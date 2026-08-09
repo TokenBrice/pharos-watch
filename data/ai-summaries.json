@@ -1049,11 +1049,11 @@
   },
   "musd-metamask": {
     "title": "Distribution as Moat",
-    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The C safety grade is a split decision: a solid B backing pillar and near-flawless peg behavior that rarely leaves the calm end of the stress scale, dragged down by an exit pillar that grades D — the secondary market hasn't caught up with primary-market confidence, and DEX liquidity stays spread wide and shallow. The reserve composition reads like a compliance team's wishlist, but a few dozen brief depeg blips, including a sharp positive spike, show that arbitrage works in theory while depth stays thin in practice. The funnel switched on at the end of June: MetaMask's Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert those tens of millions of users into float. The moat narrative is still more aspiration than balance sheet — but the plumbing to realize it now exists.",
-    "updatedAt": "2026-08-05",
+    "text": "MetaMask mUSD is what happens when a wallet with tens of millions of users decides to vertically integrate — issued by Stripe's Bridge on M0 protocol rails, with 85% in {{term:treasury}}T-bills{{/term}} and 15% in bankruptcy-remote cash verified by real-time on-chain {{term:attestation}}validator attestations{{/term}}. The C safety grade is a split decision: a solid B- backing pillar and near-flawless peg behavior that rarely leaves the calm end of the stress scale, dragged down by an exit pillar that grades D — the secondary market hasn't caught up with primary-market confidence, and DEX liquidity stays spread wide and shallow. The reserve composition reads like a compliance team's wishlist, but a few dozen brief depeg blips, including a sharp positive spike, show that arbitrage works in theory while depth stays thin in practice. The funnel switched on at the end of June: MetaMask's Money Account wires mUSD into yield routes and card spending directly inside the wallet, the first serious attempt to convert those tens of millions of users into float. The moat narrative is still more aspiration than balance sheet — but the plumbing to realize it now exists.",
+    "updatedAt": "2026-08-09",
     "authoredBy": "ai",
     "model": "claude-fable-5",
-    "factsAsOf": "2026-08-05"
+    "factsAsOf": "2026-08-09"
   },
   "cash-phantom": {
     "title": "The Wallet's Dollar",
@@ -1766,14 +1766,12 @@
     "factsAsOf": "2026-05-15"
   },
   "silk-shade-protocol": {
-    "title": "The GDP-Weighted Privacy Dollar",
-    "text": "A GDP-weighted basket of 20 currencies on Secret Network, defended by overcollateralized CDPs — conceptually ambitious, but hard to acquire at ~$1.1M circulating.\n\nSILK is what happens when you cross a stablecoin with a macro index fund and deploy it on a privacy chain. Pegged to a GDP-weighted basket of 20 global currencies — USD at 30%, CNY at 22%, EUR bloc at 14%, plus JPY, GBP, INR, and fourteen others — SILK doesn't track any single fiat currency, making it one of the most conceptually ambitious stablecoins tracked on Pharos. Built entirely on Secret Network using the SNIP-20 privacy token standard, every transaction is private by default with optional auditability via viewing keys. The stability architecture layers {{term:overcollateralization}}overcollateralized{{/term}} lending (ShadeLend) via {{term:cdp}}CDP{{/term}} vaults, stablecoin {{term:redemption}}redemption{{/term}} pools, bounded minting with DAO governance, and ShadeDAO bonds — a belt-and-suspenders approach deployed on a chain that most DeFi users have never touched. At ~$1.1M in circulation on a single unproven chain with no {{term:bridge}}bridge{{/term}} to Ethereum, SILK is simultaneously the most interesting basket stablecoin in crypto and one of the hardest to actually acquire.",
-    "updatedAt": "2026-05-15",
+    "title": "The Vault Nobody Can Liquidate",
+    "text": "SILK is still the most conceptually ambitious basket stablecoin on Pharos — a GDP-weighted index of twenty currencies, defended by {{term:overcollateralization}}overcollateralized{{/term}} {{term:cdp}}CDP{{/term}} vaults, running natively on Secret Network's privacy chain. It is also, on inspection, a nineteen-vault lending book priced through a single oracle provider with no failover and an empty deviation-guard list. The finding that matters sits in the WBTC vault, second-largest at 18.3% of ShadeLend's elastic debt: it is governance-frozen against roughly 37.9k SILK of debt backed by about 0.00002 WBTC, its {{term:liquidation}}liquidation{{/term}} query reverts on a divide-by-zero, and its collateral staleness tolerance has been widened from the 600 seconds every other vault uses to a number with fourteen digits — the check is off. Two more collateral oracles have been rejecting queries as stale since February 2025 and July 2026 respectively, and the Stability Pool holds well under half the protocol's aggregate debt with no documented socialization path for a shortfall. A basket that hedges twenty currencies is an elegant answer to a question nobody was asking; a stranded vault with the staleness check disabled is a plainer problem.",
+    "updatedAt": "2026-08-09",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-08-08"
   },
   "idrx-idrx": {
     "title": "Rupiah Rails With Audit Claims",
@@ -2354,14 +2352,12 @@
     "factsAsOf": "2026-05-15"
   },
   "xtusd-xt": {
-    "title": "The XT Exchange Dollar",
-    "text": "XT.com's centralized dollar token has minimal public reserve disclosure; Pharos treats it as CEX-issued credit with very high transparency risk.\n\nXTUSD is an exchange-issued dollar token associated with XT.com. The provider footprint is enough to admit it through CoinGecko, but its main chain is outside the configured Pharos chain set and public reserve detail is thin. Pharos treats the reserves as issuer-managed CEX assets under undisclosed {{term:custody}}custody{{/term}} with very high transparency risk, and no holder-side {{term:redemption}}redemption{{/term}} backstop is modeled. That keeps the token visible without overstating its redemption or reserve quality.",
-    "updatedAt": "2026-05-15",
+    "title": "A Vault With No Liquidator",
+    "text": "XTUSD is XT.com's exchange-issued dollar, and its live deployment on XSC is a Maker-style Vat carrying one debt-bearing collateral type: roughly 4.3 million XTUSD borrowed against Wrapped XT. What the on-chain read found is what is missing. No Spotter, price feed, or other update contract is authorized on that Vat — the collateral price sits at a fixed value with no identified mechanism to move it — and no Cat, Dog, auction, or global-settlement module is authorized either. The 2022 announcement that promised a 150% minimum collateral ratio and an auction for risky vaults is half true: the 3% annual fee matches the Jug's duty exactly, so the interest accrues as advertised, while the auction it is supposed to protect has no contract standing behind it. The Median/OSM/Spotter stack that does exist on XSC is wired to the issuer's legacy TAI deployment, not to this one. Pharos rates XTUSD NR rather than badly: an unpriced, unliquidatable vault is not a grade, it is an absence of the machinery a grade would measure.",
+    "updatedAt": "2026-08-09",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-08-08"
   },
   "hbd-hive": {
     "title": "The Hive Conversion Dollar",
@@ -2424,14 +2420,12 @@
     "factsAsOf": "2026-05-15"
   },
   "mai-qidao": {
-    "title": "The Multichain QiDao Dollar",
-    "text": "QiDao's long-running overcollateralized stablecoin minted against crypto vaults across multiple EVM chains; resilience depends on collateral quality, liquidations, and governance rather than an issuer balance sheet. MAI is the long-running QiDao overcollateralized stablecoin, minted against crypto vaults across multiple EVM deployments through {{term:cdp}}CDP{{/term}} mechanics. Its resilience depends on collateral quality, bridge exposure, {{term:liquidation}}liquidations{{/term}}, and QiDao governance rather than an issuer balance sheet. Pharos tracks the major supported deployments and uses Polygon for curated reserve validation. The entry also preserves the MIMATIC provider identity while presenting the more familiar MAI name.",
-    "updatedAt": "2026-05-15",
+    "title": "Debt That Cannot Be Liquidated",
+    "text": "MAI is a multi-collateral {{term:cdp}}CDP{{/term}} dollar whose most important number is not its supply but the share of its loan book that no longer functions. An on-chain sweep of 71 QiDao vault contracts across twelve chains found roughly 2.1 million MAI of recorded vault debt — and about 72% of it sits in fifteen Fantom markets where every price source reverts. Because the price call fails, {{term:liquidation}}liquidation{{/term}}, collateral withdrawal, and new borrowing all revert with it: this is Multichain-era debt that cannot be cleared, only waited out, and QiDao's own site describes the Fantom position as a dispute whose tokens return to holders once resolved. The markets that do still price read exactly one Chainlink feed with no staleness check, no heartbeat enforcement, and no fallback, and no deployment carries a stability pool or insurance fund — the stabilityPool address is zero everywhere it was probed. Even on live chains some vaults are too far underwater to liquidate at all, because the collateral payout underflows before the keeper can be paid. The F grade is not a verdict on QiDao's design so much as an accounting of what is left standing.",
+    "updatedAt": "2026-08-09",
     "authoredBy": "ai",
-    "model": "claude-opus-4-7",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-05-15",
-    "factsAsOf": "2026-05-15"
+    "model": "claude-opus-5",
+    "factsAsOf": "2026-08-08"
   },
   "spusd-soulpeg": {
     "title": "The SoulPeg Dollar",
