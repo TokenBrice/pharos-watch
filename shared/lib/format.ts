@@ -202,6 +202,21 @@ export function formatLongDate(date: Date, options: { utc?: boolean } = {}): str
   });
 }
 
+/**
+ * Join labels into a human-readable prose list ("A", "A and B", "A, B, and C").
+ *
+ * Pharos house style is the Oxford comma; pass `oxford: false` for the surfaces
+ * that deliberately read without it. Callers own truncation and empty-list
+ * fallbacks — this only joins what it is given.
+ */
+export function formatProseList(items: readonly string[], options: { oxford?: boolean } = {}): string {
+  const { oxford = true } = options;
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}${oxford ? "," : ""} and ${items[items.length - 1]}`;
+}
+
 /** Named idiom for the off-by-one-proof day label ("Aug 9, 2026", always UTC). */
 export function formatUtcDayLabel(date: Date): string {
   return formatShortDate(date, { utc: true });

@@ -1,13 +1,13 @@
 import { z } from "zod";
-import { V9FactStatusV2Schema, V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
+import {
+  V9FactStatusV2Schema,
+  V9FailureDomainRefSchema,
+  compareText,
+} from "./safety-score-v9-fact-primitives";
 
 const V9_MECHANISM_QUALITY_LEVELS = ["strong", "adequate", "limited", "weak", "failed"] as const;
 const V9MechanismQualityLevelSchema = z.enum(V9_MECHANISM_QUALITY_LEVELS);
 export type V9MechanismQualityLevel = z.infer<typeof V9MechanismQualityLevelSchema>;
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 const CanonicalFailureDomainsSchema = z
   .array(V9FailureDomainRefSchema)

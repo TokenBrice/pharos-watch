@@ -12,12 +12,9 @@ import {
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
+import { compareText } from "./safety-score-v9-fact-primitives";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 4;
 

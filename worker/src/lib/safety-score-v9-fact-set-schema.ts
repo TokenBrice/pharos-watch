@@ -26,6 +26,7 @@ import {
 import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
+import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 
 export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): string {
   return `reserve:${domainDigest("safety-score-v9.reserve-exposure-key.v1", {
@@ -39,17 +40,6 @@ export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): str
 const CanonicalTextSchema = z.string().trim().min(1);
 const UnixSecondsSchema = z.number().int().nonnegative();
 const FractionSchema = z.number().finite().min(0).max(1);
-
-function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
-  return z
-    .array(schema)
-    .superRefine((values, ctx) => {
-      const keys = values.map(keyOf);
-      const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-      if (duplicate !== undefined) ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
-    })
-    .transform((values) => [...values].sort((left, right) => compareText(keyOf(left), keyOf(right))));
-}
 
 const SourceClockSchema = z
   .object({

@@ -87,7 +87,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/safety-score-active-source.test.ts",
   "worker/src/api/__tests__/safety-score-history-v2.test.ts",
   "worker/src/lib/__tests__/safety-score-history-v2.test.ts",
-  "worker/src/lib/__tests__/safety-score-v9-anchor-gate.test.ts",
+  "worker/scripts/lib/__tests__/safety-score-v9-anchor-gate.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-candidate.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-consumer-freshness.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-extension-mechanism.test.ts",

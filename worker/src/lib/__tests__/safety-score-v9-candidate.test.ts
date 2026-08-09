@@ -4,6 +4,7 @@ import {
   evaluateV9FactSet,
   evaluateValidatedV9FactSet,
 } from "@shared/lib/safety-score-v9/evaluate-set";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
@@ -550,7 +551,8 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(result.candidate).toMatchObject({
       model: "v9-critical-path",
       lifecycle: "active",
-      policyVersion: "9.14",
+      // Tracks the active methodology version instead of re-pinning it per release.
+      policyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
       completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
     });
     expect(result.candidate.cards[0]).toMatchObject({ id: "alpha", score: 77, grade: "B+" });

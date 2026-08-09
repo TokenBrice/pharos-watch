@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import candidatePolicyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
+import { SAFETY_SCORE_METHODOLOGY_VERSION } from "../methodology-versions/constants";
 import {
   V9_REASON_CODES,
   V9StructuralSignalKindSchema,
@@ -24,7 +25,9 @@ describe("Safety Score v9 methodology policy", () => {
   it("loads the committed V9 policy with a frozen semantic digest", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.policyId).toBe("safety-score-v9");
     expect(V9_CANDIDATE_POLICY_V1.policy.lifecycle).toBe("active");
-    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe("9.14");
+    // The policy asset ships under the active methodology version; the
+    // sensitivity tooling enforces the same equality at runtime.
+    expect(V9_CANDIDATE_POLICY_V1.policy.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     // ROTATION-1 (owner rulings 2026-07-23): share-band materiality 0.10/0.25, T5 credit 10,
     // undisclosedFeeRouteScoreCeiling 52, commodity-allocated reserve class and
     // non-counterparty reserve-issuer concentration exemption, plus the

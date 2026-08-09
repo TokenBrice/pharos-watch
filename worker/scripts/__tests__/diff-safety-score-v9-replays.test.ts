@@ -107,7 +107,6 @@ describe("diffReplayArtifacts", () => {
 
   it("VERSION_ACTIVATION_KEYS covers the pinned-build and methodology-identity family", () => {
     for (const key of [
-      "stressStateDigest",
       "stateDigest",
       "resultDigest",
       "scoreResultDigest",
@@ -130,7 +129,7 @@ describe("diffReplayArtifacts", () => {
       id: "usdc-circle",
       grade: "A",
       score: 85,
-      stressStateDigest: "a".repeat(64),
+      scoreResultDigest: "a".repeat(64),
       ...overrides,
     });
     // A pure version activation: every VERSION_ACTIVATION_KEYS value moves,
@@ -146,7 +145,7 @@ describe("diffReplayArtifacts", () => {
       },
       compilerFactSchemaDigest: "a".repeat(64),
     });
-    const activated = artifact([card({ stressStateDigest: "b".repeat(64) })], {
+    const activated = artifact([card({ scoreResultDigest: "b".repeat(64) })], {
       policyVersion: "9.07",
       candidateId: "safety-score-v9:v1:bbbb",
       resultDigest: "b".repeat(64),

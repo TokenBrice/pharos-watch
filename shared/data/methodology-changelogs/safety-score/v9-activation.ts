@@ -244,3 +244,20 @@ export const SAFETY_SCORE_V9_NATIVE_INPUT: MethodologyChangelogEntry = {
   commits: [],
   reconstructed: false,
 };
+
+export const SAFETY_SCORE_V9_STRESS_STATE_DIGEST_REMOVAL: MethodologyChangelogEntry = {
+  version: "9.15",
+  title: "Stress-state digest removed from published cards",
+  date: "2026-08-09",
+  effectiveAt: 1786233604,
+  summary:
+    "The published card drops `stressStateDigest`. The what-if stress evaluator it identified was never wired into any published surface, and no consumer read the digest.",
+  impact: [
+    "`stressStateDigest` is no longer present on Safety Score V9 cards, in the V9 response schema, or in the OpenAPI contract",
+    "No score movement: the field was an identity digest over retained scoring state, never an input to any pillar, cap, or grade",
+    "The unused stress what-if evaluator that consumed the identified state is removed with it",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};

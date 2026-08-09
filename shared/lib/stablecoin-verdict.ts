@@ -16,6 +16,7 @@
 import type { MechanismArchetype, StablecoinStatus, StablecoinFlags } from "../types";
 import type { ReportCardGrade } from "../types/report-card-grade";
 import type { ThreatBand } from "./classification/risk";
+import { RISKY_GRADES, SAFE_GRADES } from "./safety-grade-buckets";
 
 export type StablecoinVerdictArchetype =
   | "pre-launch"
@@ -57,17 +58,8 @@ const VERDICT_LABELS: Record<StablecoinVerdictArchetype, string> = {
   uncategorized: "Uncategorized",
 };
 
-const INSTITUTIONAL_GRADES: ReadonlySet<ReportCardGrade> = new Set([
-  "A+",
-  "A",
-  "A-",
-  "B+",
-  "B",
-  "B-",
-]);
-
+// The safe/risky grade boundary lives once, in `safety-grade-buckets.ts`.
 const DISTRESSED_BANDS: ReadonlySet<ThreatBand> = new Set(["WARNING", "DANGER"]);
-const DISTRESSED_GRADES: ReadonlySet<ReportCardGrade> = new Set(["D", "F"]);
 const YIELD_HYBRID_ARCHETYPES: ReadonlySet<MechanismArchetype> = new Set([
   "synthetic-delta-neutral",
   "tbill",
@@ -107,7 +99,7 @@ export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdic
     return buildVerdict("yield-bearing-hybrid");
   }
 
-  if (grade !== null && DISTRESSED_GRADES.has(grade)) {
+  if (grade !== null && RISKY_GRADES.has(grade)) {
     return buildVerdict("distressed");
   }
 
@@ -123,7 +115,7 @@ export function deriveStablecoinVerdict(inputs: VerdictInputs): StablecoinVerdic
     archetype === "fiat-cash"
     && inputs.governance === "centralized"
     && grade !== null
-    && INSTITUTIONAL_GRADES.has(grade)
+    && SAFE_GRADES.has(grade)
   ) {
     return buildVerdict("institutional-default");
   }

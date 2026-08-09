@@ -24,10 +24,9 @@ import type {
   V9MechanismRiskReviewFactV2,
   V9ReserveExposureFactV2,
 } from "@shared/types/safety-score-v9-facts";
-import {
-  V9CdpStressCoverageFactSchema,
-  type V9CdpStressCoverageFact,
-  type V9MechanismRiskReview,
+import type {
+  V9CdpStressCoverageFact,
+  V9MechanismRiskReview,
 } from "@shared/types/safety-score-v9-backing";
 import type { ReserveSlice } from "@shared/types/reserves";
 import { computeSafetyScoreV9ReserveExposureKey } from "./safety-score-v9-fact-set-schema";
@@ -259,7 +258,9 @@ export function buildCdpStressCoverage(context: AssetBuildContext): V9CdpStressC
       ),
     ];
   }
-  return V9CdpStressCoverageFactSchema.parse(fact);
+  // Already validated: the extension's `cdpStressCoverage` is parsed at the
+  // extension boundary, and this function only rewrites `evidenceRefIds`.
+  return fact;
 }
 
 function dependencyPathKind(

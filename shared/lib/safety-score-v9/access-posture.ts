@@ -1,5 +1,5 @@
 import type {
-  V9AssetFactsV2,
+  V9AssetFactsBase,
   V9DeploymentControlFactV2,
   V9FactStatusV2,
   V9ExitRouteFactV2,
@@ -28,8 +28,8 @@ export interface V9FreezeAccessReview {
 }
 
 export interface V9AccessPostureAssetFacts {
-  assetId: V9AssetFactsV2["assetId"];
-  controlStatus: V9AssetFactsV2["controlStatus"];
+  assetId: V9AssetFactsBase["assetId"];
+  controlStatus: V9AssetFactsBase["controlStatus"];
   controls: readonly V9DeploymentControlFactV2[];
   exitRoutes: readonly Pick<V9ExitRouteFactV2, "routeKey" | "lane" | "status" | "scoreEligible" | "holderAccess">[];
 }

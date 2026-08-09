@@ -1,3 +1,4 @@
+import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
 import type {
   DexAmmExecutionModel,
   DexAmmExecutionToken,
@@ -36,10 +37,12 @@ import {
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
 
-export const DEFAULT_NOTIONALS_USD = [100_000, 1_000_000, 10_000_000, 25_000_000] as const;
-const REFERENCE_NOTIONAL_USD = 1_000_000;
-export const REFERENCE_COST_BPS = 200;
-export const IMMEDIATE_SETTLEMENT_HORIZON_SEC = 300;
+// The stress-request shape is owned by the one exit scoring engine
+// (`exit-route-scoring.ts`); these are named views of it, not a second copy.
+export const DEFAULT_NOTIONALS_USD: readonly number[] = EXIT_ROUTE_SCORING_TABLES.request.notionalGridUsd;
+const REFERENCE_NOTIONAL_USD = EXIT_ROUTE_SCORING_TABLES.request.referenceNotionalUsd;
+export const REFERENCE_COST_BPS = EXIT_ROUTE_SCORING_TABLES.request.maxCostBps;
+export const IMMEDIATE_SETTLEMENT_HORIZON_SEC = EXIT_ROUTE_SCORING_TABLES.request.settlementHorizonSec;
 const AMM_EXECUTION_COST_TOLERANCE_BPS = 0.02;
 const CURVE_STABLESWAP_ADAPTER_PROFILE_ID = "curve-stableswap-main-registry-get-dy-v1";
 const CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID = "curve-stableswap-ng-factory-get-dy-v2";

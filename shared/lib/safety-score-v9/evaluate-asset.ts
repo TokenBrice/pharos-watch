@@ -1,5 +1,5 @@
 import type {
-  V9AssetFactsV2,
+  V9AssetFactsBase,
   V9AssetFactsV3,
   V9EvidenceResponsibility,
   V9FactStatusV2,
@@ -65,7 +65,7 @@ import {
   type V9ProductionScoreInput,
   type V9ProductionScoreTrace,
 } from "./score";
-import { createV9PublicStressState, type V9PublicStressState } from "./stress";
+import { buildV9RetainedStressState, type V9RetainedStressState } from "./stress";
 import { projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 
 export interface V9EvaluatedAsset {
@@ -78,7 +78,7 @@ export interface V9EvaluatedAsset {
   scoreInput: V9ProductionScoreInput;
   trace: V9ProductionScoreTrace;
   compactTrace: V9CompactScoreTrace;
-  stressState: V9PublicStressState;
+  stressState: V9RetainedStressState;
   operationalResilience: V9OperationalResilienceResult | null;
   liquidationCapacitySelection?: V9CdpLiquidationCapacitySelection;
 }
@@ -1099,7 +1099,7 @@ export function projectV9ResolvedBackingExposure(
 }
 
 function resolvedBackingExposures(
-  asset: V9AssetFactsV2 | V9AssetFactsV3,
+  asset: V9AssetFactsBase,
   dependencyInputs: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
   unavailabilityRootsById: ReadonlyMap<string, readonly string[]>,
@@ -1131,7 +1131,7 @@ function resolvedBackingExposures(
  * verified live exposure matching the sole serial wrapper parent.
  */
 function resolveInheritedStablecoinBacking(
-  asset: V9AssetFactsV2 | V9AssetFactsV3,
+  asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
   evaluatedById: ReadonlyMap<string, V9EvaluatedAsset>,
 ): V9InheritedStablecoinBacking | undefined {
@@ -1206,7 +1206,7 @@ export type V9WrapperStrategyTier = "pure" | "staked" | "vault";
  * (a collateral basket or a "mechanism" serial claim) returns undefined.
  */
 export function resolveV9WrapperStrategyTier(
-  asset: V9AssetFactsV2 | V9AssetFactsV3,
+  asset: V9AssetFactsBase,
   resolved: V9ResolvedDependencyInputs,
   inheritedStablecoinBacking: V9InheritedStablecoinBacking | undefined,
 ): V9WrapperStrategyTier | undefined {
@@ -1654,7 +1654,7 @@ export function evaluateV9Asset({
     trace.finalScore !== null || unavailableUpstreamRoots.length === 0
       ? [asset.assetId]
       : unavailableUpstreamRoots;
-  const stressState = createV9PublicStressState(scoreInput, {
+  const stressState = buildV9RetainedStressState(scoreInput, {
     circulatingUsd: asset.supply.status.observationState === "known" ? asset.supply.circulatingUsd : null,
     portfolioStatus:
       asset.exitStatus.observationState === "known" && asset.exitStatus.applicability.state === "required"

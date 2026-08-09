@@ -1357,7 +1357,6 @@ const SafetyScoreV9CardShape = {
   evidence: SafetyScoreV9EvidenceSummarySchema,
   accessPosture: SafetyScoreV9AccessPostureSchema,
   dependencies: SafetyScoreV9DependencySummarySchema,
-  stressStateDigest: Sha256Schema.nullable(),
 } as const;
 const SafetyScoreV9CardObjectSchema = z.object(SafetyScoreV9CardShape).strict();
 type SafetyScoreV9CardBase = z.infer<typeof SafetyScoreV9CardObjectSchema>;

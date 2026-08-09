@@ -1,15 +1,15 @@
 # Methodology Page Contract
 
-`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/methodology-sections.tsx` now composes the authored long-form section groups from `src/app/methodology/sections/*.tsx`.
+`/methodology` (`src/app/methodology/page.tsx`) is the canonical long-form explainer page for Pharos scoring systems. The route shell still owns metadata, breadcrumb/FAQ/Article structured data, and the reader-guide hero chrome, while `src/app/methodology/sections/index.tsx` composes the authored long-form section bodies from `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`.
 
 ---
 
 ## Route & Structure
 
-- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, FAQ JSON-LD, Article JSON-LD, hero/reader-guide shell)
+- **Route shell:** `src/app/methodology/page.tsx` (metadata, breadcrumb JSON-LD, Article JSON-LD, hero/reader-guide shell, and the visible `FaqSection` that emits the FAQ JSON-LD)
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
-- **Section composition module:** `src/app/methodology/methodology-sections.tsx`
-- **Section composition shells:** `src/app/methodology/sections/core-sections.tsx`, `src/app/methodology/sections/core-sections-pricing.tsx`, and `src/app/methodology/sections/monitoring-sections.tsx`
+- **Section composition module:** `src/app/methodology/sections/index.tsx` (single ordered `MethodologySections` list)
+- **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
 - **Shared section summary/markdown registry:** `src/app/methodology/sections/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
@@ -53,7 +53,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `core-sections.tsx`, `core-sections-pricing.tsx`, `monitoring-sections.tsx`, or `src/app/methodology/methodology-sections.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `src/app/methodology/sections/index.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/` and bump the corresponding version module in `shared/lib/*-version.ts` so badges and changelog links stay consistent.
 

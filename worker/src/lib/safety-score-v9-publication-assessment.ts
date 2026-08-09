@@ -5,6 +5,7 @@ import type {
   SafetyScoreV9Card,
   SafetyScoreV9CurrentResponse,
 } from "@shared/types/safety-score-v9-public";
+import { REPORT_CARD_GRADE_RANK } from "@shared/lib/report-card-core";
 import type { V9Grade } from "@shared/types/safety-score-v9";
 import { z } from "zod";
 
@@ -60,20 +61,13 @@ export type V9PublicationAssessment =
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_NUMERATOR = 9;
 const V9_PRODUCER_FAILURE_MINIMUM_HEALTHY_ASSET_DENOMINATOR = 10;
 
-const GRADE_RANK: Record<V9Grade, number> = {
-  "A+": 11,
-  A: 10,
-  "A-": 9,
-  "B+": 8,
-  B: 7,
-  "B-": 6,
-  "C+": 5,
-  C: 4,
-  "C-": 3,
-  D: 2,
-  F: 1,
-  NR: 0,
-};
+/**
+ * The hold gate compares grades only relatively, so it reads the one grade-rank
+ * ladder instead of restating it. `REPORT_CARD_GRADE_RANK` is this table shifted
+ * by one (NR -1 .. A+ 10 versus NR 0 .. A+ 11) — order-isomorphic, so every
+ * `<` comparison below is unchanged.
+ */
+const GRADE_RANK: Record<V9Grade, number> = REPORT_CARD_GRADE_RANK;
 
 function producerFailedBindings(card: SafetyScoreV9Card) {
   if (!("scoreTrace" in card)) return [];

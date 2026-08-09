@@ -559,7 +559,6 @@ function buildSafetyScoreV9CandidatePipeline(
       scoreInput: asset.scoreInput,
       access: asset.access,
       dependencyInputs: asset.dependencyInputs,
-      stressState: asset.stressState,
       policy,
       backing: asset.backing,
       exit: asset.exit,

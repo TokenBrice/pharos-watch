@@ -1,5 +1,5 @@
 import type {
-  V9AssetFactsV2,
+  V9AssetFactsBase,
   V9EvidenceResponsibility,
   V9FailureDomainRef,
   V9FactGapV2,
@@ -79,7 +79,7 @@ export interface V9InheritedStablecoinBacking {
 
 export interface V9BackingAssetInput {
   readonly assetId: string;
-  readonly reserveStatus: V9AssetFactsV2["reserveStatus"];
+  readonly reserveStatus: V9AssetFactsBase["reserveStatus"];
   readonly reserveExposures: readonly V9ReserveExposureFactV2[];
   readonly gaps: readonly (V9FactGapV2 | V9FactGapV3)[];
   readonly resolvedUpstreamExposures: readonly V9ResolvedUpstreamExposure[];
@@ -1428,7 +1428,7 @@ export function createUnknownArchetypeV9BackingResult(
 
 export function createUnavailableV9BackingResult(
   asset: V9BackingAssetInput,
-  unavailableReview: Pick<V9AssetFactsV2, "archetype" | "mechanismRiskReview">,
+  unavailableReview: Pick<V9AssetFactsBase, "archetype" | "mechanismRiskReview">,
   policy: V9BackingEvaluationPolicy,
 ): V9BackingResult {
   assertV9BackingPolicy(policy);

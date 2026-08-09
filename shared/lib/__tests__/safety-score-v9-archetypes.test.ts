@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { V9FactGapV2, V9FactStatusV2, V9ReserveExposureFactV2 } from "../../types/safety-score-v9-facts";
 import type { V9BackingAssetInput, V9MechanismFactV1 } from "../safety-score-v9/backing";
 import { V9MechanismRiskReviewSchema } from "../../types/safety-score-v9-backing";
+import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { evaluateV9Backing, type V9MechanismRiskReview } from "../safety-score-v9/archetypes";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
@@ -263,6 +264,15 @@ describe("Safety Score v9 archetype backing adapters", () => {
       expect(result.structuralReasons).toEqual([]);
       expect(result.rateability).toBe("rateable");
     });
+  });
+
+  it("dispatches on exactly the archetypes the mechanism-review union declares", () => {
+    // evaluateV9Backing tests membership against MECHANISM_ARCHETYPE_VALUES
+    // instead of walking Zod's internal `options`; this is the coincidence that
+    // makes that substitution safe.
+    expect([...MECHANISM_ARCHETYPE_VALUES].sort()).toEqual(
+      V9MechanismRiskReviewSchema.options.map((schema) => schema.shape.archetype.value).sort(),
+    );
   });
 
   it("returns a reason-coded NR for an unknown archetype", () => {

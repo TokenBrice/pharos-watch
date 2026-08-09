@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
+import { V9EvidenceResponsibilitySchema, compareText } from "./safety-score-v9-fact-primitives";
 import { V9TypedFactPathSchema, V9ResolvedMechanismArchetypeSchema } from "./safety-score-v9-facts";
 import {
   V9ManualInputClassificationSchema,
@@ -17,10 +17,6 @@ const CanonicalTextSchema = z
   .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
 const UnixSecondsSchema = z.number().int().nonnegative();
 const NonNegativeUsdSchema = z.number().finite().nonnegative();
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 function addCanonicalStringArrayIssues(values: readonly string[], ctx: z.RefinementCtx, path: PropertyKey[]): void {
   if (new Set(values).size !== values.length) {

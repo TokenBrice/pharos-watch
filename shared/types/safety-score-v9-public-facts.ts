@@ -5,6 +5,10 @@ import {
   V9ReasonCodeSchema,
   type V9ReasonCode,
 } from "./safety-score-v9";
+import { compareText } from "./safety-score-v9-fact-primitives";
+
+// Canonical ordering is a determinism-digest input; it has one definition.
+export { compareText };
 
 export const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 export const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
@@ -70,9 +74,6 @@ export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODE_SET =
   new Set<V9ReasonCode>(V9_BOUNDED_ATTRIBUTION_REASON_CODES);
 
-export function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 export function isUniqueSorted(values: readonly string[]): boolean {
   return (

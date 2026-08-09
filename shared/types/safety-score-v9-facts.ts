@@ -17,6 +17,8 @@ import {
   V9FactStatusV2Schema,
   V9FailureDomainRefSchema,
   V9ObservationStateSchema,
+  canonicalArrayBy,
+  compareText,
   type V9EvidenceResponsibility,
   type V9FactApplicability,
   type V9FactStatusV2,
@@ -62,23 +64,6 @@ const CanonicalChainIdSchema = CanonicalTextSchema.refine(
   (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
   "Chain ID must be a canonical lowercase identifier",
 );
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
-
-function canonicalArrayBy<T>(schema: z.ZodType<T>, keyOf: (value: T) => string) {
-  return z
-    .array(schema)
-    .superRefine((values, ctx) => {
-      const keys = values.map(keyOf);
-      const duplicate = keys.find((key, index) => keys.indexOf(key) !== index);
-      if (duplicate !== undefined) {
-        ctx.addIssue({ code: "custom", message: `Duplicate canonical key: ${duplicate}` });
-      }
-    })
-    .transform((values) => [...values].sort((left, right) => compareText(keyOf(left), keyOf(right))));
-}
 
 const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
 
@@ -1312,6 +1297,24 @@ const V9AssetFactsBaseFields = {
   wrapperLocalFacts: V9WrapperLocalFactsSchema.optional(),
 };
 
+/**
+ * The asset-fact fields every fact-set version shares.
+ *
+ * The engine describes its current shape with this type rather than with
+ * `V9AssetFactsV2`: V2 is the retained replay arm, not the contract the
+ * evaluator is written against. V3 narrows `dependencies` and
+ * `wrapperLocalFacts` and carries a V3 gap array; both remain structurally
+ * assignable here.
+ */
+export type V9AssetFactsBase = Omit<
+  z.infer<z.ZodObject<typeof V9AssetFactsBaseFields>>,
+  "dependencies"
+> & {
+  // V3 widened the edge contract (role-aware `pathKind`/`economicRole`), so the
+  // shared base admits either effective-dependency version.
+  dependencies: V9EffectiveDependenciesV2 | V9EffectiveDependenciesV3;
+};
+
 const V9AssetFactsV2ObjectSchema = z
   .object({
     ...V9AssetFactsBaseFields,
@@ -1474,7 +1477,7 @@ function addIssue(ctx: z.RefinementCtx, path: PropertyKey[], message: string): v
   ctx.addIssue({ code: "custom", path, message });
 }
 
-function factStatuses(asset: V9AssetFactsV2 | V9AssetFactsV3): Array<{ label: string; status: V9FactStatusV2 }> {
+function factStatuses(asset: V9AssetFactsBase): Array<{ label: string; status: V9FactStatusV2 }> {
   const mechanismStatuses = asset.mechanismRiskReview.review
     ? Object.entries(asset.mechanismRiskReview.review).flatMap(([key, value]) =>
         value !== null && typeof value === "object" && "status" in value
@@ -1515,6 +1518,8 @@ function factStatuses(asset: V9AssetFactsV2 | V9AssetFactsV3): Array<{ label: st
 }
 
 function validateAssetReferences(
+  // Reads `gaps`, which each schema version types differently, so it keeps the
+  // explicit union rather than the shared base.
   asset: V9AssetFactsV2 | V9AssetFactsV3,
   activeAssetIds: ReadonlySet<string>,
   assetIndex: number,

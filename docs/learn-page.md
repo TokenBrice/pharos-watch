@@ -44,7 +44,7 @@ The case-study detail route is static-exported through `generateStaticParams()` 
 
 Each detail page renders:
 
-1. `CaseStudyPageShell` breadcrumb/header
+1. `LearnPageShell` breadcrumb/header (`titleClassName="max-w-[24ch]"`)
 2. `CaseStudyArticleJsonLd`
 3. `CaseStudyBody`, including the fact strip, optional Pharos chart widgets, authored timeline, explanation sections, and related links from the content module
 

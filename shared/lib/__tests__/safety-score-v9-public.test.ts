@@ -19,7 +19,6 @@ const DIGESTS = {
   facts: "b".repeat(64),
   base: `report-cards-input:v1:${"c".repeat(64)}`,
   build: "d".repeat(64),
-  stress: "e".repeat(64),
 } as const;
 
 const freshness = { backing: "current", exit: "current", control: "current" } as const;
@@ -151,7 +150,6 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
     },
     access,
     dependencyInputs,
-    stressState: { stateDigest: DIGESTS.stress },
     backing: {
       archetype: "fiat-cash",
       score: pillars.backing,
@@ -490,7 +488,6 @@ describe("Safety Score v9 public projection", () => {
       pegAdjustedScore: 91.8,
       evidence: { level: "strong", freshness: "stale" },
       accessPosture: { unknownFields: ["governance", "transfer"] },
-      stressStateDigest: DIGESTS.stress,
       scoreTrace: {
         schemaVersion: 3,
         legacyAliases: {

@@ -202,7 +202,6 @@ export function makeReportCardsV9Card(
       reasons: [],
     },
     dependencies: { serial: [], basket: [], cycleBlocked: false as const, reasonCodes: [] },
-    stressStateDigest: null,
     ...overrides,
     score,
     grade,

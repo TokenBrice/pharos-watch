@@ -1,5 +1,5 @@
 import type { V9ReasonCode, V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
-import type { V9AssetFactsV2, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
+import type { V9AssetFactsBase, V9ExitRouteFactV2 } from "../../types/safety-score-v9-facts";
 import type { ExitRouteObservationHistory } from "../../types/exit-route";
 import {
   blendExitCapacityComponent,
@@ -789,7 +789,7 @@ export function projectV9ExitEvaluationRoute(route: V9ExitRouteFactV2): V9ExitEv
 }
 
 export function evaluateV9ExitAssetFacts(
-  asset: Pick<V9AssetFactsV2, "supply" | "exitStatus" | "exitRoutes">,
+  asset: Pick<V9AssetFactsBase, "supply" | "exitStatus" | "exitRoutes">,
   envelope: V9ValidatedPolicyEnvelope,
   preExitDangerHeld = false,
 ): V9ExitEvaluationResult {

@@ -1,14 +1,11 @@
 import { z } from "zod";
+import { compareText } from "./safety-score-v9-fact-primitives";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const NonEmptyCanonicalStringSchema = z
   .string()
   .min(1)
   .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
-
-function compareText(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
-}
 
 const CanonicalStringSetSchema = z
   .array(NonEmptyCanonicalStringSchema)
