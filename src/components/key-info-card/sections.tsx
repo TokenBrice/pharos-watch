@@ -201,7 +201,7 @@ export function PegStabilityBody({
         <div className="mb-3 rounded-lg border border-border/50 bg-muted/20 px-4 py-3 space-y-1.5">
           <p className="text-sm font-semibold">Custom design — no archetype assigned</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            This coin doesn&apos;t fit the six tracked archetypes. See the description below and the{" "}
+            This coin doesn&apos;t fit the tracked archetypes. See the description below and the{" "}
             <Link href="/methodology/" className="pharos-focus-ring text-frost-blue hover:underline">
               methodology page
             </Link>{" "}

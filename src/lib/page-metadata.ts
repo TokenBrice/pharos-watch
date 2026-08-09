@@ -369,7 +369,7 @@ export function buildPageMetadata({
 // ---------------------------------------------------------------------------
 
 /**
- * Build a `DefinedTermSet` document describing the six tracked mechanism
+ * Build a `DefinedTermSet` document describing the tracked mechanism
  * archetypes. Emitted on the `/learn/mechanisms/` hub so search engines see
  * the page as a glossary of mechanism designs.
  */
@@ -380,7 +380,7 @@ export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
     "@type": "DefinedTermSet",
     "@id": hubUrl,
     name: "Stablecoin Mechanism Archetypes",
-    description: "Six mechanism archetypes covering every stablecoin design Pharos tracks.",
+    description: `${MECHANISM_ARCHETYPE_VALUES.length} mechanism archetypes covering every stablecoin design Pharos tracks.`,
     url: hubUrl,
     hasDefinedTerm: MECHANISM_ARCHETYPE_VALUES.map((archetype: MechanismArchetype) => ({
       "@type": "DefinedTerm",

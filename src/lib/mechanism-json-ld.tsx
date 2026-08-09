@@ -7,7 +7,7 @@ import {
 
 /**
  * `<script type="application/ld+json">` component for the mechanism hub
- * page. Emits the `DefinedTermSet` document covering all six archetypes.
+ * page. Emits the `DefinedTermSet` document covering every tracked archetype.
  */
 export function MechanismJsonLd() {
   return (
