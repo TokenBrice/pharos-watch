@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChevronDown, ExternalLink, Globe } from "lucide-react";
+import { ArrowUpRight, ExternalLink, Globe } from "lucide-react";
 import {
   SECTION_DIVIDER_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { getCoinOverride } from "@/components/stablecoin-detail/mechanism-diagrams/coin-overrides";
 import type { MechanismDiagramOptions } from "@/components/stablecoin-detail/mechanism-diagrams/types";
@@ -264,15 +265,11 @@ function InfrastructureSummary({ summary }: { summary: string }) {
         {summary}
       </p>
       {collapsible ? (
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="pharos-focus-ring inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
-        >
-          {open ? "Show less" : "More"}
-          <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} aria-hidden="true" />
-        </button>
+        <InlineDisclosureToggle
+          open={open}
+          onToggle={() => setOpen((value) => !value)}
+          collapsedLabel="More"
+        />
       ) : null}
     </>
   );

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { ControlPostureView } from "@/lib/control-posture";
 import { cn } from "@/lib/utils";
 import { CONTROL_POSTURE_ORDER, CONTROL_POSTURE_STYLES } from "@shared/lib/classification";
@@ -55,13 +55,15 @@ export function ControlPostureCard({ view }: { view?: ControlPostureView | null 
   if (!view) return null;
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Control posture">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Control posture</h2>
+    <RailCard
+      title="Control posture"
+      ariaLabel="Control posture"
+      trailing={
         <Badge variant="outline" className={cn("text-[11px] font-medium", view.badgeClassName)}>
           {view.label}
         </Badge>
-      </div>
+      }
+    >
       <div className="space-y-3 px-4 pb-4">
         <ControlPostureMap activeKey={view.key} />
         <FactGrid aria-label="Control posture facts" items={view.facts} className="grid-cols-2" />
@@ -73,6 +75,6 @@ export function ControlPostureCard({ view }: { view?: ControlPostureView | null 
         </ModuleDisclosure>
         <EvidenceFooter topic="controlPosture" showVersion={false} />
       </div>
-    </section>
+    </RailCard>
   );
 }

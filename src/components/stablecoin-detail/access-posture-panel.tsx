@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ExternalLink, LockKeyhole } from "lucide-react";
+import { ExternalLink, LockKeyhole } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { StablecoinSafetyScoreV9AccessRow } from "@/lib/stablecoin-safety-score-v9-presentation";
 import type { TransferReviewDeployment, TransferReviewView } from "@/lib/transfer-review";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 function DeploymentEvidence({ deployment }: { deployment: TransferReviewDeployment }) {
   return (
@@ -84,17 +84,12 @@ export function AccessPosturePanel({
     ? null
     : (
       <>
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
-        >
-          {open
-            ? "Show less"
-            : `How this was verified · ${review.deployments.length} ${review.deployments.length === 1 ? "deployment" : "deployments"}`}
-          <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-        </button>
+        <InlineDisclosureToggle
+          open={open}
+          onToggle={() => setOpen((value) => !value)}
+          collapsedLabel={`How this was verified · ${review.deployments.length} ${review.deployments.length === 1 ? "deployment" : "deployments"}`}
+          className="mt-2"
+        />
         {open ? (
           <div className="mt-2 border-t border-border/50 pt-3">
             {review.mixedPosture ? (
@@ -117,16 +112,16 @@ export function AccessPosturePanel({
 
   if (compact) {
     return (
-      <section className="pharos-card-shell overflow-hidden" aria-label="Access posture">
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Access posture</h2>
-          <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </div>
+      <RailCard
+        title="Access posture"
+        ariaLabel="Access posture"
+        trailing={<LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+      >
         <div className="px-4 pb-4">
           {list}
           {evidence}
         </div>
-      </section>
+      </RailCard>
     );
   }
 

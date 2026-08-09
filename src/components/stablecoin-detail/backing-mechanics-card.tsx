@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { RailCard, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismBackingMetric, MechanismBackingNote, MechanismBackingView } from "@/lib/mechanism-backing";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 const STATE_LABELS: Record<MechanismBackingNote["state"], string> = {
   "not-applicable": "Not applicable",
@@ -81,14 +82,11 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
   const [headline, ...rest] = view.metrics;
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Backing mechanics">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Backing mechanics</h2>
-        <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
-          Reviewed {view.reviewedAt}
-        </span>
-      </div>
-
+    <RailCard
+      title="Backing mechanics"
+      ariaLabel="Backing mechanics"
+      trailing={<ReviewedStamp date={view.reviewedAt} />}
+    >
       {headline ? (
         <div className="px-4 pb-4">
           <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
@@ -141,15 +139,12 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
           <ul className="mt-2 space-y-2.5">
             {view.notes.map((note) => <NoteRow key={note.key} note={note} open={open} />)}
           </ul>
-          <button
-            type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            className="pharos-focus-ring mt-2 inline-flex min-h-7 items-center gap-1 rounded-sm text-[11px] font-medium text-frost-blue"
-          >
-            {open ? "Show less" : "Why"}
-            <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} aria-hidden="true" />
-          </button>
+          <InlineDisclosureToggle
+            open={open}
+            onToggle={() => setOpen((value) => !value)}
+            collapsedLabel="Why"
+            className="mt-2"
+          />
         </div>
       ) : null}
 
@@ -163,6 +158,6 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
           {view.sourceLabel}
         </a>
       </div>
-    </section>
+    </RailCard>
   );
 }

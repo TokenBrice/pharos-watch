@@ -2,6 +2,7 @@
 
 import { ScanSearch, Sigma } from "lucide-react";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9PreBreakdownCard,
@@ -9,7 +10,6 @@ import type {
 import { buildScoreWaterfall, type ScoreWaterfallStep } from "@/lib/safety-score-v9-waterfall";
 import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 type ConstructionCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
 
@@ -104,16 +104,16 @@ export function ScoreConstructionPanel({
 
   if (compact) {
     return (
-      <section className="pharos-card-shell overflow-hidden" aria-label="How this score is built">
-        <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-          <h2 className={DETAIL_MODULE_TITLE_CLASS}>How this score is built</h2>
-          <Sigma className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </div>
+      <RailCard
+        title="How this score is built"
+        ariaLabel="How this score is built"
+        trailing={<Sigma className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+      >
         {waterfall ? <div className="px-4 pb-4">{waterfall}</div> : null}
         {whyNotHigher ? (
           <div className={cn("px-4 pb-4", waterfall && "border-t border-border/50 pt-4")}>{whyNotHigher}</div>
         ) : null}
-      </section>
+      </RailCard>
     );
   }
 

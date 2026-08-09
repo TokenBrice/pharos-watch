@@ -4,8 +4,8 @@ import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
+import { RailCard, RailStamp, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 
 interface CollateralizationCardProps {
   reviewed: MechanismCollateralizationView | null;
@@ -60,21 +60,20 @@ export function CollateralizationCard({
   const coverage = headlineRatio != null ? coverageLabel(headlineRatio) : null;
 
   return (
-    <section className="pharos-card-shell overflow-hidden" aria-label="Collateralization">
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <h2 className={DETAIL_MODULE_TITLE_CLASS}>Collateralization</h2>
-        {hasLiveMetrics ? (
-          <span className="inline-flex h-6 items-center gap-1.5 rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
+    <RailCard
+      title="Collateralization"
+      ariaLabel="Collateralization"
+      trailing={
+        hasLiveMetrics ? (
+          <RailStamp className="gap-1.5">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
             {liveAtSec != null ? `Live · ${timeAgo(liveAtSec)}` : "Live"}
-          </span>
+          </RailStamp>
         ) : reviewed != null ? (
-          <span className="inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground">
-            Reviewed {reviewed.reviewedAt}
-          </span>
-        ) : null}
-      </div>
-
+          <ReviewedStamp date={reviewed.reviewedAt} />
+        ) : null
+      }
+    >
       <div className="px-4 pb-4">
         {headlineRatio != null && coverage != null ? (
           <>
@@ -126,6 +125,6 @@ export function CollateralizationCard({
           </a>
         </div>
       ) : null}
-    </section>
+    </RailCard>
   );
 }
