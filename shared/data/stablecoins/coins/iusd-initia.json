@@ -136,8 +136,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
     "confidence": "verified",
     "sources": [
       {
@@ -157,9 +157,9 @@
         "url": "https://layerzero.network/blog/agora-and-layerzero-bring-ausd-to-5-blockchains"
       }
     ],
-    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. This establishes the complete direct wrapper reserve as 100% Agora AUSD0/AUSD with no unidentified direct asset. Agora's own underlying reserve composition remains a separately tracked upstream dependency and is not misrepresented as an unknown slice of the iUSD wrapper. Write-time re-open 2026-07-28: Initia REST iusd-vault resources still resolve; LayerZero AUSD multi-chain announcement still describes AUSD OFT deployments; 100% AUSD wrapper direct reserve retained. Agora May 2026 reserve report remains upstream AUSD disclosure.",
+    "rationale": "Initia's official iusd-vault and AUSD0 OFT resources show that iUSD is minted 1:1 only after the local AUSD0 representation is delivered and deposited. This establishes the complete direct wrapper reserve as 100% Agora AUSD0/AUSD with no unidentified direct asset. Agora's own underlying reserve composition remains a separately tracked upstream dependency and is not misrepresented as an unknown slice of the iUSD wrapper. Write-time re-open 2026-07-28: Initia REST iusd-vault resources still resolve; LayerZero AUSD multi-chain announcement still describes AUSD OFT deployments; 100% AUSD wrapper direct reserve retained. Agora May 2026 reserve report remains upstream AUSD disclosure. Re-verified 2026-08-09 against Initia REST: the iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e reported fungible_asset::Supply.current = 2332748949795 (6 decimals) while the AUSD0 metadata object 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef reported 2332751507774, so essentially all AUSD0 on Initia sits in the iusd-vault sticky object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a (ObjectCore owner 0x0) backing iUSD 1:1, and the vault ModuleStore still registers a single base token. No undisclosed remainder exists at the wrapper layer.",
     "compositionBasis": "Complete direct wrapper composition from the official Initia vault/OFT relationship and documented 1:1 AUSD dependency",
-    "compositionAsOf": "2026-07-28",
+    "compositionAsOf": "2026-08-09",
     "scope": "full-composition",
     "knownUnknownExposure": "No unidentified direct reserve asset remains in the iUSD wrapper. Look-through risks and composition of Agora AUSD remain reviewed and propagated through the tracked upstream AUSD dependency.",
     "knownUnknownExposurePct": 0

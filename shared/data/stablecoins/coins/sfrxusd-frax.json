@@ -335,16 +335,16 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Sei block 223241622, symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), and owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "reviewNote": "Re-read at Sei block 225324299 (2026-08-09): symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), owner()=0x0357d02fc95320b990322d3ff69204c3d251171b, and the EIP-1967 admin slot resolves to ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The prior note recorded owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on both Sei and Mode, which the fresh per-chain reads do not reproduce; the Sei owner is the chain-local Frax 3-of-6 Safe. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-31",
-        "observedBlock": 223241622,
+        "observedAt": "2026-08-09",
+        "observedBlock": 225324299,
         "controllerChain": "sei",
         "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-          "operator:reservoir:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+          "operator:reservoir:0x0357d02fc95320b990322d3ff69204c3d251171b"
         ],
         "sources": [
           {
@@ -370,16 +370,16 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "At Mode block 42642919, symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), and owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "reviewNote": "Re-read at Mode block 43071398 (2026-08-09): symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), owner()=0x6336cfa6edbec2a459d869031db77fc2770eaa66, and the EIP-1967 admin slot resolves to ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The prior note recorded owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on both Sei and Mode, which the fresh per-chain reads do not reproduce; the Mode owner is the chain-local Frax 3-of-6 Safe. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-31",
-        "observedBlock": 42642919,
+        "observedAt": "2026-08-09",
+        "observedBlock": 43071398,
         "controllerChain": "mode",
         "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
         "failureDomainKeys": [
           "protocol:layerzero-v2",
           "contract:mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
-          "operator:reservoir:0xb7570e32ded63b25163369d5eb4d8e89e70e5602"
+          "operator:reservoir:0x6336cfa6edbec2a459d869031db77fc2770eaa66"
         ],
         "sources": [
           {

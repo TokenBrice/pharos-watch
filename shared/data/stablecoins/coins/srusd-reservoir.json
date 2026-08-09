@@ -290,6 +290,50 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "multisig",
+  "reserves": [
+    {
+      "name": "Savings claim on rUSD via the Reservoir Savings Module (burn-mint)",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "rusd-reservoir",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Reservoir Protocol and the underlying rUSD reserve basket",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Kimi ACCESS-FREEZE AF06; verified and applied by Claude FV-B access/freeze verification",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Blockscout verified Reservoir SavingModule source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+      },
+      {
+        "label": "Reservoir Savingcoin source (official repository)",
+        "url": "https://raw.githubusercontent.com/reservoir-protocol/reservoir/master/src/Savingcoin.sol"
+      },
+      {
+        "label": "Reservoir live reserves",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    ],
+    "rationale": "srUSD is minted only by burning rUSD in the Reservoir Savings Module and is redeemed by burning srUSD and minting rUSD back to the holder, so 100% of srUSD backing is a claim on the tracked parent rusd-reservoir rather than a separate reserve pool. The verified SavingModule 0x5475611dffb8ef4d697ae39df9395513b6e947d7 documents the mint path as 'Mint srUSD to one address and burn rUSD from the other', and its own accounting defines rusdTotalLiability() as rUSD totalSupply plus srUSD totalSupply valued at the module price. Re-read at Ethereum block 25720065 on 2026-08-09: srUSD 0x738d1115b90efa71ae468f1287fc864775e23a31 totalSupply 620,025.4124461466 with no ERC-4626 asset() surface (the call reverts; srUSD is the immutable Savingcoin token), rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 totalSupply 351,557.71975701296, and rUSD balanceOf(SavingModule) 0 — the module escrows no rUSD, confirming the relationship is a protocol mint obligation, not a held reserve. The parent rUSD composition is separately reviewed at full-composition scope and is not duplicated here. This mirrors the sibling wsrusd-reservoir curated envelope.",
+    "compositionBasis": "Verified Reservoir SavingModule burn-mint relationship plus Ethereum block-25720065 supply and escrow reads (2026-08-09)",
+    "compositionAsOf": "2026-08-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts tracked on the rusd-reservoir record.",
+    "knownUnknownExposurePct": 0
+  },
   "liveReservesConfig": {
     "adapter": "reservoir",
     "version": 1,
