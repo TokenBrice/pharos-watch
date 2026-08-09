@@ -1,4 +1,6 @@
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { createHash } from "node:crypto";
+import { gunzipSync, gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import {
@@ -19,6 +21,35 @@ describe("Safety Score V9 publication codec", () => {
     await expect(
       parseSafetyScoreV9Publication(stored),
     ).resolves.toEqual(publication);
+  });
+
+  it("reads the last V5 publication emitted before stressStateDigest retired", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const envelope = JSON.parse(
+      await serializeSafetyScoreV9Publication(publication),
+    ) as Record<string, unknown>;
+    const priorPayload = JSON.parse(
+      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+    ) as typeof publication;
+    const legacyPayload = stableJsonStringifyV1({
+      ...priorPayload,
+      cards: priorPayload.cards.map((card) => ({
+        ...card,
+        stressStateDigest: "a".repeat(64),
+      })),
+    });
+    const compressed = gzipSync(Buffer.from(legacyPayload));
+    const stored = stableJsonStringifyV1({
+      ...envelope,
+      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
+      uncompressedBytes: Buffer.byteLength(legacyPayload),
+      compressedBytes: compressed.byteLength,
+      payload: compressed.toString("base64"),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
+      publication,
+    );
   });
 
   it("rejects the retired pre-cutover legacy envelope shapes", async () => {

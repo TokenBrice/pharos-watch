@@ -134,7 +134,43 @@ function parsePublicationPayload(
   if (stableJsonStringifyV1(parsed.value) !== raw) {
     throw new Error(`${label} JSON is not canonical`);
   }
-  return SafetyScoreV9CurrentResponseSchema.parse(parsed.value);
+  return SafetyScoreV9CurrentResponseSchema.parse(
+    withoutRetiredStressStateDigests(parsed.value),
+  );
+}
+
+/**
+ * Methodology 9.15 retired this unused card field without changing the V5
+ * envelope version. Keep the storage reader able to cross that one-field
+ * boundary so the first 9.15 candidate can compare with and replace the last
+ * 9.14 publication. Integrity checks still cover the original stored bytes;
+ * only the already-authenticated payload is normalized for the current schema.
+ */
+function withoutRetiredStressStateDigests(value: unknown): unknown {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return value;
+  }
+  const publication = value as Record<string, unknown>;
+  if (!Array.isArray(publication.cards)) return value;
+  let changed = false;
+  const cards = publication.cards.map((card) => {
+    if (card === null || typeof card !== "object" || Array.isArray(card)) {
+      return card;
+    }
+    const record = card as Record<string, unknown>;
+    if (!("stressStateDigest" in record)) return card;
+    const digest = record.stressStateDigest;
+    if (
+      digest !== null &&
+      (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+    ) {
+      throw new Error("Retired Safety Score v9 stress state digest is invalid");
+    }
+    const { stressStateDigest: _retired, ...currentCard } = record;
+    changed = true;
+    return currentCard;
+  });
+  return changed ? { ...publication, cards } : value;
 }
 
 function compressedStorageCandidate(value: unknown): boolean {

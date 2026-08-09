@@ -430,7 +430,7 @@ export async function runSafetyScoreV9Publication(
             ),
           },
         ],
-        affectedAssetIds: [],
+        affectedAssetIds: pipeline.quarantineAffectedAssetIds,
       };
     }
 
