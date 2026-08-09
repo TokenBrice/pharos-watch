@@ -3,6 +3,7 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import {
   reconcileStaleSlotArtifactsAndRecordEvent,
+  getExpectedJobsForScheduledSlot,
   hasActiveChildLeaseForScheduledSlot,
   type StaleSlotExecutionArtifact,
   type StaleSlotReconciliationSummary,
@@ -169,6 +170,21 @@ async function finishStaleScheduledSlotExecution(
   nowSec: number,
   reconciliation: StaleSlotReconciliationSummary,
 ): Promise<boolean> {
+  // Scope the survivor guard to this slot's own child jobs. `slot_started_at` is an
+  // aligned wall-clock timestamp shared across schedules (08:00 UTC is a quarter-hourly,
+  // hourly and daily boundary at once), so a timestamp-only NOT EXISTS lets a foreign
+  // schedule's live progress row block the finish and park the slot in 'reconciling'.
+  const childJobs = getExpectedJobsForScheduledSlot(slot.slot_key);
+  const survivingChildProgressGuard =
+    childJobs.length > 0
+      ? `
+           AND NOT EXISTS (
+             SELECT 1
+               FROM cron_run_progress progress
+              WHERE progress.slot_started_at = cron_slot_executions.slot_started_at
+                AND progress.job IN (${childJobs.map(() => "?").join(", ")})
+           )`
+      : "";
   const result = await runWithOverloadRetry(() =>
     db
       .prepare(
@@ -182,12 +198,7 @@ async function finishStaleScheduledSlotExecution(
            AND slot_started_at = ?
            AND state = 'reconciling'
            AND execution_owner = ?
-           AND execution_generation = ?
-           AND NOT EXISTS (
-             SELECT 1
-               FROM cron_run_progress progress
-              WHERE progress.slot_started_at = cron_slot_executions.slot_started_at
-           )`,
+           AND execution_generation = ?${survivingChildProgressGuard}`,
       )
       .bind(
         nowSec,
@@ -200,6 +211,7 @@ async function finishStaleScheduledSlotExecution(
         slot.slot_started_at,
         reconciliationOwner,
         reconciliationGeneration,
+        ...childJobs,
       )
       .run(),
   );

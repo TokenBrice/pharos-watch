@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCache } from "./db-cache";
-import { decodeCachedJson, type JsonDecodeMode } from "./cache-json";
+import { decodeCachedJson } from "./cache-json";
 import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { StablecoinListResponseSchema, type StablecoinData, type StablecoinListResponse } from "@shared/types/market";
 
@@ -202,14 +202,12 @@ export async function loadStablecoinsCache(
   const mode = options.mode ?? "strict";
   const contract = options.contract ?? "critical-fields";
   const allowLegacyArray = options.allowLegacyArray ?? false;
-  const decodeMode: JsonDecodeMode = mode === "lenient" ? "degraded" : "strict";
   const cacheRow = options.preloadedCache !== undefined
     ? options.preloadedCache
     : await getCache(db, "stablecoins");
   const decoded = decodeCachedJson<StablecoinsCacheDecodePayload, StablecoinsCacheFailureReason>(
     cacheRow,
     {
-      mode: decodeMode,
       missingReason: "missing-cache",
       parseErrorReason: "json-parse-failed",
       normalize: (parsed) => {

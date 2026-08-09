@@ -11,13 +11,6 @@ export function throwIfAborted(signal?: AbortSignal): void {
   }
 }
 
-export async function runWithAbort<T>(signal: AbortSignal | undefined, fn: () => Promise<T>): Promise<T> {
-  throwIfAborted(signal);
-  const result = await fn();
-  throwIfAborted(signal);
-  return result;
-}
-
 export function rethrowIfAborted(error: unknown, signal?: AbortSignal): void {
   if (signal?.aborted) {
     throw abortError(signal);

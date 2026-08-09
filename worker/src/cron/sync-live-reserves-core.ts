@@ -190,10 +190,8 @@ export async function syncReserveCoin(args: {
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
-    const scoringAllowsUnverifiedFreshness = false;
     const snapshotMetadata = {
       ...(result.metadata ?? {}),
-      ...(scoringAllowsUnverifiedFreshness ? { scoringAllowsUnverifiedFreshness: true } : {}),
       durationMs,
     };
 
@@ -226,7 +224,6 @@ export async function syncReserveCoin(args: {
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,
           fatal: warnings.filter((warning) => warning.effect === "fatal").length,
         },
-        scoringAllowsUnverifiedFreshness,
         durationMs,
       },
       lastSuccessAt: attemptStartedAt,

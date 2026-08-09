@@ -619,7 +619,6 @@ describe("syncStablecoins", () => {
     const gtProbe = metadata.gtProbe as Record<string, unknown>;
     const transports = gtProbe.transports as Record<string, unknown>;
 
-    expect(gtProbe.updatedCount).toBe(0);
     expect(gtProbe.inlineDisabled).toBe(true);
     expect(gtProbe.isolationReason).toBe("worker-memory-boundary");
     expect((transports.coingeckoOnchain as Record<string, unknown>).attempted).toBe(0);

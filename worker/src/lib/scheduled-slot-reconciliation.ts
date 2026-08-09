@@ -90,7 +90,7 @@ async function listProgressRowsForStaleSlot(
   return rows.results ?? [];
 }
 
-function getExpectedJobsForScheduledSlot(slotKey: string): readonly string[] {
+export function getExpectedJobsForScheduledSlot(slotKey: string): readonly string[] {
   const plan = SCHEDULED_SLOT_PLANS[slotKey as CronScheduleKey];
   return plan ? flattenScheduledSlotPlanJobs(plan) : [];
 }

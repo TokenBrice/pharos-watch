@@ -41,6 +41,10 @@ export interface MintBurnAggregationRepairResult {
   error: string | null;
 }
 
+/**
+ * Test-only scale overrides. Production callers (`sync-mint-burn.ts`) always take the module
+ * defaults; the retention suite injects small limits to exercise the batch/cap loops.
+ */
 interface MintBurnRetentionOptions {
   repairCandidateEventLimit?: number;
   repairRunLimit?: number;
@@ -48,14 +52,6 @@ interface MintBurnRetentionOptions {
   eventRunLimit?: number;
   hourlyBatchLimit?: number;
   hourlyRunLimit?: number;
-}
-
-function normalizeLimit(value: number | undefined, fallback: number, name: string): number {
-  const resolved = value ?? fallback;
-  if (!Number.isInteger(resolved) || resolved <= 0) {
-    throw new RangeError(`${name} must be a positive integer.`);
-  }
-  return resolved;
 }
 
 async function deleteCapped(
@@ -451,36 +447,12 @@ export async function pruneMintBurnRetention(
 ): Promise<MintBurnRetentionResult> {
   throwIfAborted(signal);
   const startedAtMs = Date.now();
-  const repairCandidateEventLimit = normalizeLimit(
-    options.repairCandidateEventLimit,
-    DEFAULT_REPAIR_CANDIDATE_EVENT_LIMIT,
-    "repairCandidateEventLimit",
-  );
-  const repairRunLimit = normalizeLimit(
-    options.repairRunLimit,
-    DEFAULT_HOURLY_REPAIR_RUN_LIMIT,
-    "repairRunLimit",
-  );
-  const eventBatchLimit = normalizeLimit(
-    options.eventBatchLimit,
-    DEFAULT_DELETE_BATCH_LIMIT,
-    "eventBatchLimit",
-  );
-  const eventRunLimit = normalizeLimit(
-    options.eventRunLimit,
-    DEFAULT_EVENT_DELETE_RUN_LIMIT,
-    "eventRunLimit",
-  );
-  const hourlyBatchLimit = normalizeLimit(
-    options.hourlyBatchLimit,
-    DEFAULT_DELETE_BATCH_LIMIT,
-    "hourlyBatchLimit",
-  );
-  const hourlyRunLimit = normalizeLimit(
-    options.hourlyRunLimit,
-    DEFAULT_HOURLY_DELETE_RUN_LIMIT,
-    "hourlyRunLimit",
-  );
+  const repairCandidateEventLimit = options.repairCandidateEventLimit ?? DEFAULT_REPAIR_CANDIDATE_EVENT_LIMIT;
+  const repairRunLimit = options.repairRunLimit ?? DEFAULT_HOURLY_REPAIR_RUN_LIMIT;
+  const eventBatchLimit = options.eventBatchLimit ?? DEFAULT_DELETE_BATCH_LIMIT;
+  const eventRunLimit = options.eventRunLimit ?? DEFAULT_EVENT_DELETE_RUN_LIMIT;
+  const hourlyBatchLimit = options.hourlyBatchLimit ?? DEFAULT_DELETE_BATCH_LIMIT;
+  const hourlyRunLimit = options.hourlyRunLimit ?? DEFAULT_HOURLY_DELETE_RUN_LIMIT;
 
   const aggregationRepair = await repairMissingHourlyRows(
     db,

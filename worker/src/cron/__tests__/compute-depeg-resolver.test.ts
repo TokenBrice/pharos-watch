@@ -253,6 +253,7 @@ describe("computeDepegResolver", () => {
           lockState: null,
         },
       ]),
+      loadCanonicalIncidents: vi.fn(async () => []),
       recordLockDeferral: vi.fn(async () => undefined),
       sealPublicPrediction: vi.fn(async () => {
         throw new Error("unexpected prediction seal");

@@ -335,8 +335,10 @@ function canReuseHistoricalSnapshot(
   expectedScoredIds: ReadonlySet<string>,
   incomingRouteHistoryIds: ReadonlySet<string>,
 ): boolean {
+  // `idx_dex_hist_coin_date_unique` makes (stablecoin_id, snapshot_date) unique, so the row
+  // list for one snapshot date is already one row per identity.
   const activeIds = new Set(rows.map((row) => row.stablecoin_id));
-  if (activeIds.size !== rows.length || !setsEqual(activeIds, expectedActiveIds)) return false;
+  if (!setsEqual(activeIds, expectedActiveIds)) return false;
 
   const scoredIds = new Set(rows.filter((row) => row.liquidity_score != null).map((row) => row.stablecoin_id));
   if (!setsEqual(scoredIds, expectedScoredIds)) return false;

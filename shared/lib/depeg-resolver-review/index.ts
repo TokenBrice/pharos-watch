@@ -1,5 +1,5 @@
 import type { DdrrRow, DdrrSummary } from "../../types/depeg-resolver-review";
-import type { DdrrReviewBatchInput, DdrrV2ReviewBatchInput } from "./inputs";
+import type { DdrrV2ReviewBatchInput } from "./inputs";
 import { lookupActualEvent } from "./inputs";
 import {
   buildDdrrCoverageRow,
@@ -12,10 +12,6 @@ import { summarizeDdrrRows } from "./summary";
 export interface DdrrReviewBatchResult {
   rows: DdrrRow[];
   summary: DdrrSummary;
-}
-
-export function reviewDepegResolverAssessments(input: DdrrReviewBatchInput): DdrrReviewBatchResult {
-  return reviewDdrrV2Rows({ assessments: input.assessments, actualEventsById: input.actualEventsById, nowSec: input.nowSec });
 }
 
 export function reviewDdrrV2Rows(input: DdrrV2ReviewBatchInput): DdrrReviewBatchResult {

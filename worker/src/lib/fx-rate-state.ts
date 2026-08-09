@@ -119,7 +119,6 @@ function buildBootstrapMeta(cache: CacheRow, rates: Record<string, number>): FxR
 
 function parseFxMeta(value: string, fallback: CacheRow, rates: Record<string, number>): FxRatesMeta {
   const decoded = decodeJsonString<FxRatesMeta, "json-parse-failed" | "invalid-payload">(value, {
-    mode: "best-effort",
     parseErrorReason: "json-parse-failed",
     normalize: (parsed) => {
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -425,7 +424,6 @@ export function hydrateFxRateState(
   const decodedRates = decodeJsonString<Record<string, number>, "json-parse-failed">(
     ratesCache.value,
     {
-      mode: "strict",
       parseErrorReason: "json-parse-failed",
       normalize: (parsed) => ({ ok: true, payload: sanitizeFxRates(parsed) }),
     },

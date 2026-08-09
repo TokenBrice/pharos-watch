@@ -71,7 +71,7 @@ export interface LoadYieldHistorySnapshotOptions {
   chunkSize?: number;
   yieldToEventLoop?: (signal?: AbortSignal) => Promise<void>;
   onProgress?: (progress: YieldHistorySnapshotProgress) => void | Promise<void>;
-  sourceKeysByStablecoin?: Map<string, ReadonlySet<string | null>>;
+  sourceKeysByStablecoin?: Map<string, ReadonlySet<string>>;
   maxPreviousTvlRows?: number;
 }
 
@@ -96,8 +96,8 @@ function buildSuppressedYieldHistoryExclusion(alias: string): { sql: string; bin
 
 function getRequestedSourceKeys(
   stablecoinId: string,
-  sourceKeysByStablecoin: Map<string, ReadonlySet<string | null>> | undefined,
-): readonly (string | null)[] {
+  sourceKeysByStablecoin: Map<string, ReadonlySet<string>> | undefined,
+): readonly string[] {
   if (!sourceKeysByStablecoin) return [];
   const sourceKeys = sourceKeysByStablecoin.get(stablecoinId);
   return sourceKeys ? [...sourceKeys] : [];
@@ -107,7 +107,7 @@ async function loadPreviousTvlRowsForChunk(
   db: D1Database,
   idChunk: readonly string[],
   sevenDaysAgoSec: number,
-  sourceKeysByStablecoin: Map<string, ReadonlySet<string | null>> | undefined,
+  sourceKeysByStablecoin: Map<string, ReadonlySet<string>> | undefined,
   maxRows: number,
   signal?: AbortSignal,
 ): Promise<{ rows: YieldHistorySnapshotRow[]; truncated: boolean }> {
@@ -124,15 +124,13 @@ async function loadPreviousTvlRowsForChunk(
         break outer;
       }
       throwIfAborted(signal);
-      const sourcePredicate = sourceKey == null ? "h.source_key IS NULL" : "h.source_key = ?";
-      const sourceBinds = sourceKey == null ? [] : [sourceKey];
       const result = await db
         .prepare(
           `SELECT /* pharos:yield-sync:previous-tvl-point */
              h.stablecoin_id, h.source_key, h.source_tvl_usd, h.recorded_at
            FROM yield_history h
            WHERE h.stablecoin_id = ?
-             AND ${sourcePredicate}
+             AND h.source_key = ?
              AND h.recorded_at <= ?
              AND h.source_tvl_usd IS NOT NULL
              AND (h.publication_state IS NULL OR h.publication_state = 'published')
@@ -140,7 +138,7 @@ async function loadPreviousTvlRowsForChunk(
            ORDER BY h.recorded_at DESC, h.rowid DESC
            LIMIT 1`,
         )
-        .bind(stablecoinId, ...sourceBinds, sevenDaysAgoSec, ...exclusion.binds)
+        .bind(stablecoinId, sourceKey, sevenDaysAgoSec, ...exclusion.binds)
         .all<YieldHistorySnapshotRow>();
       const row = result.results?.[0] ?? null;
       if (row && !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)) {
@@ -279,7 +277,7 @@ export async function loadYieldHistorySnapshots(
                SELECT 1
                FROM yield_history newer
                WHERE newer.stablecoin_id = h.stablecoin_id
-                 AND COALESCE(newer.source_key, '') = COALESCE(h.source_key, '')
+                 AND newer.source_key = h.source_key
                  AND newer.recorded_at <= ?
                  AND newer.source_tvl_usd IS NOT NULL
                  AND (newer.publication_state IS NULL OR newer.publication_state = 'published')

@@ -1630,10 +1630,6 @@ describe("syncLiveReserves", () => {
     });
 
     expect(result.status).toBe("synced");
-    const composition = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO reserve_composition"));
-    expect(composition?.binds.some((bind) =>
-      typeof bind === "string" && bind.includes("scoringAllowsUnverifiedFreshness")
-    )).toBe(false);
     const finalizeSuccess = db.getHistory().find((entry) => (
       entry.sql.includes("UPDATE reserve_sync_state")
       && entry.sql.includes("last_success_at = ?")

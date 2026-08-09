@@ -24,7 +24,6 @@ function decodeLegacyJsonArray<T>(
   },
 ): T[] | null {
   const decoded = decodeJsonString<T[], LegacyJsonDecodeReason>(value, {
-    mode: "degraded",
     updatedAt: options.updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",

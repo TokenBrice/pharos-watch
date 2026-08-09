@@ -3,6 +3,7 @@ import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
 import type { AddressPriceProviderRuntimeConfig } from "../../lib/address-price-providers";
 import type { PriceCacheWriteEntry } from "../../lib/db-cache";
+import type { CronProgressReporter } from "../../lib/cron-logger";
 import { createEmptyGtProbeStats } from "../../lib/geckoterminal-price-probe-stats";
 import { syncViaCoingeckoFallback } from "./fallback";
 import { loadStablecoinsIntake } from "./intake";
@@ -46,9 +47,10 @@ import {
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import type { SupplyGapReconciliationResult } from "./supply-gap-reconciliation";
 import type { PeggedAsset } from "./enrich-prices";
-import type { CronStageContext } from "../shared/stage-contracts";
 
-interface StablecoinsIntakeStageOptions extends CronStageContext {
+interface StablecoinsIntakeStageOptions {
+  signal?: AbortSignal;
+  reportProgress?: CronProgressReporter;
   db: D1Database;
   syncStartSec: number;
   cmcApiKey?: string;
@@ -142,7 +144,9 @@ export async function runStablecoinsIntakeStage(
   };
 }
 
-interface StablecoinsPricingStageOptions extends CronStageContext {
+interface StablecoinsPricingStageOptions {
+  signal?: AbortSignal;
+  reportProgress?: CronProgressReporter;
   db: D1Database;
   assets: PeggedAsset[];
   previousAssetsById: Map<string, PeggedAsset>;
@@ -166,7 +170,7 @@ export async function runStablecoinsPricingStage(
   | {
       enrichStats: Awaited<ReturnType<typeof enrichMissingPrices>>;
       priceValidationStats: Awaited<ReturnType<typeof fetchPrimaryPrices>>["stats"];
-      gtProbe: { updatedCount: number; stats: ReturnType<typeof createEmptyGtProbeStats> };
+      gtProbe: { stats: ReturnType<typeof createEmptyGtProbeStats> };
       authoritativeOverrideCount: number;
       authoritativeOverrideStats: AuthoritativeLivePriceOverrideStats;
       rejectedCount: number;
@@ -184,8 +188,9 @@ export async function runStablecoinsPricingStage(
     options.syncStartSec,
     replayPriceCache,
   );
+  // The inline GeckoTerminal probe is disabled at the Worker memory boundary; the block is
+  // published purely as an explicit disabled marker for `/api/status`.
   const gtProbe = {
-    updatedCount: 0,
     stats: {
       ...createEmptyGtProbeStats(),
       inlineDisabled: true,
@@ -410,7 +415,6 @@ export async function runStablecoinsPricingStage(
       nativePegCorrections: nativePegCorrectionCount,
       nativePegFills: nativePegFillCount,
       cachedFallbackPrices: cachedFallbackCount,
-      gtProbeUpdates: gtProbe.updatedCount,
     },
   });
 

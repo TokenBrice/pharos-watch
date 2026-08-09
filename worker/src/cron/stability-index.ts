@@ -72,9 +72,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       }),
     };
   }
-  const depegEventsUnavailable = false;
-  const depegEventsFailureReason: string | null = null;
-
   const now = Math.floor(Date.now() / 1000);
 
   // Build price lookup from stablecoins cache
@@ -264,8 +261,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         dewsLatestComputedAt,
         dewsRowsRead,
         dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
-        depegEventsUnavailable,
-        depegEventsFailureReason,
         replayPriceFallbackCount,
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
@@ -308,8 +303,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       dewsLatestComputedAt,
       dewsRowsRead,
       dewsMaxAgeSec: DEWS_STRESS_MAX_AGE_SEC,
-      depegEventsUnavailable,
-      depegEventsFailureReason,
       replayPriceFallbackCount,
     }),
   };

@@ -57,7 +57,6 @@ export function decodeLegacyStressSignals(
   computedAt: number,
 ): LegacyDecodeResult<Record<string, { value: number }>> {
   const decoded = decodeJsonString<Record<string, unknown>, PersistedJsonDecodeReason>(signalsJson, {
-    mode: "degraded",
     updatedAt: computedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",

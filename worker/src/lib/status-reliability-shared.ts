@@ -90,7 +90,6 @@ export function parseCauses(
   const decoded = decodeJsonString<StatusCause[], "missing" | "json-parse-failed" | "invalid-shape">(
     json,
     {
-      mode: "best-effort",
       updatedAt: updatedAt ?? null,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",

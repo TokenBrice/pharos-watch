@@ -28,8 +28,8 @@
 // writes to stress_signals + stress_signal_history.
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { throwIfAborted } from "../lib/abort";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
-import { runWithAbort } from "../lib/abort";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getCache, setCache } from "../lib/db-cache";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
@@ -88,7 +88,9 @@ export async function computeAndStoreDEWS(
 
   // 1. Read stablecoins cache
   await reportDewsProgress(reportProgress, "stablecoins-cache", { validationFailures });
-  const stablecoinsCache = await runWithAbort(signal, () => loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }));
+  throwIfAborted(signal);
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     return buildStablecoinsCacheFailureResult(stablecoinsCache.reason);
   }
@@ -98,7 +100,9 @@ export async function computeAndStoreDEWS(
   sourceCoverage.stablecoins = eligibleAssets.length;
   await reportDewsProgress(reportProgress, "stablecoins-cache-loaded", { rowsComputed: eligibleAssets.length, validationFailures });
   const assetById = new Map(eligibleAssets.map((a) => [a.id, a]));
-  const bootstrapPending = (await runWithAbort(signal, () => getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY))) == null;
+  throwIfAborted(signal);
+  const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
+  throwIfAborted(signal);
 
   const registerSourceFailure = (
     source: string,
@@ -154,15 +158,15 @@ export async function computeAndStoreDEWS(
   } = derivePegRates(eligibleAssets, PSI_ELIGIBLE_META_BY_ID, fxFallbackRates);
 
   await reportDewsProgress(reportProgress, "source-hydration", { validationFailures });
-  const sourceState = await runWithAbort(signal, () =>
-    loadDewsSourceState({
-      db,
-      nowSec,
-      bootstrapPending,
-      registerSourceFailure,
-      registerMalformedPersistedInput,
-    })
-  );
+  throwIfAborted(signal);
+  const sourceState = await loadDewsSourceState({
+    db,
+    nowSec,
+    bootstrapPending,
+    registerSourceFailure,
+    registerMalformedPersistedInput,
+  });
+  throwIfAborted(signal);
   Object.assign(sourceCoverage, sourceState.sourceCoverage);
   await reportDewsProgress(reportProgress, "source-hydration-loaded", { sourceFailures: sourceFailures.length, validationFailures });
 
@@ -183,6 +187,7 @@ export async function computeAndStoreDEWS(
   const freshnessSentinelPublished = results.length > 0 && !degraded;
 
   await reportDewsProgress(reportProgress, "persistence", { rowsComputed: results.length, validationFailures });
+  throwIfAborted(signal);
   const {
     rowsDropped,
     rowsRetiredCurrent,
@@ -190,17 +195,16 @@ export async function computeAndStoreDEWS(
     latestGenerationRows,
     publicationPointerWritten,
     publishedGeneration,
-  } = await runWithAbort(signal, () =>
-    persistDewsResults({
-      db,
-      results,
-      eligibleIds,
-      noCurrentSupplyIds,
-      publishFreshnessSentinel: freshnessSentinelPublished,
-      nowSec,
-      signal,
-    })
-  );
+  } = await persistDewsResults({
+    db,
+    results,
+    eligibleIds,
+    noCurrentSupplyIds,
+    publishFreshnessSentinel: freshnessSentinelPublished,
+    nowSec,
+    signal,
+  });
+  throwIfAborted(signal);
   await reportDewsProgress(reportProgress, "persistence-complete", { rowsComputed: results.length, rowsWritten: results.length, validationFailures });
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
@@ -212,7 +216,9 @@ export async function computeAndStoreDEWS(
 
   console.log(`[dews] Computed DEWS for ${results.length} coins`);
   if (bootstrapPending) {
-    await runWithAbort(signal, () => setCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY, JSON.stringify({ completedAt: nowSec })));
+    throwIfAborted(signal);
+    await setCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY, JSON.stringify({ completedAt: nowSec }));
+    throwIfAborted(signal);
   }
   return {
     itemCount: results.length,

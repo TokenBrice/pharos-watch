@@ -194,7 +194,7 @@ export interface DdrV2StoreContracts {
       onRepairRequired?: (eventId: number, reason: string) => void;
     },
   ): Promise<DdrCanonicalIncident[]>;
-  loadCanonicalIncidents?(
+  loadCanonicalIncidents(
     db: D1Database,
     filters: {
       incidentKeys?: string[];

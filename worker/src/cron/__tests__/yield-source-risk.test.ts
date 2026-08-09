@@ -11,7 +11,6 @@ import {
   YIELD_RISK_CONFIG_PROTOCOLS,
   YIELD_RISK_CONFIG_REVIEW_CADENCE,
 } from "../yield-sync/source-risk";
-import { YIELD_RISK_CONFIG_METADATA } from "@shared/lib/yield-source-risk-metadata";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation-types";
 
 function makeSource(overrides: Partial<EvaluatedYieldSource> = {}): EvaluatedYieldSource {
@@ -113,9 +112,9 @@ describe("yield source-risk registry", () => {
         expect(config.scores[category], `${protocol}.${category}`).toBeGreaterThanOrEqual(1);
         expect(config.scores[category], `${protocol}.${category}`).toBeLessThanOrEqual(5);
       }
-      const metadata = YIELD_RISK_CONFIG_METADATA[protocol];
-      expect(metadata.evidence.length, protocol).toBeGreaterThan(0);
-      expect(metadata.rationale.length, protocol).toBeGreaterThan(0);
+      // Reviewer provenance lives on the entry itself; every enrolled protocol carries both.
+      expect(config.evidence?.length ?? 0, protocol).toBeGreaterThan(0);
+      expect(config.rationale?.length ?? 0, protocol).toBeGreaterThan(0);
     }
   });
 

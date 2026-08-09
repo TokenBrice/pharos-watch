@@ -29,7 +29,6 @@ function decodeDigestInputData(value: string | null, generatedAt: number) {
   const decoded = decodeJsonString<DigestArchiveInput, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
-      mode: "best-effort",
       updatedAt: generatedAt,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",
@@ -58,7 +57,6 @@ function decodeDigestMeta(value: string | null, generatedAt: number) {
   const decoded = decodeJsonString<{ type?: string; internal?: unknown }, "missing" | "json-parse-failed" | "invalid-shape">(
     value,
     {
-      mode: "best-effort",
       updatedAt: generatedAt,
       missingReason: "missing",
       parseErrorReason: "json-parse-failed",

@@ -1852,16 +1852,11 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned")).toBeDefined();
   });
 
-  // OPEN FINDING (surfaced by replacing the SQL-string fake with the real
-  // schema): `finishStaleScheduledSlotExecution` (worker/src/lib/scheduled-slot-fence.ts:186-190)
-  // guards on `NOT EXISTS (SELECT 1 FROM cron_run_progress WHERE progress.slot_started_at
-  // = cron_slot_executions.slot_started_at)` with no schedule scoping. A progress
-  // row belonging to a *different* schedule that shares the slot timestamp therefore
-  // blocks the finish UPDATE, so the sweep raises ScheduledSlotOwnershipLostError after
-  // it already claimed the slot as 'reconciling' — and the throw aborts the whole sweep
-  // loop. The retired fake omitted this clause entirely, which is why the scenario
-  // passed before. Un-skip once the guard is scoped to the slot's own child jobs.
-  it.skip("does not reconcile child progress from a different schedule with a colliding slot timestamp", async () => {
+  // Regression guard: `finishStaleScheduledSlotExecution`'s survivor check is scoped to the
+  // slot's own child jobs. `slot_started_at` is an aligned wall-clock timestamp shared across
+  // schedules, so a foreign schedule's live progress row must neither be reconciled away nor
+  // block the finish UPDATE (which would park the slot in 'reconciling' and abort the sweep).
+  it("does not reconcile child progress from a different schedule with a colliding slot timestamp", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
     const db = makeLeaseDb({
@@ -1921,6 +1916,45 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getProgress("daily-digest")).toBeDefined();
     expect(db.getLease("daily-digest")).toBeDefined();
     expect(db.getSlot("quarterHourly", staleSlotStartedAt)?.result_status).toBe("error");
+  });
+
+  it("refuses to finish a stale slot whose own child progress survived reconciliation", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const staleSlotStartedAt = now - 3600;
+    const db = makeLeaseDb({
+      slots: [
+        {
+          slot_key: "hourlyYieldSync",
+          slot_started_at: staleSlotStartedAt,
+          state: "running",
+          result_status: null,
+          execution_owner: "slot-owner-a",
+          started_at: staleSlotStartedAt,
+          finished_at: null,
+          updated_at: now - 1800,
+          metadata: null,
+        },
+      ],
+      // No cron_leases row for sync-yield-data: reconciliation cannot prove the child is dead,
+      // so it leaves the progress row in place and the terminal UPDATE must refuse to fire.
+      progress: [
+        {
+          job: "sync-yield-data",
+          started_at: staleSlotStartedAt + 20,
+          updated_at: now - 1800,
+          stage: "publication",
+          lease_owner: "yield-owner-a",
+          slot_started_at: staleSlotStartedAt,
+        },
+      ],
+    });
+
+    await expect(sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 })).rejects.toThrow(
+      "scheduled slot ownership lost",
+    );
+
+    expect(db.getProgress("sync-yield-data")).toBeDefined();
+    expect(db.getSlot("hourlyYieldSync", staleSlotStartedAt)).toMatchObject({ state: "reconciling" });
   });
 
   it("does not synthesize a stale child cron run while the matching child lease is still active", async () => {

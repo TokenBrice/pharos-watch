@@ -7,8 +7,9 @@ import {
 } from "@shared/types/depeg-resolver-review";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildDdrMethodologyEnvelope } from "../../lib/depeg-resolver-methodology";
-import { DDRR_ASSESSMENT_ROW_CAP } from "./assessment-loader";
 
+/** Published as `_meta.assessmentRowLimit`; retained for response-shape compatibility. */
+const DDRR_ASSESSMENT_ROW_CAP = 20_000;
 const DDRR_SNAPSHOT_TTL_SEC = API_FRESHNESS_MAX_AGE_SEC.depegResolverReview;
 const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
 const DDRR_PUBLIC_ROW_CAP = 400;

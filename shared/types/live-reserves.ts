@@ -53,7 +53,6 @@ export interface LiveReserveWarning {
 export interface LiveReserveSnapshotMetadata extends Record<string, unknown> {
   sourceTimestamp?: number;
   freshnessMode?: LiveReserveFreshnessMode;
-  scoringAllowsUnverifiedFreshness?: boolean;
   unknownExposurePct?: number;
   yieldBasisCollateralUsd?: number;
   yieldBasisCollateralPct?: number;
@@ -281,7 +280,6 @@ export const LiveReserveSnapshotMetadataSchema: z.ZodType<LiveReserveSnapshotMet
   .object({
     sourceTimestamp: z.number().finite().optional(),
     freshnessMode: z.enum(LIVE_RESERVE_FRESHNESS_MODE_VALUES).optional(),
-    scoringAllowsUnverifiedFreshness: z.boolean().optional(),
     unknownExposurePct: z.number().finite().optional(),
     yieldBasisCollateralUsd: z.number().finite().optional(),
     yieldBasisCollateralPct: z.number().finite().optional(),

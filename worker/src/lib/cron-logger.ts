@@ -237,7 +237,7 @@ export interface CronResult {
   error?: string;
   /**
    * Affirmative discriminant set only on results produced by the cron-stage
-   * abort builders (see `buildAbortedCronStageResult`). Lets `isAbortResult`
+   * abort builders (see `abortResult` in `sync-stablecoins/runtime.ts`). Lets `isAbortResult`
    * identify the abort sentinel without relying on the absence of fields from
    * other stage result shapes.
    */
