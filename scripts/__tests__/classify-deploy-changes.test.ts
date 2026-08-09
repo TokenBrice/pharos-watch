@@ -198,11 +198,7 @@ describe("hasDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
     expect(hasWorkerDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(false);
 
-    for (const file of [
-      "scripts/ci/check-build-attribution.mjs",
-      "scripts/maintenance/report-build-size.mjs",
-      "scripts/maintenance/update-build-attribution-baseline.mjs",
-    ]) {
+    for (const file of ["scripts/maintenance/report-build-size.mjs", "scripts/ci/check-phishing-signatures.mjs"]) {
       expect(hasDeployImpact([file]), file).toBe(false);
     }
   });

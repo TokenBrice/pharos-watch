@@ -17,11 +17,14 @@ const ALLOWED_SCRIPT_PREFIXES = [
 ];
 const SCRIPT_COMMANDS = ["node", "tsx"];
 const SCRIPT_PATH_TERMINATORS = new Set([" ", "\t", "\r", "\n", "`", "'", '"', ")"]);
-// Reverse mode: every runnable script in these directories must be referenced
-// somewhere (package.json, CI workflows, docs, or another script).
+// Reverse mode: every runnable script in these directories must be *runnable*
+// — referenced from package.json, a CI workflow, or another script. `docs/` is
+// deliberately excluded: a documentation row describes a script, it does not
+// keep it reachable, and doc mentions were what let a batch of never-executed
+// checks survive as orphans.
 const REVERSE_ENTRYPOINT_DIRS = ["scripts/maintenance", "scripts/ci", "scripts/build-data", ".github/scripts"];
 const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
-const REVERSE_REFERENCE_ROOTS = ["scripts", "docs", "package.json", ".github"];
+const REVERSE_REFERENCE_ROOTS = ["scripts", "package.json", ".github"];
 const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
 
 function collectFiles(root, path, acc, extensions = SOURCE_EXTENSIONS) {
@@ -151,9 +154,7 @@ export function collectScriptEntrypointErrors({ root = process.cwd() } = {}) {
       ({ file, content }) => file !== candidate && (content.includes(relPath) || content.includes(bare)),
     );
     if (!referenced) {
-      errors.push(
-        `${relPath}: unreferenced script — wire it into package.json/CI, document it in docs/scripts.md, or delete it`,
-      );
+      errors.push(`${relPath}: unreferenced script — wire it into package.json/CI or delete it`);
     }
   }
 

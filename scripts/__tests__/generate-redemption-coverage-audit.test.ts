@@ -288,49 +288,8 @@ describe("generate-redemption-coverage-audit", () => {
       reviewedDispositions: [review("random-crypto")],
     });
 
-    expect(
-      evaluateRedemptionCoverageAudit(audit, {
-        baseline: { activeDefaultClassified: 0, activeUnconfigured: 1, heuristicConfiguredRoutes: 0 },
-      }),
-    ).toEqual([]);
+    expect(evaluateRedemptionCoverageAudit(audit)).toEqual([]);
     expect(evaluateRedemptionCoverageAudit(audit, { strictActiveGaps: true })).toEqual([]);
-  });
-
-  it("check mode ratchets active unconfigured and heuristic route growth", () => {
-    const activeGapAudit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "random-crypto" })],
-      activeCoins: [coin({ id: "random-crypto" })],
-      configs: {},
-      reviewedDispositions: [review("random-crypto")],
-    });
-    const heuristicAudit = generateRedemptionCoverageAudit({
-      trackedCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
-      activeCoins: [coin({ id: "usdc-circle" }), coin({ id: "pmusd-precious-metals" })],
-      configs: {
-        "usdc-circle": configuredRoute,
-        "pmusd-precious-metals": heuristicRoute,
-      },
-      reviewedDispositions: [],
-    });
-
-    expect(
-      evaluateRedemptionCoverageAudit(activeGapAudit, {
-        baseline: { activeDefaultClassified: 1, activeUnconfigured: 0, heuristicConfiguredRoutes: 0 },
-      }),
-    ).toEqual([
-      expect.objectContaining({
-        code: "active-unconfigured-ratchet-regressed",
-      }),
-    ]);
-    expect(
-      evaluateRedemptionCoverageAudit(heuristicAudit, {
-        baseline: { activeDefaultClassified: 0, activeUnconfigured: 0, heuristicConfiguredRoutes: 0 },
-      }),
-    ).toEqual([
-      expect.objectContaining({
-        code: "heuristic-configured-ratchet-regressed",
-      }),
-    ]);
   });
 
   it("writes nested CLI reports with the selected output format", () => {

@@ -5,7 +5,7 @@ Stablecoin analytics dashboard. Static Next.js 16 export to Cloudflare Pages. AP
 Live: https://pharos.watch
 Local dev-server: http://localhost:3000/
 
-This file is mirrored to `CLAUDE.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
+`CLAUDE.md` and `AGENTS.md` carry the same content; `AGENTS.md` is generated, so edit `CLAUDE.md`. Durable process guidance belongs in `/docs/process/` or the nearest verified doc.
 
 ## Start Here
 
