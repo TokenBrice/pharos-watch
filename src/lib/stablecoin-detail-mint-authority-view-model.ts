@@ -24,6 +24,14 @@ import {
   projectBridgeRouteRiskClientSummary,
   type BridgeRouteRiskClientSummary,
 } from "@/lib/stablecoin-detail-bridge-client";
+import {
+  projectCustodyClientSummary,
+  type CustodyClientSummary,
+} from "@/lib/stablecoin-detail-custody-client";
+import {
+  projectOracleRiskClientSummary,
+  type OracleRiskClientSummary,
+} from "@/lib/stablecoin-detail-oracle-client";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -132,6 +140,8 @@ type StablecoinDetailServerOnlyField =
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServerOnlyField> & {
   bridgeRouteRiskSummary?: BridgeRouteRiskClientSummary | null;
+  custodyProfileSummary?: CustodyClientSummary | null;
+  oracleRiskSummary?: OracleRiskClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -182,9 +192,13 @@ export function buildStablecoinDetailClientCoin(
   const mintAuthoritySummary = projectMintAuthorityClientSummary(coin);
   const mintAuthorityParentSummaries = collectMintAuthorityParentSummaries(mintAuthoritySummary, options.parentById);
   const bridgeRouteRiskSummary = projectBridgeRouteRiskClientSummary(coin);
+  const custodyProfileSummary = projectCustodyClientSummary(coin);
+  const oracleRiskSummary = projectOracleRiskClientSummary(coin);
   return {
     ...clientCoin,
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
+    ...(custodyProfileSummary ? { custodyProfileSummary } : {}),
+    ...(oracleRiskSummary ? { oracleRiskSummary } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
     ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };
