@@ -47,4 +47,24 @@ describe("CustodyCard", () => {
     expect(renderToStaticMarkup(<CustodyCard summary={null} />)).toBe("");
     expect(renderToStaticMarkup(<CustodyCard />)).toBe("");
   });
+
+  it("renders no provider list when providers is empty", () => {
+    const html = renderToStaticMarkup(
+      <CustodyCard
+        summary={{
+          ...SUMMARY,
+          providers: [],
+          undisclosedSharePct: null,
+          summary: "Reserve custody counterparties are not individually disclosed; the account structure is undisclosed.",
+        }}
+      />,
+    );
+    expect(html).not.toContain('aria-label="Custody providers"');
+    expect(html).toContain("not individually disclosed");
+  });
+
+  it("labels the provider list for assistive tech", () => {
+    const html = renderToStaticMarkup(<CustodyCard summary={SUMMARY} />);
+    expect(html).toContain('aria-label="Custody providers"');
+  });
 });

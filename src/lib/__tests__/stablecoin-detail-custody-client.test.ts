@@ -1,13 +1,13 @@
 // src/lib/__tests__/stablecoin-detail-custody-client.test.ts
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
+import type { CustodyProfile, StablecoinMeta } from "@shared/types";
 import { projectCustodyClientSummary, shouldDisplayCustodyModule } from "../stablecoin-detail-custody-client";
 
 function coinWith(custodyProfile: unknown): StablecoinMeta {
   return { id: "test-coin", custodyProfile } as unknown as StablecoinMeta;
 }
 
-const USDC_LIKE_PROFILE = {
+const USDC_LIKE_PROFILE: CustodyProfile = {
   providers: [
     { name: "The Bank of New York Mellon", role: "custodian", sharePct: 88, jurisdiction: "United States" },
     { name: "Systemically important and other regulated banks (not individually disclosed)", role: "bank" },
@@ -76,6 +76,37 @@ describe("projectCustodyClientSummary", () => {
   it("maps unknown segregation to the undisclosed posture", () => {
     const summary = projectCustodyClientSummary(coinWith({ ...USDC_LIKE_PROFILE, segregation: "unknown" }));
     expect(summary!.postureKey).toBe("undisclosed");
+  });
+
+  it("returns null for a malformed profile whose providers is not an array", () => {
+    expect(projectCustodyClientSummary(coinWith({ sentinel: true }))).toBeNull();
+  });
+
+  it("describes undisclosed custody for an empty providers array", () => {
+    const summary = projectCustodyClientSummary(coinWith({ ...USDC_LIKE_PROFILE, providers: [] }));
+    expect(summary!.providers).toHaveLength(0);
+    expect(summary!.summary).toContain("Reserve custody counterparties are not individually disclosed");
+  });
+
+  it("describes single-provider custody", () => {
+    const summary = projectCustodyClientSummary(
+      coinWith({ ...USDC_LIKE_PROFILE, providers: [USDC_LIKE_PROFILE.providers[0]!] }),
+    );
+    expect(summary!.providers).toHaveLength(1);
+    expect(summary!.summary).toContain("Reserve custody is held by The Bank of New York Mellon");
+  });
+
+  it("dedupes sources by url", () => {
+    const summary = projectCustodyClientSummary(
+      coinWith({
+        ...USDC_LIKE_PROFILE,
+        sources: [
+          { label: "Circle 10-K", url: "https://example.com/10k" },
+          { label: "Circle 10-K (mirror)", url: "https://example.com/10k" },
+        ],
+      }),
+    );
+    expect(summary!.sources).toEqual([{ label: "Circle 10-K", url: "https://example.com/10k" }]);
   });
 });
 

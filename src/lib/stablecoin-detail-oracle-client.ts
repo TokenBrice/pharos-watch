@@ -1,4 +1,4 @@
-import type { OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { OracleRiskConfidence, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
 
 /**
  * Client-safe projection of the server-only `oracleRisk` review, in the
@@ -75,7 +75,7 @@ const TIER_TONES: Record<OracleRiskTier, string> = {
   "opaque-or-unknown": "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
 };
 
-const CONFIDENCE_LABELS: Record<string, string> = {
+const CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
   verified: "Verified",
   probable: "Probable",
   limited: "Limited",
@@ -92,8 +92,13 @@ export function formatOracleDurationSec(seconds: number | null | undefined): str
   return `${seconds}s`;
 }
 
+/** Rounds to at most 2 decimals and trims trailing zeros, e.g. 66.6667 -> "66.67%", 110 -> "110%". */
+export function formatOraclePct(value: number): string {
+  return `${Number(value.toFixed(2))}%`;
+}
+
 function formatPct(value: number | null | undefined): string | null {
-  return value != null ? `${value}%` : null;
+  return value != null ? formatOraclePct(value) : null;
 }
 
 export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRiskClientSummary | null {
@@ -111,6 +116,9 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
       provider: feed.provider,
       path: feed.path,
       chain: feed.chain,
+      // Zero heartbeat/staleness reads as "unset" (nothing meaningful to show),
+      // but a zero liquidationDelaySec below is a real, load-bearing fact —
+      // instant liquidation — so it renders as "None" rather than being hidden.
       heartbeatLabel: feed.heartbeatSec != null && feed.heartbeatSec > 0 ? formatOracleDurationSec(feed.heartbeatSec) : null,
       stalenessLabel:
         feed.stalenessBoundSec != null && feed.stalenessBoundSec > 0
@@ -159,7 +167,7 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
     tierLabel: TIER_LABELS[profile.tier] ?? profile.tier,
     tierToneClass: TIER_TONES[profile.tier] ?? "border-border/60 bg-muted/30 text-muted-foreground",
     summary: profile.summary,
-    confidenceLabel: profile.confidence ? (CONFIDENCE_LABELS[profile.confidence] ?? profile.confidence) : null,
+    confidenceLabel: profile.confidence ? CONFIDENCE_LABELS[profile.confidence] : null,
     reviewedAt: profile.reviewedAt ?? null,
     branchCount: branches.length,
     feedCount: branches.reduce((count, branch) => count + branch.feeds.length, 0),

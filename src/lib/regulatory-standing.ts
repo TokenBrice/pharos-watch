@@ -31,6 +31,8 @@ export interface RegulatoryFact {
   value: string;
   valueClassName?: string;
   href?: string;
+  /** Full untruncated value, e.g. the original regulator prose before slicing. */
+  title?: string;
 }
 
 export interface RegulatoryChecklistRow {
@@ -83,6 +85,31 @@ function isGeniusRelevant(genius: GeniusProfile): boolean {
   return genius.applicability === "apparent-payment-stablecoin" || genius.authorizationStatus !== "not-applicable";
 }
 
+/**
+ * `primaryFederalRegulator` is a bounded enum, safe to render as-is. Absent
+ * that, `licensingRegulator`/`stateRegulator` are free prose (observed up to
+ * ~208 chars) that would overflow the bounded FactGrid cell, so it is sliced
+ * at the first parenthetical/clause break; the full string survives as the
+ * fact's `title` whenever the slice trims anything.
+ */
+function buildRegulatorFact(genius: GeniusProfile): RegulatoryFact | null {
+  if (genius.primaryFederalRegulator) {
+    return { key: "regulator", label: "Regulator", value: genius.primaryFederalRegulator };
+  }
+  const full = genius.licensingRegulator ?? genius.stateRegulator;
+  if (!full) return null;
+  const cutIndices = [full.indexOf("("), full.indexOf(";"), full.indexOf("/")].filter((index) => index >= 0);
+  const cutIndex = cutIndices.length > 0 ? Math.min(...cutIndices) : -1;
+  const value = (cutIndex >= 0 ? full.slice(0, cutIndex) : full).trim();
+  if (!value) return null;
+  return {
+    key: "regulator",
+    label: "Regulator",
+    value,
+    ...(value !== full ? { title: full } : {}),
+  };
+}
+
 function buildGeniusRegime(genius: GeniusProfile): RegulatoryRegimeView {
   const facts: RegulatoryFact[] = [
     {
@@ -95,8 +122,8 @@ function buildGeniusRegime(genius: GeniusProfile): RegulatoryRegimeView {
     },
     { key: "pathway", label: "Pathway", value: GENIUS_ISSUER_PATHWAY_LABELS[genius.issuerPathway] },
   ];
-  const regulator = genius.licensingRegulator ?? genius.primaryFederalRegulator ?? genius.stateRegulator;
-  if (regulator) facts.push({ key: "regulator", label: "Regulator", value: regulator });
+  const regulatorFact = buildRegulatorFact(genius);
+  if (regulatorFact) facts.push(regulatorFact);
 
   const checklist: RegulatoryChecklistRow[] = [];
   if (genius.monthlyAttestationPresent != null) {

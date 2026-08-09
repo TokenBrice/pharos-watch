@@ -6,6 +6,7 @@ import type {
   CustodyRehypothecation,
   CustodySegregation,
   MechanismArchetype,
+  ResearchReviewConfidence,
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types";
@@ -72,7 +73,7 @@ const REHYPOTHECATION_LABELS: Record<CustodyRehypothecation, string> = {
   unknown: "Unknown",
 };
 
-const CONFIDENCE_LABELS: Record<string, string> = {
+const CONFIDENCE_LABELS: Record<ResearchReviewConfidence, string> = {
   verified: "Verified",
   probable: "Probable",
   "manual-review": "Manual review",
@@ -153,9 +154,27 @@ export function shouldDisplayCustodyModule(
   return resolvedArchetype !== "cdp" && resolvedArchetype !== "algorithmic";
 }
 
+function dedupeSources(sources: StablecoinLink[] | undefined): StablecoinLink[] {
+  if (!sources) return [];
+  const seen = new Set<string>();
+  const deduped: StablecoinLink[] = [];
+  for (const source of sources) {
+    if (seen.has(source.url)) continue;
+    seen.add(source.url);
+    deduped.push(source);
+  }
+  return deduped;
+}
+
 export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClientSummary | null {
   const profile = coin.custodyProfile;
-  if (!profile) return null;
+  // Single untrusted boundary: custodyProfile is typed as CustodyProfile, but
+  // the client detail coin only ever passes through a projection built here —
+  // an upstream caller supplying a malformed value must not crash the module,
+  // matching the mint-authority reader's philosophy of validating at the one
+  // place raw data enters. `providers` not being an array is the load-bearing
+  // shape check: everything else below assumes it can be iterated.
+  if (!profile || !Array.isArray(profile.providers)) return null;
   const postureKey = resolvePostureKey(profile);
   return {
     postureKey,
@@ -177,9 +196,9 @@ export function projectCustodyClientSummary(coin: StablecoinMeta): CustodyClient
       profile.rehypothecation === "permitted" || profile.rehypothecation === "conditional"
         ? "text-amber-700 dark:text-amber-400"
         : null,
-    confidenceLabel: CONFIDENCE_LABELS[profile.confidence] ?? profile.confidence,
+    confidenceLabel: CONFIDENCE_LABELS[profile.confidence],
     uncertainty: profile.uncertainty || null,
     reviewedAt: profile.reviewedAt,
-    sources: profile.sources ?? [],
+    sources: dedupeSources(profile.sources),
   };
 }

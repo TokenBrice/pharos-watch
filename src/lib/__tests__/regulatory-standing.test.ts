@@ -80,6 +80,34 @@ describe("buildRegulatoryStandingView", () => {
     expect(view).toBeNull();
   });
 
+  it("prefers the bounded primaryFederalRegulator enum over free-form licensingRegulator prose", () => {
+    const longLicensingRegulator =
+      "Office of the Comptroller of the Currency, acting as primary federal banking regulator " +
+      "under 12 U.S.C. Chapter 1, with concurrent examination authority delegated to regional staff";
+    expect(longLicensingRegulator.length).toBeGreaterThan(100);
+    const view = buildRegulatoryStandingView({
+      symbol: "USDC",
+      genius: { ...GENIUS, licensingRegulator: longLicensingRegulator, primaryFederalRegulator: "OCC" },
+    });
+    const regulatorFact = view!.regimes[0]!.facts.find((fact) => fact.key === "regulator")!;
+    expect(regulatorFact.value).toBe("OCC");
+    expect(regulatorFact.title).toBeUndefined();
+  });
+
+  it("slices free-form licensingRegulator prose at the first clause break and keeps the full string as title", () => {
+    const view = buildRegulatoryStandingView({
+      symbol: "USDX",
+      genius: {
+        ...GENIUS,
+        licensingRegulator: "NYDFS (BitLicense; trust charter)",
+        primaryFederalRegulator: undefined,
+      },
+    });
+    const regulatorFact = view!.regimes[0]!.facts.find((fact) => fact.key === "regulator")!;
+    expect(regulatorFact.value).toBe("NYDFS");
+    expect(regulatorFact.title).toBe("NYDFS (BitLicense; trust charter)");
+  });
+
   it("hides checklist rows the review did not research", () => {
     const view = buildRegulatoryStandingView({
       symbol: "USDX",

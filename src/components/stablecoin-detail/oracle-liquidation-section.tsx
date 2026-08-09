@@ -13,17 +13,70 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
-import type { OracleBranchClientRow, OracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
+import { formatOraclePct, type OracleBranchClientRow, type OracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
 import { cn } from "@/lib/utils";
+
+/** Inline branches beyond this count move into the disclosure, sorted forward. */
+const INLINE_BRANCH_LIMIT = 6;
 
 function branchHasDetail(branch: OracleBranchClientRow): boolean {
   return (
     branch.feeds.length > 0 ||
     branch.collateralParameters.length > 0 ||
     branch.liquidationMechanism != null ||
+    branch.liquidationDelayLabel != null ||
     branch.backstop != null ||
     branch.fallbackBehavior != null ||
     branch.shutdownOrBadDebtBehavior != null
+  );
+}
+
+/**
+ * Highest debt-share branches first (null shares — unmeasured, so treated as
+ * material — sort last), preserving the curated order otherwise. Coins with
+ * many branches (up to ~40) need this so the six inline rows are the ones
+ * that matter most; the projection itself stays in curated order since the
+ * disclosure detail below still walks every branch in that order.
+ */
+export function sortOracleBranchesForDisplay(branches: readonly OracleBranchClientRow[]): OracleBranchClientRow[] {
+  return branches
+    .map((branch, index) => ({ branch, index }))
+    .sort((a, b) => {
+      if (a.branch.debtSharePct == null && b.branch.debtSharePct == null) return a.index - b.index;
+      if (a.branch.debtSharePct == null) return 1;
+      if (b.branch.debtSharePct == null) return -1;
+      if (a.branch.debtSharePct !== b.branch.debtSharePct) return b.branch.debtSharePct - a.branch.debtSharePct;
+      return a.index - b.index;
+    })
+    .map(({ branch }) => branch);
+}
+
+function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow; tierLabel: string }) {
+  return (
+    <li>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="flex min-w-0 items-baseline gap-1.5">
+          <span className="text-sm font-medium text-foreground">{branch.label}</span>
+          {branch.tierLabel !== tierLabel ? (
+            <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{branch.tierLabel}</span>
+          ) : null}
+        </span>
+        {branch.debtSharePct != null ? (
+          <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+            {branch.debtSharePct}% of debt
+          </span>
+        ) : null}
+      </div>
+      {branch.debtSharePct != null ? (
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+          <div
+            className="h-full rounded-full bg-foreground/40"
+            style={{ width: `${Math.max(0, Math.min(100, branch.debtSharePct))}%` }}
+          />
+        </div>
+      ) : null}
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{branch.summary}</p>
+    </li>
   );
 }
 
@@ -43,10 +96,10 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
       : []),
     ...(summary.feedCount > 0 ? [{ key: "feeds", label: "Feeds", value: String(summary.feedCount) }] : []),
     ...(summary.worstMaxLtvPct != null
-      ? [{ key: "max-ltv", label: "Max LTV", value: `${summary.worstMaxLtvPct}%` }]
+      ? [{ key: "max-ltv", label: "Max LTV", value: formatOraclePct(summary.worstMaxLtvPct) }]
       : []),
     ...(summary.worstMinCrPct != null
-      ? [{ key: "min-cr", label: "Min CR", value: `${summary.worstMinCrPct}%` }]
+      ? [{ key: "min-cr", label: "Min CR", value: formatOraclePct(summary.worstMinCrPct) }]
       : []),
     ...(summary.maxLiquidationDelayLabel != null
       ? [{ key: "liq-delay", label: "Liq. delay", value: summary.maxLiquidationDelayLabel }]
@@ -57,6 +110,9 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
   ];
 
   const detailBranches = summary.branches.filter(branchHasDetail);
+  const sortedBranches = sortOracleBranchesForDisplay(summary.branches);
+  const inlineBranches = sortedBranches.slice(0, INLINE_BRANCH_LIMIT);
+  const overflowBranches = sortedBranches.slice(INLINE_BRANCH_LIMIT);
 
   return (
     <Card id="oracle" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
@@ -69,34 +125,30 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <p className="text-sm leading-relaxed text-muted-foreground">{summary.summary}</p>
         <FactGrid aria-label="Oracle and liquidation facts" items={facts} />
-        {summary.branches.length > 0 ? (
-          <ul className="space-y-3">
-            {summary.branches.map((branch) => (
-              <li key={branch.id}>
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-medium text-foreground">{branch.label}</span>
-                  {branch.debtSharePct != null ? (
-                    <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
-                      {branch.debtSharePct}% of debt
-                    </span>
-                  ) : null}
-                </div>
-                {branch.debtSharePct != null ? (
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
-                    <div
-                      className="h-full rounded-full bg-foreground/40"
-                      style={{ width: `${Math.max(0, Math.min(100, branch.debtSharePct))}%` }}
-                    />
-                  </div>
-                ) : null}
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{branch.summary}</p>
-              </li>
-            ))}
-          </ul>
+        {inlineBranches.length > 0 ? (
+          <div>
+            <ul aria-label="Oracle branches" className="space-y-3">
+              {inlineBranches.map((branch) => (
+                <BranchSummaryRow key={branch.id} branch={branch} tierLabel={summary.tierLabel} />
+              ))}
+            </ul>
+            {overflowBranches.length > 0 ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                + {overflowBranches.length} more branches in the breakdown below
+              </p>
+            ) : null}
+          </div>
         ) : null}
-        {detailBranches.length > 0 ? (
+        {detailBranches.length > 0 || overflowBranches.length > 0 ? (
           <ModuleDisclosure label="Feeds, parameters & failure behavior">
             <div className="mt-3 space-y-4">
+              {overflowBranches.length > 0 ? (
+                <ul className="space-y-3">
+                  {overflowBranches.map((branch) => (
+                    <BranchSummaryRow key={branch.id} branch={branch} tierLabel={summary.tierLabel} />
+                  ))}
+                </ul>
+              ) : null}
               {detailBranches.map((branch) => (
                 <div key={branch.id} className="space-y-1.5">
                   <div className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
@@ -120,7 +172,14 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
                     </p>
                   ))}
                   {branch.liquidationMechanism ? (
-                    <p className="text-xs leading-relaxed text-muted-foreground">{branch.liquidationMechanism}</p>
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {branch.liquidationMechanism}
+                      {branch.liquidationDelayLabel != null ? ` · liquidation delay ${branch.liquidationDelayLabel}` : ""}
+                    </p>
+                  ) : branch.liquidationDelayLabel != null ? (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {`Liquidation delay ${branch.liquidationDelayLabel}`}
+                    </p>
                   ) : null}
                   {branch.backstop ? (
                     <p className="text-xs leading-relaxed text-muted-foreground">{branch.backstop}</p>

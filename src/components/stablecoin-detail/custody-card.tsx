@@ -49,34 +49,36 @@ export function CustodyCard({ summary }: { summary?: CustodyClientSummary | null
       </div>
       <div className="space-y-3 px-4 pb-4">
         <p className="text-xs leading-relaxed text-muted-foreground">{summary.summary}</p>
-        <ul className="space-y-2.5">
-          {summary.providers.map((provider) => (
-            <li key={provider.key}>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 break-words text-xs text-foreground">{provider.name}</span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
-                  {provider.sharePct != null ? `${provider.sharePct}%` : "—"}
-                </span>
-              </div>
-              <div className="text-[10px] uppercase leading-tight tracking-[0.14em] text-muted-foreground">
-                {provider.roleLabel}
-                {provider.jurisdiction ? ` · ${provider.jurisdiction}` : ""}
-              </div>
-              {provider.sharePct != null ? <ShareBar pct={provider.sharePct} /> : null}
-            </li>
-          ))}
-          {summary.undisclosedSharePct != null ? (
-            <li>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xs text-amber-700 dark:text-amber-400">Undisclosed</span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-400">
-                  {summary.undisclosedSharePct}%
-                </span>
-              </div>
-              <ShareBar pct={summary.undisclosedSharePct} barClassName="bg-amber-500/50" />
-            </li>
-          ) : null}
-        </ul>
+        {summary.providers.length > 0 || summary.undisclosedSharePct != null ? (
+          <ul aria-label="Custody providers" className="space-y-2.5">
+            {summary.providers.map((provider) => (
+              <li key={provider.key}>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 break-words text-xs text-foreground">{provider.name}</span>
+                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {provider.sharePct != null ? `${provider.sharePct}%` : "—"}
+                  </span>
+                </div>
+                <div className="text-[10px] uppercase leading-tight tracking-[0.14em] text-muted-foreground">
+                  {provider.roleLabel}
+                  {provider.jurisdiction ? ` · ${provider.jurisdiction}` : ""}
+                </div>
+                {provider.sharePct != null ? <ShareBar pct={provider.sharePct} /> : null}
+              </li>
+            ))}
+            {summary.undisclosedSharePct != null ? (
+              <li>
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-xs text-amber-700 dark:text-amber-400">Undisclosed</span>
+                  <span className="shrink-0 font-mono text-[11px] tabular-nums text-amber-700 dark:text-amber-400">
+                    {summary.undisclosedSharePct}%
+                  </span>
+                </div>
+                <ShareBar pct={summary.undisclosedSharePct} barClassName="bg-amber-500/50" />
+              </li>
+            ) : null}
+          </ul>
+        ) : null}
         <FactGrid aria-label="Custody facts" items={facts} className="grid-cols-3" />
         <EvidenceFooter
           sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}

@@ -75,4 +75,70 @@ describe("OracleLiquidationSection", () => {
     expect(renderToStaticMarkup(<OracleLiquidationSection summary={null} />)).toBe("");
     expect(renderToStaticMarkup(<OracleLiquidationSection />)).toBe("");
   });
+
+  it("labels the branch list for assistive tech", () => {
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={SUMMARY} />);
+    expect(html).toContain('aria-label="Oracle branches"');
+  });
+
+  it("shows a diverging branch tier as a kicker but not a matching one", () => {
+    const divergentSummary: OracleRiskClientSummary = {
+      ...SUMMARY,
+      branches: [
+        { ...SUMMARY.branches[0]!, tierLabel: "Single-source / laggy" },
+        SUMMARY.branches[1]!,
+      ],
+    };
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={divergentSummary} />);
+    expect(html).toContain("Single-source / laggy");
+    // Only the module's tier badge should read "Redundant + failover"; the
+    // second branch shares that tier with the module summary, so it must not
+    // duplicate it as a kicker.
+    expect((html.match(/Redundant \+ failover/g) ?? []).length).toBe(1);
+  });
+
+  it("appends the liquidation delay to the mechanism line, or renders it standalone", () => {
+    const summaryWithDelay: OracleRiskClientSummary = {
+      ...SUMMARY,
+      branches: [
+        { ...SUMMARY.branches[0]!, liquidationMechanism: "Immediate Stability Pool offset.", liquidationDelayLabel: "1h" },
+        { ...SUMMARY.branches[1]!, liquidationMechanism: null, liquidationDelayLabel: "None" },
+      ],
+    };
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={summaryWithDelay} />);
+    expect(html).toContain("Immediate Stability Pool offset. · liquidation delay 1h");
+    expect(html).toContain("Liquidation delay None");
+  });
+
+  it("caps the inline branch list at 6, sorted by debt share, with the rest in the disclosure", () => {
+    const manyBranches: OracleRiskClientSummary["branches"] = Array.from({ length: 8 }, (_, index) => ({
+      id: `branch-${index}`,
+      label: `Branch ${index}`,
+      tierLabel: "Redundant + failover",
+      summary: `Branch ${index} summary.`,
+      debtSharePct: index === 7 ? null : 80 - index * 10,
+      feeds: [],
+      collateralParameters: [],
+      liquidationMechanism: null,
+      liquidationDelayLabel: null,
+      backstop: null,
+      fallbackBehavior: null,
+      shutdownOrBadDebtBehavior: null,
+    }));
+    const manySummary: OracleRiskClientSummary = { ...SUMMARY, branches: manyBranches };
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={manySummary} />);
+
+    const detailsIndex = html.indexOf("<details");
+    expect(detailsIndex).toBeGreaterThan(-1);
+    const beforeDetails = html.slice(0, detailsIndex);
+    for (let index = 0; index < 6; index++) {
+      expect(beforeDetails).toContain(`Branch ${index}`);
+    }
+    expect(beforeDetails).not.toContain("Branch 6");
+    expect(beforeDetails).not.toContain("Branch 7");
+    expect(html).toContain("+ 2 more branches in the breakdown below");
+    // The two overflow branches still render (inside the disclosure).
+    expect(html).toContain("Branch 6");
+    expect(html).toContain("Branch 7");
+  });
 });

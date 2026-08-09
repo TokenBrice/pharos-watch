@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "@shared/types";
-import { formatOracleDurationSec, projectOracleRiskClientSummary } from "../stablecoin-detail-oracle-client";
+import type { OracleRiskProfile, StablecoinMeta } from "@shared/types";
+import { formatOracleDurationSec, formatOraclePct, projectOracleRiskClientSummary } from "../stablecoin-detail-oracle-client";
 
 function coinWith(oracleRisk: unknown): StablecoinMeta {
   return { id: "test-coin", oracleRisk } as unknown as StablecoinMeta;
 }
 
-const BOLD_LIKE_PROFILE = {
+const BOLD_LIKE_PROFILE: OracleRiskProfile = {
   tier: "redundant-with-failover",
   summary: "External feeds with response validation, last-good-price handling, and per-branch shutdown.",
   branchModel: "multi-branch",
@@ -51,6 +51,14 @@ describe("formatOracleDurationSec", () => {
     expect(formatOracleDurationSec(86400)).toBe("1d");
     expect(formatOracleDurationSec(null)).toBeNull();
     expect(formatOracleDurationSec(undefined)).toBeNull();
+  });
+});
+
+describe("formatOraclePct", () => {
+  it("rounds to at most 2 decimals and trims trailing zeros", () => {
+    expect(formatOraclePct(66.6667)).toBe("66.67%");
+    expect(formatOraclePct(110)).toBe("110%");
+    expect(formatOraclePct(90.9)).toBe("90.9%");
   });
 });
 
@@ -100,5 +108,42 @@ describe("projectOracleRiskClientSummary", () => {
     expect(summary!.maxLiquidationDelayLabel).toBeNull();
     expect(summary!.confidenceLabel).toBeNull();
     expect(summary!.reviewedAt).toBeNull();
+  });
+
+  it("rounds collateral-parameter percentage labels while keeping the numeric worst-case fields exact", () => {
+    const summary = projectOracleRiskClientSummary(
+      coinWith({
+        ...BOLD_LIKE_PROFILE,
+        branches: [
+          {
+            ...BOLD_LIKE_PROFILE.branches![0]!,
+            collateralParameters: [
+              { asset: "WETH", maximumLtvPct: 66.6667, minimumCollateralRatioPct: 110 },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(summary!.branches[0]!.collateralParameters[0]).toMatchObject({
+      maxLtvLabel: "66.67%",
+      minCrLabel: "110%",
+    });
+    expect(summary!.worstMaxLtvPct).toBe(66.6667);
+  });
+
+  it("dedupes merged sources by url", () => {
+    const summary = projectOracleRiskClientSummary(
+      coinWith({
+        ...BOLD_LIKE_PROFILE,
+        sources: [{ label: "Liquity V2 contracts", url: "https://example.com/contracts" }],
+        branches: [
+          {
+            ...BOLD_LIKE_PROFILE.branches![0]!,
+            sources: [{ label: "Mirror", url: "https://example.com/contracts" }],
+          },
+        ],
+      }),
+    );
+    expect(summary!.sources).toEqual([{ label: "Liquity V2 contracts", url: "https://example.com/contracts" }]);
   });
 });

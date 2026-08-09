@@ -176,6 +176,7 @@ function DetailSummaryRail({
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
   const liveCollateralizationRatio = viewModel.reserves?.metadata?.collateralizationRatio ?? null;
   const liveLiquidationCapacityRatio = viewModel.reserves?.metadata?.liquidationCapacityRatio ?? null;
+  const regulatoryStanding = buildRegulatoryStandingView(viewModel.coin);
   return (
     <aside aria-label="Coin summary rail" className="hidden min-w-0 self-stretch xl:block">
       <div className="space-y-4 pb-4">
@@ -212,7 +213,7 @@ function DetailSummaryRail({
         ) : null}
         <MechanismReviewPanel review={mechanismReview} compact />
         <BridgingCard summary={viewModel.coin.bridgeRouteRiskSummary} />
-        <RegulatoryStandingCard view={buildRegulatoryStandingView(viewModel.coin)} />
+        <RegulatoryStandingCard view={regulatoryStanding} />
       </div>
     </aside>
   );
