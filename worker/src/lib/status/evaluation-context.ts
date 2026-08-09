@@ -128,7 +128,6 @@ function countDiagnosticIssues(input: {
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
-  jobAttemptQueryFailed?: boolean;
   scheduledSlotRunningQueryFailed?: boolean;
   scheduledSlotEventMarkerQueryFailed?: boolean;
   cronBudgetSurfaceTelemetryQueryFailed?: boolean;
@@ -139,7 +138,6 @@ function countDiagnosticIssues(input: {
   if (input.cronHistoryQueryFailed) count += 1;
   if (input.cronProgressQueryFailed) count += 1;
   if (input.cronLeaseQueryFailed) count += 1;
-  if (input.jobAttemptQueryFailed) count += 1;
   if (input.scheduledSlotRunningQueryFailed) count += 1;
   if (input.scheduledSlotEventMarkerQueryFailed) count += 1;
   if (input.cronBudgetSurfaceTelemetryQueryFailed) count += 1;
@@ -162,7 +160,6 @@ export function countStatusDiagnosticIssues(input: {
     cronHistoryQueryFailed: input.cronHealth.cronHistoryQueryFailed,
     cronProgressQueryFailed: input.cronHealth.cronProgressQueryFailed,
     cronLeaseQueryFailed: input.cronHealth.cronLeaseQueryFailed,
-    jobAttemptQueryFailed: input.cronHealth.jobAttemptQueryFailed,
     scheduledSlotRunningQueryFailed: input.cronHealth.scheduledSlots.queryFailed,
     scheduledSlotEventMarkerQueryFailed: input.cronHealth.scheduledSlotEventMarkerQueryFailed,
     cronBudgetSurfaceTelemetryQueryFailed: input.cronBudgetSurfaceTelemetryQueryFailed,
@@ -189,13 +186,6 @@ export function applyCronHealthSectionErrors(
     sectionErrors.scheduledSlots = {
       code: scheduledSlotErrorCode,
       message: getStatusSectionMessage("scheduledSlots"),
-    };
-  }
-
-  if (cronHealth.jobAttemptQueryFailed) {
-    sectionErrors.jobAttempts = {
-      code: "job_attempts_query_failed",
-      message: getStatusSectionMessage("jobAttempts"),
     };
   }
 }

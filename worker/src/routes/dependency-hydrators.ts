@@ -1,12 +1,11 @@
 import { ENDPOINT_DEPENDENCY_HYDRATION_POLICIES, type EndpointDependency } from "@shared/lib/api-endpoints";
 import { buildChainRpcs } from "../lib/chain-registry";
 import { normalizeCgApiKey } from "../lib/coingecko";
-import { isReserveRecoveryFaultInjectionEnabled, parseCsvEnv, type Env } from "../lib/env";
+import type { Env } from "../lib/env";
 import { resolveMintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import { buildTelegramCreds } from "../lib/runtime-credentials";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import type { FullRouteContext } from "./shared";
-import { normalizeWorkerJobLedgerMode } from "../lib/job-ledger";
 import { normalizeWorkerCanaryMode } from "../lib/worker-canary-mode";
 
 type RouteDependencyHydrator = (routeCtx: FullRouteContext, env: Env) => void;
@@ -55,15 +54,10 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   },
   workerStatusConfig(routeCtx, env) {
-    routeCtx.workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
-    routeCtx.workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
     routeCtx.workerCanaryMode = normalizeWorkerCanaryMode(env.WORKER_CANARY_MODE);
   },
   workerVersion(routeCtx, env) {
     routeCtx.workerVersion = env.CF_VERSION_METADATA?.tag || env.CF_VERSION_METADATA?.id || null;
-    routeCtx.reserveRecoveryFaultInjectionEnabled = isReserveRecoveryFaultInjectionEnabled(
-      env.WORKER_RESERVE_FAULT_INJECTION_ENABLED,
-    );
   },
   telegram(routeCtx, env) {
     routeCtx.telegramCreds = buildTelegramCreds(env);

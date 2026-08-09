@@ -5,7 +5,6 @@ import {
 } from "@shared/lib/scheduled-runner-registry";
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
-import { markWorkerJobAttemptsAbandonedForSlot } from "./job-ledger";
 import { recordProducerOutcome } from "./producer-history";
 
 export interface StaleSlotExecutionArtifact {
@@ -42,7 +41,6 @@ export interface StaleSlotReconciliationFence {
 
 export interface StaleSlotReconciliationSummary {
   syntheticCronRuns: number;
-  jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
   recoveryCheckpointsPrepared: number;
@@ -57,7 +55,6 @@ export interface StaleSlotReconciliationSummary {
 }
 
 export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
-const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
 export function cacheKeySegment(value: string): string {
   const normalized = value
@@ -438,7 +435,6 @@ async function reconcileStaleSlotArtifacts(
 ): Promise<StaleSlotReconciliationSummary> {
   const summary: StaleSlotReconciliationSummary = {
     syntheticCronRuns: 0,
-    jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     recoveryCheckpointsPrepared: 0,
@@ -472,31 +468,6 @@ async function reconcileStaleSlotArtifacts(
       stillMissingProgressJobs.push(job);
     }
   }
-  if (stillMissingProgressJobs.length > 0) {
-    try {
-      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
-        scheduleKey: slot.slot_key,
-        slotStartedAt: slot.slot_started_at,
-        jobs: stillMissingProgressJobs,
-        nowSec,
-        error: STALE_SLOT_ERROR,
-        metadata: {
-          reason: "stale-slot-reconciled",
-          reconciliationSource: "slot-no-progress-sweep",
-          slotKey: slot.slot_key,
-          slotStartedAt: slot.slot_started_at,
-          slotOwner: slot.execution_owner,
-          reconciledAt: nowSec,
-        },
-      });
-    } catch (err) {
-      console.warn(
-        `[cron-slot] Failed to mark no-progress job attempts abandoned for ${slot.slot_key}@${slot.slot_started_at}:`,
-        err,
-      );
-    }
-  }
-
   const unconditionallyDueMissingJobs = stillMissingProgressJobs.filter(
     (job) => !(slot.slot_key === "digestTriggerPoll" && job === "daily-digest"),
   );
@@ -525,27 +496,6 @@ async function reconcileStaleSlotArtifacts(
     const cleared = progressDelete.meta.changes ?? 0;
     summary.progressRowsCleared += cleared;
     if (cleared === 0) continue;
-    try {
-      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
-        scheduleKey: slot.slot_key,
-        slotStartedAt: slot.slot_started_at,
-        jobs: [progress.job],
-        nowSec,
-        error: STALE_SLOT_ERROR,
-        metadata: {
-          reason: "stale-slot-reconciled",
-          reconciliationSource: "slot-ownerless-progress-sweep",
-          slotKey: slot.slot_key,
-          slotStartedAt: slot.slot_started_at,
-          slotOwner: slot.execution_owner,
-          progressStage: progress.stage,
-          progressUpdatedAt: progress.updated_at,
-          reconciledAt: nowSec,
-        },
-      });
-    } catch (err) {
-      console.warn(`[cron-slot] Failed to abandon ownerless attempt for ${progress.job}@${slot.slot_started_at}:`, err);
-    }
     summary.abandonedJobs.push({
       job: progress.job,
       progressStage: progress.stage,
@@ -604,32 +554,6 @@ async function reconcileStaleSlotArtifacts(
       leaseOwner: progress.lease_owner,
       leaseUntil: lease.lease_until,
     });
-    try {
-      summary.jobAttemptsAbandoned += await markWorkerJobAttemptsAbandonedForSlot(db, {
-        scheduleKey: slot.slot_key,
-        slotStartedAt: slot.slot_started_at,
-        jobs: [progress.job],
-        nowSec,
-        error: STALE_SLOT_ERROR,
-        metadata: {
-          reason: "stale-slot-reconciled",
-          slotKey: slot.slot_key,
-          slotStartedAt: slot.slot_started_at,
-          slotOwner: slot.execution_owner,
-          progressStage: progress.stage,
-          progressUpdatedAt: progress.updated_at,
-          leaseOwner: progress.lease_owner,
-          leaseUntil: lease.lease_until,
-          reconciledAt: nowSec,
-        },
-      });
-    } catch (err) {
-      console.warn(
-        `[cron-slot] Failed to mark job attempt abandoned for ${progress.job}@${slot.slot_started_at}:`,
-        err,
-      );
-    }
-
     const leaseDelete = await runWithOverloadRetry(() =>
       db
         .prepare("DELETE FROM cron_leases WHERE job = ? AND lease_owner = ? AND lease_until = ? AND lease_until < ?")

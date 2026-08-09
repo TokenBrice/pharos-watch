@@ -65,24 +65,10 @@ type CacheRow = {
   updated_at: number;
 };
 
-type JobAttemptRow = {
-  attempt_id: string;
-  schedule_key: string;
-  job: string;
-  slot_started_at: number | null;
-  state: string;
-  status_class: string | null;
-  finished_at: number | null;
-  updated_at: number;
-  error: string | null;
-  result_metadata_json: string | null;
-};
-
 interface TestLeaseDb extends D1Database {
   getSlot: (slotKey: string, slotStartedAt: number) => SlotExecutionRow | undefined;
   getLease: (job: string) => LeaseRow | undefined;
   getProgress: (job: string) => ProgressRow | undefined;
-  getJobAttempt: (attemptId: string) => JobAttemptRow | undefined;
   getRuns: () => CronRunRow[];
   getCache: (key: string) => CacheRow | undefined;
 }
@@ -97,7 +83,6 @@ function makeLeaseDb(seed?: {
   progress?: ProgressRow[];
   runs?: CronRunRow[];
   cache?: CacheRow[];
-  attempts?: JobAttemptRow[];
   failSlotHeartbeatRuns?: number;
   failSlotFinishRuns?: number;
   failSlotProgressReads?: number;
@@ -109,7 +94,6 @@ function makeLeaseDb(seed?: {
   const progressRows = new Map<string, ProgressRow>();
   const cronRuns: CronRunRow[] = [...(seed?.runs ?? [])];
   const cacheRows = new Map<string, CacheRow>();
-  const jobAttempts = new Map<string, JobAttemptRow>();
   let failSlotHeartbeatRuns = seed?.failSlotHeartbeatRuns ?? 0;
   let failSlotFinishRuns = seed?.failSlotFinishRuns ?? 0;
   let failSlotProgressReads = seed?.failSlotProgressReads ?? 0;
@@ -130,9 +114,6 @@ function makeLeaseDb(seed?: {
   }
   for (const row of seed?.cache ?? []) {
     cacheRows.set(row.key, row);
-  }
-  for (const attempt of seed?.attempts ?? []) {
-    jobAttempts.set(attempt.attempt_id, attempt);
   }
 
   function stmt(sql: string) {
@@ -336,51 +317,6 @@ function makeLeaseDb(seed?: {
               updated_at: updatedAt,
             });
             return { success: true, meta: { changes: 1 } };
-          }
-
-          if (sql.includes("UPDATE worker_job_attempts")) {
-            const [finishedAt, error, metadata, updatedAt, scheduleKey, slotStartedAt, ...rest] = args as [
-              number,
-              string,
-              string | null,
-              number,
-              string,
-              number,
-              ...string[],
-            ];
-            const activeStates = new Set(["queued", "claimed", "running"]);
-            const terminalStates = new Set([
-              "completed",
-              "deferred",
-              "abandoned",
-              "failed",
-              "skipped_locked",
-              "cancelled",
-            ]);
-            const stateStart = rest.findIndex((value) => activeStates.has(value));
-            const jobs = stateStart >= 0 ? rest.slice(0, stateStart) : rest;
-            let changes = 0;
-            for (const [attemptId, attempt] of jobAttempts) {
-              if (
-                attempt.schedule_key === scheduleKey &&
-                attempt.slot_started_at === slotStartedAt &&
-                jobs.includes(attempt.job) &&
-                activeStates.has(attempt.state) &&
-                !terminalStates.has(attempt.state)
-              ) {
-                jobAttempts.set(attemptId, {
-                  ...attempt,
-                  state: "abandoned",
-                  status_class: "abandoned",
-                  finished_at: finishedAt,
-                  updated_at: updatedAt,
-                  error,
-                  result_metadata_json: metadata ?? attempt.result_metadata_json,
-                });
-                changes++;
-              }
-            }
-            return { success: true, meta: { changes } };
           }
 
           if (sql.includes("INSERT OR IGNORE INTO cron_slot_executions")) {
@@ -750,7 +686,6 @@ function makeLeaseDb(seed?: {
     getSlot: (slotKey: string, slotStartedAt: number) => slots.get(makeSlotMapKey(slotKey, slotStartedAt)),
     getLease: (job: string) => leases.get(job),
     getProgress: (job: string) => progressRows.get(job),
-    getJobAttempt: (attemptId: string) => jobAttempts.get(attemptId),
     getRuns: () => [...cronRuns],
     getCache: (key: string) => cacheRows.get(key),
   } as unknown as TestLeaseDb;
@@ -1896,7 +1831,6 @@ describe("runScheduledSlotWithFence", () => {
     expect(db.getRuns()).toEqual([]);
     expect(db.getProgress("sync-yield-data")).toBeDefined();
     expect(db.getLease("sync-yield-data")).toBeDefined();
-    expect(db.getJobAttempt("yield-attempt-a")).toBeUndefined();
     expect(db.getCache("cron:event:hourlyyieldsync:scheduled-slot-abandoned")).toBeUndefined();
     const slot = db.getSlot("hourlyYieldSync", slotStartedAt);
     expect(slot?.execution_owner).toBe("slot-owner-a");
@@ -2180,10 +2114,9 @@ describe("runScheduledSlotWithFence", () => {
     });
   });
 
-  it("abandons active worker job attempts for stale slots even when progress was never written", async () => {
+  it("synthesizes an error cron run for a stale slot whose job never wrote progress", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
-    const attemptId = "attempt|scheduled-slot|hourlyYieldSync|stale|sync-yield-data|1";
     const db = makeLeaseDb({
       slots: [
         {
@@ -2198,20 +2131,6 @@ describe("runScheduledSlotWithFence", () => {
           metadata: null,
         },
       ],
-      attempts: [
-        {
-          attempt_id: attemptId,
-          schedule_key: "hourlyYieldSync",
-          job: "sync-yield-data",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          status_class: null,
-          finished_at: null,
-          updated_at: now - 1700,
-          error: null,
-          result_metadata_json: null,
-        },
-      ],
     });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
@@ -2220,7 +2139,6 @@ describe("runScheduledSlotWithFence", () => {
       slotsReconciled: 1,
       syntheticCronRuns: 1,
       notStartedCronRuns: 1,
-      jobAttemptsAbandoned: 1,
       progressRowsCleared: 0,
       leasesCleared: 0,
     });
@@ -2231,32 +2149,18 @@ describe("runScheduledSlotWithFence", () => {
         slot_started_at: staleSlotStartedAt,
       }),
     ]);
-    const attempt = db.getJobAttempt(attemptId);
-    expect(attempt).toMatchObject({
-      state: "abandoned",
-      status_class: "abandoned",
-      error: "scheduled slot heartbeat stale; marked expired by later invocation",
-      finished_at: now,
-    });
-    expect(attempt?.result_metadata_json ? JSON.parse(attempt.result_metadata_json) : null).toMatchObject({
-      reason: "stale-slot-reconciled",
-      reconciliationSource: "slot-no-progress-sweep",
-      slotKey: "hourlyYieldSync",
-      slotStartedAt: staleSlotStartedAt,
-    });
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
       staleSlotReconciliation: {
-        jobAttemptsAbandoned: 1,
+        notStartedCronRuns: 1,
         abandonedJobs: [],
       },
     });
   });
 
-  it("clears ownerless stale slot progress and abandons the active worker attempt", async () => {
+  it("clears ownerless stale slot progress without synthesizing a cron run", async () => {
     const now = Math.floor(Date.now() / 1000);
     const staleSlotStartedAt = now - 3600;
-    const attemptId = "attempt|scheduled-slot|hourlyYieldSync|stale|sync-yield-data|1";
     const db = makeLeaseDb({
       slots: [
         {
@@ -2281,20 +2185,6 @@ describe("runScheduledSlotWithFence", () => {
           slot_started_at: staleSlotStartedAt,
         },
       ],
-      attempts: [
-        {
-          attempt_id: attemptId,
-          schedule_key: "hourlyYieldSync",
-          job: "sync-yield-data",
-          slot_started_at: staleSlotStartedAt,
-          state: "running",
-          status_class: null,
-          finished_at: null,
-          updated_at: now - 1700,
-          error: null,
-          result_metadata_json: null,
-        },
-      ],
     });
 
     const summary = await sweepStaleScheduledSlotExecutions(db, { nowSec: now, staleAfterSec: 1200 });
@@ -2303,17 +2193,11 @@ describe("runScheduledSlotWithFence", () => {
       slotsReconciled: 1,
       syntheticCronRuns: 0,
       notStartedCronRuns: 0,
-      jobAttemptsAbandoned: 1,
       progressRowsCleared: 1,
       leasesCleared: 0,
     });
     expect(db.getProgress("sync-yield-data")).toBeUndefined();
     expect(db.getRuns()).toEqual([]);
-    expect(db.getJobAttempt(attemptId)).toMatchObject({
-      state: "abandoned",
-      status_class: "abandoned",
-      finished_at: now,
-    });
     const staleSlot = db.getSlot("hourlyYieldSync", staleSlotStartedAt);
     expect(staleSlot?.metadata ? JSON.parse(staleSlot.metadata) : null).toMatchObject({
       staleSlotReconciliation: {

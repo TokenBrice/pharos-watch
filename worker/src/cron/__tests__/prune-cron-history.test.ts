@@ -11,11 +11,6 @@ interface SlotExecRow {
   slot_started_at: number;
 }
 
-interface JobAttemptRow {
-  updated_at: number;
-  state: string;
-}
-
 interface RepairTaskRow {
   updated_at: number;
   state: string;
@@ -47,7 +42,6 @@ function createStubDb(): {
   db: D1Database;
   preparedSqls: string[];
   cronRuns: CronRunRow[];
-  jobAttempts: JobAttemptRow[];
   repairTasks: RepairTaskRow[];
   canaryRuns: CanaryRunRow[];
   recoveryCheckpoints: RecoveryCheckpointRow[];
@@ -56,7 +50,6 @@ function createStubDb(): {
   slotExecs: SlotExecRow[];
 } {
   const cronRuns: CronRunRow[] = [];
-  const jobAttempts: JobAttemptRow[] = [];
   const repairTasks: RepairTaskRow[] = [];
   const canaryRuns: CanaryRunRow[] = [];
   const recoveryCheckpoints: RecoveryCheckpointRow[] = [];
@@ -118,18 +111,6 @@ function createStubDb(): {
           }
           return { success: true, meta: { changes: removed } };
         }
-        if (sql.includes("DELETE FROM worker_job_attempts")) {
-          const [cutoff] = bound as [number];
-          let removed = 0;
-          const terminalStates = new Set(bound.slice(1).map(String));
-          for (let i = jobAttempts.length - 1; i >= 0; i--) {
-            if (jobAttempts[i].updated_at < cutoff && terminalStates.has(jobAttempts[i].state)) {
-              jobAttempts.splice(i, 1);
-              removed += 1;
-            }
-          }
-          return { success: true, meta: { changes: removed } };
-        }
         if (sql.includes("DELETE FROM worker_repair_tasks")) {
           const [cutoff] = bound as [number];
           let removed = 0;
@@ -184,7 +165,6 @@ function createStubDb(): {
     db,
     preparedSqls,
     cronRuns,
-    jobAttempts,
     repairTasks,
     canaryRuns,
     recoveryCheckpoints,
@@ -236,23 +216,6 @@ describe("runPruneCronHistory", () => {
 
     expect(slotExecs).toHaveLength(1);
     expect(slotExecs[0].slot_started_at).toBe(now - 3600);
-  });
-
-  it("removes terminal worker_job_attempts older than 7 days and keeps active or newer rows", async () => {
-    const { db, jobAttempts } = createStubDb();
-    const now = Math.floor(Date.now() / 1000);
-    jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 3600 });
-    jobAttempts.push({ state: "running", updated_at: now - ONE_WEEK_SEC - 3600 });
-    jobAttempts.push({ state: "failed", updated_at: now - 3600 });
-
-    const result = await runPruneCronHistory(db);
-
-    expect(jobAttempts).toEqual([
-      { state: "running", updated_at: now - ONE_WEEK_SEC - 3600 },
-      { state: "failed", updated_at: now - 3600 },
-    ]);
-    const metadata = JSON.parse(result.metadata!) as { jobAttemptsDeleted: number };
-    expect(metadata.jobAttemptsDeleted).toBe(1);
   });
 
   it("removes terminal repair tasks older than 7 days and keeps active or newer rows", async () => {
@@ -344,8 +307,7 @@ describe("runPruneCronHistory", () => {
     const {
       db,
       cronRuns,
-      jobAttempts,
-      repairTasks,
+        repairTasks,
       canaryRuns,
       recoveryCheckpoints,
       selectorSnapshotDailyQuotaRows,
@@ -354,7 +316,6 @@ describe("runPruneCronHistory", () => {
     } = createStubDb();
     const now = Math.floor(Date.now() / 1000);
     cronRuns.push({ job: "sync-stablecoins", started_at: now - ONE_WEEK_SEC - 1 });
-    jobAttempts.push({ state: "completed", updated_at: now - ONE_WEEK_SEC - 1 });
     repairTasks.push({ state: "closed", updated_at: now - ONE_WEEK_SEC - 1 });
     canaryRuns.push({ observed_at: now - NINETY_DAYS_SEC - 1 });
     recoveryCheckpoints.push({ state: "completed", updated_at: now - TWO_WEEKS_SEC - 1 });
@@ -365,7 +326,6 @@ describe("runPruneCronHistory", () => {
     const result = await runPruneCronHistory(db);
     const metadata = JSON.parse(result.metadata!) as {
       cronRunsDeleted: number;
-      jobAttemptsDeleted: number;
       repairTasksDeleted: number;
       canaryRunsDeleted: number;
       recoveryCheckpointsDeleted: number;
@@ -373,7 +333,6 @@ describe("runPruneCronHistory", () => {
       blockTimestampCacheDeleted: number;
       slotExecutionsDeleted: number;
       cutoffCronRunsSec: number;
-      cutoffJobAttemptsSec: number;
       cutoffRepairTasksSec: number;
       cutoffCanaryRunsSec: number;
       cutoffRecoveryCheckpointsSec: number;
@@ -383,7 +342,6 @@ describe("runPruneCronHistory", () => {
     };
 
     expect(metadata.cronRunsDeleted).toBe(1);
-    expect(metadata.jobAttemptsDeleted).toBe(1);
     expect(metadata.repairTasksDeleted).toBe(1);
     expect(metadata.canaryRunsDeleted).toBe(1);
     expect(metadata.recoveryCheckpointsDeleted).toBe(1);
@@ -391,7 +349,6 @@ describe("runPruneCronHistory", () => {
     expect(metadata.blockTimestampCacheDeleted).toBe(1);
     expect(metadata.slotExecutionsDeleted).toBe(1);
     expect(metadata.cutoffCronRunsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
-    expect(metadata.cutoffJobAttemptsSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffRepairTasksSec).toBeCloseTo(now - ONE_WEEK_SEC, -2);
     expect(metadata.cutoffCanaryRunsSec).toBeCloseTo(now - NINETY_DAYS_SEC, -2);
     expect(metadata.cutoffRecoveryCheckpointsSec).toBeCloseTo(now - TWO_WEEKS_SEC, -2);

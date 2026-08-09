@@ -6,7 +6,6 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 const moduleLoads = vi.hoisted(() => ({
   auditDepegHistory: vi.fn(),
   backfillDepegs: vi.fn(),
-  reserveFaultInjection: vi.fn(),
 }));
 
 vi.mock("../../api/audit-depeg-history", () => {
@@ -20,13 +19,6 @@ vi.mock("../../api/backfill-depegs", () => {
   moduleLoads.backfillDepegs();
   return {
     handleBackfillDepegsTrusted: vi.fn(async () => new Response("ok")),
-  };
-});
-
-vi.mock("../../api/admin-reserve-recovery-fault-injection", () => {
-  moduleLoads.reserveFaultInjection();
-  return {
-    handleArmReserveRecoveryFaultInjection: vi.fn(async () => new Response("ok")),
   };
 });
 
@@ -73,15 +65,6 @@ describe("lazy admin route authentication", () => {
 
     expect(response.status).toBe(401);
     expect(moduleLoads.auditDepegHistory).not.toHaveBeenCalled();
-  });
-
-  it("rejects reserve fault injection before importing its endpoint module", async () => {
-    const route = findRoute(ADMIN_STATIC_ROUTES, "reserve-recovery-fault-injection");
-
-    const response = await route.handler(makeContext(route.endpoint.path, "POST"));
-
-    expect(response.status).toBe(401);
-    expect(moduleLoads.reserveFaultInjection).not.toHaveBeenCalled();
   });
 
 });

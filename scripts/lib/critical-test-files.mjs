@@ -71,7 +71,6 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/price-validation.test.ts",
   "worker/src/lib/__tests__/price-publish-policy.test.ts",
   "worker/src/lib/__tests__/price-publication-state.test.ts",
-  "worker/src/lib/__tests__/pricing-circuit-map.test.ts",
   "worker/src/lib/__tests__/pricing-provider-runtime-state.test.ts",
   "worker/src/lib/__tests__/pricing-source-freshness.test.ts",
   "worker/src/lib/__tests__/primary-price-collector.test.ts",

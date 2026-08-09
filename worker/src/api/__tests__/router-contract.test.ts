@@ -245,22 +245,6 @@ describe("router contract: strict frontend paths are routable", () => {
     }
   });
 
-  it("requires the admin mutation header for reserve recovery fault injection", async () => {
-    const path = "https://stablecoin-api.preview.workers.dev/api/admin/reserve-recovery-fault-injection";
-    const response = await route(makeRouteCtx({
-      url: new URL(path),
-      request: new Request(path, { method: "POST" }),
-      trustedAdmin: true,
-      workerVersion: "preview-v1",
-    }));
-
-    expect(response).not.toBeNull();
-    expect(response!.status).toBe(403);
-    await expect(response!.json()).resolves.toEqual({
-      error: "Missing required X-Pharos-Admin header; refusing mutation.",
-    });
-  });
-
   it("keeps the dynamic API key admin routes aligned with shared method/auth rules", async () => {
     const postPath = "https://api.pharos.watch/api/api-keys/7/rotate";
     const postResult = await route(makeRouteCtx({

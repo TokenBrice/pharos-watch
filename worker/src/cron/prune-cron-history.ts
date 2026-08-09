@@ -3,7 +3,6 @@ import { throwIfAborted } from "../lib/abort";
 import { SECONDS } from "../lib/time-constants";
 import { runWithOverloadRetry } from "../lib/cron-lease";
 import { createCronResult } from "../lib/cron-result";
-import { pruneWorkerJobAttempts } from "../lib/job-ledger";
 import { pruneRepairTasks } from "../lib/repair-tasks";
 import { WORKER_CANARY_RUN_RETENTION_SEC, pruneWorkerCanaryRuns } from "../lib/canary-checks";
 import { pruneScheduledRecoveryCheckpoints } from "../lib/scheduled-recovery-checkpoint";
@@ -71,8 +70,6 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   throwIfAborted(signal);
   const cronRunsDeleted = cronRunsResult.meta?.changes ?? 0;
 
-  const jobAttemptsDeleted = await pruneWorkerJobAttempts(db, now - SECONDS.ONE_WEEK, signal);
-  throwIfAborted(signal);
   const producerHistoryDeleted = await pruneProducerHistory(db, now, signal);
   throwIfAborted(signal);
   const repairTasksDeleted = await pruneRepairTasks(db, now - SECONDS.ONE_WEEK, signal);
@@ -123,7 +120,6 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     status: "ok",
     itemCount:
       cronRunsDeleted +
-      jobAttemptsDeleted +
       producerHistoryDeleted +
       repairTasksDeleted +
       canaryRunsDeleted +
@@ -133,7 +129,6 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       slotExecutionsDeleted,
     metadata: {
       cronRunsDeleted,
-      jobAttemptsDeleted,
       producerHistoryDeleted,
       repairTasksDeleted,
       canaryRunsDeleted,
@@ -142,7 +137,6 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       blockTimestampCacheDeleted,
       slotExecutionsDeleted,
       cutoffCronRunsSec: now - SECONDS.ONE_WEEK,
-      cutoffJobAttemptsSec: now - SECONDS.ONE_WEEK,
       cutoffRepairTasksSec: now - SECONDS.ONE_WEEK,
       cutoffCanaryRunsSec: now - WORKER_CANARY_RUN_RETENTION_SEC,
       cutoffRecoveryCheckpointsSec: now - SLOT_EXECUTION_RETENTION_SEC,

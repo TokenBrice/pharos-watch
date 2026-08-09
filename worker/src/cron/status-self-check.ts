@@ -22,7 +22,6 @@ import { hasDivergence } from "../lib/status-discrepancy-view";
 import type { MintBurnFreshnessConfig } from "../lib/mint-burn-health-config";
 import type { CloudflareD1StatusConfig } from "../lib/env";
 import { refreshD1CapacityMonitoring } from "../lib/status/d1-capacity-monitor";
-import { normalizeWorkerJobLedgerMode } from "../lib/job-ledger";
 
 interface ProbeResult {
   path: string;
@@ -81,8 +80,6 @@ export interface StatusSelfCheckOptions {
   mintBurnFreshnessConfig?: MintBurnFreshnessConfig;
   siteApiSharedSecret?: string | null;
   d1StatusConfig?: CloudflareD1StatusConfig;
-  workerJobLedgerMode?: string;
-  workerJobLedgerAllowlist?: readonly string[];
 }
 
 interface CollectedStatusSelfCheckProbes {
@@ -712,21 +709,10 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     },
   });
 
-  const workerJobLedgerMode = normalizeWorkerJobLedgerMode(options.workerJobLedgerMode);
-  const workerJobLedgerAllowlist = options.workerJobLedgerAllowlist ?? [];
-  const raw = await computeRawStatus(db, now, {
-    workerJobLedgerMode,
-    workerJobLedgerAllowlist,
-  });
+  const raw = await computeRawStatus(db, now);
   const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall);
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(
-    db,
-    now,
-    raw,
-    workerJobLedgerMode,
-    workerJobLedgerAllowlist,
-  );
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw);
   const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
 
   const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure);

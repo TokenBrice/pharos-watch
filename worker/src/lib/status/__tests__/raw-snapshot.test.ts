@@ -48,10 +48,9 @@ describe("writeStatusRawSnapshot", () => {
     expect(write.sql).toContain("WHERE cache.updated_at <= excluded.updated_at");
     expect(write.binds[0]).toBe(STATUS_RAW_SNAPSHOT_CACHE_KEY);
     expect(write.binds[2]).toBe(NOW);
-    expect(JSON.parse(String(write.binds[1])).workerJobLedgerScope).toBe("off");
   });
 
-  it("bypasses legacy snapshots that do not identify their ledger read scope", async () => {
+  it("serves a cached payload that is within the freshness budget", async () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache",
       rows: [],
@@ -61,10 +60,10 @@ describe("writeStatusRawSnapshot", () => {
       },
     }], { requireMatch: true });
 
-    const snapshot = await loadStatusRawSnapshot(db, NOW + 30, "off", []);
+    const snapshot = await loadStatusRawSnapshot(db, NOW + 30);
 
     expect(snapshot).toMatchObject({
-      kind: "mode-mismatch",
+      kind: "fresh",
       updatedAt: NOW,
       ageSec: 30,
     });

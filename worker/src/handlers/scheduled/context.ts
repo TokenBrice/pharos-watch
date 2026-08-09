@@ -13,19 +13,9 @@ import { buildChainRpcs, type ChainRpcConfig } from "../../lib/chain-registry";
 import { normalizeCronMetadata, mergeCronMetadataWithLease } from "../../lib/cron-metadata";
 import { parseCsvEnv, type Env } from "../../lib/env";
 import {
-  createWorkerJobAttempt,
-  finishWorkerJobAttempt,
-  heartbeatWorkerJobAttempt,
-  normalizeWorkerJobLedgerMode,
-  recordWorkerJobAttemptLease,
-  shouldRecordWorkerJobAttempt,
-  type WorkerJobAttemptIdentity,
-} from "../../lib/job-ledger";
-import {
   resolveMintBurnFreshnessConfig,
   type MintBurnFreshnessConfig,
 } from "../../lib/mint-burn-health-config";
-import { logWorkerEvent } from "../../lib/structured-log";
 import type { ScheduledRecoveryCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { utcCalendarMonth, type ProducerIdentity } from "../../lib/producer-history";
 import { ScheduledFetchBudget } from "../../lib/scheduled-fetch-budget";
@@ -60,18 +50,6 @@ const PER_JOB_LEASE_OPTIONS: Record<string, Pick<CronLeaseOptions, "heartbeatSec
   "daily-digest": LONG_RUNNING_LEASE_OPTIONS,
   "weekly-recap": LONG_RUNNING_LEASE_OPTIONS,
 };
-
-function logJobLedgerWriteFailure(job: string, event: string, error: unknown): void {
-  logWorkerEvent({
-    scope: "lib",
-    level: "warn",
-    event,
-    job,
-    source: "worker_job_attempts",
-    message: "Worker job attempt ledger write failed",
-    error,
-  });
-}
 
 export interface ScheduledRuntimeContext {
   db: D1Database;
@@ -188,8 +166,6 @@ export function createScheduledRuntimeContext(
   const mintBurnFreshnessConfig = resolveMintBurnFreshnessConfig(env);
   const coingeckoApiKey = normalizeCgApiKey(env.COINGECKO_API_KEY);
   const chainRpcs = buildChainRpcs(env.ALCHEMY_API_KEY, env.DRPC_API_KEY);
-  const workerJobLedgerMode = normalizeWorkerJobLedgerMode(env.WORKER_JOB_LEDGER_MODE);
-  const workerJobLedgerAllowlist = parseCsvEnv(env.WORKER_JOB_LEDGER_ALLOWLIST);
   const slotBudgetStartedAtMs = scheduled.slotBudgetStartedAtMs ?? Date.now();
   const invocationId = createLeaseOwner(`scheduled:${scheduled.scheduleKey}`);
   const workerVersion = env.CF_VERSION_METADATA?.id || null;
@@ -240,39 +216,12 @@ export function createScheduledRuntimeContext(
       }
       const timeoutBudget = resolveCronTimeoutBudget(job, { slotBudgetStartedAtMs });
       const timeoutBudgetMetadata = getCronTimeoutBudgetMetadata(timeoutBudget);
-      const ledgerEnabled = shouldRecordWorkerJobAttempt({
-        mode: workerJobLedgerMode,
-        allowlist: workerJobLedgerAllowlist,
-        job,
-      });
       const combinedSlotSignal = runtime.slotSignal && slotAbortSignal
         ? AbortSignal.any([runtime.slotSignal, slotAbortSignal])
         : runtime.slotSignal ?? slotAbortSignal;
 
       return fetchBudget.run(descriptor.maxConnections, combinedSlotSignal, async () => {
-        const ledgerStartedAtMs = Date.now();
-        let ledgerIdentity: WorkerJobAttemptIdentity | null = null;
-        let ledgerBootstrapError: unknown = null;
-        try {
-          if (ledgerEnabled) {
-            try {
-              ledgerIdentity = await createWorkerJobAttempt(db, {
-                scheduleKey: scheduled.scheduleKey,
-                job,
-                slotStartedAt: scheduled.slotStartedAt,
-                producerPath: descriptor.producerPath,
-                attemptNo: jobAttemptNo,
-                producerKind,
-                invocationId,
-                workerVersion,
-              });
-            } catch (err) {
-              logJobLedgerWriteFailure(job, "worker_job_attempt_create_failed", err);
-              if (workerJobLedgerMode === "write") ledgerBootstrapError = err;
-            }
-          }
-          const result = await logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
-          if (ledgerBootstrapError) throw ledgerBootstrapError;
+        return logCronRun(db, job, async (signal, reportProgress): Promise<CronResult> => {
           const slotMeta = {
             slotStartedAt: scheduled.slotStartedAt,
             scheduleKey: scheduled.scheduleKey,
@@ -283,52 +232,7 @@ export function createScheduledRuntimeContext(
             producerKind,
           };
           const leaseOwner = createLeaseOwner(job);
-          let ledgerWriteTail = Promise.resolve();
-          const enqueueLedgerWrite = (write: () => Promise<void>, event: string): Promise<void> => {
-            const next = ledgerWriteTail.then(write);
-            ledgerWriteTail = next.catch((err) => {
-              logJobLedgerWriteFailure(job, event, err);
-            });
-            return workerJobLedgerMode === "write" ? next : ledgerWriteTail;
-          };
-          const reportProgressWithLedger: CronProgressReporter = (update) => {
-            const progressWrite = reportProgress(update);
-            if (!ledgerIdentity) return progressWrite;
-            return progressWrite.then(() => enqueueLedgerWrite(
-              () => heartbeatWorkerJobAttempt(db, {
-                attemptId: ledgerIdentity!.attemptId,
-                progress: update,
-              }),
-              "worker_job_attempt_heartbeat_failed",
-            ));
-          };
-          const currentLedgerIdentity = ledgerIdentity;
-          const recordLeaseState: CronLeaseOptions["onLeaseState"] | undefined = currentLedgerIdentity
-            ? async (leaseState) => {
-                await enqueueLedgerWrite(
-                  () => recordWorkerJobAttemptLease(db, {
-                    attemptId: currentLedgerIdentity.attemptId,
-                    owner: leaseState.leaseOwner,
-                    leaseUntil: leaseState.leaseUntil,
-                  }),
-                  "worker_job_attempt_lease_state_failed",
-                );
-              }
-            : undefined;
-          const finishLedgerResult = async (result: CronResult): Promise<void> => {
-            if (!ledgerIdentity) return;
-            try {
-              await finishWorkerJobAttempt(db, {
-                attemptId: ledgerIdentity.attemptId,
-                startedAtMs: ledgerStartedAtMs,
-                result,
-              });
-            } catch (err) {
-              logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", err);
-              if (workerJobLedgerMode === "write") throw err;
-            }
-          };
-          await reportProgressWithLedger({
+          await reportProgress({
             stage: "started",
             message: `Starting ${job}`,
             metadata: slotMeta,
@@ -352,51 +256,41 @@ export function createScheduledRuntimeContext(
             owner: leaseOwner,
             abortSignal: signal,
             timeoutBudget,
-            ...(recordLeaseState
-              ? {
-                  onLeaseState: recordLeaseState,
-                  leaseStateObserverMode: workerJobLedgerMode === "write" ? "required" as const : "best-effort" as const,
-                }
-              : {}),
             ...perJobLeaseOptions,
           };
           const lease = await runCronWithLease(db, job, async ({ signal: leaseSignal }) => {
-            await reportProgressWithLedger({
+            await reportProgress({
               stage: "lease-acquired",
               message: `Lease acquired for ${job}`,
               leaseOwner,
               metadata: slotMeta,
             });
-            return fn(leaseSignal, reportProgressWithLedger);
+            return fn(leaseSignal, reportProgress);
           }, leaseOptions);
 
           if (lease.status === "skipped_locked") {
-            await reportProgressWithLedger({
+            await reportProgress({
               stage: "skipped-locked",
               message: `Lease already held for ${job}`,
               leaseOwner: lease.leaseOwner,
               metadata: slotMeta,
             });
-            const terminalResult: CronResult = {
+            return {
               status: "skipped_locked",
               metadata: JSON.stringify({
                 reason: "lease-locked",
                 ...buildLeaseMeta(lease),
               }),
             };
-            await finishLedgerResult(terminalResult);
-            return terminalResult;
           }
 
           const result = lease.result;
           if (!result) {
-            const terminalResult: CronResult = {
+            return {
               metadata: JSON.stringify({
                 ...buildLeaseMeta(lease),
               }),
             };
-            await finishLedgerResult(terminalResult);
-            return terminalResult;
           }
 
           const leaseMeta = buildLeaseMeta(lease);
@@ -406,16 +300,14 @@ export function createScheduledRuntimeContext(
             leaseMeta,
           );
 
-          await reportProgressWithLedger({
+          await reportProgress({
             stage: "completed",
             message: `Completed ${job}`,
             leaseOwner: lease.leaseOwner,
             metadata: slotMeta,
           });
 
-          const terminalResult = { ...result, metadata };
-          await finishLedgerResult(terminalResult);
-          return terminalResult;
+          return { ...result, metadata };
         }, {
           slotStartedAt: scheduled.slotStartedAt,
           timeoutBudget,
@@ -424,27 +316,6 @@ export function createScheduledRuntimeContext(
             ...getProducerIdentity(job),
           },
         });
-        return result;
-        } catch (err) {
-          if (ledgerIdentity) {
-            try {
-              await finishWorkerJobAttempt(db, {
-                attemptId: ledgerIdentity.attemptId,
-                startedAtMs: ledgerStartedAtMs,
-                error: err,
-              });
-            } catch (finishErr) {
-              logJobLedgerWriteFailure(job, "worker_job_attempt_finish_failed", finishErr);
-              if (workerJobLedgerMode === "write") {
-                throw new AggregateError(
-                  [err, finishErr],
-                  `Cron ${job} failed and its terminal worker-job attempt could not be persisted`,
-                );
-              }
-            }
-          }
-          throw err;
-        }
       });
     },
     runBudgetOnlyTask: (job, fn) => {

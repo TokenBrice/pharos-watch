@@ -245,13 +245,6 @@ vi.mock("../lib/scheduled-recovery-checkpoint", async (importOriginal) => {
     claimNextScheduledCheckpointRecovery: vi.fn(async () => null),
   };
 });
-vi.mock("../lib/reserve-recovery-fault-injection", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../lib/reserve-recovery-fault-injection")>();
-  return {
-    ...actual,
-    loadReserveRecoveryFaultInjectionController: vi.fn(async () => null),
-  };
-});
 vi.mock("../cron/status-self-check", () => ({ runStatusSelfCheck: cronMocks.runStatusSelfCheck }));
 vi.mock("../cron/cron-staleness-watchdog", () => ({
   runCronStalenessWatchdog: cronMocks.runCronStalenessWatchdog,
@@ -602,31 +595,6 @@ describe("worker.scheduled", () => {
       "sync-stablecoins",
       expect.any(Function),
       expect.objectContaining({ abortSignal: expect.any(AbortSignal) }),
-    );
-  });
-
-  it("records worker job attempt lease_until from the lease acquisition callback", async () => {
-    const { ctx, waits } = makeCtx();
-    const db = mockD1();
-    const env = {
-      DB: db,
-      CORS_ORIGIN: "https://pharos.watch",
-      TELEGRAM_BOT_TOKEN: "bot-token",
-      WORKER_JOB_LEDGER_MODE: "shadow",
-      WORKER_JOB_LEDGER_ALLOWLIST: "sync-fx-rates",
-    } as const;
-
-    await worker.scheduled(
-      { cron: "*/15 * * * *", scheduledTime: Date.parse("2026-04-01T00:15:00Z") } as ScheduledEvent,
-      env as never,
-      ctx,
-    );
-    await Promise.all(waits);
-
-    const leaseUpdate = db.getHistory().find((entry) => entry.sql.includes("lease_until = ?"));
-    expect(leaseUpdate?.binds[1]).toBe(1_777_777_900);
-    expect(leaseUpdate?.binds[6]).toBe(
-      "attempt|scheduled-job|quarterHourly|quarterHourly|1775002500|sync-fx-rates|1",
     );
   });
 

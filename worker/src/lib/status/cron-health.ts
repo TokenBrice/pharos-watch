@@ -4,7 +4,6 @@ import { CronRunStatusSchema } from "@shared/types/status";
 import type { CronEvent, CronInFlight, CronRun, CronStaleArtifact, CronStatus } from "@shared/types/status";
 import { staleSlotEventCacheKey } from "../cron-lease";
 import { buildInClause } from "../db";
-import { loadWorkerJobAttemptHealth, type WorkerJobLedgerMode } from "../job-ledger";
 import { logWorkerEvent } from "../structured-log";
 
 export interface CronHealthSnapshot {
@@ -20,12 +19,9 @@ export interface CronHealthSnapshot {
   staleCronArtifacts: number;
   expiredCronLeases: number;
   orphanedCronProgressRows: number;
-  activeJobAttempts: number;
-  staleJobAttempts: number;
   cronHistoryQueryFailed: boolean;
   cronProgressQueryFailed: boolean;
   cronLeaseQueryFailed: boolean;
-  jobAttemptQueryFailed: boolean;
   scheduledSlotEventMarkerQueryFailed: boolean;
   scheduledSlots: ScheduledSlotHealthSummary;
 }
@@ -384,14 +380,8 @@ function summarizeRunningCronSlots(
 export async function loadCronHealth(
   db: D1Database,
   now: number,
-  workerJobLedgerMode: WorkerJobLedgerMode = "off",
-  workerJobLedgerAllowlist: readonly string[] = [],
 ): Promise<CronHealthSnapshot> {
   const cronJobs = Object.keys(CRON_INTERVALS);
-  const ledgerJobs = workerJobLedgerAllowlist.length === 0 || workerJobLedgerAllowlist.includes("*")
-    ? cronJobs
-    : cronJobs.filter((job) => workerJobLedgerAllowlist.includes(job));
-  const ledgerJobSet = new Set(ledgerJobs);
   const cronJobInClause = buildInClause(cronJobs);
   const scheduleKeys = Object.keys(SCHEDULED_SLOT_PLANS) as Array<keyof typeof SCHEDULED_SLOT_PLANS>;
   const eventKeys = scheduleKeys.map(staleSlotEventCacheKey);
@@ -402,13 +392,12 @@ export async function loadCronHealth(
   // dependency is purely an in-memory post-fetch step, so only the raw fetches
   // run in parallel; the dependent processing below preserves the original
   // ordering. This collapses ~13 sequential D1 awaits into one parallel wave.
-  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult, jobAttemptHealth] = await Promise.all([
+  const [historyResult, leaseResult, progressResult, slotEventResult, runningSlotResult] = await Promise.all([
     fetchCronHistoryRows(db, cronJobs),
     fetchCronLeaseRows(db, cronJobInClause),
     fetchCronProgressRows(db, cronJobInClause),
     fetchCronSlotEventRows(db, eventKeyInClause),
     fetchRunningCronSlotRows(db),
-    loadWorkerJobAttemptHealth(db, ledgerJobs, now, workerJobLedgerMode),
   ]);
   const scheduledSlotEventMarkerQueryFailed = slotEventResult.failed;
   const scheduledSlots = summarizeRunningCronSlots(runningSlotResult.rows, now, runningSlotResult.failed);
@@ -586,7 +575,6 @@ export async function loadCronHealth(
         (lastRun.status === "skipped_neutral" && hasFreshRequiredAvailability) ||
         (lastRun.status === "skipped_locked" && hasFreshOk));
     const statusImpact = getCronStatusImpact(job);
-    const latestAttempt = jobAttemptHealth.latestByJob.get(job);
     const metadataDegraded =
       job === "sync-blacklist"
       && lastRun != null
@@ -602,17 +590,10 @@ export async function loadCronHealth(
       requiredRuns.length === 0 &&
       runs.length <= 1 &&
       statusImpact === "watch";
-    // An expired lease or heartbeat on the latest active attempt is a direct
-    // producer-integrity failure. A prior successful cron_runs row (or a
-    // separately fresh progress row) must not mask abandoned current
-    // ownership while the sweeper is still catching up.
-    const latestAttemptStale = latestAttempt?.stale === true;
-    const healthy = latestAttemptStale
-      ? false
-      : telemetryUnknown
-        ? true
-        : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
-    const availabilityUnhealthy = !healthy && (!telemetryUnknown || latestAttemptStale);
+    const healthy = telemetryUnknown
+      ? true
+      : inFlightFresh || availabilityHealthyFromLastRun || watchBootstrap;
+    const availabilityUnhealthy = !healthy && !telemetryUnknown;
 
     if (availabilityUnhealthy) {
       unhealthyCrons++;
@@ -665,13 +646,6 @@ export async function loadCronHealth(
           stale: now - inFlight.updatedAt > Math.max(300, interval),
         };
       })(),
-      ...(latestAttempt ? { latestAttempt } : {}),
-      attemptTelemetry:
-        workerJobLedgerMode === "off"
-          ? "disabled"
-          : ledgerJobSet.has(job)
-            ? "enabled"
-            : "scoped-out",
       ...(staleArtifactsByJob.has(job) ? { staleArtifacts: staleArtifactsByJob.get(job) } : {}),
       ...(latestEventByJob.has(job) ? { latestEvent: latestEventByJob.get(job) } : {}),
       ...(watchBootstrap ? { bootstrap: true } : {}),
@@ -699,12 +673,9 @@ export async function loadCronHealth(
     staleCronArtifacts,
     expiredCronLeases,
     orphanedCronProgressRows,
-    activeJobAttempts: jobAttemptHealth.activeAttempts,
-    staleJobAttempts: jobAttemptHealth.staleAttempts,
     cronHistoryQueryFailed,
     cronProgressQueryFailed,
     cronLeaseQueryFailed,
-    jobAttemptQueryFailed: jobAttemptHealth.queryFailed,
     scheduledSlotEventMarkerQueryFailed,
     scheduledSlots,
   };

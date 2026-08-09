@@ -176,7 +176,6 @@ export const API_PATHS = {
     buildQueryPath("/api/reset-circuit-breaker", { circuit: params?.circuit }),
   killCronInFlight: (params?: { job?: string; leaseOwner?: string }) =>
     buildQueryPath("/api/kill-cron-in-flight", { job: params?.job, leaseOwner: params?.leaseOwner }),
-  armReserveRecoveryFaultInjection: () => "/api/admin/reserve-recovery-fault-injection",
   clearTelegramPending: (params?: { chatId?: string; olderThanSec?: number }) =>
     buildQueryPath("/api/telegram-pending", {
       chat_id: params?.chatId,

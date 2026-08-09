@@ -94,7 +94,6 @@ export interface ScheduledSlotSweepSummary {
   candidateSlots: number;
   slotsReconciled: number;
   syntheticCronRuns: number;
-  jobAttemptsAbandoned: number;
   progressRowsCleared: number;
   leasesCleared: number;
   recoveryCheckpointsPrepared: number;
@@ -268,7 +267,6 @@ export async function sweepStaleScheduledSlotExecutions(
     candidateSlots: staleSlots.length,
     slotsReconciled: 0,
     syntheticCronRuns: 0,
-    jobAttemptsAbandoned: 0,
     progressRowsCleared: 0,
     leasesCleared: 0,
     recoveryCheckpointsPrepared: 0,
@@ -312,7 +310,6 @@ export async function sweepStaleScheduledSlotExecutions(
     }
     summary.slotsReconciled++;
     summary.syntheticCronRuns += reconciliation.syntheticCronRuns;
-    summary.jobAttemptsAbandoned += reconciliation.jobAttemptsAbandoned;
     summary.progressRowsCleared += reconciliation.progressRowsCleared;
     summary.leasesCleared += reconciliation.leasesCleared;
     summary.recoveryCheckpointsPrepared += reconciliation.recoveryCheckpointsPrepared;

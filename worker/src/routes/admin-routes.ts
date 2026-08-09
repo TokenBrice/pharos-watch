@@ -1,4 +1,4 @@
-import { makeAdminRoute, makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
+import { makeConditionalIdempotentAdminRoute, makeIdempotentAdminRoute } from "../lib/route-wrappers";
 import {
   defineLazyStaticRoute,
   defineStaticRoute,
@@ -134,23 +134,6 @@ export const ADMIN_STATIC_ROUTES = [
   ),
   defineLazyStaticRoute("kill-cron-in-flight", () =>
     import("../api/admin-kill-cron-in-flight").then(({ handleKillCronInFlight }) => handleKillCronInFlight),
-  ),
-  defineStaticRoute(
-    "reserve-recovery-fault-injection",
-    makeAdminRoute(
-      "reserve-recovery-fault-injection",
-      async ({ db, request, trustedAdmin, workerVersion, reserveRecoveryFaultInjectionEnabled }) => {
-        const { handleArmReserveRecoveryFaultInjection } =
-          await import("../api/admin-reserve-recovery-fault-injection");
-        return handleArmReserveRecoveryFaultInjection(
-          db,
-          request,
-          trustedAdmin,
-          workerVersion,
-          reserveRecoveryFaultInjectionEnabled,
-        );
-      },
-    ),
   ),
   defineLazyStaticRoute("clear-telegram-pending", () =>
     import("../api/admin-telegram-pending").then(({ handleClearTelegramPending }) => handleClearTelegramPending),

@@ -1040,12 +1040,6 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "manual",
   }),
   adminMutation({
-    key: "reserve-recovery-fault-injection",
-    path: API_PATHS.armReserveRecoveryFaultInjection(),
-    routeDependencies: ["workerVersion"],
-    probeGroup: "manual",
-  }),
-  adminMutation({
     key: "clear-telegram-pending",
     path: API_PATHS.clearTelegramPending(),
     probeGroup: "manual",

@@ -624,36 +624,9 @@ export const ENV_BINDINGS = [
     },
   },
   {
-    key: "WORKER_JOB_LEDGER_MODE",
-    valueType: "string",
-    description: "Scheduled job-attempt ledger mode. `off` disables, `shadow` records best-effort telemetry, and `write` makes bootstrap, lease-state, progress-heartbeat, and terminal persistence part of the owned job contract.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "WORKER_JOB_LEDGER_ALLOWLIST",
-    valueType: "string",
-    description: "Optional CSV allowlist for job-attempt ledger recording. Unset records all scheduled jobs when the ledger mode is enabled.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
     key: "WORKER_RESERVE_RECOVERY_MODE",
     valueType: "string",
     description: "Reserve interruption recovery mode. Unset or `off` skips recovery scans; `shadow` reads eligibility only; `reconcile` seals abandoned attempts and prepares replay without claiming; `recover` also claims and replays prepared attempts.",
-    example: { section: "workerOptional", value: "" },
-    runtimes: {
-      worker: { status: "optional" },
-    },
-  },
-  {
-    key: "WORKER_RESERVE_FAULT_INJECTION_ENABLED",
-    valueType: "string",
-    description: "Explicit preview-only arming gate for reserve recovery fault injection. Only a normalized literal `true` enables the test harness; unset or any other value disables it.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
