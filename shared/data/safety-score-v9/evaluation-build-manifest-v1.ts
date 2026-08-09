@@ -378,11 +378,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-facts.ts",
-      "sha256": "1d7705c9d7158c05ca2c66989c6e5994131be2437570bc276d9c5f11bc005cef"
+      "sha256": "e67c89d99d04bf95b35f8c7caf58a626c0963864226d932cc9d1ca8d2662c5cb"
     },
     {
       "path": "shared/types/safety-score-v9-operational-resilience.ts",
-      "sha256": "c59be1a9c29227acad72d47735d124b4ab39ef56a915144a6e22fe1bee944530"
+      "sha256": "5dadd167bcbb6a16a0a76975b68ed3db6716d226a171af50d9871f2ddac98f25"
     },
     {
       "path": "shared/types/safety-score-v9-public-facts.ts",
@@ -510,7 +510,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-schema.ts",
-      "sha256": "2331c1f84aa61235522b429a0e362621d70675429487044df512c2946c3fefe5"
+      "sha256": "d2c5b9d723ce78b500948b90f54cf3f7aaf0d9257aec88660397ce667af054a0"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-wrapper.ts",
@@ -541,7 +541,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "40a429df27da402548d6451129dce0c873b4d6debe4c9b94b3b9f6522385b262"
+  "digest": "a49374c2bede08849a27187c36be343f691144b6674d3ec212cfebd92396aa50"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
