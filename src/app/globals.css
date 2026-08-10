@@ -939,6 +939,24 @@
     box-shadow: none;
   }
 
+  .pharos-overview-table-shell.pharos-density-compact {
+    --overview-table-font-size: 0.75rem;
+    --overview-table-line-height: 1rem;
+    --overview-table-head-height: 2rem;
+    --overview-table-cell-padding-x: 0.5rem;
+    --overview-table-cell-padding-y: 0.25rem;
+    --overview-table-row-height: 2.625rem;
+  }
+
+  .pharos-overview-table-shell.pharos-density-spacious {
+    --overview-table-font-size: 0.875rem;
+    --overview-table-line-height: 1.25rem;
+    --overview-table-head-height: 2.375rem;
+    --overview-table-cell-padding-x: 0.75rem;
+    --overview-table-cell-padding-y: 0.375rem;
+    --overview-table-row-height: 3.5rem;
+  }
+
   .dark .pharos-overview-table-shell {
     --overview-table-bg: oklch(0.105 0 0);
     --overview-table-header-bg: oklch(0.15 0 0);
@@ -963,24 +981,24 @@
   }
 
   .pharos-overview-table-shell [data-slot="table"].text-sm {
-    font-size: 0.875rem !important;
-    line-height: 1.25rem !important;
+    font-size: var(--overview-table-font-size) !important;
+    line-height: var(--overview-table-line-height) !important;
   }
 
   .pharos-overview-table-shell [data-slot="table-head"] {
-    height: 2.375rem !important;
-    padding-inline: 0.75rem !important;
+    height: var(--overview-table-head-height) !important;
+    padding-inline: var(--overview-table-cell-padding-x) !important;
     color: var(--text-tertiary);
-    font-size: 0.875rem !important;
+    font-size: var(--overview-table-font-size) !important;
     font-weight: 500;
-    line-height: 1.25rem !important;
+    line-height: var(--overview-table-line-height) !important;
   }
 
   .pharos-overview-table-shell [data-slot="table-cell"] {
-    padding-inline: 0.75rem !important;
-    padding-block: 0.375rem !important;
-    font-size: 0.875rem !important;
-    line-height: 1.25rem !important;
+    padding-inline: var(--overview-table-cell-padding-x) !important;
+    padding-block: var(--overview-table-cell-padding-y) !important;
+    font-size: var(--overview-table-font-size) !important;
+    line-height: var(--overview-table-line-height) !important;
   }
 
   .pharos-overview-table-header,
@@ -989,7 +1007,7 @@
   }
 
   .pharos-overview-table-row {
-    height: 3.5rem !important;
+    height: var(--overview-table-row-height) !important;
     border-left-color: transparent;
   }
 
