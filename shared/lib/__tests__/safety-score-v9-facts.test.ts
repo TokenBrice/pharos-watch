@@ -13,7 +13,6 @@ import {
   parseCompiledV9FactSetV2,
   parseCompiledV9FactSetV3,
   readCompiledV9FactSetForEvaluation,
-  upgradeCompiledV9FactSetV2,
   upgradeV9FactGapV2,
 } from "../safety-score-v9/facts";
 import {
@@ -29,6 +28,7 @@ import type {
   V9AssetFactsV2,
   V9AssetFactsV3,
 } from "../../types/safety-score-v9-facts";
+import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
 
 const AS_OF_SEC = 1_000;
 const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"a".repeat(64)}`;
@@ -627,13 +627,90 @@ function completeEmptyCoreFixture() {
   return input;
 }
 
-function nativeCompleteEmptyCoreFixture() {
-  const upgraded = structuredClone(
-    upgradeCompiledV9FactSetV2(
-      compileV9FactSetV2(completeEmptyCoreFixture()),
-    ),
+function nativeWrapperLocalFactsForFixture(asset: V9AssetFactsV2) {
+  const wrapperEdge = asset.dependencies.edges.find(
+    (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
   );
-  const { v9FactSetDigest: _digest, ...core } = upgraded;
+  const form =
+    asset.variantKind === "pure-wrapper"
+      ? "pure"
+      : asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption"
+        ? "native-staked"
+        : asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
+          ? "strategy-vault"
+          : null;
+  const evidenceRefIds = [
+    ...new Set([
+      ...asset.implementation.status.evidenceRefIds,
+      ...asset.dependencies.status.evidenceRefIds,
+      ...(wrapperEdge?.evidenceRefIds ?? []),
+    ]),
+  ].sort();
+  if (form === null) {
+    return { schemaVersion: 1 as const, applicability: "not-wrapper" as const, evidenceRefIds };
+  }
+  const unavailableFact = (factKey: string) => ({
+    disposition: "integration-missing" as const,
+    assessment: null,
+    signals: [`fixture-wrapper-local-fact:${factKey}`],
+    evidenceRefIds: [],
+  });
+  return {
+    schemaVersion: 1 as const,
+    applicability: "wrapper" as const,
+    form,
+    formDisposition: evidenceRefIds.length > 0 ? "reviewed" as const : "integration-missing" as const,
+    formSignals: [`fixture-wrapper-form:${form}`],
+    formEvidenceRefIds: evidenceRefIds,
+    facts: Object.fromEntries(
+      [
+        "contractMutability",
+        "custodyEscrow",
+        "strategyComplexity",
+        "leverage",
+        "rehypothecationCorrelation",
+        "shareAccountingNavOracle",
+        "withdrawalTerms",
+        "measuredUnwind",
+        "lossAbsorptionEmergencyControls",
+      ].map((factKey) => [factKey, unavailableFact(factKey)]),
+    ),
+    riskTransfer: {
+      disposition: "integration-missing" as const,
+      mechanism: "unknown" as const,
+      maximumParentLossAbsorptionPoints: 0,
+      signals: ["fixture-wrapper-risk-transfer"],
+      evidenceRefIds: [],
+    },
+  };
+}
+
+function compileNativeV3FactSet(input: ReturnType<typeof coreFixture>) {
+  return compileV9FactSetV3({
+    ...input,
+    schemaVersion: 3,
+    assets: input.assets.map((asset) => ({
+      ...asset,
+      dependencies: {
+        ...asset.dependencies,
+        edges: asset.dependencies.edges.map((edge) => ({
+          ...edge,
+          edgeKey: canonicalV9DependencyEdgeKey(
+            edge.dependencyType as DependencyType,
+            edge.upstreamAssetId,
+            edge.economicRole as V9DependencyEconomicRole | undefined,
+          ),
+        })),
+      },
+      wrapperLocalFacts: nativeWrapperLocalFactsForFixture(asset as unknown as V9AssetFactsV2),
+      gaps: asset.gaps.map(upgradeV9FactGapV2),
+    })),
+  });
+}
+
+function nativeCompleteEmptyCoreFixture() {
+  const native = structuredClone(compileNativeV3FactSet(completeEmptyCoreFixture()));
+  const { v9FactSetDigest: _digest, ...core } = native;
   return core;
 }
 
@@ -712,7 +789,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     input.assets.push(grandparent);
     input.activeAssetIds.push("delta");
 
-    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     const missingParentReasons = evaluated.assets
       .find((asset) => asset.assetId === "alpha")!
       .scoreInput.dependencyReasons.filter(
@@ -736,10 +813,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
   });
 
   it("attributes a derived oracle reason to the exact reviewed disclosure gap", () => {
-    const upgraded = structuredClone(
-      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
-    );
-    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const native = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const { v9FactSetDigest: _digest, ...core } = native;
     const alpha = core.assets.find(
       (asset) => asset.assetId === "alpha",
     ) as V9AssetFactsV3;
@@ -795,10 +870,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
   });
 
   it("scopes a control-specific reason before considering aggregate control gaps", () => {
-    const upgraded = structuredClone(
-      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
-    );
-    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const native = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const { v9FactSetDigest: _digest, ...core } = native;
     const alpha = core.assets.find(
       (asset) => asset.assetId === "alpha",
     ) as V9AssetFactsV3;
@@ -866,10 +939,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
   });
 
   it("keeps mixed upstream backing owners on distinct causal score paths", () => {
-    const upgraded = structuredClone(
-      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
-    );
-    const { v9FactSetDigest: _digest, ...core } = upgraded;
+    const native = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const { v9FactSetDigest: _digest, ...core } = native;
     const beta = core.assets.find(
       (asset) => asset.assetId === "beta",
     ) as V9AssetFactsV3;
@@ -1016,8 +1087,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
       "upgrade-control:safe:admin",
     ]);
 
-    expect(evaluateV9FactSet(reversed, V9_CANDIDATE_POLICY_V1)).toEqual(
-      evaluateV9FactSet(ordered, V9_CANDIDATE_POLICY_V1),
+    expect(evaluateV9FactSet(compileNativeV3FactSet(coreFixture(true)), V9_CANDIDATE_POLICY_V1)).toEqual(
+      evaluateV9FactSet(compileNativeV3FactSet(coreFixture(false)), V9_CANDIDATE_POLICY_V1),
     );
   });
 
@@ -1086,7 +1157,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       input.activeAssetIds = [child.assetId, parent.assetId];
       input.assets = [child as never, parent as never];
 
-      const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
       return {
         child: evaluated.assets.find((asset) => asset.assetId === child.assetId)!,
         parent: evaluated.assets.find((asset) => asset.assetId === parent.assetId)!,
@@ -1166,7 +1237,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       ).valuedExecutableUsd,
     ).toBe(40_000);
 
-    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     for (const assetId of ["alpha", "delta"]) {
       const signal = evaluated.assets
         .find((asset) => asset.assetId === assetId)!
@@ -1194,7 +1265,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
         route.coverageClass = "diagnostic";
         route.scoreEligible = false;
       }
-      return evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     };
     const dexSignal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
       evaluated.assets
@@ -1255,7 +1326,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
           diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
         };
       }
-      return evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      return evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     };
     const signal = (evaluated: ReturnType<typeof evaluateV9FactSet>, assetId: string) =>
       evaluated.assets
@@ -1484,7 +1555,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
         asset.supply.failureDomains.push(targetDomain, nativeDomain);
       }
 
-      const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+      const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
       return evaluated.assets
         .find((asset) => asset.assetId === "alpha")!
         .scoreInput.dependencyStructuralSignals.find((signal) =>
@@ -1586,7 +1657,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       asset.supply.failureDomains.push(targetDomain);
     }
 
-    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     for (const assetId of ["alpha", "delta"]) {
       expect(
         evaluated.assets
@@ -1634,7 +1705,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       }),
       quality: null,
     };
-    const pillarEvaluated = evaluateV9FactSet(compileV9FactSetV2(pillarInput), V9_CANDIDATE_POLICY_V1).assets.find(
+    const pillarEvaluated = evaluateV9FactSet(compileNativeV3FactSet(pillarInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;
     expect(pillarEvaluated.scoreInput.pillars.backing).toMatchObject({
@@ -1649,7 +1720,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     const redemptionRoute = diagnosticAsset.exitRoutes.find((route) => route.routeId === "issuer-main")!;
     redemptionRoute.failureDomains.push(dexRoute.failureDomains.find((domain) => domain.kind === "dex-protocol")!);
     const diagnosticEvaluated = evaluateV9FactSet(
-      compileV9FactSetV2(diagnosticInput),
+      compileNativeV3FactSet(diagnosticInput),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "alpha")!;
     expect(diagnosticEvaluated.exit.reasons).toContain("correlated-exit-routes");
@@ -1677,7 +1748,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     beta.exitRoutes = [measuredRoute];
 
     const evaluated = evaluateV9FactSet(
-      compileV9FactSetV2(input),
+      compileNativeV3FactSet(input),
       V9_CANDIDATE_POLICY_V1,
     ).assets.find((asset) => asset.assetId === "beta")!;
     const primaryRoute = evaluated.exit.routes.find(
@@ -1746,7 +1817,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
         gapIds: [ceilingGap.gapId],
       }),
     };
-    const ceilingEvaluated = evaluateV9FactSet(compileV9FactSetV2(ceilingInput), V9_CANDIDATE_POLICY_V1).assets.find(
+    const ceilingEvaluated = evaluateV9FactSet(compileNativeV3FactSet(ceilingInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;
     expect(ceilingEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("limited");
@@ -1772,7 +1843,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       }),
       review: null,
     };
-    const nrEvaluated = evaluateV9FactSet(compileV9FactSetV2(nrInput), V9_CANDIDATE_POLICY_V1).assets.find(
+    const nrEvaluated = evaluateV9FactSet(compileNativeV3FactSet(nrInput), V9_CANDIDATE_POLICY_V1).assets.find(
       (asset) => asset.assetId === "alpha",
     )!;
     expect(nrEvaluated.scoreInput.pillars.backing.evidenceLevel).toBe("insufficient");
@@ -1814,7 +1885,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
     configureCycleMember(beta, "gamma", "wrapper");
     configureCycleMember(gamma, "beta", "mechanism");
 
-    const evaluated = evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1);
+    const evaluated = evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1);
     expect(evaluated.assets.map((asset) => asset.assetId)).toEqual(["alpha", "beta", "gamma"]);
     expect(evaluated.assets.find((asset) => asset.assetId === "beta")!.compactTrace.reasonCodes).toContain(
       "implementation-parent-cycle",
@@ -1911,80 +1982,11 @@ describe("Safety Score v9 normalized fact protocol", () => {
     expect(reparsed.v9FactSetDigest).toBe(retained.v9FactSetDigest);
   });
 
-  it("strictly upgrades retained V2 gaps into the responsibility-bearing V3 evaluator contract", () => {
+  it("rejects retained V2 fact sets closed", () => {
     const retained = compileV9FactSetV2(coreFixture());
-    const retainedBytes = stableJsonStringifyV1(retained);
-    const upgraded = upgradeCompiledV9FactSetV2(retained);
-    const read = readCompiledV9FactSetForEvaluation(JSON.parse(retainedBytes));
-
-    expect(read.sourceSchemaVersion).toBe(2);
-    expect(read.sourceFactSetDigest).toBe(retained.v9FactSetDigest);
-    expect(read.factSet).toEqual(upgraded);
-    expect(upgraded.schemaVersion).toBe(3);
-    expect(parseCompiledV9FactSetV3(upgraded)).toEqual(upgraded);
-    expect(
-      upgraded.assets.every((asset) => !Object.prototype.hasOwnProperty.call(asset, "operationalResilience")),
-    ).toBe(true);
-    expect(upgraded.v9FactSetDigest).not.toBe(retained.v9FactSetDigest);
-    expect(upgraded.assets[0]!.gaps).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          reasonCode: "unsupported-same-notional-route",
-          responsibility: "method-unsupported",
-        }),
-      ]),
+    expect(() => readCompiledV9FactSetForEvaluation(retained)).toThrow(
+      "Unsupported Safety Score v9 fact-set schema version: 2; expected 3",
     );
-    expect(stableJsonStringifyV1(parseCompiledV9FactSetV2(JSON.parse(retainedBytes)))).toBe(retainedBytes);
-
-    const evaluated = evaluateV9FactSet(retained, V9_CANDIDATE_POLICY_V1);
-    expect(evaluated.factSetDigest).toBe(retained.v9FactSetDigest);
-    expect(evaluated.assets[0]!.trace.unresolvedFacts).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          code: "unsupported-same-notional-route",
-          responsibility: "method-unsupported",
-        }),
-      ]),
-    );
-  });
-
-  it("fails retained V2 no-exit ambiguity closed without weakening native V3 measured outcomes", () => {
-    const legacyGap = {
-      ...coreFixture().assets[0]!.gaps[0]!,
-      reasonCode: "no-viable-exit-path" as const,
-    };
-    expect(upgradeV9FactGapV2(legacyGap).responsibility).toBe("method-unsupported");
-    expect(
-      createV9FactGapV3({
-        ...legacyGap,
-        responsibility: "measured-adverse",
-      }).responsibility,
-    ).toBe("measured-adverse");
-  });
-
-  it("keeps equivalent retained V2 complete-empty ambiguity method-unsupported and NR", () => {
-    const retained = compileV9FactSetV2(completeEmptyCoreFixture());
-    const evaluated = evaluateV9FactSet(
-      retained,
-      V9_CANDIDATE_POLICY_V1,
-    ).assets.find((asset) => asset.assetId === "alpha")!;
-    const reason = evaluated.scoreInput.pillars.exit.reasons.find(
-      (candidate) => candidate.code === "no-viable-exit-path",
-    );
-
-    expect(evaluated.exit).toMatchObject({
-      score: 0,
-      primaryRouteKey: null,
-      reasons: expect.arrayContaining(["no-viable-exit-path"]),
-    });
-    expect(reason).toMatchObject({
-      path: "exit:no-viable-exit-path",
-      responsibility: "method-unsupported",
-    });
-    expect(evaluated.trace).toMatchObject({
-      finalScore: null,
-      finalGrade: "NR",
-    });
   });
 
   it.each([
@@ -2055,10 +2057,8 @@ describe("Safety Score v9 normalized fact protocol", () => {
   });
 
   it("preserves explicit exit-gap and mechanism-profile ownership over native complete-empty fallback", () => {
-    const upgradedWithGap = structuredClone(
-      upgradeCompiledV9FactSetV2(compileV9FactSetV2(coreFixture())),
-    );
-    const { v9FactSetDigest: _gapDigest, ...gapCore } = upgradedWithGap;
+    const nativeWithGap = structuredClone(compileNativeV3FactSet(coreFixture()));
+    const { v9FactSetDigest: _gapDigest, ...gapCore } = nativeWithGap;
     const gapAsset = gapCore.assets.find(
       (candidate) => candidate.assetId === "alpha",
     ) as V9AssetFactsV3;
@@ -2130,7 +2130,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       }
     };
     const severity = (input: ReturnType<typeof coreFixture>) =>
-      evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1)
+      evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === "beta")!
         .scoreInput.dependencyStructuralSignals.find((signal) => signal.failureDomainKeys.includes("chain:hyperliquid"))
         ?.severity;
@@ -2162,7 +2162,7 @@ describe("Safety Score v9 normalized fact protocol", () => {
       }
     };
     const chainSignal = (input: ReturnType<typeof coreFixture>, assetId: string) =>
-      evaluateV9FactSet(compileV9FactSetV2(input), V9_CANDIDATE_POLICY_V1)
+      evaluateV9FactSet(compileNativeV3FactSet(input), V9_CANDIDATE_POLICY_V1)
         .assets.find((asset) => asset.assetId === assetId)!
         .scoreInput.dependencyStructuralSignals.find((signal) =>
           signal.failureDomainKeys.includes("chain:chain:fixture"),

@@ -338,7 +338,7 @@ const V9EvidenceResponsibilityCountSchema = z
 
 const V9EvidenceGapQueueFactsV2Schema = z
   .object({
-    sourceSchemaVersion: z.union([z.literal(2), z.literal(3)]),
+    sourceSchemaVersion: z.literal(3),
     sourceFactSetDigest: Sha256Schema,
     evaluationFactSetDigest: Sha256Schema,
     baseInputGenerationId: BaseInputGenerationIdSchema,
@@ -348,14 +348,11 @@ const V9EvidenceGapQueueFactsV2Schema = z
   .strict()
   .superRefine((facts, ctx) => {
     const digestsMatch = facts.sourceFactSetDigest === facts.evaluationFactSetDigest;
-    if ((facts.sourceSchemaVersion === 3) !== digestsMatch) {
+    if (!digestsMatch) {
       ctx.addIssue({
         code: "custom",
         path: ["evaluationFactSetDigest"],
-        message:
-          facts.sourceSchemaVersion === 3
-            ? "Native V3 source and evaluation fact-set digests must match"
-            : "Retained V2 source and upgraded V3 evaluation fact-set digests must be distinct",
+        message: "Native V3 source and evaluation fact-set digests must match",
       });
     }
   });

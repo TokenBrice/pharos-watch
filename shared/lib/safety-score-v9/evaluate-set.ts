@@ -1,6 +1,5 @@
 import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../data/safety-score-v9/evaluation-build-manifest-v1";
 import type {
-  CompiledV9FactSetV2,
   CompiledV9FactSetV3,
   V9AssetFactsBase,
   V9AssetFactsV3,
@@ -993,7 +992,6 @@ function evaluateV9FactSetRead(
       identity,
       marketRank: marketRanks.get(assetId) ?? null,
       dependencySignals: commonSignals.get(assetId) ?? [],
-      sourceSchemaVersion: factSetRead.sourceSchemaVersion,
     });
     evaluatedById.set(assetId, evaluatedAsset);
     unavailabilityRootsById.set(assetId, unavailabilityRoots);
@@ -1022,7 +1020,7 @@ function evaluateV9FactSetRead(
 
 /** Evaluate one untrusted compiled active-asset set after strict validation. */
 export function evaluateV9FactSet(
-  input: CompiledV9FactSetV2 | CompiledV9FactSetV3,
+  input: CompiledV9FactSetV3,
   envelope: V9ValidatedPolicyEnvelope,
 ): Readonly<V9EvaluatedSet> {
   return evaluateV9FactSetRead(readCompiledV9FactSetForEvaluation(input), envelope);

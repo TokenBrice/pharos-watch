@@ -225,7 +225,7 @@ export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueue {
   throw new Error(`Unsupported Safety Score v9 evidence-gap queue schema version: ${String(schemaVersion)}`);
 }
 
-/** Build a policy-backed work queue from native V3 or explicitly upgraded retained V2 facts. */
+/** Build a policy-backed work queue from native V3 facts. */
 export function buildV9EvidenceGapQueue(args: {
   factSet: unknown;
   policy: V9ValidatedPolicyEnvelope;
@@ -304,7 +304,7 @@ export function buildV9EvidenceGapQueue(args: {
     purpose: "evidence-work-queue-not-release-gate",
     status: entries.length === 0 ? "clear" : "work-required",
     facts: {
-      sourceSchemaVersion: factSetRead.sourceSchemaVersion,
+      sourceSchemaVersion: 3,
       sourceFactSetDigest: factSetRead.sourceFactSetDigest,
       evaluationFactSetDigest: factSet.v9FactSetDigest,
       baseInputGenerationId: factSet.baseInputGenerationId,
