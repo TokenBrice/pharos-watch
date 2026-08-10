@@ -8,6 +8,23 @@ function readRepoFile(path: string): string {
 }
 
 describe("CI workflow scope", () => {
+  it("keeps successful Pages release snapshots when another refresh fails open", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pages-release.yml")) as {
+      jobs: Record<string, { steps?: Array<{ name?: string; run?: string }> }>;
+    };
+    const refreshStep = workflow.jobs["pages-release"].steps?.find(
+      (step) => step.name === "Refresh API-backed release data",
+    );
+    const run = refreshStep?.run ?? "";
+
+    expect(run).toContain("git checkout -- data/digests.json");
+    expect(run).toContain("git checkout -- data/depeg-events.json");
+    expect(run).toContain("git checkout -- public/datasets");
+    expect(run).not.toContain(
+      "git checkout -- data/digests.json data/depeg-events.json public/datasets",
+    );
+  });
+
   it("packages the Worker before production D1 mutation", () => {
     const workflow = readRepoFile(".github/workflows/deploy-cloudflare.yml");
     const packageStep = workflow.indexOf("npm run check:worker-package");
