@@ -3,6 +3,8 @@ import brlvMetaSource from "@shared/data/stablecoins/coins/brlv-crown.json";
 import xsgdMetaSource from "@shared/data/stablecoins/coins/xsgd-straitsx.json";
 import brlvReserveSource from "@shared/data/stablecoins/domains/reserves/brlv-crown.json";
 import xsgdReserveSource from "@shared/data/stablecoins/domains/reserves/xsgd-straitsx.json";
+import brlvMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/brlv-crown.json";
+import xsgdMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/xsgd-straitsx.json";
 import type { ReserveSlice } from "@shared/types/reserves";
 import {
   buildSafetyScoreV9ReviewedCuratedFallbackReserveRows,
@@ -445,6 +447,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       ...xsgdMetaSource,
       reserves: xsgdReserveSource.reserves,
       reserveReview: xsgdReserveSource.reserveReview,
+      mintAuthority: xsgdMintAuthoritySource.mintAuthority,
     } as unknown as V9ExtensionRegistryMeta;
 
     expect(xsgdMeta.mintAuthority).toMatchObject({
@@ -468,6 +471,7 @@ describe("Phase 1 D6 issuer-attested reserve admission", () => {
       ...brlvMetaSource,
       reserves: brlvReserveSource.reserves,
       reserveReview: brlvReserveSource.reserveReview,
+      mintAuthority: brlvMintAuthoritySource.mintAuthority,
     } as unknown as V9ExtensionRegistryMeta;
 
     expect(brlvMeta.mintAuthority?.supervision).toBe("attestation-only");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   parseStablecoinMetaAssets,
@@ -1424,11 +1424,35 @@ describe("StablecoinMeta schema — real fixture smoke tests", () => {
     "stusd-stoneyield",
   ];
 
+  // Since the D8 migration a base coin file is only one projection of an asset:
+  // compliance, reserves, mint-authority and risk-review fields live in sidecars.
+  // The catalog schema's refinements span domains (a base-file liveReservesConfig is
+  // validated against a reserves slice that now sits in the reserves sidecar), so the
+  // fixture has to be composed before parsing or it fails closed on its own absent
+  // fields. Sidecars carry exactly their domain's fields plus `id`.
+  const SIDECAR_DOMAINS = ["compliance", "reserves", "mint-authority", "risk-review"] as const;
+
+  function composeSourceAsset(fixture: string): unknown {
+    const dataDir = join(__dirname, "../../../../shared/data/stablecoins");
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
+    const composed = JSON.parse(readFileSync(join(dataDir, "coins", `${fixture}.json`), "utf8")) as Record<
+      string,
+      unknown
+    >;
+    for (const domain of SIDECAR_DOMAINS) {
+      const sidecarPath = join(dataDir, "domains", domain, `${fixture}.json`);
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
+      if (!existsSync(sidecarPath)) continue;
+      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
+      const { id: _id, ...fields } = JSON.parse(readFileSync(sidecarPath, "utf8")) as Record<string, unknown>;
+      Object.assign(composed, fields);
+    }
+    return composed;
+  }
+
   for (const fixture of fixtures) {
     it(`parses ${fixture}.json without error`, () => {
-      const path = join(__dirname, "../../../../shared/data/stablecoins/coins", `${fixture}.json`);
-      // eslint-disable-next-line security/detect-non-literal-fs-filename -- test reads fixed fixture IDs from the local whitelist.
-      const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
+      const raw = composeSourceAsset(fixture);
       expect(() => parseStablecoinMetaAssets([raw], fixture)).not.toThrow();
     });
   }

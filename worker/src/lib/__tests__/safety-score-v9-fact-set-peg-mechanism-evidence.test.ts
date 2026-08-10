@@ -7,6 +7,14 @@
 import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import usdtMetaSource from "@shared/data/stablecoins/coins/usdt-tether.json";
+import usdtComplianceSource from "@shared/data/stablecoins/domains/compliance/usdt-tether.json";
+import usdtMintAuthoritySource from "@shared/data/stablecoins/domains/mint-authority/usdt-tether.json";
+import usdtReserveSource from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
+import usdtRiskReviewSource from "@shared/data/stablecoins/domains/risk-review/usdt-tether.json";
+
+function withoutId<T extends { id: string }>({ id: _id, ...fields }: T): Omit<T, "id"> {
+  return fields;
+}
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -226,7 +234,15 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       metaById: new Map([
         [
           "usdt-tether",
-          usdtMetaSource as unknown as V9ExtensionRegistryMeta,
+          // The asset is base file + its four domain sidecars; scoring an
+          // uncomposed base file would read owned facts as undisclosed.
+          {
+            ...usdtMetaSource,
+            ...withoutId(usdtComplianceSource),
+            ...withoutId(usdtMintAuthoritySource),
+            ...withoutId(usdtReserveSource),
+            ...withoutId(usdtRiskReviewSource),
+          } as unknown as V9ExtensionRegistryMeta,
         ],
       ]),
     });

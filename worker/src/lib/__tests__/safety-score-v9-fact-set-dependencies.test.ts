@@ -6,6 +6,7 @@
 
 import { describe, expect, it } from "vitest";
 import fraxMetaSource from "@shared/data/stablecoins/coins/frax-frax.json";
+import fraxReserveSource from "@shared/data/stablecoins/domains/reserves/frax-frax.json";
 import flipcashMetaSource from "@shared/data/stablecoins/coins/usdf-flipcash.json";
 import astherusMetaSource from "@shared/data/stablecoins/coins/usdf-astherus.json";
 import megaMetaSource from "@shared/data/stablecoins/coins/usdm-mega.json";
@@ -217,7 +218,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
 
   it("loads every economic role from reviewed production metadata and preserves the Frax WTGXX non-link", () => {
     const productionMeta = [
-      fraxMetaSource,
+      {
+        ...fraxMetaSource,
+        reserves: fraxReserveSource.reserves,
+        reserveReview: fraxReserveSource.reserveReview,
+      },
       flipcashMetaSource,
       astherusMetaSource,
       megaMetaSource,
