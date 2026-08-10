@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import type { ChainRpcConfig } from "../chain-registry";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
-import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { buildReviewedDeploymentRouteInventory } from "../safety-score-v9-supply-attribution-contract";
 import { buildXautRepresentationGroupInventory } from "../safety-score-v9-xaut-supply-attribution-contract";
@@ -556,7 +556,7 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
             safetyScoreV9SupplyAttributionById: capture.attributionById,
           },
           "wm-m0",
-          wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
+          wmRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile,
         ),
       ).toBeNull();
     },

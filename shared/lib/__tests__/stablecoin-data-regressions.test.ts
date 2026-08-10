@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import felixAsset from "../../data/stablecoins/coins/feusd-felix.json";
-import usdkgAsset from "../../data/stablecoins/coins/usdkg-gold-dollar.json";
+import felixMintAuthority from "../../data/stablecoins/domains/mint-authority/feusd-felix.json";
+import usdkgReserves from "../../data/stablecoins/domains/reserves/usdkg-gold-dollar.json";
 
 describe("stablecoin source-data regressions", () => {
   it("marks every Felix BorrowerOperations debt cap as admin-mutable", () => {
-    const borrowerOperations = felixAsset.mintAuthority.controls.filter((control) =>
+    const borrowerOperations = felixMintAuthority.mintAuthority.controls.filter((control) =>
       control.label.endsWith("BorrowerOperations"),
     );
 
@@ -16,7 +16,7 @@ describe("stablecoin source-data regressions", () => {
   });
 
   it("keeps USDKG physical gold on the active reserve-risk rubric", () => {
-    const physicalGold = usdkgAsset.reserves.find((reserve) => reserve.name.startsWith("Physical gold"));
+    const physicalGold = usdkgReserves.reserves.find((reserve) => reserve.name.startsWith("Physical gold"));
 
     expect(physicalGold).toMatchObject({ pct: 100, risk: "very-low" });
     expect(physicalGold?.riskFactors).toEqual(
@@ -24,6 +24,6 @@ describe("stablecoin source-data regressions", () => {
     );
     // Lockstep pin: composition is anchored to the 2025-11-28 Kreston AUP that
     // latestReport records, not the later live transparency-page read.
-    expect(usdkgAsset.reserveReview.compositionAsOf).toBe("2025-11-28");
+    expect(usdkgReserves.reserveReview.compositionAsOf).toBe("2025-11-28");
   });
 });
