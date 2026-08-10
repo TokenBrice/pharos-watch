@@ -9,6 +9,13 @@
  * location for backward compatibility — no callers need to change imports.
  */
 
+import {
+  TELEGRAM_ALERT_TTL_SEC as SHARED_TELEGRAM_ALERT_TTL_SEC,
+  TELEGRAM_HISTORICAL_SOURCE_PRIORITY,
+  TELEGRAM_HISTORICAL_SOURCE_TTL_SEC,
+  TELEGRAM_PENDING_PRIORITY as SHARED_TELEGRAM_PENDING_PRIORITY,
+} from "@shared/lib/telegram-delivery-policy";
+
 // ---------- Depeg-step subscription values ----------
 
 /** Allowed bps values for the depeg-step subscription setting. */
@@ -71,6 +78,17 @@ export const TELEGRAM_SPLIT_VERSION = 1;
 
 // Preserve the established Worker import surface while the policy itself stays
 // runtime-neutral and is shared with the synthetic load guard.
+/** Compatibility defaults for historical pending rows, not active alert families. */
+export const TELEGRAM_ALERT_TTL_SEC = {
+  ...SHARED_TELEGRAM_ALERT_TTL_SEC,
+  legacy: TELEGRAM_HISTORICAL_SOURCE_TTL_SEC,
+} as const;
+/** Compatibility defaults for historical pending rows, not active alert families. */
+export const TELEGRAM_PENDING_PRIORITY = {
+  ...SHARED_TELEGRAM_PENDING_PRIORITY,
+  legacy: TELEGRAM_HISTORICAL_SOURCE_PRIORITY,
+} as const;
+
 export {
   BLOCK_STRIKE_WINDOW_SEC,
   PENDING_BACKOFF_SCHEDULE_SEC,
@@ -80,14 +98,14 @@ export {
   PENDING_OLD_AGE_ALERT_SEC,
   PENDING_TTL_SEC,
   SEND_BATCH_SIZE,
-  TELEGRAM_ALERT_TTL_SEC,
   TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE,
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
   TELEGRAM_PENDING_DRAIN_BUDGET,
-  TELEGRAM_PENDING_PRIORITY,
+  TELEGRAM_HISTORICAL_SOURCE_PRIORITY,
+  TELEGRAM_HISTORICAL_SOURCE_TTL_SEC,
 } from "@shared/lib/telegram-delivery-policy";
 
 // ---------- Webhook disambiguation ----------

@@ -327,7 +327,7 @@ export async function loadReportCardsSnapshotInputs(
   ] = await Promise.allSettled([
     options.preloadedStablecoinsCache
       ? Promise.resolve(options.preloadedStablecoinsCache)
-      : loadStablecoinsCache(db, { mode: "strict", contract: "published", allowLegacyArray: false }),
+      : loadStablecoinsCache(db, { mode: "strict", contract: "published" }),
     loadDexLiquiditySnapshot(db),
     loadDexDeploymentSupplyJoin(db),
     loadRedemptionBackstopSnapshot(db),

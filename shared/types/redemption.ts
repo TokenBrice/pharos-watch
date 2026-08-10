@@ -351,7 +351,7 @@ export const RedemptionBackstopMethodologySchema = MethodologyEnvelopeSchema.ext
   }),
 });
 
-export const RedemptionSnapshotSourceSchema = z.enum(["run-rows", "legacy-current"]);
+export const RedemptionSnapshotSourceSchema = z.enum(["run-rows"]);
 export type RedemptionSnapshotSource = z.infer<typeof RedemptionSnapshotSourceSchema>;
 
 export const RedemptionBackstopsResponseSchema = z.object({

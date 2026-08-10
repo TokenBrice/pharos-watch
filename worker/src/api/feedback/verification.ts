@@ -11,7 +11,7 @@ export async function verifyDataCorrection(
   stablecoinId: string,
 ): Promise<VerificationResult> {
   try {
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
     if (stablecoinsCache.kind !== "ok") {
       throw new Error(`stablecoins cache ${stablecoinsCache.reason}`);
     }

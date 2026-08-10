@@ -87,6 +87,9 @@ describe("report-card blacklist authority", () => {
     // The supply key is used by HLiquity's collateralized CDP mint path, not
     // treated as standalone unbounded admin dilution authority.
     expect(resolved.get("hchf-hedera-swiss-franc")).toBe(false);
+    // EURO3: no direct token freeze, but the dominant meUSDC collateral is a
+    // Mendi receipt over Circle's official Linea USDC deployment.
+    expect(resolved.get("euro3-3a-dao")).toBe("inherited");
   });
 
   it("pins the May 2026 unfreezable audit (upgradeable-proxy + admin-mint corrections)", () => {
@@ -212,7 +215,11 @@ describe("report-card blacklist authority", () => {
     // can replace an otherwise unrestricted implementation.
     expect(resolved.get("pht-pht")).toBe("possible");
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
-    expect(resolved.get("usdd-tron-dao-reserve")).toBe(false);
+    // USDD has no direct token freeze surface, but its debt-weighted all-chain
+    // reserve composition is majority-exposed through Smart Allocator
+    // stablecoin positions and direct USDT issuance rails.
+    expect(resolved.get("usdd-tron-dao-reserve")).toBe("inherited");
+    expect(resolved.get("susdd-tron-dao-reserve")).toBe("inherited");
     // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
     // direct holder freeze/blacklist and added a reviewed suppression (same-symbol
     // false positive vs the unrelated Noble USDN), re-graded to direct false.

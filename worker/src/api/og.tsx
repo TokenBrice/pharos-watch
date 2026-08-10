@@ -293,7 +293,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   ] = await Promise.all([
     loadStablecoinsCache(db, {
       mode: "strict",
-      allowLegacyArray: false,
       contract: "published",
     }),
     loadDexLiquidityMap(db),
@@ -436,7 +435,6 @@ async function handleSafetyScoresOg(db: D1Database): Promise<Response> {
   const [stablecoinsPayload, safetySource] = await Promise.all([
     loadStablecoinsCache(db, {
       mode: "strict",
-      allowLegacyArray: false,
       contract: "published",
     }),
     loadOgSafetyScoreSource(db),
@@ -701,7 +699,6 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
 
   const stablecoinsResult = await loadStablecoinsCache(db, {
     mode: "strict",
-    allowLegacyArray: false,
     contract: "published",
   });
   if (stablecoinsResult.kind !== "ok") {

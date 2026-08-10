@@ -26,8 +26,6 @@ export interface TelegramPendingDeliveryBacklog {
   executionUnknownSampleLimit?: number;
   executionUnknownLowerBound?: boolean;
   sentCleanup?: number;
-  /** @deprecated Use `sentCleanup`. */
-  completedPendingCleanup?: number;
 }
 
 interface TelegramWatcherLifecycleSnapshot {

@@ -169,9 +169,6 @@ export async function syncUsdsStatus(
 
   const statusResult = UsdsStatusResponseSchema.safeParse({
     freezeCapabilityPresent,
-    // Deprecated alias mirroring freezeCapabilityPresent — capability presence
-    // is the only observable signal here, not actual freeze use. See audit Q-238.
-    freezeActive: freezeCapabilityPresent,
     implementationAddress,
     lastChecked: syncStartSec,
   });
@@ -191,7 +188,6 @@ export async function syncUsdsStatus(
         reason: "status-payload-invalid",
         implementationAddress,
         freezeCapabilityPresent,
-        freezeActive: freezeCapabilityPresent,
       }),
     };
   }
@@ -216,7 +212,6 @@ export async function syncUsdsStatus(
         reason: "cache-write-failed",
         implementationAddress,
         freezeCapabilityPresent,
-        freezeActive: freezeCapabilityPresent,
       }),
     };
   }
@@ -233,7 +228,6 @@ export async function syncUsdsStatus(
     metadata: JSON.stringify({
       implementationAddress,
       freezeCapabilityPresent,
-      freezeActive: freezeCapabilityPresent,
       cacheKey: CACHE_KEY,
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",

@@ -1,10 +1,10 @@
 {
   "id": "euro3-3a-dao",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "evidence": "Re-verified 2026-08-08 across both tracked deployments. At Polygon block 91675721, EURO3 0xa0e4c84693266a9d3bbef2f394b33712c76599ab returned owner 0xb3857f86a95516902c953d530d3e5c29b1518a85; at Linea block 31656728, EURO3 0x3f817b28da4940f018c6b5c0a11c555ebb1264f9 returned owner 0x1ba31e955a3e1fbc8caffa64056c58a3e4d86082. Both retained direct non-proxy code and zero EIP-1967 implementation/admin slots. Sourcify exact-match MintableToken source is OpenZeppelin ERC-20 plus onlyOwner mint and has no pause, blacklist, freeze, allowlist, seizure, arbitrary-holder burn, or transfer hook. The owner chain can change minters but cannot change deployed transfer logic, so direct blacklistability is false. Freezeable collateral remains backing risk only.",
-    "reviewer": "OpenAI Codex C11 access review",
-    "reviewedAt": "2026-08-08",
+    "reviewedStatus": "inherited",
+    "evidence": "Re-verified 2026-08-10 across both tracked deployments. At Polygon block 91771970 and Linea block 31673704, EURO3 retained the reviewed owner contracts, direct non-proxy bytecode, and zero EIP-1967 implementation/admin slots. Sourcify exact-match MintableToken source is OpenZeppelin ERC-20 plus onlyOwner mint and has no pause, blacklist, freeze, allowlist, seizure, arbitrary-holder burn, or transfer hook, so EURO3 has no direct holder-freeze control. The reserve verdict is nevertheless Upstream: the reviewed all-chain collateral composition assigns 70.1381% to Mendi meUSDC, and a live Linea recheck at block 31673691 put meUSDC at 71.79% of current Linea factory collateral. meUSDC.underlying() returned Circle's official Linea USDC contract 0x176211869ca2b568f2a7d4ee941e073a821ee1ff; meUSDT.underlying() likewise returned Linea USDT. Those named freezable stablecoin dependencies exceed the strict 50% upstream threshold, so the resolved status is inherited rather than direct Yes.",
+    "reviewer": "Codex FreezeWatch upstream audit",
+    "reviewedAt": "2026-08-10",
     "sources": [
       {
         "label": "Sourcify exact-match Polygon MintableToken",
@@ -29,6 +29,14 @@
       {
         "label": "3A DAO Polygon collateral registry",
         "url": "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts"
+      },
+      {
+        "label": "Mendi Finance cToken exchange documentation",
+        "url": "https://docs.mendi.finance/protocol/developer-docs"
+      },
+      {
+        "label": "Circle official Linea USDC contract registry",
+        "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
       }
     ]
   },

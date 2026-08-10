@@ -97,7 +97,6 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
 
   const stablecoinsCache = await loadStablecoinsCache(db, {
     mode: "strict",
-    allowLegacyArray: true,
   });
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
     return {

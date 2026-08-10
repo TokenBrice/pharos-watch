@@ -2,13 +2,8 @@ import { z } from "zod";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import {
   SafetyScoreV9CompletenessSchema,
-  SafetyScoreV9CausalCardSchema,
   SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9PreBreakdownCardSchema,
-  SafetyScoreV9PreviousCardSchema,
   findSafetyScoreV9ParentAttributionIssues,
-  type SafetyScoreV9Card,
-  type SafetyScoreV9CausalCard,
   type SafetyScoreV9CurrentCard,
 } from "./safety-score-v9-public";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
@@ -17,12 +12,6 @@ import { compareText } from "./safety-score-v9-fact-primitives";
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 4;
-
-// The report-v1/v2/v3 versions below are compatibility-reader literals only.
-// They had no consumer outside this file, so they are stated inline on the arm
-// that reads them (WS6.8, 2026-08-09) — see the retention-horizon note on
-// SafetyScoreV9ResponseSchema in ./safety-score-v9-public for when an arm and
-// its version may be retired together.
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -164,7 +153,7 @@ export type ReportCardsV9DependencyGraph = z.infer<typeof ReportCardsV9Dependenc
  * intentionally do not reuse the V8 dependency type or weight semantics.
  */
 export function buildReportCardsV9DependencyGraph(
-  cards: readonly SafetyScoreV9Card[],
+  cards: readonly SafetyScoreV9CurrentCard[],
 ): ReportCardsV9DependencyGraph {
   const edges: ReportCardsV9DependencyEdge[] = [];
   for (const card of cards) {
@@ -249,7 +238,7 @@ function refineReportCardsV9Response(
     asOfSec: number;
     updatedAt: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
-    cards: readonly SafetyScoreV9Card[];
+    cards: readonly SafetyScoreV9CurrentCard[];
     dependencyGraph: ReportCardsV9DependencyGraph;
   },
   ctx: z.RefinementCtx,
@@ -292,17 +281,7 @@ function refineReportCardsV9Response(
       message: "V9 dependency graph must exactly project the V9 card dependency summaries",
     });
   }
-  const currentCards = response.cards.filter(
-    (
-      card,
-    ): card is SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard =>
-      "scoreTrace" in card &&
-      (
-        card.scoreTrace.schemaVersion === 2 ||
-        card.scoreTrace.schemaVersion === 3
-      ),
-  );
-  for (const issue of findSafetyScoreV9ParentAttributionIssues(currentCards)) {
+  for (const issue of findSafetyScoreV9ParentAttributionIssues(response.cards)) {
     ctx.addIssue({
       code: "custom",
       path: ["cards"],
@@ -310,46 +289,6 @@ function refineReportCardsV9Response(
     });
   }
 }
-
-/** Compatibility reader for report-v1 envelopes carrying retained trace-v1 cards. */
-export const ReportCardsV9LegacyResponseSchema = z
-  .object({
-    ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(1),
-    cards: z.array(SafetyScoreV9PreviousCardSchema),
-  })
-  .strict()
-  .superRefine(refineReportCardsV9Response);
-export type ReportCardsV9LegacyResponse = z.infer<
-  typeof ReportCardsV9LegacyResponseSchema
->;
-
-/** Compatibility reader for report-v2 envelopes carrying causal trace-v2 cards. */
-export const ReportCardsV9PreviousResponseSchema = z
-  .object({
-    ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(2),
-    cards: z.array(SafetyScoreV9CausalCardSchema),
-  })
-  .strict()
-  .superRefine(refineReportCardsV9Response);
-export type ReportCardsV9PreviousResponse = z.infer<
-  typeof ReportCardsV9PreviousResponseSchema
->;
-
-/** Retained report-v3 reader for current-trace cards emitted before component breakdowns. */
-export const ReportCardsV9PreBreakdownResponseSchema = z
-  .object({
-    ...ReportCardsV9ResponseShape,
-    schemaVersion: z.literal(3),
-    publicationHealth: V9PublicationHealthSchema,
-    cards: z.array(SafetyScoreV9PreBreakdownCardSchema),
-  })
-  .strict()
-  .superRefine(refineReportCardsV9Response);
-export type ReportCardsV9PreBreakdownResponse = z.infer<
-  typeof ReportCardsV9PreBreakdownResponseSchema
->;
 
 /** Current public report contract. Report-v4 adds compact component breakdowns. */
 export const ReportCardsV9CurrentResponseSchema = z
@@ -369,14 +308,3 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
-
-/** Explicit historical reader. Never use this union at a live publication boundary. */
-export const ReportCardsV9CompatibleResponseSchema = z.union([
-  ReportCardsV9CurrentResponseSchema,
-  ReportCardsV9PreBreakdownResponseSchema,
-  ReportCardsV9PreviousResponseSchema,
-  ReportCardsV9LegacyResponseSchema,
-]);
-export type ReportCardsV9CompatibleResponse = z.infer<
-  typeof ReportCardsV9CompatibleResponseSchema
->;

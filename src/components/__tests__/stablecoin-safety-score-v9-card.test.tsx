@@ -2,10 +2,7 @@
 
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import {
-  SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9PreBreakdownCardSchema,
-} from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9CurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 
@@ -213,29 +210,6 @@ describe("StablecoinSafetyScoreV9Card", () => {
     expect(screen.getByRole("img", {
       name: "Capacity score — selected route: <1 out of 100, 25% weight",
     })).toBeTruthy();
-  });
-
-  it("keeps the reviewed-input fallback for a pre-breakdown V3 card", () => {
-    const currentCard = makeV9Card();
-    const { breakdowns: _breakdowns, ...preBreakdownFields } = currentCard;
-    const card = SafetyScoreV9PreBreakdownCardSchema.parse(preBreakdownFields);
-    const response = makeReportCardsV9Response();
-
-    render(
-      <StablecoinSafetyScoreV9Card
-        card={card}
-        identity={response.safetyScoreIdentity}
-        publicationHealth={response.publicationHealth}
-        updatedAtMs={response.updatedAt * 1000}
-      />,
-    );
-
-    // Open the non-weakest pillars; the weakest already auto-opened.
-    fireEvent.click(screen.getByRole("button", { name: /Backing/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Economic Control/ }));
-    expect(screen.getAllByText("Reviewed inputs").length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("img", { name: "1 reviewed input" }).length).toBeGreaterThan(0);
-    expect(screen.queryByText("Route components")).toBeNull();
   });
 
   it("renders held publication wording across the card with an exact time value", () => {

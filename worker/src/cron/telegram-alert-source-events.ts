@@ -352,7 +352,6 @@ export async function loadOldestIncompleteTelegramAlertSourceEvent(
               last_error_class, baseline_committed_at, completed_at
         FROM telegram_alert_source_events
         WHERE status IN ('resolving', 'planned', 'baseline_committed')
-          AND source_event_id NOT LIKE 'telegram-source:legacy-overflow:v1:%'
         ORDER BY detected_at ASC, source_event_id ASC
         LIMIT 1`,
     )

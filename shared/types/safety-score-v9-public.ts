@@ -22,7 +22,6 @@ import {
 } from "./safety-score-v9-wrapper";
 import {
   BaseInputGenerationIdSchema,
-  CandidatePolicyVersionSchema,
   EXIT_SCORE_TOLERANCE,
   isUniqueSorted,
   numbersAgree,
@@ -781,20 +780,6 @@ function refineScoreTraceBaseStages(
   }
 }
 
-function refineUnadjustedScoreTrace(
-  trace: SafetyScoreV9ScoreTraceCommon,
-  ctx: z.RefinementCtx,
-): void {
-  refineScoreTraceBaseStages(trace, ctx);
-  if (!numbersAgree(trace.stages.deploymentAdjustedScore, trace.stages.preCapScore)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["stages", "preCapScore"],
-      message: "V9 pre-cap score must match the post-deployment score",
-    });
-  }
-}
-
 function refineAdjustedScoreTrace(
   trace: SafetyScoreV9AdjustedScoreTraceCommon,
   ctx: z.RefinementCtx,
@@ -866,33 +851,6 @@ function refineBoundedUncertaintyTrace(
     }
   }
 }
-
-/** Strict reader for schema-v1 traces persisted before bounded D attribution. */
-export const SafetyScoreV9PreviousScoreTraceSchema =
-  SafetyScoreV9ScoreTraceCommonSchema
-    .extend({ schemaVersion: z.literal(1) })
-    .strict()
-    .superRefine(refineUnadjustedScoreTrace);
-export type SafetyScoreV9PreviousScoreTrace = z.infer<
-  typeof SafetyScoreV9PreviousScoreTraceSchema
->;
-
-/** Retained trace-v2 reader for causal bounded-D attribution. */
-export const SafetyScoreV9CausalScoreTraceSchema =
-  SafetyScoreV9ScoreTraceCommonSchema
-    .extend({
-      schemaVersion: z.literal(2),
-      boundedUncertaintyAttribution:
-        SafetyScoreV9BoundedUncertaintyAttributionTraceSchema,
-    })
-    .strict()
-    .superRefine((trace, ctx) => {
-      refineUnadjustedScoreTrace(trace, ctx);
-      refineBoundedUncertaintyTrace(trace, ctx);
-    });
-export type SafetyScoreV9CausalScoreTrace = z.infer<
-  typeof SafetyScoreV9CausalScoreTraceSchema
->;
 
 /** Current trace. Schema v3 adds explicit policy-defined score adjustments. */
 export const SafetyScoreV9ScoreTraceSchema =
@@ -1358,10 +1316,9 @@ const SafetyScoreV9CardShape = {
   accessPosture: SafetyScoreV9AccessPostureSchema,
   dependencies: SafetyScoreV9DependencySummarySchema,
 } as const;
-const SafetyScoreV9CardObjectSchema = z.object(SafetyScoreV9CardShape).strict();
-type SafetyScoreV9CardBase = z.infer<typeof SafetyScoreV9CardObjectSchema>;
+type SafetyScoreV9CardBase = z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>;
 
-function refineLegacyCard(
+function refineCardBase(
   card: SafetyScoreV9CardBase,
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
@@ -1414,46 +1371,6 @@ function refineLegacyCard(
   }
 }
 
-export const SafetyScoreV9LegacyCardSchema = SafetyScoreV9CardObjectSchema
-  .superRefine((card, ctx) => refineLegacyCard(card, ctx));
-
-export const SafetyScoreV9PreviousCardSchema = z
-  .object({
-    ...SafetyScoreV9CardShape,
-    scoreTrace: SafetyScoreV9PreviousScoreTraceSchema,
-  })
-  .strict()
-  .superRefine((card, ctx) => refineLegacyCard(card, ctx));
-
-export const SafetyScoreV9CausalCardSchema = z
-  .object({
-    ...SafetyScoreV9CardShape,
-    scoreTrace: SafetyScoreV9CausalScoreTraceSchema,
-  })
-  .strict()
-  .superRefine((card, ctx) => {
-    refineLegacyCard(card, ctx);
-    refineCard(card, ctx);
-  });
-export type SafetyScoreV9CausalCard = z.infer<
-  typeof SafetyScoreV9CausalCardSchema
->;
-
-/** Retained reader for candidate-v4/report-v3 cards emitted before component breakdowns. */
-export const SafetyScoreV9PreBreakdownCardSchema = z
-  .object({
-    ...SafetyScoreV9CardShape,
-    scoreTrace: SafetyScoreV9ScoreTraceSchema,
-  })
-  .strict()
-  .superRefine((card, ctx) => {
-    refineLegacyCard(card, ctx);
-    refineCard(card, ctx);
-  });
-export type SafetyScoreV9PreBreakdownCard = z.infer<
-  typeof SafetyScoreV9PreBreakdownCardSchema
->;
-
 export const SafetyScoreV9CurrentCardSchema = z
   .object({
     ...SafetyScoreV9CardShape,
@@ -1462,7 +1379,7 @@ export const SafetyScoreV9CurrentCardSchema = z
   })
   .strict()
   .superRefine((card, ctx) => {
-    refineLegacyCard(card, ctx);
+    refineCardBase(card, ctx);
     refineCard(card, ctx);
     if ((card.breakdowns === null) !== (card.grade === "NR")) {
       ctx.addIssue({
@@ -1487,14 +1404,8 @@ export const SafetyScoreV9CurrentCardSchema = z
   });
 export type SafetyScoreV9CurrentCard = z.infer<typeof SafetyScoreV9CurrentCardSchema>;
 
-export const SafetyScoreV9CardSchema = z.union([
-  SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9PreBreakdownCardSchema,
-  SafetyScoreV9CausalCardSchema,
-  SafetyScoreV9PreviousCardSchema,
-  SafetyScoreV9LegacyCardSchema,
-]);
-export type SafetyScoreV9Card = z.infer<typeof SafetyScoreV9CardSchema>;
+export const SafetyScoreV9CardSchema = SafetyScoreV9CurrentCardSchema;
+export type SafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
 export interface SafetyScoreV9ParentAttributionIssue {
   cardId: string;
@@ -1502,7 +1413,7 @@ export interface SafetyScoreV9ParentAttributionIssue {
 }
 
 export function findSafetyScoreV9ParentAttributionIssues(
-  cards: readonly (SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard)[],
+  cards: readonly SafetyScoreV9CurrentCard[],
 ): SafetyScoreV9ParentAttributionIssue[] {
   const cardsById = new Map(cards.map((card) => [card.id, card]));
   const issues: SafetyScoreV9ParentAttributionIssue[] = [];
@@ -1584,23 +1495,12 @@ const SafetyScoreV9ResponseShape = {
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
 } as const;
-const SafetyScoreV9HistoricalResponseShape = {
-  ...SafetyScoreV9ResponseShape,
-  lifecycle: z.literal("candidate"),
-  policyVersion: CandidatePolicyVersionSchema,
-} as const;
-
 function refineResponse(
   response: {
     asOfSec: number;
     publishedAtSec: number;
     completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
-    cards: readonly (SafetyScoreV9CardBase & {
-      scoreTrace?:
-        | SafetyScoreV9ScoreTrace
-        | SafetyScoreV9CausalScoreTrace
-        | SafetyScoreV9PreviousScoreTrace;
-    })[];
+    cards: readonly SafetyScoreV9CurrentCard[];
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
@@ -1618,14 +1518,7 @@ function refineResponse(
   if (JSON.stringify(notRatedIds) !== JSON.stringify(response.completeness.notRatedIds)) {
     ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 NR membership does not reconcile" });
   }
-  const currentCards = response.cards.filter(
-    (
-      card,
-    ): card is SafetyScoreV9CurrentCard | SafetyScoreV9CausalCard =>
-      card.scoreTrace?.schemaVersion === 2 ||
-      card.scoreTrace?.schemaVersion === 3,
-  );
-  for (const issue of findSafetyScoreV9ParentAttributionIssues(currentCards)) {
+  for (const issue of findSafetyScoreV9ParentAttributionIssues(response.cards)) {
     ctx.addIssue({
       code: "custom",
       path: ["cards"],
@@ -1633,46 +1526,6 @@ function refineResponse(
     });
   }
 }
-
-/** Retained reader for persisted candidate/shadow artifacts emitted before the trace contract. */
-export const SafetyScoreV9LegacyResponseSchema = z
-  .object({
-    ...SafetyScoreV9HistoricalResponseShape,
-    schemaVersion: z.literal(1),
-    cards: z.array(SafetyScoreV9LegacyCardSchema),
-  })
-  .strict()
-  .superRefine((response, ctx) => refineResponse(response, ctx));
-
-/** Compatibility reader for schema-v2 envelopes carrying schema-v1 traces. */
-export const SafetyScoreV9PreviousResponseSchema = z
-  .object({
-    ...SafetyScoreV9HistoricalResponseShape,
-    schemaVersion: z.literal(2),
-    cards: z.array(SafetyScoreV9PreviousCardSchema),
-  })
-  .strict()
-  .superRefine((response, ctx) => refineResponse(response, ctx));
-
-/** Compatibility reader for schema-v3 envelopes carrying causal trace-v2 cards. */
-export const SafetyScoreV9CausalResponseSchema = z
-  .object({
-    ...SafetyScoreV9HistoricalResponseShape,
-    schemaVersion: z.literal(3),
-    cards: z.array(SafetyScoreV9CausalCardSchema),
-  })
-  .strict()
-  .superRefine((response, ctx) => refineResponse(response, ctx));
-
-/** Retained reader for schema-v4 candidates emitted before component breakdowns. */
-export const SafetyScoreV9PreBreakdownResponseSchema = z
-  .object({
-    ...SafetyScoreV9HistoricalResponseShape,
-    schemaVersion: z.literal(4),
-    cards: z.array(SafetyScoreV9PreBreakdownCardSchema),
-  })
-  .strict()
-  .superRefine((response, ctx) => refineResponse(response, ctx));
 
 /** Current V9 envelope. Schema v5 adds compact component breakdowns. */
 export const SafetyScoreV9CurrentResponseSchema = z
@@ -1685,50 +1538,8 @@ export const SafetyScoreV9CurrentResponseSchema = z
   .superRefine((response, ctx) => refineResponse(response, ctx));
 export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentResponseSchema>;
 
-/**
- * Compatibility reader for stored shadow artifacts. New V9 production
- * must use SafetyScoreV9CurrentResponseSchema and always emits schema version 5.
- *
- * RETENTION HORIZON (decision D16, recorded 2026-08-09 — WS6.8).
- *
- * Tiers v1–v4 exist only to keep *already stored* artifacts readable. They are
- * never emitted: every producer path writes schema version 5. Their cost is a
- * five-arm union that every reader must try, plus five card schemas and their
- * refinements, kept alive for rows nothing may still be holding.
- *
- * The horizon is deliberately expressed as a decision framework rather than a
- * date, because the answer lives in production data, not in this file. A tier
- * may be deleted when all three hold:
- *
- *   1. No stored artifact still parses at that tier. The authoritative query is
- *      the minimum `schemaVersion` across the V9 publication store (the
- *      `safety_score_v9_publication` cache rows read by
- *      `worker/src/lib/safety-score-v9-publication-store.ts`) *and* any retained
- *      candidate/shadow artifacts. Tiers strictly below that minimum are dead.
- *   2. The tier is below the oldest artifact any replay corpus, golden fixture,
- *      or digest pin still reads — replay determinism outranks tidiness here.
- *   3. Its deletion ships as one step: schema arm, card schema, refinements, and
- *      the matching `REPORT_CARDS_V9_*_RESPONSE_SCHEMA_VERSION` constant, so the
- *      union never disagrees with the version constants.
- *
- * Per D16 the ladder itself stays until that query is run; only the six unused
- * historical *type aliases* were removed (2026-08-09). Do not delete an arm on
- * the strength of "nothing imports its type" — the arms are load-bearing for
- * parsing, and their types were merely unused sugar over them.
- */
-export const SafetyScoreV9ResponseSchema = z.union([
-  SafetyScoreV9CurrentResponseSchema,
-  SafetyScoreV9PreBreakdownResponseSchema,
-  SafetyScoreV9CausalResponseSchema,
-  SafetyScoreV9PreviousResponseSchema,
-  SafetyScoreV9LegacyResponseSchema,
-]);
-export type SafetyScoreV9Response = Omit<
-  z.infer<typeof SafetyScoreV9LegacyResponseSchema>,
-  "schemaVersion" | "cards" | "lifecycle" | "policyVersion"
-> & {
-  schemaVersion: 1 | 2 | 3 | 4 | 5;
-  lifecycle: "candidate" | "active";
-  policyVersion: string;
-  cards: SafetyScoreV9Card[];
-};
+// Arms v1–v4 were deleted on 2026-08-10 after retained-store evidence showed
+// only v5 publications and component breakdowns on every V9 snapshot; see
+// agents/legacy-cleanup-wave3/gate-evidence.md (G4–G5).
+export const SafetyScoreV9ResponseSchema = SafetyScoreV9CurrentResponseSchema;
+export type SafetyScoreV9Response = SafetyScoreV9CurrentResponse;

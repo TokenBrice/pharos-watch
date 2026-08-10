@@ -4,7 +4,7 @@ import type {
   V9AssetFactsV3,
   V9ExitRouteFactV2,
 } from "../../types/safety-score-v9-facts";
-import { compileV9FactSetV2 } from "../safety-score-v9/compile";
+import { compileV9FactSetV3 } from "../safety-score-v9/compile";
 import { evaluateV9FactSet } from "../safety-score-v9/evaluate-set";
 import {
   projectV9ExitEvaluationRoute,
@@ -21,7 +21,6 @@ import {
   canonicalV9RouteKey,
   computeV9FactSetDigest,
   parseCompiledV9FactSetV3,
-  upgradeCompiledV9FactSetV2,
 } from "../safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
@@ -227,8 +226,8 @@ function sealFactSet(factSet: CompiledV9FactSetV3): CompiledV9FactSetV3 {
 function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSetV3 {
   const baseEvidence = evidence(BASE_EVIDENCE_ID);
   const routeEvidence = routes.map((route) => evidence(route.status.evidenceRefIds[0]!, DEX_GENERATION_ID));
-  const compiledV2 = compileV9FactSetV2({
-    schemaVersion: 2,
+  return compileV9FactSetV3({
+    schemaVersion: 3,
     baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     asOfSec: AS_OF_SEC,
     compiledAtSec: AS_OF_SEC,
@@ -240,6 +239,11 @@ function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSe
         archetype: "algorithmic",
         evidence: [baseEvidence, ...routeEvidence],
         gaps: [],
+        wrapperLocalFacts: {
+          schemaVersion: 1,
+          applicability: "not-wrapper",
+          evidenceRefIds: [],
+        },
         implementation: {
           status: knownStatus(),
           launchedAtSec: 1_400_000_000,
@@ -348,12 +352,10 @@ function compiledFactSet(routes: readonly V9ExitRouteFactV2[]): CompiledV9FactSe
           unreviewedRouteSupplyShare: 0,
           failureDomains: [{ kind: "chain", key: "ethereum" }],
         },
+        operationalResilience: operationalResilienceFact(),
       },
     ],
   });
-  const upgraded = upgradeCompiledV9FactSetV2(compiledV2);
-  upgraded.assets[0]!.operationalResilience = operationalResilienceFact();
-  return sealFactSet(upgraded);
 }
 
 function evaluatedAsset(factSet: CompiledV9FactSetV3) {

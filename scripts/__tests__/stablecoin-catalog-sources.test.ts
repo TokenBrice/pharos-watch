@@ -312,7 +312,7 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/coin id "other-usd" must match file id "base-usd"/);
   });
 
-  it("applies full catalog invariants to base coin files without sidecars", () => {
+  it("still rejects invalid sidecar-free base files through post-merge validation", () => {
     const rootDir = makeTempRoot();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("base-usd", { canBeBlacklisted: true }));

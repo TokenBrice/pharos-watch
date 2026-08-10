@@ -103,7 +103,7 @@ export async function snapshotSupply(
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     console.error("[snapshot-supply] No stablecoins cache found");

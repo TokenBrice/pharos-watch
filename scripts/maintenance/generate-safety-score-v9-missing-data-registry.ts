@@ -815,8 +815,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     buildV9EvidenceGapQueue({ factSet: replay.compiledFacts, policy: loadV9MethodologyPolicy(input.policy) }),
   );
   const candidate = replay.candidate;
-  const candidateFactSetDigest =
-    factSetRead.sourceSchemaVersion === 2 ? factSetRead.sourceFactSetDigest : facts.v9FactSetDigest;
+  const candidateFactSetDigest = facts.v9FactSetDigest;
   if (
     candidate.factSetDigest !== candidateFactSetDigest ||
     candidate.baseInputGenerationId !== facts.baseInputGenerationId ||

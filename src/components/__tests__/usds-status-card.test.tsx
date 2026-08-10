@@ -21,7 +21,6 @@ describe("UsdsStatusCard", () => {
     useUsdsStatusMock.mockReturnValue({
       data: {
         freezeCapabilityPresent: false,
-        freezeActive: false,
         implementationAddress: "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
         lastChecked: 0,
       },

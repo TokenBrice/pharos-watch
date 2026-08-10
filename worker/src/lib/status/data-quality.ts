@@ -166,7 +166,7 @@ export async function getDataQuality(
     blacklistMetrics?: BlacklistGapMetrics | null;
   },
 ): Promise<DataQuality> {
-  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   const sourceFailures: StatusResponse["dataQuality"]["sourceFailures"] = [];
   if (stablecoinsCacheResult.kind !== "ok") {
     logWorkerEvent({

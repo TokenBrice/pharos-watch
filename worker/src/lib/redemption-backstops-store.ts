@@ -55,7 +55,6 @@ import {
 import { buildMethodologyEnvelope } from "./api-utils";
 import { decodeJsonString } from "./cache-json";
 import { isMissingTableError } from "./db";
-import { recordRuntimeFallbackUsage } from "./runtime-fallback-telemetry";
 import { SNAPSHOT_ROW_COLUMNS } from "./redemption-backstops-store-write";
 export { upsertRedemptionBackstopSnapshots } from "./redemption-backstops-store-write";
 
@@ -421,31 +420,6 @@ async function getRecentCompletedRedemptionBackstopRuns(
   }
 }
 
-async function queryRedemptionBackstopMap(db: D1Database, runId?: string | null): Promise<RedemptionBackstopMap> {
-  let rows: D1Result<RedemptionBackstopRow>;
-  try {
-    const statement = runId
-      ? db
-          .prepare(
-            `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
-             FROM redemption_backstop
-            WHERE snapshot_run_id = ?`,
-          )
-          .bind(runId)
-      : db.prepare(
-          `SELECT ${REDEMPTION_BACKSTOP_ROW_COLUMNS}
-           FROM redemption_backstop`,
-        );
-    rows = await statement.all<RedemptionBackstopRow>();
-  } catch (error) {
-    throw new RedemptionBackstopSnapshotUnavailableError("Failed to load current redemption backstop snapshot", {
-      cause: error,
-    });
-  }
-
-  return decodeBackstopRows(rows.results ?? [], "Failed to decode redemption backstop snapshot rows");
-}
-
 async function queryRedemptionBackstopMapFromRunRows(
   db: D1Database,
   runId: string,
@@ -474,34 +448,6 @@ async function queryRedemptionBackstopMapFromRunRows(
     map: decodeBackstopRows(resultRows, "Failed to decode immutable redemption backstop run rows"),
     rawRowCount: resultRows.length,
   };
-}
-
-async function queryCompletedRedemptionBackstopRunMap(
-  db: D1Database,
-  runId: string,
-): Promise<{ map: RedemptionBackstopMap; source: RedemptionSnapshotSource }> {
-  try {
-    const { map, rawRowCount } = await queryRedemptionBackstopMapFromRunRows(db, runId);
-    if (rawRowCount > 0) {
-      return { map, source: "run-rows" };
-    }
-  } catch (error) {
-    if (!isMissingTableError(error)) {
-      throw error;
-    }
-  }
-
-  return {
-    map: await queryRedemptionBackstopMap(db, runId),
-    source: "legacy-current",
-  };
-}
-
-export async function loadLegacyRedemptionBackstopCurrentMap(db: D1Database): Promise<RedemptionBackstopMap> {
-  // Legacy/current-table reader retained for focused compatibility tests.
-  // API/report-card paths should use loadRedemptionBackstopSnapshot(), which
-  // serves completed run snapshots only and fails closed without one.
-  return queryRedemptionBackstopMap(db);
 }
 
 export interface RedemptionBackstopLiveSignalRow {
@@ -573,11 +519,9 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
       }
 
       let map: RedemptionBackstopMap;
-      let source: RedemptionSnapshotSource = "run-rows";
+      let rawRowCount: number;
       try {
-        const result = await queryCompletedRedemptionBackstopRunMap(db, run.run_id);
-        map = result.map;
-        source = result.source;
+        ({ map, rawRowCount } = await queryRedemptionBackstopMapFromRunRows(db, run.run_id));
       } catch (error) {
         const message = toErrorMessage(error);
         rejectionReasons.push(`${run.run_id}: query failed (${message})`);
@@ -585,15 +529,8 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
       }
 
       const rowCount = Object.keys(map).length;
-      if (source === "legacy-current") {
-        recordRuntimeFallbackUsage("redemption-backstop-legacy-current", {
-          runId: run.run_id,
-          rowCount,
-          expectedCount: run.written_count,
-        });
-      }
-      if (rowCount !== run.written_count) {
-        rejectionReasons.push(`${run.run_id}: ${source} row count mismatch (${rowCount}/${run.written_count})`);
+      if (rawRowCount !== run.written_count || rowCount !== run.written_count) {
+        rejectionReasons.push(`${run.run_id}: run-row count mismatch (${rowCount}/${run.written_count})`);
         continue;
       }
 
@@ -602,7 +539,7 @@ export async function loadRedemptionBackstopSnapshot(db: D1Database): Promise<Re
         latestUpdatedAt: run.max_updated_at,
         runId: run.run_id,
         methodologyVersion: run.methodology_version,
-        snapshotSource: source,
+        snapshotSource: "run-rows",
       };
     }
 

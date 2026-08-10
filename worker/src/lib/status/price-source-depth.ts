@@ -55,7 +55,7 @@ export async function loadSourceDepthDistribution(
   preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<PriceSourceDepthDistribution | null> {
   const stablecoinsCache = preloadedCache
-    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
+    ?? (await loadStablecoinsCache(db, { mode: "lenient" }));
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
     return null;
   }

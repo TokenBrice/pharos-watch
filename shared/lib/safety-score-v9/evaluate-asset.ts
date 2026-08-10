@@ -37,7 +37,6 @@ import {
 } from "./exit";
 import {
   V9_LEGACY_RESPONSIBILITY_BY_REASON,
-  type V9EvaluationFactSetRead,
 } from "./facts";
 import {
   decimalSnap,
@@ -477,7 +476,6 @@ function exitPillar(
   asset: V9AssetFactsV3,
   result: V9ExitEvaluationResult,
   envelope: V9ValidatedPolicyEnvelope,
-  sourceSchemaVersion: V9EvaluationFactSetRead["sourceSchemaVersion"],
 ): V9PillarEvaluation {
   const mechanismExitFacts = asset.mechanismExitFacts ?? [];
   const hasKnownRuntimeRoute = asset.exitRoutes.some(
@@ -576,7 +574,6 @@ function exitPillar(
             ? `exit:mechanism-profile:${profileFactKeys.join("+")}`
             : `exit:${code}`;
         const nativeMeasuredCompleteEmpty =
-          sourceSchemaVersion === 3 &&
           code === "no-viable-exit-path" &&
           asset.exitStatus.applicability.state === "required" &&
           asset.exitStatus.observationState === "known" &&
@@ -1453,7 +1450,6 @@ interface V9EvaluateAssetInput {
   identity: V9ProductionScoreInput["identity"];
   marketRank: number | null;
   dependencySignals: readonly V9StructuralSignal[];
-  sourceSchemaVersion: V9EvaluationFactSetRead["sourceSchemaVersion"];
 }
 
 export function evaluateV9Asset({
@@ -1466,7 +1462,6 @@ export function evaluateV9Asset({
   identity,
   marketRank,
   dependencySignals,
-  sourceSchemaVersion,
 }: V9EvaluateAssetInput): {
   evaluatedAsset: V9EvaluatedAsset;
   unavailabilityRoots: readonly string[];
@@ -1571,7 +1566,6 @@ export function evaluateV9Asset({
       asset,
       exit,
       envelope,
-      sourceSchemaVersion,
     ),
     control: controlPillarEvaluation,
   };

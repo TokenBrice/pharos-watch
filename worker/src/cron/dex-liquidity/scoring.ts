@@ -1401,7 +1401,7 @@ export async function computeDexPrices(
   const loadPrimaryPrices = async (stablecoinId: string): Promise<Map<string, number>> => {
     if (primaryPrices.has(stablecoinId) || loadedStrictPrimaryPrices) return primaryPrices;
     loadedStrictPrimaryPrices = true;
-    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
     if (stablecoinsCache.kind === "ok") {
       for (const asset of stablecoinsCache.payload.peggedAssets) {
         if (

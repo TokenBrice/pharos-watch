@@ -160,7 +160,7 @@ export function makeHealthyStatusResponse(): StatusResponse {
         expired: 0,
         nearTtl: 0,
         executionUnknown: 0,
-        completedPendingCleanup: 0,
+        sentCleanup: 0,
       },
       retryErrorClassCounts: {},
       webhookEffectUnknown: 0,

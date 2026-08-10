@@ -194,9 +194,6 @@ type DexLiquidityPoolResponse = {
 
 function normalizePoolSource(source: unknown): LiquidityPoolSourceFamily | undefined {
   if (typeof source !== "string" || source.length === 0) return undefined;
-  if (source === "cg") return "cg_onchain";
-  if (source === "gt") return "gecko_terminal";
-  if (source === "ds") return "dexscreener";
   if (
     source === "dl" ||
     source === "cg_onchain" ||

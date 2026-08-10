@@ -233,7 +233,6 @@ describe("mapTelegramBotStats", () => {
         executionUnknownSampleLimit: 5001,
         executionUnknownLowerBound: false,
         sentCleanup: 1,
-        completedPendingCleanup: 1,
       },
       webhookEffectUnknown: 3,
       webhookEffectLifecycle: {
@@ -431,7 +430,6 @@ describe("getTelegramBotStats", () => {
       executionUnknownSampleLimit: 5001,
       executionUnknownLowerBound: false,
       sentCleanup: 0,
-      completedPendingCleanup: 0,
     });
     expect(result.webhookEffectUnknown).toBe(1);
     expect(result.retryErrorClassCounts).toEqual({ rate_limit: 1 });

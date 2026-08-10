@@ -3,15 +3,12 @@
 import { ScanSearch, Sigma } from "lucide-react";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
-import type {
-  SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
-} from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import { buildScoreWaterfall, type ScoreWaterfallStep } from "@/lib/safety-score-v9-waterfall";
 import { buildSafetyScoreV9Attribution } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { cn } from "@/lib/utils";
 
-type ConstructionCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
+type ConstructionCard = SafetyScoreV9CurrentCard;
 
 function WaterfallStep({ step, showHint }: { step: ScoreWaterfallStep; showHint: boolean }) {
   const terminal = step.kind === "published";

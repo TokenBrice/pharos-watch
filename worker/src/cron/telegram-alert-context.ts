@@ -35,7 +35,7 @@ export async function buildAlertContextLines(
     loadActiveSafetyScoreSource(db).then((source) =>
       source.kind === "v9" ? source : null,
     ).catch(() => null),
-    loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
+    loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
     loadLiquidityRows(db, uniqueIds),
     loadFlowRows(db, uniqueIds, nowSec),
   ]);

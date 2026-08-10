@@ -1,7 +1,7 @@
 {
   "id": "usdd-tron-dao-reserve",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "USDD freeze-free core-features disclosure",
@@ -22,11 +22,19 @@
       {
         "label": "Tronscan verified USDD source",
         "url": "https://tronscan.org/#/contract/TXDk8mbtRbXeYuMNS83CfKPaYYT8XWv9Hz/code"
+      },
+      {
+        "label": "USDD Data Platform all-chain overview",
+        "url": "https://app-api.usdd.io/data-platform/overview/info"
+      },
+      {
+        "label": "USDD Smart Allocator live positions and debt",
+        "url": "https://app-api.usdd.io/smart-allocator/detail-overview"
       }
     ],
-    "evidence": "USDD's official documentation explicitly describes the token as freeze-free. The canonical Tron, Ethereum, and BSC direct implementations expose wards for mint, rely, and deny, but transfer and burn require holder authority or allowance and contain no blacklist, holder freeze, seizure, or pause mechanism. Ethereum and BSC implementation and admin slots were zero, so an upgrade cannot add a hidden token-level freeze path.",
-    "reviewer": "Codex C01 control/access review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "USDD's canonical Tron, Ethereum, and BSC direct implementations expose wards for mint, rely, and deny, but transfer and burn require holder authority or allowance and contain no blacklist, holder freeze, seizure, or pause mechanism; the Ethereum and BSC deployments are non-proxy. The upstream result instead comes from the debt-weighted all-chain reserve review captured 2026-08-10: 62.2% of minted USDD debt is backed through Smart Allocator positions itemized as USDS, USDT, USDT0, and USDC, and another 8.3% uses direct USDT PSM/vault issuance rails. That 70.5% freeze-exposed majority exceeds the v3.9973 threshold and resolves USDD as Upstream rather than direct Yes.",
+    "reviewer": "Codex USDD upstream exposure audit",
+    "reviewedAt": "2026-08-10"
   },
   "oracleRisk": {
     "tier": "medianized-with-delay",

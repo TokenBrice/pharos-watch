@@ -98,7 +98,7 @@ export async function resolveTelegramPresetTargets(
 ): Promise<TelegramPresetResolveResult> {
   const cacheResult = options.getStablecoinsCacheResult
     ? await options.getStablecoinsCacheResult()
-    : await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+    : await loadStablecoinsCache(db, { mode: "strict" });
   if (cacheResult.kind !== "ok") {
     return {
       kind: "error",

@@ -104,7 +104,6 @@ async function loadCachedStablecoinPricesById(
     const loaded = await loadStablecoinsCache(ctx.db!, {
       mode: "lenient",
       contract: "critical-fields",
-      allowLegacyArray: true,
     });
     if (!hasUsableStablecoinsPayload(loaded)) return new Map<string, number>();
 

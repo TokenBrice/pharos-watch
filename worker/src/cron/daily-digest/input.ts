@@ -113,7 +113,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   });
   const degradedReasons: string[] = [];
 
-  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
     console.warn(
       `[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`,

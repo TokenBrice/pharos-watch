@@ -17,8 +17,10 @@ export const TELEGRAM_ALERT_TTL_SEC = {
   reserve: PENDING_TTL_SEC,
   freeze: PENDING_TTL_SEC,
   adminBroadcast: 45 * 60,
-  legacy: PENDING_TTL_SEC,
 } as const;
+
+/** Defaults retained only for rows written before alert-family attribution was explicit. */
+export const TELEGRAM_HISTORICAL_SOURCE_TTL_SEC = PENDING_TTL_SEC;
 
 /** The dedicated Telegram alert dispatcher runs every five minutes. */
 export const TELEGRAM_DISPATCH_INTERVAL_SEC = 5 * 60;
@@ -105,9 +107,11 @@ export const TELEGRAM_PENDING_PRIORITY = {
   reserve: 30,
   freeze: 10,
   riskAlert: 30,
-  legacy: 50,
   adminBroadcast: 90,
 } as const;
+
+/** Priority retained only for rows written before alert-family attribution was explicit. */
+export const TELEGRAM_HISTORICAL_SOURCE_PRIORITY = 50;
 
 /**
  * Reviewed calibration inputs that exist only in the synthetic load model.

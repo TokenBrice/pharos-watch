@@ -394,8 +394,8 @@ Run manifests and immutable run rows are pruned after successful writes with a 1
 **File:** `worker/src/api/redemption-backstops.ts`
 
 - Returns `503` with `{ "error": "Redemption backstop snapshot unavailable" }` when no valid completed run can be read cleanly from immutable run rows (including before the first completed sync on a fresh database); partial manifested current rows are not treated as authoritative
-- The response metadata carries `snapshotSource` (`run-rows` | `legacy-current`) so consumers can tell whether the snapshot came from immutable run rows or the run-scoped current-table fallback
-- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run manifest or latest stored snapshot row for true legacy snapshots, and `currentVersion` preserved as the live code version
+- The response metadata carries `snapshotSource: "run-rows"`; snapshots are read only from immutable rows for a valid completed run
+- Otherwise returns the current map plus methodology metadata from `buildRedemptionBackstopsSnapshot(db)`, with `methodology.version` attributed from the latest completed run manifest and `currentVersion` preserved as the live code version
 - Cache profile: `standard` (`public, s-maxage=300, max-age=60`) with freshness headers based on `updatedAt`
 
 See [API Reference](./api-reference.md) for the exact response shape.

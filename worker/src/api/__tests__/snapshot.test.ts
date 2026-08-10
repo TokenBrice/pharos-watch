@@ -232,43 +232,6 @@ describe("handleSnapshotsIndex", () => {
     expect(coinBody.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
   });
 
-  it("keeps retained report-v2 and trace-v2 V9 snapshots readable", async () => {
-    const retainedReport = structuredClone(
-      makeWorkerReportCardsV9Response({
-        lifecycle: "active",
-        safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
-        asOfSec: 1779105500,
-        updatedAt: 1779105600,
-        cards: [makeWorkerV9Card({ id: "usdt-tether", score: 83, grade: "A" })],
-      }),
-    ) as unknown as {
-      schemaVersion: number;
-      publicationHealth?: unknown;
-      cards: Array<{ breakdowns?: unknown; scoreTrace: Record<string, unknown> }>;
-    };
-    retainedReport.schemaVersion = 2;
-    delete retainedReport.publicationHealth;
-    delete retainedReport.cards[0]!.breakdowns;
-    retainedReport.cards[0]!.scoreTrace.schemaVersion = 2;
-    delete retainedReport.cards[0]!.scoreTrace.scoreAdjustments;
-    const row = await buildSnapshotRow({
-      ...SAMPLE_ENVELOPE,
-      methodologyVersions: {
-        ...SAMPLE_ENVELOPE.methodologyVersions,
-        reportCard: V9_SAFETY_SCORE_IDENTITY.methodologyVersion,
-      },
-      safetyScoreIdentity: V9_SAFETY_SCORE_IDENTITY,
-      reportCards: retainedReport,
-    });
-
-    const db = mockD1([{ match: "FROM public_snapshots", rows: [], first: row }]);
-    const response = await handleSnapshotCoin(db, ISO_DATE, "usdt-tether");
-    const body = (await response.json()) as { safetyScoreIdentity: unknown };
-
-    expect(response.status).toBe(200);
-    expect(body.safetyScoreIdentity).toEqual(V9_SAFETY_SCORE_IDENTITY);
-  });
-
   it.each(["2026-07-13", "2026-07-14", "2026-07-15"])(
     "keeps the %s partial-identity transition readable without claiming a verified identity",
     async (transitionDate) => {

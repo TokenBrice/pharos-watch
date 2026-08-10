@@ -6,17 +6,11 @@ import {
   type CompiledV9FactSetV2,
   type CompiledV9FactSetV3,
   type V9EvidenceResponsibility,
-  type V9AssetFactsV2,
   type V9FactGapV2,
   type V9FactSetCoreV2,
   type V9FactSetCoreV3,
 } from "../../types/safety-score-v9-facts";
 import type { DependencyType, V9DependencyEconomicRole } from "../../types/dependency-types";
-import {
-  V9_WRAPPER_LOCAL_FACT_KEYS,
-  type V9WrapperLocalFacts,
-  type V9WrapperLocalFactKey,
-} from "../../types/safety-score-v9-wrapper";
 import { V9_REASON_CODES, type V9ReasonCode } from "../../types/safety-score-v9";
 import { sha256HexFromUtf8Chunks } from "../sha256";
 import { stableJsonStringifyChunksV1 } from "../stable-json";
@@ -216,105 +210,19 @@ export function upgradeV9FactGapV2(gap: V9FactGapV2) {
   return { ...gap, responsibility };
 }
 
-function legacyWrapperLocalFacts(asset: V9AssetFactsV2): V9WrapperLocalFacts {
-  const wrapperEdge = asset.dependencies.edges.find(
-    (edge) => edge.pathKind === "serial-dependency" && edge.dependencyType === "wrapper",
-  );
-  const form =
-    asset.variantKind === "pure-wrapper"
-      ? "pure"
-      : asset.variantKind === "savings-passthrough" || asset.variantKind === "risk-absorption"
-        ? "native-staked"
-        : asset.variantKind === "strategy-vault" || wrapperEdge !== undefined
-          ? "strategy-vault"
-          : null;
-  const classificationEvidenceRefIds = [
-    ...new Set([
-      ...asset.implementation.status.evidenceRefIds,
-      ...asset.dependencies.status.evidenceRefIds,
-      ...(wrapperEdge?.evidenceRefIds ?? []),
-    ]),
-  ].sort();
-  if (form === null) {
-    return {
-      schemaVersion: 1,
-      applicability: "not-wrapper",
-      evidenceRefIds: classificationEvidenceRefIds,
-    };
-  }
-  const unavailableFact = (factKey: V9WrapperLocalFactKey) => ({
-    disposition: "integration-missing" as const,
-    assessment: null,
-    signals: [`legacy-v2-wrapper-local-fact-not-compiled:${factKey}`],
-    evidenceRefIds: [],
-  });
-  return {
-    schemaVersion: 1,
-    applicability: "wrapper",
-    form,
-    formDisposition: classificationEvidenceRefIds.length > 0 ? "reviewed" : "integration-missing",
-    formSignals: [`legacy-v2-wrapper-form:${form}`],
-    formEvidenceRefIds: classificationEvidenceRefIds,
-    facts: Object.fromEntries(
-      V9_WRAPPER_LOCAL_FACT_KEYS.map((factKey) => [factKey, unavailableFact(factKey)]),
-    ) as Record<V9WrapperLocalFactKey, ReturnType<typeof unavailableFact>>,
-    riskTransfer: {
-      disposition: "integration-missing",
-      mechanism: "unknown",
-      maximumParentLossAbsorptionPoints: 0,
-      signals: ["legacy-v2-risk-transfer-not-compiled"],
-      evidenceRefIds: [],
-    },
-  };
-}
-
-/** Upgrade retained V2 bytes into the responsibility-bearing V3 evaluator contract. */
-export function upgradeCompiledV9FactSetV2(input: unknown): CompiledV9FactSetV3 {
-  const retained = parseCompiledV9FactSetV2(input);
-  const { v9FactSetDigest: _retainedDigest, ...retainedCore } = retained;
-  const core = V9FactSetCoreV3Schema.parse({
-    ...retainedCore,
-    schemaVersion: 3,
-    assets: retained.assets.map((asset) => ({
-      ...asset,
-      dependencies: {
-        ...asset.dependencies,
-        edges: asset.dependencies.edges.map((edge) => ({
-          ...edge,
-          edgeKey: canonicalV9DependencyEdgeKey(edge.dependencyType, edge.upstreamAssetId, edge.economicRole),
-        })),
-      },
-      wrapperLocalFacts: asset.wrapperLocalFacts ?? legacyWrapperLocalFacts(asset),
-      gaps: asset.gaps.map(upgradeV9FactGapV2),
-    })),
-  });
-  return parseCompiledV9FactSetV3({
-    ...core,
-    v9FactSetDigest: computeV9FactSetDigest(core),
-  });
-}
-
 export interface V9EvaluationFactSetRead {
-  sourceSchemaVersion: 2 | 3;
+  sourceSchemaVersion: 3;
   sourceFactSetDigest: string;
   factSet: CompiledV9FactSetV3;
 }
 
-/** Strict dual reader: retained V2 is validated before explicit V3 upgrade. */
+/** Strict V3 reader for the responsibility-bearing evaluator contract. */
 export function readCompiledV9FactSetForEvaluation(input: unknown): V9EvaluationFactSetRead {
   const schemaVersion =
     input !== null && typeof input === "object" ? (input as { schemaVersion?: unknown }).schemaVersion : undefined;
-  if (schemaVersion === 2) {
-    const retained = parseCompiledV9FactSetV2(input);
-    return {
-      sourceSchemaVersion: 2,
-      sourceFactSetDigest: retained.v9FactSetDigest,
-      factSet: upgradeCompiledV9FactSetV2(retained),
-    };
+  if (schemaVersion !== 3) {
+    throw new Error(`Unsupported Safety Score v9 fact-set schema version: ${String(schemaVersion)}; expected 3`);
   }
-  if (schemaVersion === 3) {
-    const factSet = parseCompiledV9FactSetV3(input);
-    return { sourceSchemaVersion: 3, sourceFactSetDigest: factSet.v9FactSetDigest, factSet };
-  }
-  throw new Error(`Unsupported Safety Score v9 fact-set schema version: ${String(schemaVersion)}`);
+  const factSet = parseCompiledV9FactSetV3(input);
+  return { sourceSchemaVersion: 3, sourceFactSetDigest: factSet.v9FactSetDigest, factSet };
 }

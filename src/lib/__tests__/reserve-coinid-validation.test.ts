@@ -173,14 +173,6 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "APACX identifies apcxUSDT as an eligible collateral wrapper but does not establish its current PHT balance or reconcile the wrapper to underlying USDT reserves.",
   ],
   [
-    "euro3-3a-dao::Mendi meUSDC collateral (Linea)::USDC",
-    "meUSDC is a Mendi lending-market receipt, classified alongside mewETH/mewstETH as a protocol position: 3A's liquidation claim tracks Mendi pool solvency, not a directly held USDC slice. The directly held USDC.e vault collateral carries the usdc-circle link.",
-  ],
-  [
-    "euro3-3a-dao::Mendi meUSDT collateral (Linea)::USDT",
-    "Same Mendi receipt-token treatment; the borrower mix behind meUSDT is not an exact upstream USDT dependency, while the direct USDT vault collateral slice carries the usdt-tether link.",
-  ],
-  [
     "iusd-indigo-protocol::USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance::USDC",
     "Mint transactions prove USDCx-collateral CDPs mint iUSD, but no public endpoint attributes the validator's USDCx/USDM/USDA balances per iAsset or per CDP, so no constituent link or exact split is asserted.",
   ],

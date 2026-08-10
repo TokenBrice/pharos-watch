@@ -171,7 +171,7 @@ function worstOf<TValue extends string>(
 }
 
 async function checkStablecoinsCacheActiveCount(db: D1Database) {
-  const cache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const cache = await loadStablecoinsCache(db, { mode: "lenient" });
   const expectedActiveCount = ACTIVE_IDS.size;
   if (!hasUsableStablecoinsPayload(cache)) {
     return errorResult(`stablecoins cache ${cache.reason}`, {

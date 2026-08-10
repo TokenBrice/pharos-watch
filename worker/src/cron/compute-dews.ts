@@ -89,7 +89,7 @@ export async function computeAndStoreDEWS(
   // 1. Read stablecoins cache
   await reportDewsProgress(reportProgress, "stablecoins-cache", { validationFailures });
   throwIfAborted(signal);
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     return buildStablecoinsCacheFailureResult(stablecoinsCache.reason);

@@ -141,7 +141,6 @@ const TelegramHealthSummarySchema = z.object({
     executionUnknownSampleLimit: z.number().optional(),
     executionUnknownLowerBound: z.boolean().optional(),
     sentCleanup: z.number().optional(),
-    completedPendingCleanup: z.number().optional(),
   }).optional(),
   lastDispatchAt: z.number().nullable(),
   lastDispatchStatus: z.string().nullable(),
