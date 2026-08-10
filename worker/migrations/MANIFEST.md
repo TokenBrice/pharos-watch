@@ -15,6 +15,7 @@
 | Sequence | Filename                                                     | Description                                                                                                  |
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | 0228     | `0228_depeg_resolver_incident_closed_pre_lock.sql`           | Add nullable `closed_pre_lock_at` for the derived pre-lock closed lifecycle state.                          |
+| 0229     | `0229_d1_capacity_compaction.sql`                            | Add gzip DDR publication snapshots, daily yield history, and decision-episode fingerprints.                |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 

@@ -10,6 +10,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
@@ -24,6 +25,7 @@ import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
   cleanupFalseLinkedVariantSourceSwitches,
+  materializeYieldHistoryDaily,
   pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
@@ -1210,7 +1212,7 @@ describe("publishYieldCoordinatorResults", () => {
     expect(decisionRows[0]?.retention_reason).toBe("audit");
   });
 
-  it("classifies retention_reason as 'trend' when a rejected alternative has anomalies", async () => {
+  it("classifies anomaly evidence as an episode candidate with a stable fingerprint", async () => {
     const db = makePublicationDb(1);
     const best = makeEvaluatedSource({
       sourceKey: "defillama:best",
@@ -1242,12 +1244,44 @@ describe("publishYieldCoordinatorResults", () => {
     const decisionInsert = db
       .getHistory()
       .find((entry) => entry.sql.includes("INSERT OR REPLACE INTO yield_source_decisions"));
-    const decisionRows = parseJsonBind<Array<{ retention_reason: string }>>(decisionInsert);
-    expect(decisionRows[0]?.retention_reason).toBe("trend");
+    const decisionRows = parseJsonBind<Array<{ retention_reason: string; trend_fingerprint: string }>>(decisionInsert);
+    expect(decisionRows[0]?.retention_reason).toBe("episode");
+    expect(JSON.parse(decisionRows[0]?.trend_fingerprint ?? "null")).toMatchObject({
+      selectedSourceKey: best.sourceKey,
+      evidence: [{ sourceKey: rejected.sourceKey, anomalies: ["diverges-from-canonical"] }],
+    });
   });
 });
 
 describe("pruneYieldTables", () => {
+  it("materializes the last published source point for the daily history tier", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const snapshotDate = Math.floor((startSec - 31 * DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_history (
+          stablecoin_id, source_key, recorded_at, is_best, apy, data_source, publication_state
+        ) VALUES ('coin-a', 'source-a', ?, 1, ?, 'test', 'published')`,
+      );
+      insert.run(snapshotDate + 60, 4.1);
+      insert.run(snapshotDate + 3_600, 4.4);
+
+      await expect(materializeYieldHistoryDaily(db, startSec)).resolves.toBe(1);
+      expect(
+        sqlite
+          .prepare(
+            `SELECT snapshot_date, recorded_at, apy
+               FROM yield_history_daily
+              WHERE stablecoin_id = 'coin-a' AND source_key = 'source-a'`,
+          )
+          .get(),
+      ).toEqual({ snapshot_date: snapshotDate, recorded_at: snapshotDate + 3_600, apy: 4.4 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("reclassifies false linked switches only after two clean published generations", async () => {
     const { DatabaseSync } = await import("node:sqlite");
     const sqlite = new DatabaseSync(":memory:");
@@ -1400,6 +1434,56 @@ describe("pruneYieldTables", () => {
 });
 
 describe("yield publication migration compatibility", () => {
+  it("retains only anomaly episode boundaries as permanent trend decisions", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const publish = (generationId: string, startSec: number, fingerprint: string) =>
+      publishYieldRowsAtomically(db, {
+        rankingsPayload: { rankings: [] },
+        startSec,
+        generationId,
+        yieldDataRows: [],
+        historyRows: [],
+        decisionRows: [{
+          generation_id: generationId,
+          stablecoin_id: "coin-a",
+          selected_source_key: "source-a",
+          selected_confidence_tier: "curated",
+          selected_data_source: "test",
+          selected_apy_30d: 4.2,
+          selected_score: 50,
+          selected_reason: "test",
+          previous_best_source_key: "source-a",
+          source_switch: 0,
+          rejected_count: 1,
+          alternatives_json: "[]",
+          created_at: startSec,
+          retention_reason: "episode",
+          trend_fingerprint: fingerprint,
+        }],
+        decisionAlternativeRows: [],
+      });
+    try {
+      await publish("g-1", 100, "episode-a");
+      await publish("g-2", 200, "episode-a");
+      await publish("g-3", 300, "episode-b");
+      expect(
+        sqlite
+          .prepare(
+            `SELECT generation_id, retention_reason
+               FROM yield_source_decisions
+              ORDER BY created_at`,
+          )
+          .all(),
+      ).toEqual([
+        { generation_id: "g-1", retention_reason: "trend" },
+        { generation_id: "g-2", retention_reason: "audit" },
+        { generation_id: "g-3", retention_reason: "trend" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("retries atomic publication with legacy statements when new yield schema is absent", async () => {
     const db = mockD1([
       {

@@ -202,7 +202,7 @@ function makeDb(): D1Database {
     };
 
     const first = async <T>() => {
-      if (sql.includes("pharos:dews:stress-current-generation-count")) {
+      if (sql.includes("pharos:dews:publication-generation-count")) {
         return { cnt: fixtures.length } as T;
       }
       if (sql.includes("pharos:dews:stress-latest-generation-count")) {
@@ -222,7 +222,7 @@ function makeDb(): D1Database {
     return {
       bind: (...args: unknown[]) => {
         boundArgs = args;
-        if (sql.includes("INSERT OR REPLACE INTO stress_signals") && !sql.includes("_history")) {
+        if (sql.includes("pharos:dews:publication-row-insert")) {
           const [stablecoinId, , score, band, signalsJson] = boundArgs as [
             string,
             number,

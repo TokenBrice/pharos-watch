@@ -95,9 +95,9 @@ function makeDb(opts: {
           results: (opts.priceCacheRows ?? []) as T[],
         };
       }
-      if (sql.includes("FROM stress_signals")) {
+      if (sql.includes("FROM stress_signal_publication_rows") || sql.includes("FROM stress_signals")) {
         if (opts.dewsUnavailable) {
-          throw new Error("no such table: stress_signals");
+          throw new Error("no such table: stress_signal_publication_rows");
         }
         const bound = typeof binds[0] === "number" ? binds[0] : null;
         let filtered = configuredDewsRows;
@@ -221,7 +221,7 @@ describe("computeAndStoreStabilityIndex", () => {
     };
     expect(metadata.fallbackMode).toBe("dews-unavailable");
     expect(metadata.dewsUnavailable).toBe(true);
-    expect(metadata.dewsFailureReason).toContain("stress_signals");
+    expect(metadata.dewsFailureReason).toContain("stress_signal_publication_rows");
     expect(metadata.preservedCurrentSample).toBe(true);
     expect(
       db.runHistory.some((entry) => entry.sql.includes("INSERT OR REPLACE INTO stability_index_samples")),

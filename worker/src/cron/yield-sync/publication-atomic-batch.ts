@@ -149,7 +149,7 @@ export async function publishYieldRowsAtomically(
               generation_id, stablecoin_id, selected_source_key, selected_confidence_tier,
               selected_data_source, selected_apy_30d, selected_score, selected_reason,
               previous_best_source_key, source_switch, rejected_count, alternatives_json, created_at,
-              retention_reason
+              retention_reason, trend_fingerprint
             )
             SELECT
               json_extract(value, '$.generation_id'),
@@ -165,7 +165,21 @@ export async function publishYieldRowsAtomically(
               json_extract(value, '$.rejected_count'),
               json_extract(value, '$.alternatives_json'),
               json_extract(value, '$.created_at'),
-              json_extract(value, '$.retention_reason')
+              CASE
+                WHEN json_extract(value, '$.retention_reason') = 'trend' THEN 'trend'
+                WHEN json_extract(value, '$.retention_reason') = 'episode'
+                 AND COALESCE((
+                   SELECT previous.trend_fingerprint
+                     FROM yield_source_decisions previous
+                    WHERE previous.stablecoin_id = json_extract(value, '$.stablecoin_id')
+                      AND previous.created_at < json_extract(value, '$.created_at')
+                    ORDER BY previous.created_at DESC, previous.generation_id DESC
+                    LIMIT 1
+                 ), '') != COALESCE(json_extract(value, '$.trend_fingerprint'), '')
+                THEN 'trend'
+                ELSE 'audit'
+              END,
+              json_extract(value, '$.trend_fingerprint')
             FROM json_each(?)
             WHERE ${cacheFreshGuard}`,
       )

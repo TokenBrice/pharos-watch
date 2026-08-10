@@ -328,7 +328,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
           updated_at: Math.floor(Date.now() / 1000),
         } as T;
       }
-      if (sql.includes("pharos:dews:stress-current-generation-count")) {
+      if (sql.includes("pharos:dews:publication-generation-count")) {
         return { cnt: opts.currentGenerationRows ?? 1 } as T;
       }
       if (sql.includes("pharos:dews:stress-latest-generation-count")) {
@@ -344,7 +344,7 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     return {
       bind: (...args: unknown[]) => {
         if (
-          sql.includes("pharos:dews:stress-current-upsert")
+          sql.includes("pharos:dews:stress-history-sparse-insert")
           && typeof args[0] === "string"
         ) {
           computedSnapshotIds.add(args[0]);

@@ -298,9 +298,35 @@ async function upsertLatestStressSignalRows(
   }
 }
 
+async function insertStressSignalPublicationRows(
+  db: D1Database,
+  results: DewsComputedRow[],
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  if (results.length === 0) return;
+  const stmts = results.map((result) =>
+    db
+      .prepare(
+        `/* pharos:dews:publication-row-insert */
+         INSERT OR REPLACE INTO stress_signal_publication_rows
+           (stablecoin_id, computed_at, score, band, signals_json)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .bind(
+        result.stablecoinId,
+        nowSec,
+        result.score,
+        result.band,
+        buildStressSignalsEnvelope(result),
+      ),
+  );
+  await batchExecute(db, stmts, { signal });
+}
+
 async function countStressSignalRowsForGeneration(
   db: D1Database,
-  table: "stress_signals" | "stress_signals_latest",
+  table: "stress_signal_publication_rows" | "stress_signals_latest",
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<number | null> {
@@ -308,8 +334,8 @@ async function countStressSignalRowsForGeneration(
     const row = await runWithOverloadRetry(() =>
       db
         .prepare(
-          table === "stress_signals"
-            ? "SELECT /* pharos:dews:stress-current-generation-count */ COUNT(*) as cnt FROM stress_signals WHERE computed_at = ?"
+          table === "stress_signal_publication_rows"
+            ? "SELECT /* pharos:dews:publication-generation-count */ COUNT(*) as cnt FROM stress_signal_publication_rows WHERE computed_at = ?"
             : "SELECT /* pharos:dews:stress-latest-generation-count */ COUNT(*) as cnt FROM stress_signals_latest WHERE computed_at = ?",
         )
         .bind(nowSec)
@@ -347,9 +373,23 @@ export async function persistDewsResults(params: {
     const stmts = params.results.map((result) =>
       params.db
         .prepare(
-          `/* pharos:dews:stress-current-upsert */
-           INSERT OR REPLACE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json)
-           VALUES (?, ?, ?, ?, ?)`,
+          `/* pharos:dews:stress-history-sparse-insert */
+           INSERT OR IGNORE INTO stress_signals (stablecoin_id, computed_at, score, band, signals_json)
+           SELECT ?, ?, ?, ?, ?
+            WHERE NOT EXISTS (
+                    SELECT 1 FROM stress_signals history
+                     WHERE history.stablecoin_id = ?
+                       AND history.computed_at > ?
+                  )
+               OR NOT EXISTS (
+                    SELECT 1 FROM stress_signals_latest latest
+                     WHERE latest.stablecoin_id = ?
+                  )
+               OR EXISTS (
+                    SELECT 1 FROM stress_signals_latest latest
+                     WHERE latest.stablecoin_id = ?
+                       AND (latest.band != ? OR ABS(latest.score - ?) >= 1)
+                  )`,
         )
         .bind(
           result.stablecoinId,
@@ -357,10 +397,17 @@ export async function persistDewsResults(params: {
           result.score,
           result.band,
           buildStressSignalsEnvelope(result),
+          result.stablecoinId,
+          params.nowSec - 60 * 60,
+          result.stablecoinId,
+          result.stablecoinId,
+          result.band,
+          result.score,
         ),
     );
     await batchExecute(params.db, stmts, { signal: params.signal });
     throwIfAborted(params.signal);
+    await insertStressSignalPublicationRows(params.db, params.results, params.nowSec, params.signal);
     await upsertLatestStressSignalRows(params.db, params.results, params.nowSec, params.signal);
   }
   const computedIds = new Set(params.results.map((result) => result.stablecoinId));
@@ -430,7 +477,7 @@ export async function persistDewsResults(params: {
   if (params.results.length > 0) {
     currentGenerationRows = await countStressSignalRowsForGeneration(
       params.db,
-      "stress_signals",
+      "stress_signal_publication_rows",
       params.nowSec,
       params.signal,
     ) ?? 0;
@@ -443,7 +490,7 @@ export async function persistDewsResults(params: {
     const expectedRows = params.results.length;
     if (currentGenerationRows !== expectedRows) {
       throw new Error(
-        `DEWS publication incomplete: stress_signals has ${currentGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
+        `DEWS publication incomplete: stress_signal_publication_rows has ${currentGenerationRows}/${expectedRows} rows for ${params.nowSec}`,
       );
     }
     if (latestGenerationRows != null && latestGenerationRows !== expectedRows) {
@@ -459,6 +506,27 @@ export async function persistDewsResults(params: {
     );
     publicationPointerWritten = pointerWrite.written;
     publishedGeneration = pointerWrite.written ? params.nowSec : null;
+    if (pointerWrite.written) {
+      await runWithOverloadRetry(() =>
+        params.db
+          .prepare(
+            `/* pharos:dews:publication-generation-retention */
+             DELETE FROM stress_signal_publication_rows
+              WHERE computed_at < (
+                SELECT MIN(computed_at)
+                  FROM (
+                    SELECT DISTINCT computed_at
+                      FROM stress_signal_publication_rows
+                     ORDER BY computed_at DESC
+                     LIMIT 2
+                  )
+              )`,
+          )
+          .run(),
+        3,
+        params.signal,
+      );
+    }
   }
 
   if (params.publishFreshnessSentinel && params.results.length > 0) {

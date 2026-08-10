@@ -199,22 +199,43 @@ function buildYieldSourceDecisionEvidence(params: {
   };
 }
 
-function classifyDecisionRetentionReason(input: {
+function classifyDecisionRetention(input: {
   sourceSwitch: boolean;
   source: EvaluatedYieldSource;
   candidates: EvaluatedYieldSource[];
-}): "trend" | "audit" {
-  if (input.sourceSwitch) return "trend";
-  if (input.candidates.some((candidate) => candidate.anomalies.length > 0)) return "trend";
+}): { retentionReason: "trend" | "episode" | "audit"; trendFingerprint: string | null } {
+  if (input.sourceSwitch) return { retentionReason: "trend", trendFingerprint: null };
   const selectedConfidence = getConfidencePriority(input.source.confidenceTier);
-  const rejectedHigherConfidence = input.candidates.some(
-    (candidate) =>
-      candidate.sourceKey !== input.source.sourceKey &&
-      candidate.rejected &&
-      getConfidencePriority(candidate.confidenceTier) > selectedConfidence,
-  );
-  if (rejectedHigherConfidence) return "trend";
-  return "audit";
+  const episodeEvidence = input.candidates
+    .filter(
+      (candidate) =>
+        candidate.anomalies.length > 0 ||
+        (candidate.sourceKey !== input.source.sourceKey &&
+          candidate.rejected &&
+          getConfidencePriority(candidate.confidenceTier) > selectedConfidence
+        ),
+    )
+    .map((candidate) => ({
+      sourceKey: candidate.sourceKey,
+      confidenceTier: candidate.confidenceTier,
+      anomalies: [...candidate.anomalies].sort(),
+      rejectedHigherConfidence:
+        candidate.sourceKey !== input.source.sourceKey &&
+        candidate.rejected &&
+        getConfidencePriority(candidate.confidenceTier) > selectedConfidence,
+      rejectionReasonCode: candidate.rejected
+        ? deriveRejectionReasonCode(input.source, candidate)
+        : null,
+    }));
+  if (episodeEvidence.length === 0) return { retentionReason: "audit", trendFingerprint: null };
+  return {
+    retentionReason: "episode",
+    trendFingerprint: JSON.stringify({
+      selectedSourceKey: input.source.sourceKey,
+      selectedConfidenceTier: input.source.confidenceTier,
+      evidence: episodeEvidence,
+    }),
+  };
 }
 
 export async function validateYieldRankingsPayloadForPublish(
@@ -403,7 +424,7 @@ export async function persistEvaluatedYieldSources(
       const candidates = input.evaluatedSources
         .filter((candidate) => candidate.id === source.id)
         .sort(compareCandidates);
-      const retentionReason = classifyDecisionRetentionReason({
+      const retention = classifyDecisionRetention({
         sourceSwitch: decisionEvidence.sourceSwitch,
         source,
         candidates,
@@ -422,7 +443,8 @@ export async function persistEvaluatedYieldSources(
         rejected_count: decisionEvidence.rejectedCount,
         alternatives_json: decisionEvidence.alternativesJson,
         created_at: input.startSec,
-        retention_reason: retentionReason,
+        retention_reason: retention.retentionReason,
+        trend_fingerprint: retention.trendFingerprint,
       });
 
       for (const alternative of decisionEvidence.publicDecisionLedger.alternatives) {

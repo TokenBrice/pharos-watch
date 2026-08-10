@@ -91,10 +91,18 @@ const REGULAR_HISTORY_RETENTION_SEC = 30 * 24 * 60 * 60;
 const BUDGET_HISTORY_RETENTION_SEC = 90 * 24 * 60 * 60;
 const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 
-function normalizeMetadata(metadata: string | null | undefined): string | null {
-  if (!metadata) return null;
+function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
   const parsed = parseObjectMetadata(metadata);
-  return boundedJson(parsed ?? { raw: metadata.slice(0, MAX_HISTORY_METADATA_CHARS) }, MAX_HISTORY_METADATA_CHARS);
+  if (!parsed) return null;
+  const scalars: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (value === null || typeof value === "number" || typeof value === "boolean") {
+      scalars[key] = value;
+    } else if (typeof value === "string") {
+      scalars[key] = value.slice(0, 240);
+    }
+  }
+  return Object.keys(scalars).length > 0 ? boundedJson(scalars, 2_000) : null;
 }
 
 function normalizePublications(
@@ -196,7 +204,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
   const publications = productive ? normalizePublications(input.productivity?.publications) : [];
   const publicationsJson = publications.length > 0 ? boundedJson(publications, MAX_HISTORY_METADATA_CHARS) : null;
   const publicationAt = latestPublicationAt(publications);
-  const metadataJson = normalizeMetadata(input.metadata);
+  const metadataJson = normalizeHistoryMetadata(input.metadata);
   const error = input.error?.slice(0, MAX_HISTORY_ERROR_CHARS) ?? null;
 
   await runWithOverloadRetry(() =>
@@ -250,7 +258,7 @@ export async function recordProducerOutcome(db: D1Database, input: RecordProduce
         productive ? 1 : 0,
         input.itemCount ?? null,
         publications.length,
-        publicationsJson,
+        null,
         input.calendarPeriod ?? null,
         metadataJson,
         error,

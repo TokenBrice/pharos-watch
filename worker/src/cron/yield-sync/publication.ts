@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
-import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
 import { isMissingColumnError, isMissingTableError } from "../../lib/db";
 
@@ -22,6 +22,68 @@ export { buildYieldRankingsPayloadFromEvaluatedSources } from "./publication-ran
  *  (source switches, anomalies, rejected higher-confidence sources) are
  *  preserved beyond this window for long-running analytics. */
 const AUDIT_DECISION_RETENTION_DAYS = 30;
+
+export async function materializeYieldHistoryDaily(
+  db: D1Database,
+  startSec: number,
+): Promise<number> {
+  const snapshotDate = Math.floor((startSec - (YIELD_HISTORY_RAW_DAYS + 1) * DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+  try {
+    const result = await db
+      .prepare(
+      `/* pharos:yield-sync:daily-history-materialize */
+       INSERT INTO yield_history_daily (
+         stablecoin_id, source_key, snapshot_date, recorded_at, is_best,
+         apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
+         data_source, warning_signals, yield_source, yield_type,
+         publication_generation_id, publication_state, pys_at_publish,
+         safety_at_publish, variance_at_publish, pys_inputs_at_publish
+       )
+       SELECT stablecoin_id, source_key, ?, recorded_at, is_best,
+              apy, apy_base, apy_reward, exchange_rate, source_tvl_usd,
+              data_source, warning_signals, yield_source, yield_type,
+              publication_generation_id, publication_state, pys_at_publish,
+              safety_at_publish, variance_at_publish, pys_inputs_at_publish
+         FROM (
+           SELECT h.*,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY h.stablecoin_id, h.source_key
+                    ORDER BY h.recorded_at DESC, h.rowid DESC
+                  ) AS row_rank
+             FROM yield_history h
+            WHERE h.recorded_at >= ?
+              AND h.recorded_at < ?
+              AND (h.publication_state IS NULL OR h.publication_state = 'published')
+         ) ranked
+        WHERE row_rank = 1
+       ON CONFLICT(stablecoin_id, source_key, snapshot_date) DO UPDATE SET
+         recorded_at = excluded.recorded_at,
+         is_best = excluded.is_best,
+         apy = excluded.apy,
+         apy_base = excluded.apy_base,
+         apy_reward = excluded.apy_reward,
+         exchange_rate = excluded.exchange_rate,
+         source_tvl_usd = excluded.source_tvl_usd,
+         data_source = excluded.data_source,
+         warning_signals = excluded.warning_signals,
+         yield_source = excluded.yield_source,
+         yield_type = excluded.yield_type,
+         publication_generation_id = excluded.publication_generation_id,
+         publication_state = excluded.publication_state,
+         pys_at_publish = excluded.pys_at_publish,
+         safety_at_publish = excluded.safety_at_publish,
+         variance_at_publish = excluded.variance_at_publish,
+         pys_inputs_at_publish = excluded.pys_inputs_at_publish
+       WHERE excluded.recorded_at > yield_history_daily.recorded_at`,
+    )
+      .bind(snapshotDate, snapshotDate, snapshotDate + DAY_SECONDS)
+      .run();
+    return result.meta?.changes ?? 0;
+  } catch (error) {
+    if (isMissingTableError(error) || isMissingColumnError(error)) return 0;
+    throw error;
+  }
+}
 
 /**
  * Reclassify the historical linked-variant false-switch pattern only after the
@@ -81,6 +143,8 @@ export async function pruneYieldTables(
     await deleteOrphanYieldRows(db, managedYieldIds);
   }
 
+  await materializeYieldHistoryDaily(db, startSec);
+
   const pruneCutoff = startSec - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS;
   const frozenIdsList = [...FROZEN_IDS];
   const frozenClause =
@@ -91,6 +155,15 @@ export async function pruneYieldTables(
     .prepare(`/* pharos:yield-sync:history-retention-delete */ DELETE FROM yield_history WHERE recorded_at < ? ${frozenClause}`)
     .bind(pruneCutoff, ...frozenIdsList)
     .run();
+
+  try {
+    await db
+      .prepare(`/* pharos:yield-sync:daily-history-retention-delete */ DELETE FROM yield_history_daily WHERE snapshot_date < ? ${frozenClause}`)
+      .bind(pruneCutoff, ...frozenIdsList)
+      .run();
+  } catch (error) {
+    if (!isMissingTableError(error)) throw error;
+  }
 
   if (allowDestructiveCleanup) {
     await cleanupFalseLinkedVariantSourceSwitches(db);

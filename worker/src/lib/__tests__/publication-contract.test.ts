@@ -457,7 +457,7 @@ describe("loadPublicationHealth", () => {
     const health = await loadPublicationHealth(db, NOW);
 
     expect(health.surfaces.dews).toMatchObject({
-      sourceOfTruth: "cache[dews:published-generation]+stress_signals",
+      sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
       lastPublishedGeneration: {
         generationId: `dews:${dewsAt}`,
         state: "published",
@@ -517,7 +517,7 @@ describe("loadPublicationHealth", () => {
     const health = await loadPublicationHealth(db, NOW);
 
     expect(health.surfaces.dews).toMatchObject({
-      sourceOfTruth: "cache[dews:published-generation]+stress_signals",
+      sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
       lastPublishedGeneration: null,
       lastFailureReason: "published generation coverage mismatch: rows=1/2",
     });

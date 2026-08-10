@@ -90,7 +90,7 @@ const API_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:stress-signals:legacy-lates
 
 const API_EXACT_ALL_SQL = `SELECT /* pharos:stress-signals:published-exact-all */
          stablecoin_id, score, band, signals_json, computed_at
-       FROM stress_signals
+       FROM stress_signal_publication_rows
        WHERE computed_at = ?
        ORDER BY stablecoin_id ASC`;
 
@@ -119,7 +119,7 @@ const API_LEGACY_ONE_BOUNDED_SQL = `SELECT /* pharos:stress-signals:legacy-lates
 
 const API_EXACT_ONE_SQL = `SELECT /* pharos:stress-signals:published-exact-one */
          score, band, signals_json, computed_at
-       FROM stress_signals
+       FROM stress_signal_publication_rows
        WHERE stablecoin_id = ? AND computed_at = ?
        LIMIT 1`;
 
@@ -152,7 +152,7 @@ const TELEGRAM_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:telegram-dispatch:dews
 
 const TELEGRAM_EXACT_ALL_SQL = `SELECT /* pharos:telegram-dispatch:dews-published-exact */
          stablecoin_id, score, band, signals_json, computed_at
-       FROM stress_signals
+       FROM stress_signal_publication_rows
        WHERE computed_at = ?
        ORDER BY stablecoin_id ASC`;
 
@@ -185,7 +185,7 @@ const DEWS_PREVIOUS_LEGACY_ALL_BOUNDED_SQL = `SELECT /* pharos:dews:previous-str
 
 const DEWS_PREVIOUS_EXACT_ALL_SQL = `SELECT /* pharos:dews:previous-stress-published-exact */
          stablecoin_id, signals_json, band, computed_at
-       FROM stress_signals
+       FROM stress_signal_publication_rows
        WHERE computed_at = ?
        ORDER BY stablecoin_id ASC`;
 
@@ -261,7 +261,7 @@ export async function loadPublishedStressSignalGeneration(
     const statement = db.prepare(
       `SELECT /* pharos:stress-signals:published-exact */
               stablecoin_id, score, band, signals_json, computed_at
-         FROM stress_signals
+         FROM stress_signal_publication_rows
         WHERE computed_at = ?
         ORDER BY stablecoin_id ASC`,
     )
