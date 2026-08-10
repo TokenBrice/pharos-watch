@@ -1316,8 +1316,7 @@ const SafetyScoreV9CardShape = {
   accessPosture: SafetyScoreV9AccessPostureSchema,
   dependencies: SafetyScoreV9DependencySummarySchema,
 } as const;
-const SafetyScoreV9CardObjectSchema = z.object(SafetyScoreV9CardShape).strict();
-type SafetyScoreV9CardBase = z.infer<typeof SafetyScoreV9CardObjectSchema>;
+type SafetyScoreV9CardBase = z.infer<z.ZodObject<typeof SafetyScoreV9CardShape>>;
 
 function refineCardBase(
   card: SafetyScoreV9CardBase,

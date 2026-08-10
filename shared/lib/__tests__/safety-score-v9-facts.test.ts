@@ -11,7 +11,6 @@ import {
   canonicalV9RouteKey,
   computeV9FactSetDigest,
   parseCompiledV9FactSetV2,
-  parseCompiledV9FactSetV3,
   readCompiledV9FactSetForEvaluation,
   upgradeV9FactGapV2,
 } from "../safety-score-v9/facts";
