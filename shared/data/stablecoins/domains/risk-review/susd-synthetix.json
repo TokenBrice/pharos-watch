@@ -1,9 +1,9 @@
 {
   "id": "susd-synthetix",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: SUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "reviewedStatus": false,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver under the v3.9973 majority-threshold upstream policy; no separate manual override source is attached.",
+    "evidence": "Inferred review updated: SUSD has no resolved direct holder freeze surface, and its matched upstream reserve exposure is below the strict >50% threshold, so it resolves to No rather than Upstream.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

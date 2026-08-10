@@ -1,7 +1,7 @@
 {
   "id": "lisusd-lista",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Sourcify LisUSD implementation source",
@@ -20,7 +20,7 @@
         "url": "https://sourcify.dev/server/v2/contract/56/0xfe928A7D8Be9c8cEce7e97F0Ed5704f4fA2cb42A?fields=abi,sources"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08. The lisUSD implementation exposes ordinary transfers, allowance-gated burns, and ward-gated mint/cap administration without a native blacklist or holder-selective transfer control. Current collateral nevertheless includes wBETH, whose live BSC implementation exposes blacklist/isBlacklisted and pause/unpause controls, in addition to the documented USDT/USDC/FDUSD PSM exposure. Those positive reserve-side issuer controls resolve lisUSD as Upstream rather than No.",
+    "evidence": "Re-reviewed 2026-08-08. The lisUSD implementation exposes ordinary transfers, allowance-gated burns, and ward-gated mint/cap administration without a native blacklist or holder-selective transfer control. Current structured collateral includes minority BTCB/wBETH issuer-control exposure and no >50% stablecoin PSM reserve share under the v3.9973 upstream threshold, so those reserve-side controls no longer resolve lisUSD as Upstream.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },

@@ -83,6 +83,14 @@ const dai = {
   circulating: { peggedUSD: 90_000_000 },
 } as unknown as StablecoinData;
 
+const lisusd = {
+  ...coin,
+  id: "lisusd-lista",
+  name: "Lista USD",
+  symbol: "LISUSD",
+  circulating: { peggedUSD: 75_000_000 },
+} as unknown as StablecoinData;
+
 const reportCardsResponse = makeReportCardsV9Response({
   cards: [
     makeV9Card({
@@ -90,6 +98,13 @@ const reportCardsResponse = makeReportCardsV9Response({
       accessPosture: {
         ...makeV9Card().accessPosture,
         freezeExposure: "upstream",
+      },
+    }),
+    makeV9Card({
+      id: "lisusd-lista",
+      accessPosture: {
+        ...makeV9Card().accessPosture,
+        freezeExposure: "possible",
       },
     }),
     makeV9Card({ id: "usdt-tether" }),
@@ -281,6 +296,23 @@ describe("StablecoinTable", () => {
 
     expect(screen.getByText("Upstream")).toBeTruthy();
     expect(screen.queryByLabelText(/source/i)).toBeNull();
+  });
+
+  it("renders reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+    localStorage.setItem("pharos-table-columns", JSON.stringify(["name", "blacklistable"]));
+
+    render(
+      <StablecoinTable
+        data={[lisusd]}
+        isLoading={false}
+        activeFilters={[]}
+        pegRates={{}}
+        reportCards={reportCards}
+      />,
+    );
+
+    expect(screen.getByText("No")).toBeTruthy();
+    expect(screen.queryByText("Possible")).toBeNull();
   });
 
   it("renders a star control when pinning is enabled", () => {

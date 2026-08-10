@@ -22,6 +22,7 @@ export {
   createBlacklistResolutionContext,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
+  getReserveBlacklistabilityExposurePct,
   isBlacklistable,
   resolveBlacklistStatus,
   resolveBlacklistStatuses,

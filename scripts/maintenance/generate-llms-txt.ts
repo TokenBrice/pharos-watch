@@ -66,7 +66,7 @@ const coreDataLinks = [
   [
     "Safety Scores",
     absolute("/safety-scores/"),
-    "Weighted Liquidity / Resilience / Decentralization / Dependency + peg-stability multiplier, A+ to F.",
+    "Safety Score V9 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.",
   ],
   ["Pharos Stability Index", absolute("/stability-index/"), "Aggregate market-stability gauge with history chart."],
   ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],

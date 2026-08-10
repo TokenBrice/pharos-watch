@@ -1,6 +1,6 @@
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/app/learn/case-studies/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
-import { getV9ResolvedBlacklistStatus } from "@/lib/safety-score-v9-consumers";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
@@ -268,7 +268,7 @@ export function buildStablecoinDetailHeroViewModel({
   redemptionBackstop,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
-  const blacklistStatus = getV9ResolvedBlacklistStatus(reportCard);
+  const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
   const pegScoreDisplay = buildPegScoreDisplay(

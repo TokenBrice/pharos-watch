@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // no implicit cap that forces a v4; entries below are newest-first by version.
 export const BLACKLIST_TRACKER_V3: readonly MethodologyChangelogEntry[] = [
   {
+    version: "3.9973",
+    title: "Majority-threshold upstream exposure",
+    date: "2026-08-10",
+    effectiveAt: 1786320000, // 2026-08-10T00:00:00Z
+    summary:
+      "Changes FreezeWatch upstream classification from any matched reserve path to a strict majority rule: reserve exposure must exceed 50% and may aggregate Yes, Upstream, and Possible upstream assets or rails.",
+    impact: [
+      "Reserve slices can carry explicit `blacklistabilityExposure` annotations for yes/upstream/possible/no/unknown exposure when the reserve bucket cannot be represented by one tracked `coinId`",
+      "Direct `Yes` and direct `Possible` token reviews keep their direct tier; the upstream threshold applies only when no direct holder-facing freeze control is resolved",
+      "DAI remains Upstream because its PSM stablecoin bucket plus Grove RWA exposure exceed the threshold, while minority-exposure assets such as hyUSD, lisUSD, USDaf, and USDD move out of Upstream",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "3.9972",
     title: "Actionable data-quality warning scope",
     date: "2026-07-01",

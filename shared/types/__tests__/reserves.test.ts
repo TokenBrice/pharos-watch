@@ -41,6 +41,28 @@ describe("reserve composition validation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts explicit reserve blacklistability exposure annotations", () => {
+    const result = FullReserveCompositionSchema.safeParse([
+      { name: "PSM stablecoins", pct: 40, risk: "low", blacklistabilityExposure: "yes" },
+      { name: "RWA credit sleeve", pct: 20, risk: "medium", blacklistabilityExposure: "upstream" },
+      { name: "ETH", pct: 40, risk: "very-low", blacklistabilityExposure: "no" },
+    ]);
+
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects contradictory blacklistability exposure annotations", () => {
+    const directNo = FullReserveCompositionSchema.safeParse([
+      { name: "USDC", pct: 100, risk: "low", blacklistable: true, blacklistabilityExposure: "no" },
+    ]);
+    const directUnknown = FullReserveCompositionSchema.safeParse([
+      { name: "USDC", pct: 100, risk: "low", blacklistable: true, blacklistabilityExposure: "unknown" },
+    ]);
+
+    expect(directNo.success).toBe(false);
+    expect(directUnknown.success).toBe(false);
+  });
+
   it("rejects partial known-exposure totals above 100 plus tolerance", () => {
     expect(validateReserveCompositionTotal([
       { pct: 100 + RESERVE_COMPOSITION_TOTAL_TOLERANCE_PCT },

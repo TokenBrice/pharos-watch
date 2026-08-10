@@ -1497,6 +1497,59 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(hero.passportItems.some((item) => item.key === "redeemability")).toBe(false);
   });
 
+  it("uses reviewed FreezeWatch status before stale V9 freeze exposure in the hero passport", () => {
+    const coin = TRACKED_META_BY_ID.get("lisusd-lista");
+    expect(coin).toBeDefined();
+
+    const hero = buildStablecoinDetailHeroViewModel({
+      coin: coin!,
+      coinData: {
+        id: "lisusd-lista",
+        name: "Lista USD",
+        symbol: "LISUSD",
+        pegType: "peggedUSD",
+        price: 1,
+        circulating: { peggedUSD: 100 },
+        chains: [],
+      } as never,
+      isNavToken: false,
+      mcap: 100,
+      supply: 100,
+      prevDay: null,
+      prevWeek: null,
+      prevMonth: null,
+      performanceVsUsd1y: null,
+      pegRef: 1,
+      deviationBps: 0,
+      gaugeDeviationBps: 0,
+      pegReferenceUnavailable: false,
+      pegScoreResult: null,
+      liquidityData: undefined,
+      yieldRanking: null,
+      stressSignal: null,
+      reportCard: makeV9Card({
+        id: "lisusd-lista",
+        accessPosture: {
+          ...makeV9Card().accessPosture,
+          freezeExposure: "possible",
+        },
+      }),
+      verdict: {
+        archetype: "uncategorized",
+        label: "Uncategorized",
+      },
+      resolvedMechanismArchetype: null,
+      mintAuthority: {
+        status: "not-reviewed",
+      } as never,
+      redemptionBackstop: null,
+    });
+
+    expect(hero.passportItems.find((item) => item.key === "freeze")).toMatchObject({
+      value: "No",
+    });
+  });
+
   it("builds passport chips with honest fallbacks for sparse coins", () => {
     const sparseCoin = {
       id: "mock-sparse",

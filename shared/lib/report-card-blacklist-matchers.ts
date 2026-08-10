@@ -3,20 +3,24 @@ import type { ReserveSlice, StablecoinMeta } from "../types";
 import { buildDelimitedSymbolPattern } from "./reserve-symbol-matchers";
 
 export type BlacklistStatus = boolean | "possible" | "inherited";
+type ReserveBlacklistExposureStatus = BlacklistStatus | "unknown";
+
+const UPSTREAM_BLACKLISTABILITY_EXPOSURE_THRESHOLD_PCT = 50;
+const UPSTREAM_BLACKLISTABILITY_EXPOSURE_EPSILON_PCT = 1e-9;
 const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
 const SYMBOL_MATCHER_PREFIX_GROUP = "(?:s|stata|vb|syrup\\s*)?";
 const SYMBOL_MATCHER_SUFFIX_GROUP = "(?:0)?";
 
-type ReserveBlacklistRisk = "direct" | "possible" | "none";
-
 interface BlacklistSymbolMatcher {
   coinId: string;
   symbol: string;
+  status: BlacklistStatus;
   pattern: RegExp;
 }
 
 export interface BlacklistResolutionContext {
   blacklistableIds: ReadonlySet<string>;
+  statusesById: ReadonlyMap<string, BlacklistStatus>;
   symbolMatchers: readonly BlacklistSymbolMatcher[];
   trackedMetaById?: ReadonlyMap<string, StablecoinMeta>;
 }
@@ -71,8 +75,8 @@ const POSSIBLE_BLACKLIST_TEXT_PATTERNS: readonly RegExp[] = [
   /\bapcxusdt\b/i,
   /\bstablecoins?\b/i,
   /\bstables\b/i,
-  /\bpsm\b/i,
-  /\bgsm\b/i,
+  /\bpsms?\b/i,
+  /\bgsms?\b/i,
 ];
 
 const DIRECT_COLLATERAL_BLACKLIST_SYMBOLS = [
@@ -131,9 +135,56 @@ function sliceTextSignalsDirectBlacklistRisk(text: string): boolean {
   );
 }
 
+function strongerBlacklistStatus(left: BlacklistStatus, right: BlacklistStatus): BlacklistStatus {
+  const rank = (status: BlacklistStatus) => {
+    if (status === true) return 3;
+    if (status === "inherited") return 2;
+    if (status === "possible") return 1;
+    return 0;
+  };
+
+  return rank(left) >= rank(right) ? left : right;
+}
+
+function isCountedUpstreamBlacklistExposure(
+  status: ReserveBlacklistExposureStatus | null | undefined,
+): boolean {
+  return status === true || status === "inherited" || status === "possible";
+}
+
+function exceedsUpstreamBlacklistExposureThreshold(pct: number): boolean {
+  return pct - UPSTREAM_BLACKLISTABILITY_EXPOSURE_THRESHOLD_PCT > UPSTREAM_BLACKLISTABILITY_EXPOSURE_EPSILON_PCT;
+}
+
+function mapReserveBlacklistabilityExposure(
+  exposure: ReserveSlice["blacklistabilityExposure"],
+): ReserveBlacklistExposureStatus | null {
+  if (exposure === "yes") return true;
+  if (exposure === "upstream") return "inherited";
+  if (exposure === "possible") return "possible";
+  if (exposure === "no") return false;
+  if (exposure === "unknown") return "unknown";
+  return null;
+}
+
+function matchKnownBlacklistableSymbolStatus(
+  text: string,
+  context?: BlacklistResolutionContext,
+  excludedCoinId?: string,
+): BlacklistStatus | null {
+  if (!context) return null;
+
+  let status: BlacklistStatus | null = null;
+  for (const matcher of context.symbolMatchers) {
+    if (matcher.coinId === excludedCoinId) continue;
+    if (!matcher.pattern.test(text)) continue;
+    status = status === null ? matcher.status : strongerBlacklistStatus(status, matcher.status);
+  }
+  return status;
+}
+
 function textSignalsKnownBlacklistableSymbol(text: string, context?: BlacklistResolutionContext): boolean {
-  if (!context) return false;
-  return context.symbolMatchers.some(({ pattern }) => pattern.test(text));
+  return matchKnownBlacklistableSymbolStatus(text, context) !== null;
 }
 
 function sliceTextSignalsPossibleBlacklistRisk(text: string): boolean {
@@ -151,32 +202,69 @@ function metaTextSignalsPossibleBlacklistRisk(meta: StablecoinMeta, context?: Bl
   );
 }
 
-function reserveSliceBlacklistRisk(slice: ReserveSlice, context?: BlacklistResolutionContext): ReserveBlacklistRisk {
-  if (slice.blacklistable === true) return "direct";
-  if (slice.coinId !== undefined && context?.blacklistableIds.has(slice.coinId) === true) return "direct";
-  if (sliceTextSignalsDirectBlacklistRisk(slice.name)) return "direct";
-  if (textSignalsKnownBlacklistableSymbol(slice.name, context)) return "direct";
+function reserveSliceBlacklistExposureStatus(
+  slice: ReserveSlice,
+  context?: BlacklistResolutionContext,
+  excludedCoinId?: string,
+): ReserveBlacklistExposureStatus {
+  const explicitExposure = mapReserveBlacklistabilityExposure(slice.blacklistabilityExposure);
+  if (explicitExposure !== null) return explicitExposure;
+
+  if (slice.blacklistable === true) return true;
+  if (slice.coinId !== undefined) {
+    if (slice.coinId === excludedCoinId) return false;
+    const linkedStatus = context?.statusesById.get(slice.coinId);
+    if (linkedStatus !== undefined) return linkedStatus;
+    if (context?.blacklistableIds.has(slice.coinId) === true) return true;
+  }
+  if (sliceTextSignalsDirectBlacklistRisk(slice.name)) return true;
+  const symbolStatus = matchKnownBlacklistableSymbolStatus(slice.name, context, excludedCoinId);
+  if (symbolStatus !== null) return symbolStatus;
   if (sliceTextSignalsPossibleBlacklistRisk(slice.name)) return "possible";
-  return "none";
+  return false;
+}
+
+export function getReserveBlacklistabilityExposurePct(
+  reserveSlices: readonly ReserveSlice[],
+  context?: BlacklistResolutionContext,
+  excludedCoinId?: string,
+): number {
+  return reserveSlices.reduce((total, slice) => {
+    const status = reserveSliceBlacklistExposureStatus(slice, context, excludedCoinId);
+    return isCountedUpstreamBlacklistExposure(status) ? total + slice.pct : total;
+  }, 0);
 }
 
 export function createBlacklistResolutionContext(
   blacklistableIds: ReadonlySet<string>,
   trackedMetaById: ReadonlyMap<string, StablecoinMeta>,
+  statusesById: ReadonlyMap<string, BlacklistStatus> = new Map(
+    [...blacklistableIds].map((coinId) => [coinId, true] as const),
+  ),
 ): BlacklistResolutionContext {
-  const symbolMatchers: BlacklistSymbolMatcher[] = [];
+  const resolvedStatusesById = new Map(statusesById);
   for (const coinId of blacklistableIds) {
+    if (!resolvedStatusesById.has(coinId)) {
+      resolvedStatusesById.set(coinId, true);
+    }
+  }
+
+  const symbolMatchers: BlacklistSymbolMatcher[] = [];
+  for (const [coinId, status] of resolvedStatusesById) {
+    if (!isCountedUpstreamBlacklistExposure(status)) continue;
     const meta = trackedMetaById.get(coinId);
     if (meta && meta.symbol.length >= MIN_SYMBOL_LENGTH_FOR_DETECTION) {
       symbolMatchers.push({
         coinId,
         symbol: meta.symbol,
+        status,
         pattern: buildBlacklistableSymbolPattern(meta.symbol),
       });
     }
   }
   return {
     blacklistableIds,
+    statusesById: resolvedStatusesById,
     symbolMatchers,
     trackedMetaById,
   };
@@ -187,8 +275,8 @@ function enrichReserveSlicesForBlacklist(
   context: BlacklistResolutionContext,
 ): ReserveSlice[] {
   return reserveSlices.map((slice) => {
-    const risk = reserveSliceBlacklistRisk(slice, context);
-    if (risk !== "direct" || slice.blacklistable) return slice;
+    const status = reserveSliceBlacklistExposureStatus(slice, context);
+    if (status !== true || slice.blacklistable) return slice;
     return { ...slice, blacklistable: true };
   });
 }
@@ -217,35 +305,48 @@ export function resolveBlacklistStatus(
   meta: StablecoinMeta,
   options: ResolveBlacklistStatusOptions = {},
 ): BlacklistStatus {
-  if (meta.canBeBlacklisted !== undefined && meta.canBeBlacklisted !== false) return meta.canBeBlacklisted;
-  if (meta.canBeBlacklisted === undefined && meta.blacklistabilityReview?.reviewedStatus !== undefined) {
-    const reviewedStatus = meta.blacklistabilityReview.reviewedStatus;
-    if (reviewedStatus !== false) return reviewedStatus;
-  }
+  const directStatus = resolveDirectBlacklistStatus(meta);
+  if (directStatus === true) return true;
+  if (directStatus === "possible") return "possible";
 
   const inferredStatus = resolveBlacklistStatusWithoutExplicitOverride(meta, options);
-  if (meta.canBeBlacklisted === false) {
-    const suppressesUpstream = inferredStatus === "inherited";
-    if (suppressesUpstream && !meta.blacklistabilityReview?.upstreamSuppressionRationale) {
-      return "inherited";
+  if (inferredStatus === "inherited") {
+    if (directStatus === false && meta.blacklistabilityReview?.upstreamSuppressionRationale) {
+      return false;
     }
-    return false;
+    return "inherited";
   }
+  if (directStatus === false) return false;
 
   return inferredStatus;
+}
+
+function resolveDirectBlacklistStatus(meta: StablecoinMeta): BlacklistStatus | null {
+  if (meta.canBeBlacklisted !== undefined) return meta.canBeBlacklisted;
+
+  const reviewedStatus = meta.blacklistabilityReview?.reviewedStatus;
+  if (reviewedStatus === true || reviewedStatus === false || reviewedStatus === "possible") {
+    return reviewedStatus;
+  }
+  if (reviewedStatus === "inherited") {
+    return null;
+  }
+
+  if (meta.flags.governance === "centralized") return true;
+
+  return null;
 }
 
 function resolveBlacklistStatusWithoutExplicitOverride(
   meta: StablecoinMeta,
   options: ResolveBlacklistStatusOptions = {},
 ): BlacklistStatus {
-  if (meta.flags.governance === "centralized") return true;
-
   // Tracked parent variants inherit their parent's freeze surface: a sUSDS or
   // sDAI holder's exposure to issuer-side freeze flows through the parent, so
   // resolve the parent's status rather than relying on reserve/text inference.
   if (meta.variantOf && options.context) {
-    if (options.context.blacklistableIds.has(meta.variantOf)) {
+    const resolvedParentStatus = options.context.statusesById.get(meta.variantOf);
+    if (isCountedUpstreamBlacklistExposure(resolvedParentStatus)) {
       return "inherited";
     }
     const parentMeta = options.context.trackedMetaById?.get(meta.variantOf);
@@ -254,30 +355,23 @@ function resolveBlacklistStatusWithoutExplicitOverride(
         ...options,
         reserveSlices: options.reserveSlicesById?.get(parentMeta.id),
       });
-      if (parentStatus === true || parentStatus === "inherited") return "inherited";
-      if (parentStatus === "possible") return "possible";
+      if (isCountedUpstreamBlacklistExposure(parentStatus)) return "inherited";
     }
   }
 
   const effectiveReserves = options.reserveSlices ?? meta.reserves;
   if (effectiveReserves) {
-    let directReservePct = 0;
-    let possibleReservePct = 0;
-    for (const slice of effectiveReserves) {
-      const risk = reserveSliceBlacklistRisk(slice, options.context);
-      if (risk === "direct") {
-        directReservePct += slice.pct;
-        continue;
-      }
-      if (risk === "possible") {
-        possibleReservePct += slice.pct;
-      }
-    }
-    if (directReservePct > 0 || possibleReservePct > 0) return "inherited";
+    const upstreamExposurePct = getReserveBlacklistabilityExposurePct(effectiveReserves, options.context, meta.id);
+    if (exceedsUpstreamBlacklistExposureThreshold(upstreamExposurePct)) return "inherited";
   }
 
   if (meta.custodyModel === "cex") return "inherited";
-  if (metaTextSignalsPossibleBlacklistRisk(meta, options.context)) return "inherited";
+  if (
+    (!effectiveReserves || effectiveReserves.length === 0) &&
+    metaTextSignalsPossibleBlacklistRisk(meta, options.context)
+  ) {
+    return "inherited";
+  }
   return false;
 }
 
@@ -287,14 +381,46 @@ export function isBlacklistable(
   reserveSlices?: readonly ReserveSlice[],
 ): BlacklistStatus {
   const context = blacklistableIds
-    ? {
+    ? createBlacklistResolutionContext(
         blacklistableIds,
         // Single-coin callers only pass ids, not the tracked metadata required
         // to build symbol matchers. Bulk resolution supplies the full context.
-        symbolMatchers: [],
-      }
+        new Map(),
+      )
     : undefined;
   return resolveBlacklistStatus(meta, { context, reserveSlices });
+}
+
+function getCountedBlacklistableIds(statuses: ReadonlyMap<string, BlacklistStatus>): Set<string> {
+  return new Set(
+    [...statuses.entries()]
+      .filter(([, status]) => isCountedUpstreamBlacklistExposure(status))
+      .map(([coinId]) => coinId),
+  );
+}
+
+function seedDirectBlacklistStatuses(metas: readonly StablecoinMeta[]): Map<string, BlacklistStatus> {
+  const statuses = new Map<string, BlacklistStatus>();
+  for (const meta of metas) {
+    const status = resolveDirectBlacklistStatus(meta);
+    if (status !== null) {
+      statuses.set(meta.id, status);
+    }
+  }
+  return statuses;
+}
+
+function blacklistStatusesEqual(
+  left: ReadonlyMap<string, BlacklistStatus>,
+  right: ReadonlyMap<string, BlacklistStatus>,
+  metas: readonly StablecoinMeta[],
+): boolean {
+  for (const meta of metas) {
+    if (left.get(meta.id) !== right.get(meta.id)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 export function resolveBlacklistStatuses(
@@ -304,21 +430,14 @@ export function resolveBlacklistStatuses(
   const trackedMetaById = options.trackedMetaById ?? new Map(
     metas.map((meta) => [meta.id, meta] as const),
   );
-  const blacklistableIds = new Set(
-    metas
-      .filter((meta) => (
-        meta.canBeBlacklisted === true ||
-        (meta.canBeBlacklisted === undefined && meta.flags.governance === "centralized")
-      ))
-      .map((meta) => meta.id),
-  );
   const reserveSlicesById = options.reserveSlicesById;
   const maxIterations = metas.length + 1;
-  const statuses = new Map<string, BlacklistStatus>();
+  let statuses = seedDirectBlacklistStatuses(metas);
 
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
-    const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById);
-    let addedThisPass = false;
+    const blacklistableIds = getCountedBlacklistableIds(statuses);
+    const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById, statuses);
+    const nextStatuses = new Map<string, BlacklistStatus>();
 
     for (const meta of metas) {
       const status = resolveBlacklistStatus(meta, {
@@ -326,16 +445,13 @@ export function resolveBlacklistStatuses(
         reserveSlices: reserveSlicesById?.get(meta.id),
         reserveSlicesById,
       });
-      statuses.set(meta.id, status);
-      if ((status === true || status === "inherited") && !blacklistableIds.has(meta.id)) {
-        blacklistableIds.add(meta.id);
-        addedThisPass = true;
-      }
+      nextStatuses.set(meta.id, status);
     }
 
-    if (!addedThisPass) {
-      return statuses;
+    if (blacklistStatusesEqual(statuses, nextStatuses, metas)) {
+      return nextStatuses;
     }
+    statuses = nextStatuses;
   }
 
   throw new Error("Blacklist status resolution did not converge");

@@ -48,6 +48,20 @@ function walk(dir: string, out: string[] = []): string[] {
 }
 
 describe("design invariants", () => {
+  it("keeps homepage overview table sizing responsive to the density control", () => {
+    const globals = readFileSync(APP_GLOBALS, "utf8");
+
+    expect(globals).toMatch(
+      /\.pharos-overview-table-shell\.pharos-density-compact\s*{[^}]*--overview-table-row-height:\s*2\.625rem/s,
+    );
+    expect(globals).toMatch(
+      /\.pharos-overview-table-shell\.pharos-density-spacious\s*{[^}]*--overview-table-row-height:\s*3\.5rem/s,
+    );
+    expect(globals).toMatch(
+      /\.pharos-overview-table-row\s*{[^}]*height:\s*var\(--overview-table-row-height\)\s*!important/s,
+    );
+  });
+
   it("resolves the display font token from the body-level font bridge", () => {
     const globals = readFileSync(APP_GLOBALS, "utf8");
 

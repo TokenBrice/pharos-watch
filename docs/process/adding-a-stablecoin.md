@@ -48,7 +48,7 @@ Useful repo references before editing:
 - New tracked entries belong in per-coin JSON assets, not in executable TypeScript arrays.
 - For an existing coin with a research sidecar, update the sidecar and keep every field owned by that domain out of the base file. Do not create sidecars for unrelated scalar metadata.
 - Regenerate `shared/data/stablecoins/coins.generated.json` after per-coin metadata edits; do not edit the generated aggregate by hand.
-- New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs even though legacy numeric keys still exist.
+- New keys in `data/logos.json` and `data/ai-summaries.json` must use canonical stablecoin IDs; existing keys are canonical today, though many logo values still point at legacy numeric filenames such as `/logos/1-usdt.svg`.
 - Do not add manual supply overrides. Pharos uses DefiLlama first, then the existing fallback paths documented in `docs/data-pipeline.md`.
 - Do not treat `infrastructures` and `dependencies` as interchangeable. `infrastructures` is project taxonomy; `dependencies` is the asset graph.
 - Keep `reserves[]` curated even when `liveReservesConfig` exists. Curated reserves still drive dependency inference and fallback views.
@@ -694,7 +694,7 @@ Example:
 
 Notes:
 
-- `data/logos.json` currently contains legacy numeric keys. Ignore that for new work.
+- `data/logos.json` keys are canonical stablecoin IDs today, though some values still point at legacy numeric filenames such as `/logos/1-usdt.svg`. Ignore that for new work.
 - `scripts/maintenance/fetch-logos.ts` exists, but the checked-in production map today is local `/logos/...` paths.
 - If no logo exists yet, the UI can fall back to initials, but a tracked addition should ship with a real logo unless the coverage decision note records an explicit skipped reason.
 

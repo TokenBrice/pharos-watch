@@ -5,7 +5,7 @@
 ## Core Data
 
 - [Dashboard homepage](https://pharos.watch/): Market overview with KPI bar, peg-score heatmap, and stablecoin list.
-- [Safety Scores](https://pharos.watch/safety-scores/): Weighted Liquidity / Resilience / Decentralization / Dependency + peg-stability multiplier, A+ to F.
+- [Safety Scores](https://pharos.watch/safety-scores/): Safety Score V9 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.
 - [Pharos Stability Index](https://pharos.watch/stability-index/): Aggregate market-stability gauge with history chart.
 - [DEWS (Depeg Early Warning System)](https://pharos.watch/depeg/): Active depegs, watch-list, and historical DEWS bands.
 - [Liquidity](https://pharos.watch/liquidity/): DEX liquidity scores, pool counts, TVL depth.

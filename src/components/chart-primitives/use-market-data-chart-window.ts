@@ -36,7 +36,11 @@ export function useMarketDataChartWindow<T extends TimePoint>({
   const { data: annotations } = useChartAnnotations(stablecoinId, fromMs, toMs);
 
   const xTicks = useMemo(() => {
-    if (range !== "all" || visibleData.length === 0) return undefined;
+    // Month-oriented labels need a matching monthly tick cadence. Letting
+    // Recharts auto-generate ticks for 90d/1y produces several identical
+    // "May '26"-style labels within one month, which then collide in the
+    // side-by-side detail layout.
+    if ((range === "7d" || range === "30d") || visibleData.length === 0) return undefined;
     const first = visibleData[0].ts;
     const last = visibleData[visibleData.length - 1].ts;
     return buildAdaptiveMonthlyTicks(first, last);

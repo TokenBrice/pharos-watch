@@ -14,7 +14,6 @@ const EXPECTED_RETIRED_DILUTABLE_UPSTREAM_IDS = [
   "jpyt-dephaser",
   "reusd-resupply",
   "srusd-reservoir",
-  "usdd-tron-dao-reserve",
 ] as const;
 
 function deterministicShuffle<T>(values: readonly T[]): T[] {
@@ -158,16 +157,17 @@ describe("report-card blacklist authority", () => {
       "brlm-mento",
       "buck-bucket-protocol",
       "frax-frax",
-      "hyusd-hylo",
       "jusd-juicedollar",
-      "lisusd-lista",
       "sdola-inverse-finance",
       "usd3-reserve-protocol",
-      "usdaf-asymmetry",
       "usdh-hubble",
       "xdai-gnosis",
     ]) {
       expect(resolved.get(id)).toBe("inherited");
+    }
+
+    for (const id of ["hyusd-hylo", "lisusd-lista", "usdaf-asymmetry"]) {
+      expect(resolved.get(id)).toBe(false);
     }
 
     // usdxl-last / yzusd-yuzu: the C07 and C04 reviews replaced the unresolvable
@@ -184,6 +184,12 @@ describe("report-card blacklist authority", () => {
     // bank keeper, so MsgSetSendEnabled can globally disable `usdx` sends.
     expect(resolved.get("usdx-kava")).toBe(true);
     expect(resolved.get("zchf-frankencoin")).toBe("possible");
+    // GHO has no direct holder blacklist function, but its current reserve
+    // composition crosses the strict majority upstream threshold through GSM
+    // exposure. GLDT has no current freeze entrypoint, but the SNS-controlled
+    // canonical ledger can be upgraded behind live balances.
+    expect(resolved.get("gho-aave")).toBe("inherited");
+    expect(resolved.get("gldt-gold-dao")).toBe("possible");
     expect(resolved.get("uusd-youves")).toBe(true);
   });
 
@@ -206,6 +212,7 @@ describe("report-card blacklist authority", () => {
     // can replace an otherwise unrestricted implementation.
     expect(resolved.get("pht-pht")).toBe("possible");
     expect(resolved.get("luausd-lumi-finance")).toBe("inherited");
+    expect(resolved.get("usdd-tron-dao-reserve")).toBe(false);
     // usdn-smardex: TERRA re-review of the verified Ethereum USDN source found no
     // direct holder freeze/blacklist and added a reviewed suppression (same-symbol
     // false positive vs the unrelated Noble USDN), re-graded to direct false.
@@ -248,17 +255,19 @@ describe("report-card blacklist authority", () => {
   it("keeps batch and singleton resolution aligned when using the same resolved context", () => {
     const resolved = resolveBlacklistStatuses(TRACKED_STABLECOINS);
     const blacklistableIds = new Set(
-      [...resolved.entries()].filter(([, status]) => status === true || status === "inherited").map(([id]) => id),
+      [...resolved.entries()]
+        .filter(([, status]) => status === true || status === "inherited" || status === "possible")
+        .map(([id]) => id),
     );
     const trackedMetaById = new Map(TRACKED_STABLECOINS.map((meta) => [meta.id, meta] as const));
-    const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById);
+    const context = createBlacklistResolutionContext(blacklistableIds, trackedMetaById, resolved);
 
     for (const meta of TRACKED_STABLECOINS) {
       expect(resolveBlacklistStatus(meta, { context, reserveSlices: meta.reserves })).toBe(resolved.get(meta.id));
     }
   });
 
-  it("propagates upstream exposure from any positive reserve share", () => {
+  it("requires majority upstream reserve exposure", () => {
     const resolved = resolveBlacklistStatuses([
       makeMeta("direct", {
         flags: {
@@ -278,7 +287,28 @@ describe("report-card blacklist authority", () => {
       }),
     ]);
 
-    expect(resolved.get("downstream")).toBe("inherited");
+    expect(resolved.get("downstream")).toBe(false);
+
+    const majorityResolved = resolveBlacklistStatuses([
+      makeMeta("direct", {
+        flags: {
+          backing: "rwa-backed",
+          pegCurrency: "USD",
+          governance: "centralized",
+          yieldBearing: false,
+          rwa: true,
+          navToken: false,
+        },
+      }),
+      makeMeta("downstream", {
+        reserves: [
+          { name: "Direct stablecoin majority", pct: 50.1, risk: "low", coinId: "direct" },
+          { name: "ETH", pct: 49.9, risk: "very-low" },
+        ],
+      }),
+    ]);
+
+    expect(majorityResolved.get("downstream")).toBe("inherited");
   });
 
   it("keeps singleton helper context and live-slice enrichment aligned", () => {
@@ -295,7 +325,7 @@ describe("report-card blacklist authority", () => {
     });
     const blacklistableIds = new Set(["direct"]);
     const enriched = enrichLiveSlicesForBlacklist(
-      [{ name: "DRT sleeve", pct: 1, risk: "low" }],
+      [{ name: "DRT sleeve", pct: 51, risk: "low" }],
       blacklistableIds,
       new Map([["direct", direct]]),
     );
@@ -344,7 +374,7 @@ describe("report-card blacklist authority", () => {
         },
       }),
       makeMeta("upstream-parent", {
-        reserves: [{ name: "USDC", pct: 1, risk: "low", coinId: "direct-parent" }],
+        reserves: [{ name: "USDC", pct: 51, risk: "low", coinId: "direct-parent" }],
       }),
       makeMeta("upstream-child", {
         variantOf: "upstream-parent",
@@ -363,7 +393,7 @@ describe("report-card blacklist authority", () => {
 
     const resolved = resolveBlacklistStatuses(metas);
 
-    expect(resolved.get("possible-child")).toBe("possible");
+    expect(resolved.get("possible-child")).toBe("inherited");
     expect(resolved.get("direct-child")).toBe("inherited");
     expect(resolved.get("upstream-child")).toBe("inherited");
   });
@@ -381,7 +411,7 @@ describe("report-card blacklist authority", () => {
     });
     const withoutRationale = makeMeta("without-rationale", {
       canBeBlacklisted: false,
-      reserves: [{ name: "Direct stablecoin", pct: 1, risk: "low", coinId: "direct" }],
+      reserves: [{ name: "Direct stablecoin", pct: 51, risk: "low", coinId: "direct" }],
     });
     const withRationale = makeMeta("with-rationale", {
       canBeBlacklisted: false,
@@ -393,7 +423,7 @@ describe("report-card blacklist authority", () => {
         reviewedAt: "2026-05-12",
         upstreamSuppressionRationale: "Reviewed fixture suppression rationale.",
       },
-      reserves: [{ name: "Direct stablecoin", pct: 1, risk: "low", coinId: "direct" }],
+      reserves: [{ name: "Direct stablecoin", pct: 51, risk: "low", coinId: "direct" }],
     });
 
     const resolved = resolveBlacklistStatuses([direct, withoutRationale, withRationale]);

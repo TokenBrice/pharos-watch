@@ -13,6 +13,7 @@
         "smart-contract",
         "custody"
       ],
+      "blacklistabilityExposure": "possible",
       "liquidityHorizon": "unknown"
     },
     {

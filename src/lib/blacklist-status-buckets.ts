@@ -1,4 +1,5 @@
-import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
@@ -56,10 +57,10 @@ export function resolveBlacklistStatusBucket(
 }
 
 export function getBlacklistStatusBucketForStablecoin(
-  _stablecoinId: string,
+  stablecoinId: string,
   reportCard?: V9SafetyTableRow | null,
 ): BlacklistStatusBucketKey | null {
-  const resolved = getV9ResolvedBlacklistStatus(reportCard);
+  const resolved = getResolvedBlacklistStatus(stablecoinId, reportCard);
   return resolved === null ? null : resolveBlacklistStatusBucket(resolved);
 }
 

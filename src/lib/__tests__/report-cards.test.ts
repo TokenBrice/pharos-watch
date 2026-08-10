@@ -46,7 +46,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
   });
 
-  it("returns inherited when any direct blacklistable reserve share is present", () => {
+  it("does not infer inherited exposure below the strict majority threshold", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -55,7 +55,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
   it("counts explicit reserve-slice blacklistability even without coinId links", () => {
@@ -81,7 +81,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
     expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
   });
 
-  it("returns inherited when reserve names imply upstream blacklist risk even without an indexed coinId", () => {
+  it("does not infer inherited exposure at exactly half of reserves", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -90,10 +90,10 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle", "usdt-tether"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
-  it("returns inherited for unlabeled centralized-stable reserve slices", () => {
+  it("does not infer inherited exposure for a minority unlabeled stablecoin slice", () => {
     const meta = makeMeta({
       flags: { governance: "decentralized", backing: "crypto-backed", pegCurrency: "USD", yieldBearing: false, rwa: false, navToken: false },
       reserves: [
@@ -102,7 +102,7 @@ describe("isBlacklistable — inherited risk from reserves", () => {
       ],
     });
     const blacklistableIds = new Set(["usdc-circle"]);
-    expect(isBlacklistable(meta, blacklistableIds)).toBe("inherited");
+    expect(isBlacklistable(meta, blacklistableIds)).toBe(false);
   });
 
   it("returns inherited for cex custody even when reserve slices are generic", () => {

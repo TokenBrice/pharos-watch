@@ -11,7 +11,8 @@ import {
   CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID,
 } from "@shared/lib/stablecoins/client-registry";
 import type { DexLiquidityMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
-import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 
 export type StablecoinTableSortKey =
   | "name"
@@ -188,7 +189,7 @@ export function sortStablecoins({
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,
     blacklistable: (r) => {
-      const status = getV9ResolvedBlacklistStatus(reportCards?.[r.id]);
+      const status = getResolvedBlacklistStatus(r.id, reportCards?.[r.id]);
       if (status === null) return null;
       if (status === true) return 3;
       if (status === "possible" || status === "inherited") return 1;
@@ -253,7 +254,7 @@ export function exportStablecoinsCsv(
         header: "Blacklistable",
         accessor: (row) => {
           if (!TRACKED_META_BY_ID.has(row.id)) return null;
-          const status = getV9ResolvedBlacklistStatus(reportCards?.[row.id]);
+          const status = getResolvedBlacklistStatus(row.id, reportCards?.[row.id]);
           return status === true ? "Yes" : status === "inherited" ? "Upstream" : status === "possible" ? "Possible" : status === false ? "No" : "Unknown";
         },
       },
