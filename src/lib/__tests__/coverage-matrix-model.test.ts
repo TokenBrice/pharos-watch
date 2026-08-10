@@ -91,6 +91,40 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.staleQueries.every((query) => query.hasData)).toBe(true);
   });
 
+  it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+    const coin = CLIENT_TRACKED_META_BY_ID.get("lisusd-lista");
+    expect(coin).toBeDefined();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({
+        peggedAssets: [
+          {
+            id: "lisusd-lista",
+            name: "Lista USD",
+            symbol: "LISUSD",
+            circulating: { peggedUSD: 1_000 },
+          },
+        ],
+      } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource(makeReportCardsV9Response({
+        cards: [
+          makeV9Card({
+            id: "lisusd-lista",
+            accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+          }),
+        ],
+      })),
+      activeStablecoins: [coin!],
+    });
+
+    expect(model.rows[0]?.statuses.blacklist.kind).toBe("no");
+  });
+
   it("classifies dependency-map roles from live report-card graph edges", () => {
     const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");

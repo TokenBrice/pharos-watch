@@ -1,12 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildTrackedIdSet,
+  exportStablecoinsCsv,
   sortStablecoins,
   filterStablecoins,
   prioritizePinnedStablecoins,
   resolveEffectiveSortKey,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
+import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   COMMODITY_PEG_TAGS,
   NON_USD_NON_COMMODITY_PEG_TAGS,
@@ -16,6 +19,14 @@ import {
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
+
+const { downloadCsvMock } = vi.hoisted(() => ({
+  downloadCsvMock: vi.fn(),
+}));
+
+vi.mock("@/lib/exports/csv", () => ({
+  downloadCsv: downloadCsvMock,
+}));
 
 // Minimal StablecoinData factory
 function makeCoin(id: string, name: string, overrides: Partial<StablecoinData> = {}): StablecoinData {
@@ -496,6 +507,61 @@ describe("sortStablecoins — grade (reportCards)", () => {
     });
     expect(result[0].id).toBe("hasGrade");
     expect(result[1].id).toBe("noGrade");
+  });
+});
+
+describe("sortStablecoins — blacklistable", () => {
+  it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+    const lisusd = makeCoin("lisusd-lista", "Lista USD");
+    const runtimePossible = makeCoin("runtime-possible", "Runtime Possible");
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({
+          id: "lisusd-lista",
+          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+        }),
+        makeV9Card({
+          id: "runtime-possible",
+          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+        }),
+      ],
+    });
+    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const reportCards = projection.status === "available" ? projection.value : {};
+
+    const result = sortStablecoins({
+      filtered: [runtimePossible, lisusd],
+      sort: sortAsc("blacklistable"),
+      effectiveSortKey: "blacklistable",
+      pegRates: {},
+      reportCards,
+    });
+
+    expect(result.map((row) => row.id)).toEqual(["lisusd-lista", "runtime-possible"]);
+  });
+});
+
+describe("exportStablecoinsCsv — blacklistable", () => {
+  it("uses reviewed FreezeWatch status before stale V9 freeze exposure", () => {
+    downloadCsvMock.mockReset();
+
+    const lisusd = makeCoin("lisusd-lista", "Lista USD");
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({
+          id: "lisusd-lista",
+          accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
+        }),
+      ],
+    });
+    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const reportCards = projection.status === "available" ? projection.value : {};
+
+    exportStablecoinsCsv([lisusd], undefined, undefined, reportCards);
+
+    const [, columns] = downloadCsvMock.mock.calls[0]!;
+    const blacklistColumn = columns.find((column) => column.header === "Blacklistable");
+    expect(blacklistColumn?.accessor(lisusd, 0)).toBe("No");
   });
 });
 

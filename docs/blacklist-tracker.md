@@ -30,8 +30,8 @@ The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and th
 
 The public buckets read the reviewed client-registry blacklistability status first. V9
 `accessPosture.freezeExposure` is only a fallback when no reviewed registry status is available,
-because the V9 scoring branch can publish an inherited review as bounded `possible` exposure while
-the product exposure tier remains `upstream`.
+because the V9 scoring branch can publish bounded `possible` exposure while the product exposure
+tier remains the reviewed registry result, such as `upstream` or `no`.
 
 ### Upstream Exposure And The Safety Score V9 Access Branch
 

@@ -184,6 +184,12 @@ describe("report-card blacklist authority", () => {
     // bank keeper, so MsgSetSendEnabled can globally disable `usdx` sends.
     expect(resolved.get("usdx-kava")).toBe(true);
     expect(resolved.get("zchf-frankencoin")).toBe("possible");
+    // GHO has no direct holder blacklist function, but its current reserve
+    // composition crosses the strict majority upstream threshold through GSM
+    // exposure. GLDT has no current freeze entrypoint, but the SNS-controlled
+    // canonical ledger can be upgraded behind live balances.
+    expect(resolved.get("gho-aave")).toBe("inherited");
+    expect(resolved.get("gldt-gold-dao")).toBe("possible");
     expect(resolved.get("uusd-youves")).toBe(true);
   });
 

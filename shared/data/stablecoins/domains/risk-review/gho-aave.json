@@ -1,7 +1,7 @@
 {
   "id": "gho-aave",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Aave GHO introduction",
@@ -20,9 +20,9 @@
         "url": "https://docs.chain.link/ccip/directory/mainnet/token/GHO"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers.",
-    "reviewer": "OpenAI Codex C02 control review",
-    "reviewedAt": "2026-08-08"
+    "evidence": "Re-verified 2026-08-10. The canonical GhoToken is a direct non-proxy deployment (EIP-1967 implementation slot zero), and its verified source exposes ordinary ERC-20 transfer/transferFrom paths without a holder blacklist, balance freeze, seizure, arbitrary-holder burn, or global transfer pause. Aave and Chainlink identify the reviewed non-Ethereum representations as CCIP burn/mint tokens; those bridge controls do not establish a current holder-level restriction on canonical GHO. Aave DAO facilitator and bucket roles affect issuance, not existing-holder transfers. GHO nevertheless resolves as upstream under the >50% reserve-exposure rule: the reviewed reserve composition includes 44.3% mainnet GSM aggregate exposure whose underlying stablecoin identities are not published at slice level, plus 7.4% tracked stataUSDT GSM exposure, so more than 50% of current composition is exposed to stablecoin/GSM freeze surfaces.",
+    "reviewer": "OpenAI Codex FreezeWatch consistency review",
+    "reviewedAt": "2026-08-10"
   },
   "oracleRisk": {
     "tier": "standard-external",

@@ -1,6 +1,7 @@
 import { getStablecoinTableRowRiskLevel } from "@/components/stablecoin-table-logic";
 import type { StablecoinTableRowVariant } from "@/components/stablecoin-table-row-types";
-import { getV9ResolvedBlacklistStatus, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
+import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";
@@ -51,7 +52,7 @@ export function buildStablecoinTableRowModel({
     liquidityScore,
     variantDisplay: meta?.variantKind ? getVariantDisplay(meta.variantKind) : null,
     variantContext: meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null,
-    blacklistStatus: getV9ResolvedBlacklistStatus(reportCards?.[coin.id]),
+    blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
     change24h: prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0,

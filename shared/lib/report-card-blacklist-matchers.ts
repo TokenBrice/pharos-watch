@@ -75,8 +75,8 @@ const POSSIBLE_BLACKLIST_TEXT_PATTERNS: readonly RegExp[] = [
   /\bapcxusdt\b/i,
   /\bstablecoins?\b/i,
   /\bstables\b/i,
-  /\bpsm\b/i,
-  /\bgsm\b/i,
+  /\bpsms?\b/i,
+  /\bgsms?\b/i,
 ];
 
 const DIRECT_COLLATERAL_BLACKLIST_SYMBOLS = [

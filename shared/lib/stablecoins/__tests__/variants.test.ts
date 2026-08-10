@@ -68,10 +68,10 @@ describe("stablecoin variants", () => {
     }
   });
 
-  it("keeps stkgho's direct pause authority above gho-aave's direct false status", () => {
-    // GHO has minority upstream reserve exposure under the strict majority
-    // rule, while stkGHO keeps its local pause authority.
-    expect(trackedBlacklistStatuses.get("gho-aave")).toBe(false);
+  it("keeps stkgho's direct pause authority above gho-aave's upstream status", () => {
+    // GHO crosses the strict majority upstream threshold through GSM exposure,
+    // while stkGHO keeps its local pause authority.
+    expect(trackedBlacklistStatuses.get("gho-aave")).toBe("inherited");
     expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe(true);
   });
 
