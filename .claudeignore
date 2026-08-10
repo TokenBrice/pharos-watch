@@ -1,16 +1,11 @@
 # Large stablecoin metadata — read directly when needed, skip in search
-shared/lib/stablecoins/usd-minor.ts
-shared/lib/stablecoins/usd-major.ts
-shared/lib/stablecoins/non-usd.ts
-shared/lib/stablecoins/commodity.ts
 shared/lib/dead-stablecoins.ts
+shared/data/stablecoins/coins.generated.json
+shared/data/stablecoins/coins.client.generated.json
 
 # Test files — read directly when working on tests, skip in search
 **/__tests__/**
 **/*.test.ts
-
-# Large generated content
-src/app/methodology/methodology-sections.tsx
 
 # Build artifacts and dependencies
 node_modules/
