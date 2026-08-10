@@ -94,15 +94,14 @@ const CALENDAR_HISTORY_RETENTION_SEC = 550 * 24 * 60 * 60;
 function normalizeHistoryMetadata(metadata: string | null | undefined): string | null {
   const parsed = parseObjectMetadata(metadata);
   if (!parsed) return null;
-  const scalars = Object.fromEntries(
-    Object.entries(parsed).flatMap(([key, value]) => {
-      if (value == null || typeof value === "number" || typeof value === "boolean") {
-        return [[key, value]];
-      }
-      if (typeof value === "string") return [[key, value.slice(0, 240)]];
-      return [];
-    }),
-  );
+  const scalars: Record<string, string | number | boolean | null> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (value === null || typeof value === "number" || typeof value === "boolean") {
+      scalars[key] = value;
+    } else if (typeof value === "string") {
+      scalars[key] = value.slice(0, 240);
+    }
+  }
   return Object.keys(scalars).length > 0 ? boundedJson(scalars, 2_000) : null;
 }
 
