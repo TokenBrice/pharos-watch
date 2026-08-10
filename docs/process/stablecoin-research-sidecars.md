@@ -45,36 +45,7 @@ Sidecars use strict schemas. Unknown keys, a sidecar ID that differs from its fi
 
 ## Migration Workflow
 
-Preview a move:
-
-```bash
-npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts \
-  --domain reserves \
-  --id usdc-circle \
-  --dry-run
-```
-
-Apply one domain to one or more coins:
-
-```bash
-npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts \
-  --domain risk-review \
-  --id coin-a \
-  --id coin-b
-```
-
-Verify that requested profiles are already migrated:
-
-```bash
-npx tsx scripts/maintenance/migrate-stablecoin-sidecar.ts \
-  --domain mint-authority \
-  --id coin-a \
-  --check
-```
-
-The tool moves only already-authored fields, validates the strict sidecar and base shapes, rebuilds the merged coin in memory, and refuses to write unless that projection is deeply equal to the original. It also refuses partial migrations when a target sidecar already exists while owned fields remain in the base file.
-
-Both sides of that equality check are overlaid with the coin's *other* domains' existing sidecars. The merged `StablecoinMeta` schema carries cross-domain refinements — a base-owned `liveReservesConfig` is validated against a `reserves` slice that may already live in the reserves sidecar — so comparing base-only projections would fail closed on every coin that is already partly migrated.
+The catalog migration is complete; new research goes directly into the owning sidecar. If an old branch or malformed source reintroduces domain-owned fields into a base coin file, use `scripts/maintenance/migrate-stablecoin-sidecar.ts --help` and preview with `--dry-run` before applying. The tool moves only authored fields and refuses the write unless the complete merged projection, including other domain sidecars and cross-domain refinements, remains deeply equal.
 
 ## Coordinated Generation
 

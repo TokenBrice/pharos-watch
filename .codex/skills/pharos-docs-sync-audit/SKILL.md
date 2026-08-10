@@ -20,7 +20,7 @@ Use this skill from the Pharos repository root when the user asks to:
 - Start with `docs/agent-task-router.md` and read only the docs for the matched task family.
 - Use `docs/doc-ownership.json` to decide which docs may need updates.
 - Keep `/docs/` and `README.md` as the verified documentation corpus. Do not create committed planning archives.
-- Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), doc/agent sync (`check:doc-sync`, `check:agent-doc-sync`), and the generated API contract (`check:docs-api-reference` / openapi / postman). Spend audit effort on semantic claims those checks cannot see.
+- Do not re-verify what CI already guards: file-path citations (`check:doc-source-paths`), internal doc links (`check:verified-doc-links`), methodology/doc sync (`check:doc-sync`), the generated `AGENTS.md` mirror (`check:generated-artifacts -- --only=agents-doc`), and the generated API contract (`check:docs-api-reference` / openapi / postman). Spend audit effort on semantic claims those checks cannot see.
 - `docs/api-reference.md` is far over the wholesale-read threshold — navigate it via its top navigation block plus Grep or offset reads only.
 - Mirror durable top-level guidance between `AGENTS.md` and `CLAUDE.md`, or move it into `docs/process/*` and reference it from both.
 - If pricing pipeline, PSI, PegScore/DEWS, LiquidityScore, Report Cards, blacklist tracker, mint/burn flow, yield intelligence, Chain Health, or other methodology behavior changes, update `/methodology`, the owning methodology doc, and the structured entry under `shared/data/methodology-changelogs/`.
@@ -90,8 +90,7 @@ Run the relevant doc checks:
 npm run check:doc-source-paths
 npm run check:verified-doc-links
 npm run check:doc-sync
-npm run check:agent-doc-sync
-npm run check:agent-skill-symlinks
+npm run check:generated-artifacts -- --only=agents-doc
 ```
 
 For generated docs/API artifacts:
