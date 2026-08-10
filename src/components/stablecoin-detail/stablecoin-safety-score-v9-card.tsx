@@ -10,10 +10,7 @@ import {
   ShieldCheck,
   Table2,
 } from "lucide-react";
-import type {
-  SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
-} from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
@@ -45,9 +42,7 @@ import { cn } from "@/lib/utils";
 const HEADER_ICON_BUTTON_CLASS =
   "pharos-focus-ring inline-flex !h-11 !min-h-11 !w-11 items-center justify-center rounded-md border border-border/60 bg-muted/50 text-muted-foreground transition-colors hover:border-border hover:bg-muted hover:text-foreground md:!h-5 md:!min-h-0 md:!w-5";
 
-type StablecoinSafetyScoreV9DisplayCard =
-  | SafetyScoreV9CurrentCard
-  | SafetyScoreV9PreBreakdownCard;
+type StablecoinSafetyScoreV9DisplayCard = SafetyScoreV9CurrentCard;
 
 function HeaderActions({ updatedAtMs }: { updatedAtMs: number | null }) {
   const methodology = METHODOLOGY_CONTEXT.safetyScore;

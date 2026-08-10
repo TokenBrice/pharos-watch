@@ -1,7 +1,4 @@
-import type {
-  SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
-} from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 
 /**
  * The published score is the end of a chain the card only hinted at in a trace
@@ -27,7 +24,7 @@ export interface ScoreWaterfallStep {
   detail: string | null;
 }
 
-type WaterfallCard = SafetyScoreV9CurrentCard | SafetyScoreV9PreBreakdownCard;
+type WaterfallCard = SafetyScoreV9CurrentCard;
 
 const PEG_EPSILON = 0.005;
 const POINT_EPSILON = 0.05;

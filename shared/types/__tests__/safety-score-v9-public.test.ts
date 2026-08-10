@@ -3,8 +3,6 @@ import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9BreakdownsSchema,
-  SafetyScoreV9LegacyResponseSchema,
-  SafetyScoreV9PreBreakdownResponseSchema,
   SafetyScoreV9ResponseSchema,
 } from "../safety-score-v9-public";
 
@@ -317,13 +315,6 @@ function adjustedResponse(): MutableAdjustedResponseFixture {
 }
 
 describe("SafetyScoreV9ResponseSchema", () => {
-  it("retains a strict schema-v1 reader for persisted candidate artifacts", () => {
-    const parsed = SafetyScoreV9LegacyResponseSchema.parse(response());
-    expect(parsed.cards[0]?.grade).toBe("A+");
-    expect(parsed.lifecycle).toBe("candidate");
-    expect(SafetyScoreV9ResponseSchema.parse(parsed).schemaVersion).toBe(1);
-  });
-
   it("requires the self-describing score trace on every current V9 card", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
     expect(parsed.schemaVersion).toBe(5);
@@ -345,73 +336,6 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(inconsistentTrace)).toThrow(
       /explicit preCapScore must match/,
     );
-  });
-
-  it("reads pre-attribution schema-v2 artifacts with an empty bounded trace", () => {
-    const previous = currentResponse();
-    previous.schemaVersion = 2;
-    previous.lifecycle = "candidate";
-    previous.policyVersion = "candidate-v1";
-    previous.policy = { id: "safety-score-v9-candidate-v1", semanticDigest: "d".repeat(64) };
-    delete previous.cards[0]!.breakdowns;
-    const trace = previous.cards[0]!.scoreTrace as Record<string, unknown>;
-    trace.schemaVersion = 1;
-    delete trace.boundedUncertaintyAttribution;
-    delete trace.scoreAdjustments;
-
-    const parsed = SafetyScoreV9ResponseSchema.parse(previous);
-    expect(parsed.schemaVersion).toBe(2);
-    expect("scoreTrace" in parsed.cards[0]!).toBe(true);
-    expect(
-      "scoreTrace" in parsed.cards[0]! &&
-      parsed.cards[0]!.scoreTrace.schemaVersion,
-    ).toBe(1);
-  });
-
-  it("retains exact schema-v3 and trace-v2 causal artifacts", () => {
-    const causal = currentResponse();
-    causal.schemaVersion = 3;
-    causal.lifecycle = "candidate";
-    causal.policyVersion = "candidate-v1";
-    causal.policy = { id: "safety-score-v9-candidate-v1", semanticDigest: "d".repeat(64) };
-    delete causal.cards[0]!.breakdowns;
-    const trace = causal.cards[0]!.scoreTrace as Record<string, unknown>;
-    trace.schemaVersion = 2;
-    delete trace.scoreAdjustments;
-
-    const parsed = SafetyScoreV9ResponseSchema.parse(causal);
-    expect(parsed.schemaVersion).toBe(3);
-    expect(
-      "scoreTrace" in parsed.cards[0]! &&
-      !("scoreAdjustments" in parsed.cards[0]!.scoreTrace),
-    ).toBe(true);
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(causal)).toThrow();
-  });
-
-  it("retains exact candidate-v4 cards without component breakdowns", () => {
-    const previous = currentResponse();
-    previous.schemaVersion = 4;
-    previous.lifecycle = "candidate";
-    previous.policyVersion = "candidate-v1";
-    previous.policy = {
-      id: "safety-score-v9-candidate-v1",
-      semanticDigest: "d".repeat(64),
-    };
-    delete previous.cards[0]!.breakdowns;
-
-    expect(SafetyScoreV9PreBreakdownResponseSchema.parse(previous).schemaVersion).toBe(4);
-    expect(SafetyScoreV9ResponseSchema.parse(previous).schemaVersion).toBe(4);
-    expect(() => SafetyScoreV9CurrentResponseSchema.parse(previous)).toThrow();
-  });
-
-  it("cannot downgrade a response-v4 candidate by relabeling only its traces", () => {
-    const downgraded = currentResponse();
-    const trace = downgraded.cards[0]!.scoreTrace as Record<string, unknown>;
-    trace.schemaVersion = 1;
-    delete trace.boundedUncertaintyAttribution;
-    delete trace.scoreAdjustments;
-
-    expect(() => SafetyScoreV9ResponseSchema.parse(downgraded)).toThrow();
   });
 
   it("rejects component breakdowns that do not reconcile their public scores", () => {
@@ -686,17 +610,17 @@ describe("SafetyScoreV9ResponseSchema", () => {
   });
 
   it("requires null scores to agree with NR membership and reasons", () => {
-    const invalid = structuredClone(response());
+    const invalid = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
     Object.assign(invalid.cards[0], { score: null });
     expect(() => SafetyScoreV9ResponseSchema.parse(invalid)).toThrow(/NR grade and null score must agree/);
   });
 
   it("requires binding-cap and access-unknown summaries to be exact", () => {
-    const invalidCap = structuredClone(response());
+    const invalidCap = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
     Object.assign(invalidCap.cards[0], { bindingCap: null });
     expect(() => SafetyScoreV9ResponseSchema.parse(invalidCap)).toThrow(/binding cap must match/);
 
-    const invalidAccess = structuredClone(response());
+    const invalidAccess = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
     Object.assign(invalidAccess.cards[0].accessPosture, { governance: "unknown", unknownFields: [] });
     expect(() => SafetyScoreV9ResponseSchema.parse(invalidAccess)).toThrow(/unknown fields must exactly match/);
   });

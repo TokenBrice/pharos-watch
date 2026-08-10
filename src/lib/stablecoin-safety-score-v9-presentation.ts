@@ -5,7 +5,6 @@ import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9ExitBreakdown,
   SafetyScoreV9PillarAdjustment,
-  SafetyScoreV9PreBreakdownCard,
 } from "@shared/types";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import {
@@ -13,9 +12,7 @@ import {
   SAFETY_SCORE_V9_RESPONSIBILITY_ORDER,
 } from "@/lib/safety-score-v9-labels";
 
-type StablecoinSafetyScoreV9Card =
-  | SafetyScoreV9CurrentCard
-  | SafetyScoreV9PreBreakdownCard;
+type StablecoinSafetyScoreV9Card = SafetyScoreV9CurrentCard;
 
 const PILLARS = [
   ["backing", "Backing"],
@@ -546,7 +543,7 @@ function parseControlBreakdown(
 }
 
 function cardBreakdowns(card: StablecoinSafetyScoreV9Card): SafetyScoreV9Breakdowns | null {
-  return "breakdowns" in card ? card.breakdowns : null;
+  return card.breakdowns;
 }
 
 function pillarBreakdown(

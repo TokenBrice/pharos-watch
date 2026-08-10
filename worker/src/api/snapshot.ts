@@ -24,7 +24,7 @@ import {
 } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
-import { ReportCardsV9CompatibleResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
 
 const IMMUTABLE_CACHE_CONTROL = "public, s-maxage=31536000, max-age=31536000, immutable";
 
@@ -185,8 +185,8 @@ function validateV9ReportCards(
   reportCards: Record<string, unknown>,
   identity: Extract<SafetyScorePublicationIdentity, { model: "v9" }>,
 ): string | null {
-  const parsed = ReportCardsV9CompatibleResponseSchema.safeParse(reportCards);
-  if (!parsed.success || parsed.data.lifecycle !== "active") {
+  const parsed = ReportCardsV9ResponseSchema.safeParse(reportCards);
+  if (!parsed.success) {
     return "safety-score-publication-invalid";
   }
   if (!safetyScorePublicationIdentitiesMatch(identity, parsed.data.safetyScoreIdentity)) {

@@ -19,10 +19,7 @@ import {
   QUALITY_WEIGHT,
 } from "@shared/lib/chain-health";
 import type { MethodologyContextKey } from "@/lib/methodology-context";
-import type {
-  SafetyScoreV9CurrentCard,
-  SafetyScoreV9PreBreakdownCard,
-} from "@shared/types";
+import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { DexLiquidityData, StressSignalEntry } from "@shared/types/market";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { StabilityIndexCurrent } from "@shared/types/stability";
@@ -42,9 +39,7 @@ export interface ShowYourWorkTable {
   versionLabel?: string;
 }
 
-export type SafetyScoreV9ShowWorkCard =
-  | SafetyScoreV9CurrentCard
-  | SafetyScoreV9PreBreakdownCard;
+export type SafetyScoreV9ShowWorkCard = SafetyScoreV9CurrentCard;
 
 /**
  * Show-your-work tables use an em-dash for "not reported" (the shared formatters
@@ -83,7 +78,7 @@ export function formatReportCardV9(
   methodologyVersion: string,
 ): ShowYourWorkTable {
   const stages = card.scoreTrace.stages;
-  const breakdowns = "breakdowns" in card ? card.breakdowns : null;
+  const breakdowns = card.breakdowns;
   const rows: ShowYourWorkRow[] = [
     {
       label: "Backing pillar",
