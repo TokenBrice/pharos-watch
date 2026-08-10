@@ -134,7 +134,6 @@ export function buildV9SafetyTableMap(
 }
 
 export type V9FreezeStatus = "not-observed" | "possible" | "upstream" | "direct" | "unknown";
-export type V9ResolvedBlacklistStatus = boolean | "possible" | "inherited" | null;
 
 function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
   switch (card.accessPosture.freezeExposure) {
@@ -146,24 +145,6 @@ function mapV9FreezeStatus(card: SafetyScoreV9Card): V9FreezeStatus {
       return card.accessPosture.freezeExposure;
     case "unknown":
       return "unknown";
-  }
-}
-
-export function getV9ResolvedBlacklistStatus(
-  card: Pick<SafetyScoreV9Card, "accessPosture"> | null | undefined,
-): V9ResolvedBlacklistStatus {
-  switch (card?.accessPosture?.freezeExposure) {
-    case "direct":
-      return true;
-    case "upstream":
-      return "inherited";
-    case "possible":
-      return "possible";
-    case "none-known":
-      return false;
-    case "unknown":
-    case undefined:
-      return null;
   }
 }
 

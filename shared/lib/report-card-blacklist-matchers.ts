@@ -5,7 +5,7 @@ import { buildDelimitedSymbolPattern } from "./reserve-symbol-matchers";
 export type BlacklistStatus = boolean | "possible" | "inherited";
 type ReserveBlacklistExposureStatus = BlacklistStatus | "unknown";
 
-export const UPSTREAM_BLACKLISTABILITY_EXPOSURE_THRESHOLD_PCT = 50;
+const UPSTREAM_BLACKLISTABILITY_EXPOSURE_THRESHOLD_PCT = 50;
 const UPSTREAM_BLACKLISTABILITY_EXPOSURE_EPSILON_PCT = 1e-9;
 const MIN_SYMBOL_LENGTH_FOR_DETECTION = 3;
 const SYMBOL_MATCHER_PREFIX_GROUP = "(?:s|stata|vb|syrup\\s*)?";
@@ -146,7 +146,7 @@ function strongerBlacklistStatus(left: BlacklistStatus, right: BlacklistStatus):
   return rank(left) >= rank(right) ? left : right;
 }
 
-export function isCountedUpstreamBlacklistExposure(
+function isCountedUpstreamBlacklistExposure(
   status: ReserveBlacklistExposureStatus | null | undefined,
 ): boolean {
   return status === true || status === "inherited" || status === "possible";

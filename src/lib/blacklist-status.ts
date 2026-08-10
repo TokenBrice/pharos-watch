@@ -11,7 +11,7 @@ function isResolvedBlacklistStatus(value: unknown): value is BlacklistStatus {
   return value === true || value === false || value === "possible" || value === "inherited";
 }
 
-export function getTrackedBlacklistStatus(stablecoinId: string): BlacklistStatus | null {
+function getTrackedBlacklistStatus(stablecoinId: string): BlacklistStatus | null {
   const metadata = CLIENT_TRACKED_META_BY_ID.get(stablecoinId);
   const reviewedStatus = metadata?.blacklistStatus;
   if (isResolvedBlacklistStatus(reviewedStatus)) return reviewedStatus;

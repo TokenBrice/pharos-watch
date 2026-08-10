@@ -19,12 +19,10 @@ export {
   inferResilienceDefaults,
 } from "./report-card-resilience";
 export {
-  UPSTREAM_BLACKLISTABILITY_EXPOSURE_THRESHOLD_PCT,
   createBlacklistResolutionContext,
   enrichLiveSlicesForBlacklist,
   getBlacklistStatusLabel,
   getReserveBlacklistabilityExposurePct,
-  isCountedUpstreamBlacklistExposure,
   isBlacklistable,
   resolveBlacklistStatus,
   resolveBlacklistStatuses,
