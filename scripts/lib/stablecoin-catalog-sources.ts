@@ -194,13 +194,6 @@ function mergeStablecoinSidecars(
   entry: StablecoinSourceEntry,
   sidecars: StablecoinDomainSidecarEntry[],
 ): StablecoinSourceEntry {
-  if (sidecars.length === 0) {
-    // Sidecar-free entries were already parsed through the full catalog schema
-    // in `loadPerCoinStablecoinEntries`; re-parsing here would be a second pass
-    // over identical data.
-    return entry;
-  }
-
   const patch: Record<string, unknown> = {};
   const patchFields = new Set<keyof StablecoinMeta>();
   const sortedSidecars = [...sidecars].sort((a, b) => (
@@ -240,12 +233,18 @@ function mergeStablecoinSidecars(
     ...entry.coin,
     ...patch,
   } as StablecoinMeta);
-  const label = `${entry.file} + ${sortedSidecars.map((sidecar) => sidecar.file).join(", ")}`;
+  // Validate every post-merge projection through the full catalog schema,
+  // including entries with no sidecars.
+  const label = sortedSidecars.length > 0
+    ? `${entry.file} + ${sortedSidecars.map((sidecar) => sidecar.file).join(", ")}`
+    : entry.file;
 
   return {
     ...entry,
     coin: parseSingleAssetValue(merged, label),
-    sidecarFiles: sortedSidecars.map((sidecar) => sidecar.file),
+    ...(sortedSidecars.length > 0
+      ? { sidecarFiles: sortedSidecars.map((sidecar) => sidecar.file) }
+      : {}),
   };
 }
 
@@ -311,13 +310,9 @@ export function loadPerCoinStablecoinEntries(rootDir = process.cwd()): Stablecoi
     .map((entry) => {
       const relativePath = `${PER_COIN_SOURCE_DIR}/${entry.name}`;
       const expectedId = stablecoinIdFromJsonFileName(entry.name);
-      // A coin with sidecars needs the permissive pre-merge parse first, because
-      // the catalog invariants only hold once the sidecar fields are merged back
-      // in. A coin without sidecars is already complete, so it goes straight
-      // through the full catalog schema exactly once.
-      const coin = (sidecarsById.get(expectedId)?.length ?? 0) > 0
-        ? parseSingleAsset(relativePath, rootDir)
-        : parseSingleAssetValue(readJson(relativePath, rootDir), relativePath);
+      // Every base file uses the permissive source schema first; full catalog
+      // validation runs after its sidecar fields, if any, are merged back in.
+      const coin = parseSingleAsset(relativePath, rootDir);
       if (coin.id !== expectedId) {
         throw new Error(
           `[stablecoin-assets] ${relativePath}: coin id "${coin.id}" must match file id "${expectedId}"`,
