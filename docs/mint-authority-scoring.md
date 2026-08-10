@@ -101,13 +101,12 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 | Exposed      | 0-34      | Unbounded, compromised, single-key, or otherwise weak authority dominates the score.    |
 | NR           | Not rated | Missing, unknown, inherited-but-unresolved, or insufficient review data.                |
 
-## Surfaces
+## Historical Surfaces
 
-- Stablecoin detail pages show the score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data exists.
-- The homepage table and `/screener/` show sortable Mint Score columns. `/screener/` also supports score threshold and band filters, and CSV export includes the curated route (`Mint Authority Status`) plus the published score and band, whose headers are `Mint Control Score` and `Mint Control Band` since safety `9.1`. Compact client projections include cap-mutability evidence needed to keep aggregate Mint Authority Scores equivalent to full metadata.
-- `/coverage/` counts curated review breadth by route bucket and also exposes score-band breakdown chips.
+- Stablecoin detail pages showed the retired score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data existed.
+- The current homepage and `/screener/` mint columns read Safety Score V9's published mint component, not this retired engine. `/coverage/` still counts curated review breadth by route bucket.
 - The `Mint Authority Status` kind (`resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts`) is a label over **curated metadata** — `mintPath`, `authorityPosture`, and the reviewed `controls` list — not a re-binning of the published score. The band is derived from the score. The two are independent views of the same review, so a coin can carry a curated route kind that does not line up with its band; read the kind as "what route exists" and the band as "how well controlled it scored".
-- Safety Score V9 does not blend this display score; it compiles the underlying reviewed control evidence into Economic Control facts (see `docs/report-cards.md`). Raw inputs expose `mintAuthorityScore`.
+- Safety Score V9 compiles the underlying reviewed control evidence directly into Economic Control facts (see `docs/report-cards.md`). There is no current raw `mintAuthorityScore` input from this retired lane.
 
 ## Maintenance Checklist
 

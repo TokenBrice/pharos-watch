@@ -14,16 +14,16 @@
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. It and the inline `ShowYourWorkToggle` adopt the `pharos-toggle-pill` control language (design-canon grammar alignment, 2026-07-01); `ShowYourWorkToggle` is shared, so the pill classes are passed additively from `page.tsx` and its other consumers are unchanged.
-- **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero, no frost "One Beam", the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved). See `docs/design-language.md` → Reference-group hero calls.
+- **Design carve-out:** `/methodology/` stays a longform reference page — no signature hero and no frost "One Beam". This is an explicit exception to [Feature-page heroes](./design-language.md#feature-page-heroes); the 76rem measure and `MethodologySectionShell` layout are unchanged. Only the control + numeric *grammar* is aligned to canon: the toggles use the pill language and figures/version badges use `.pharos-numeric` (semantic badge colors preserved).
 - **Mode persistence contract:** `MethodologyModeToggle` stores `pharos.methodology.mode` in `localStorage` and opens/closes authored `details` blocks via the `data-methodology-details` / `data-methodology-worked-example` attributes emitted by `MethodologyDetails` and `WorkedExample`
 - **Orientation content:** mobile compresses the reading guide into the hero card; `md+` keeps both the top-right reader-guide hero card and the dedicated "How to Read This Page" overview card
 - **Reusable long-form primitives:** `MethodologyDetails`, `MethodologyFacts`, `WorkedExample`, and `MethodologySectionShell`
-- **Version metadata:** per-system version modules in `shared/lib/methodology-versions/*.ts`, mostly built on top of `shared/lib/methodology-versions/base.ts`
+- **Version metadata:** `shared/lib/methodology-versions/constants.ts` is the shared runtime version/path surface; domain modules under the same directory own structured changelog collections and registry metadata.
 - **Public changelog routes:** pricing pipeline, stability index, scoring, liquidity score, mint/burn flow, yield, depeg, depeg resolver, blacklist tracker, and chain health all live under `src/app/methodology/*-changelog/page.tsx`. Mint Authority Score currently uses a machine-readable changelog and the `/methodology/#mint-authority-score` anchor rather than a separate changelog route.
 - **Changelog wrappers:** most changelog routes use `src/app/methodology/changelog-route-factory.tsx`; the shared shell is `src/components/methodology-changelog-page.tsx`, which renders an overview block linking back to the current methodology and public docs archive before the version cards
 - **Changelog sitemap policy:** `src/app/sitemap.ts` promotes only the explicit `METHODOLOGY_CHANGELOG_SITEMAP_PATHS` allowlist. A changelog route should stay on that list only when it has enough standalone context for external readers, normally through the shared overview block plus a useful latest-version summary.
 - **Scoring changelog special case:** `src/app/methodology/scoring-changelog/page.tsx` uses the shared route factory with custom authored content sections, while `src/app/methodology/scoring-changelog/content.tsx` renders the machine-readable changelog order with authored detail maps from `content-v8.tsx`, the `content-v7-*.tsx` modules, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`)
-- **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared changelog-path constants from `shared/lib/*-version.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
+- **Cross-app methodology links:** `src/lib/methodology-context.ts` hard-codes methodology anchors and imports shared version/changelog constants from `shared/lib/methodology-versions/constants.ts`; `src/components/methodology-hint.tsx` renders those resolved links for cards/tooltips across the app
 
 ---
 
@@ -33,7 +33,7 @@
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Pricing Pipeline      | `worker/src/lib/price-consensus.ts`, `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/authoritative-price-sources/`, `worker/src/lib/price-validation.ts`, `shared/lib/methodology-versions/pricing-pipeline.ts`                              |
 | Stability Index       | `worker/src/lib/stability-index.ts`, `shared/lib/methodology-versions/stability-index.ts`                                                                                                                                                         |
-| Safety Scores         | `shared/lib/report-cards.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/safety-score.ts`, `shared/lib/methodology-versions/safety-score.ts`, `worker/src/cron/sync-redemption-backstops.ts`                                                   |
+| Safety Scores         | `shared/lib/safety-score-v9/`, `shared/lib/safety-score-v9/policy.ts`, `worker/src/cron/compute-safety-score-v9.ts`, `shared/lib/methodology-versions/safety-score.ts`                                                   |
 | Mint Authority Score  | `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`, `src/lib/mint-authority-display.ts`, `shared/lib/methodology-versions/mint-authority.ts`, `shared/data/stablecoins/coins/*.json`                                                                          |
 | Liquidity Score       | `worker/src/cron/dex-liquidity/orchestrator.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`, `worker/src/cron/dex-discovery/orchestrator.ts`, `shared/lib/liquidity-score-weights.ts`, `shared/lib/methodology-versions/liquidity-score.ts` |
 | Infrastructure Tagging | `shared/types/core.ts`, `shared/lib/filter-tags.ts`, `src/lib/stablecoin-taxonomy.ts`, `shared/data/stablecoins/coins/*.json`                                                                                                             |
@@ -41,9 +41,8 @@
 | Yield Intelligence    | `worker/src/cron/sync-yield-data.ts`, helper modules under `worker/src/cron/yield-sync/`, `shared/lib/yield-scoring.ts` (PYS formula), `shared/lib/methodology-versions/yield-methodology.ts` |
 | PegScore + DEWS       | `shared/lib/peg-score.ts`, `worker/src/lib/dews.ts`, `shared/lib/methodology-versions/depeg-dews.ts`                                                                                                                                              |
 | Depeg Duration Resolver | `shared/lib/depeg-resolver/` (DDR/DDRR resolver), `shared/lib/methodology-versions/depeg-resolver.ts`                                                                                                                                          |
-| Contagion Test        | `shared/lib/report-cards.ts` (`computeStressedGrades`)                                                                                                                                                                               |
 | Blacklist Tracker     | `worker/src/cron/sync-blacklist.ts`, `worker/src/lib/blacklist-contracts.ts`, `shared/lib/methodology-versions/blacklist-tracker.ts`                                                                                                              |
-| Chain Health Score    | `shared/lib/chains/health.ts` (re-exported by `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/methodology-versions/chain-health.ts`) — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (Safety Scores over rated supply only, not-rated supply excluded and the average renormalized, computed once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and L2BEAT-first chain environment (stage/risk snapshot for matched scaling projects, Pharos resilience-tier fallback when unmatched). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
+| Chain Health Score    | `shared/lib/chains/health.ts` (runtime facade: `shared/lib/chain-health.ts`), `shared/lib/chains/index.ts`, `shared/lib/methodology-versions/chain-health.ts` — weighted composite (quality 30%, chain environment 20%, concentration 20%, peg stability 20%, backing diversity 10%). Sub-factors: HHI-based concentration, supply-weighted quality (Safety Scores over rated supply only, not-rated supply excluded and the average renormalized, computed once rated supply coverage clears 50%), supply-weighted peg proximity, Shannon entropy backing diversity, and L2BEAT-first chain environment (stage/risk snapshot for matched scaling projects, Pharos resilience-tier fallback when unmatched). Bands: robust (80–100), healthy (60–79), mixed (40–59), fragile (20–39), concentrated (0–19). |
 
 ---
 
@@ -55,7 +54,7 @@ When changing any methodology surface, update the runtime implementation, the de
 2. Detailed methodology doc (`docs/*.md` for that system).
 3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `src/app/methodology/sections/index.tsx` only when changing section composition or order.
 
-If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/` and bump the corresponding version module in `shared/lib/*-version.ts` so badges and changelog links stay consistent.
+If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/`, update the corresponding domain module under `shared/lib/methodology-versions/`, and bump the shared constant when applicable so badges and changelog links stay consistent.
 
 Commit provenance in structured changelog entries uses real commit hashes only. Use `commits: []` when provenance was not recorded; public changelog routes should omit `Commit(s)` output for those entries rather than using `unreleased` as a placeholder.
 
@@ -66,7 +65,7 @@ If section IDs or changelog paths change, also update `src/lib/methodology-conte
 If you add a new methodology changelog route, follow the existing pattern:
 
 1. Add the structured entries under `shared/data/methodology-changelogs/` and register them through `shared/lib/methodology-versions/registry.ts`.
-2. Add or update the version source in `shared/lib/*-version.ts`.
+2. Add or update the domain version source and `shared/lib/methodology-versions/constants.ts`.
 3. Add the public route in `src/app/methodology/*-changelog/page.tsx` using `createStandardMethodologyChangelogRoute(...)` (the standard factory used by every non-scoring route); `createMethodologyChangelogRoute(...)` is reserved for the `scoring-changelog` special case with custom authored content.
 4. Wire the new anchor/path into `src/lib/methodology-context.ts` if any cards/tooltips deep-link to it.
 
@@ -93,7 +92,7 @@ If the pricing pipeline's source roster or live-price selection semantics change
 
 For the safety-score changelog specifically, update both:
 
-1. `shared/data/methodology-changelogs/safety-score/` plus `shared/lib/methodology-versions/safety-score.ts` for the machine-readable changelog and current version exported through `shared/lib/methodology-versions/safety-score.ts`.
+1. `shared/data/methodology-changelogs/safety-score/`, `shared/lib/methodology-versions/current-version.json`, and `shared/lib/methodology-versions/safety-score.ts` for the machine-readable changelog and current version.
 2. `src/app/methodology/scoring-changelog/content.tsx` plus the split `content-v8.tsx`, `content-v7-*.tsx`, `content-v6.tsx`, `content-v5.tsx`, `content-legacy.tsx`, and `content-summary.tsx` modules for the authored long-form detail maps and reference tables (with `content-v6.tsx` merging `content-v6-9.tsx` and `content-v6-91-to-v6-99.tsx`).
 
 ---

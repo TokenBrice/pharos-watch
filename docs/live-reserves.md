@@ -59,7 +59,7 @@ The single lightweight declaration in `shared/types/live-reserve-adapter-declara
 - `single-bucket`: one-slice live proofs/attestations. Some are true independent evidence (`blast-usdb-yield-manager`, `btcfi`, `chainlink-nav`, `chainlink-por`, `erc4626-single-asset`, `liquity-native-active-pool`, `liquity-v1`, `m0-wrapper-underlying`, `pusd-vault`, `ripple-transparency`, `sgforge-coinvertible`, `sgho-wrapper`, `spiko-api`, `superstate-liquidity`, `united-por`, `usd1-bundle-oracle`, `yamato`), while weak liveness-only or proof-class summary feeds such as `single-asset`, `solstice-attestation`, and `river-protocol-info` are tagged `weak-live-probe`.
 - `independent`: scoring-eligible live evidence when the snapshot is fresh, authoritative, and the most recent sync status is `ok`.
 - `static-validated`, `weak-live-probe`: detail/status-visible evidence classes that never override curated collateral scoring.
-- `sourceOriginClass` is orthogonal to `evidenceClass`. It records `issuer-attested`, `onchain-observation`, `independent-assurance`, `reviewed-curation`, or `unknown` for diagnostic provenance. Unreviewed adapters resolve explicitly to `unknown`; the registry never guesses origin from an adapter name or input kind. Origin does not change reserve admission, V8/V9 facts, scores, or public API fields. The private V9 evidence-journal schema can carry the resolved value when journal writers are enabled.
+- `sourceOriginClass` is orthogonal to `evidenceClass`. It records `issuer-attested`, `onchain-observation`, `independent-assurance`, `reviewed-curation`, or `unknown` for diagnostic provenance. Unreviewed adapters resolve explicitly to `unknown`; the registry never guesses origin from an adapter name or input kind. Origin does not change reserve admission, standalone reserve facts, V9 facts, scores, or public API fields. The private V9 evidence-journal schema can carry the resolved value when journal writers are enabled.
 - `source-invariant`: opt-in within-run result sharing for adapters whose returned payload is coin-invariant. All other adapters run per coin even when configs look similar.
 
 `single-asset` now supports optional `reserveProbe`, `supplyProbe`, and `timestampProbe` paths so weak single-bucket feeds can persist honest reserve/supply ratio telemetry when the upstream exposes it. The family remains `weak-live-probe` unless the source is strong enough to justify promotion into a more independent adapter class.
@@ -132,7 +132,7 @@ Common metadata fields:
 | `redemption.dailyLimitUsd`, `redemption.minRedeemUsd`                                                                        | Optional adapter-emitted daily redemption limit and minimum redemption size constraints                                                     |
 | `redemption.holderEligibility`                                                                                               | Optional live holder-eligibility context when the adapter can sharpen the static route model                                                |
 | `redemption.feeBps`                                                                                                          | Normalized current redemption fee in the nested telemetry contract                                                                          |
-| `redemption.v9RouteAttempt`                                                                                                  | V9-only accepted or rejected exact route attempt; excluded from public V8 reserve and redemption semantics                                  |
+| `redemption.v9RouteAttempt`                                                                                                  | V9-only accepted or rejected exact route attempt; excluded from standalone public reserve and redemption semantics                           |
 
 Redemption telemetry is validated before persistence. Negative capacity or constraint values, capacity ratios outside `0..1`, negative fees, malformed redemption source URLs, invalid redemption freshness/capacity/holder-eligibility enum values, invalid `routeStatusReviewedAt` dates, capacity emitted by adapters that do not declare redemption-capacity support, fee telemetry emitted by adapters that do not declare fee support, and direct/proxy/queue capacity evidence emitted by an incompatible adapter capability fail the adapter output validation. Queue capacity that omits queue depth, settlement delay, or daily-limit semantics is stored only with a degraded warning. Existing flat fields are still parsed for backward compatibility, but new adapter work should emit the nested `metadata.redemption` object.
 
@@ -409,73 +409,7 @@ Fallback, template-fallback, and unavailable responses use a shorter edge cache 
 
 ## Adapter Registry
 
-Registered in `worker/src/cron/reserve-adapters/index.ts`.
-This table reflects the shared adapter registry. `Configured coins` can be `0` for deliberately parked implementations retained for a future binding.
-
-| Adapter                      | Primary input                                    | Semantics                                             | Configured coins |
-| ---------------------------- | ------------------------------------------------ | ----------------------------------------------------- | ---------------- |
-| `3jane-usd3`                 | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `abracadabra`                | `onchain-evm`                                    | `collateral-mix`                                      | 0                |
-| `accountable`                | `http-json`                                      | `collateral-mix` / `protocol-reserve`                 | 7                |
-| `anzen-usdz`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `asymmetry`                  | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `attestation-pdf-index`      | `http-html`                                      | `attestation-mix`                                     | 7                |
-| `blast-usdb-yield-manager`   | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `btcfi`                      | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `cap-vault`                  | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `chainlink-nav`              | `onchain-evm`                                    | `single-asset`                                        | 18               |
-| `chainlink-por`              | `onchain-evm`                                    | `attestation-mix`                                     | 5                |
-| `circle-transparency`        | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `collateral-positions-api`   | `http-json`                                      | `collateral-mix`                                      | 2                |
-| `crvusd`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `curated-validated`          | `onchain-evm` / `onchain-solana`                 | `attestation-mix` / `collateral-mix` / `single-asset` | 55               |
-| `dola-inverse`               | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `erc4626-single-asset`       | `onchain-evm`                                    | `single-asset`                                        | 36               |
-| `ethena`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `evm-branch-balances`        | `onchain-evm`                                    | `collateral-mix`                                      | 8                |
-| `falcon`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `fdusd-transparency`         | `http-html`                                      | `attestation-mix`                                     | 1                |
-| `frax-balance-sheet`         | `http-json`                                      | `attestation-mix`                                     | 3                |
-| `frax-fpi-collateral`        | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `fx`                         | `http-json` / `onchain-evm`                      | `collateral-mix`                                      | 1                |
-| `gho`                        | `onchain-evm`                                    | `protocol-reserve`                                    | 1                |
-| `infinifi`                   | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `jupusd`                     | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `liquity-v1`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `liquity-native-active-pool` | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `liquity-v2-branches`        | `onchain-evm`                                    | `collateral-mix`                                      | 5                |
-| `lista`                      | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `m0`                         | `http-json`                                      | `protocol-reserve`                                    | 7                |
-| `m0-wrapper-underlying`      | `onchain-evm`                                    | `single-asset`                                        | 3                |
-| `mento`                      | `http-json`                                      | `collateral-mix`                                      | 13               |
-| `nest-vault-positions`       | `http-json`                                      | `collateral-mix`                                      | 5                |
-| `openeden-usdo`              | `http-json`                                      | `collateral-mix`                                      | 0                |
-| `origin-vault-balances`      | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `pusd-vault`                 | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `quantoz-transparency`       | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `re-metrics`                 | `http-html`                                      | `collateral-mix`                                      | 1                |
-| `resupply-pairs`             | `onchain-evm`                                    | `collateral-mix`                                      | 1                |
-| `reserve-protocol-dtf`       | `http-json` / `onchain-evm`                      | `collateral-mix`                                      | 1                |
-| `reservoir`                  | `http-json`                                      | `protocol-reserve`                                    | 3                |
-| `ripple-transparency`        | `http-html`                                      | `attestation-mix`                                     | 1                |
-| `river-protocol-info`        | `http-json`                                      | `protocol-reserve`                                    | 1                |
-| `sgforge-coinvertible`       | `http-html`                                      | `attestation-mix`                                     | 2                |
-| `sgho-wrapper`               | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `single-asset`               | `http-json` / `onchain-evm`                      | `single-asset`                                        | 44               |
-| `sky-makercore`              | `http-json`                                      | `collateral-mix`                                      | 2                |
-| `solstice-attestation`       | `http-json`                                      | `protocol-reserve`                                    | 1                |
-| `spiko-api`                  | `http-json`                                      | `single-asset`                                        | 6                |
-| `superstate-liquidity`       | `onchain-evm` primary; `params.liquidityUrl` API | `single-asset`                                        | 1                |
-| `tether-transparency`        | `http-json`                                      | `attestation-mix`                                     | 2                |
-| `united-por`                 | `http-json`                                      | `single-asset`                                        | 1                |
-| `usd1-bundle-oracle`         | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `usdai-proof-of-reserves`    | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `usdgo-transparency`         | `http-json`                                      | `attestation-mix`                                     | 1                |
-| `usdd-data-platform`         | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `usdh-native-markets`        | `http-html`                                      | `attestation-mix`                                     | 0                |
-| `usdtb-transparency`         | `http-json`                                      | `collateral-mix`                                      | 1                |
-| `yamato`                     | `onchain-evm`                                    | `single-asset`                                        | 1                |
-| `zephyr-scanner`             | `http-json`                                      | `protocol-reserve`                                    | 1                |
+`worker/src/cron/reserve-adapters/index.ts` owns the registered adapter keys; `shared/types/live-reserve-adapter-declarations.ts` owns each adapter input, evidence, validation, and redemption contract; stablecoin registry configs own current usage counts. Derive the live roster and counts from those sources rather than copying a volatile table here. A registered adapter may intentionally have zero configured coins while it is parked for a future binding.
 
 `reserve-protocol-dtf` keeps its legacy Reserve discovery API path for
 timestampless fallback reads, but score-grade configs can use the direct
