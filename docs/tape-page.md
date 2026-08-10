@@ -43,7 +43,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 
 1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the pinned linked-event block, or the empty state. The whole stream is a flat typographic surface.
 2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.
-3. **Geist Mono is the dominant typeface** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
+3. **The core mono stack (JetBrains Mono) is dominant** on the stream. SummaryBand, day separators, event rows, severity tags, time prefixes — all mono. The retained `--font-geist-mono` name is a legacy token, not a Geist webfont. Sans is reserved for the filter row labels, which share control utilities with the rest of the site.
 4. **Severity is communicated by text color**, not by card border or background fill. The `severityToAccent` `border-l-[3px]` rail is intentionally dropped from `EventCard`.
 5. **Time prefix on every row** — desktop/tablet rows show `HH:MM` in mono `tabular-nums`, rendered in UTC to match the UTC day grouping (a single `All times UTC` label sits atop the feed); mobile rows show compact relative tokens (`5s`, `3m`, `2h`, `4d`) while the absolute time remains in the `<time>` metadata and hover title.
 6. **Structured row layout** — `time | severity | logo | ticker (inline ×count) | event.type slug | chain | spacer | copy-permalink | age`. The event title is redundant with these fields for coin events and is replaced by the structured form; the event summary becomes the second line.
@@ -188,7 +188,7 @@ If you find yourself wrapping event rows in `pharos-card-shell`, rounding corner
 Specifically:
 
 - The absence of `pharos-card-shell` on event rows, day groups, the currently-open band, the pinned linked-event block, and the empty state is by design, not an oversight.
-- Geist Mono as the dominant stream typeface is a third deliberate carve-out alongside Digest (Newsreader + Courier) and the detail-page `AiSummary` (Georgia).
+- The JetBrains Mono/core mono stack as the dominant stream typeface is a third deliberate carve-out alongside Digest (Newsreader + Courier) and the detail-page `AiSummary` (Georgia).
 - Severity-as-text-color (no left rail, no fill) is part of the wire-service identity. Restoring the `border-l-[3px]` rail regresses the design.
 
 Future "harmonize /timeline with the rest of the site" suggestions should be rejected unless the user explicitly asks to retire the wire-service treatment.

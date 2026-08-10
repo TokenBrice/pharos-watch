@@ -41,6 +41,10 @@ The lighthouse metaphor is useful only when it communicates data. Decorative nov
 - The homepage, stablecoin detail, Digest, Cemetery, Tape, and other special surfaces own their composition in their route contracts; do not generalize their local layout into a global rule.
 - A page hero supplements the route heading. It must not duplicate or replace the semantic `h1` unless the owning shell explicitly does so.
 
+### Feature-page heroes
+
+Feature and reference routes use one signature full-width hero with one frost-blue **One Beam** metric; supporting figures stay neutral unless they encode semantic state. The route owner defines the drawn metaphor and any explicit exception. Learn routes use the light-editorial treatment; Coverage and Funding use the reference treatment. Their route docs own only those route-specific calls.
+
 ## Shared Utility Classes
 
 Prefer the established utilities in `src/app/globals.css`:

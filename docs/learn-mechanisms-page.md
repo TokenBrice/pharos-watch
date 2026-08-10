@@ -69,7 +69,7 @@ The hub at `/learn/mechanisms/` renders the same shell with its own headline, a 
 - Title: hand-tuned per archetype, all ending in `, Explained` (see `TITLE_BY_ARCHETYPE` in the route module); template `%s | Pharos` adds the suffix.
 - Description: hand-tuned per archetype, ~150-165 chars (see `DESCRIPTION_BY_ARCHETYPE` in the route module).
 - Canonical: `getMechanismExplainerPath(archetype)`.
-- OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). Regenerated via `tsx scripts/maintenance/build-og-learn-images.ts` followed by the `svg-to-png` skill against the staged SVGs.
+- OG image: per-archetype static PNG at `public/og-learn-<slug>.png` (1200×628). [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) owns the manual staging, rasterization, and review workflow.
 - JSON-LD: `BreadcrumbJsonLd` rendered by `ExplainerPageShell`, `DefinedTermSet` JSON-LD on the hub, Dataset JSON-LD for the public peg-mechanism distribution mirror, plus Article JSON-LD via the `ArchetypeArticleJsonLd` component (`buildArchetypeArticleJsonLd` in `src/lib/page-metadata.ts`) on each archetype page.
 
 ---
@@ -82,7 +82,7 @@ Ordinary noncritical domain tests split the invariant for every `MECHANISM_ARCHE
 - The existing `src/app/learn/mechanisms/[archetype]/__tests__/page.test.tsx` exact static-param test imports the route module and round-trips every slug.
 - `src/app/__tests__/sitemap-frozen.test.ts` requires `/learn/mechanisms/<slug>/` membership for every archetype.
 
-These suites run in the ordinary noncritical lane. Per-archetype OG PNGs remain owned by `check:generated-artifacts` through `scripts/maintenance/build-og-learn-images.ts --check`.
+These suites run in the ordinary noncritical lane. `scripts/maintenance/build-og-learn-images.ts --check` checks only the expected PNG roster and non-empty files; [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png) documents the manual freshness seam.
 
 ---
 
@@ -107,7 +107,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).
-7. Run `tsx scripts/maintenance/build-og-learn-images.ts` and the `svg-to-png` skill on the new staged SVG.
+7. Run `tsx scripts/maintenance/build-og-learn-images.ts`, then follow the manual rasterize-and-review workflow in [`og-images.md`](./og-images.md#3-mechanism-explainer-cards-publicog-learn-png).
 8. Run the mechanism content, exact static-param, and sitemap suites listed in Coverage Invariant; regenerate the OG asset before running `npm run check:generated-artifacts`.
 
 ---
