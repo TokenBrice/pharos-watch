@@ -9,10 +9,37 @@
 [extend]
 useDefault = true
 
+# The trailing-punctuation class matters: reviewed `evidence` prose ends sentences
+# with an address ("... FXD token impl = 0xe4cd2c8f....") and the matched secret span
+# then carries the period, so a strictly anchored address regex misses it and the
+# finding resurfaces as a false positive.
 [[allowlists]]
 description = "EVM addresses (0x + 40 hex) are public on-chain identifiers, not secrets"
 regexTarget = "secret"
-regexes = ['''^0x[a-fA-F0-9]{40}$''']
+regexes = ['''^0x[a-fA-F0-9]{40}[.,;:)\]]?$''']
+
+# Solana mint/vault ids are base58 (no 0, O, I or l) and 32-44 chars. They are public
+# on-chain identifiers exactly like the EVM addresses above; curated risk-review rows
+# cite them behind a source-family prefix (e.g. "kamino-ktoken:<mint>"). Line-pinned
+# `.gitleaksignore` entries were the previous remedy for this class and they rot on
+# every renumbering, which is why this lives here instead.
+#
+# Matched on the whole source LINE, and only with the `<source-family>:` prefix that
+# makes it a curated registry reference. A bare base58 allowlist would be far too
+# strong: roughly one generic alphanumeric API key in fourteen happens to contain no
+# 0, O, I or l, and would be exempted along with it.
+[[allowlists]]
+description = "Registry-prefixed Solana mint identifiers are public on-chain identifiers, not secrets"
+regexTarget = "line"
+regexes = ['''"[a-z0-9]+(?:-[a-z0-9]+)*:[1-9A-HJ-NP-Za-km-z]{32,44}"''']
+
+# Repo-relative source paths are not credentials. CI gates that enumerate route roots
+# (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
+# their own configuration constants.
+[[allowlists]]
+description = "Repo-relative source paths in CI gate configuration are not secrets"
+regexTarget = "secret"
+regexes = ['''^(?:src|scripts|shared|worker|functions)/[A-Za-z0-9._/-]+$''']
 
 [[allowlists]]
 description = "Cosmos IBC denoms (ibc/ + 64 hex) are public on-chain identifiers, not secrets"

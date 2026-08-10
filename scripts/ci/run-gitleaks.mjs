@@ -143,11 +143,12 @@ export async function runGitleaks({
         "--gitleaks-ignore-path=.gitleaksignore",
       ]
     : options.fullHistory
-      ? ["git", "--no-banner", "--redact", "--exit-code", "1", "."]
+      ? ["git", "--no-banner", "--redact", "--verbose", "--exit-code", "1", "."]
       : [
           "git",
           "--no-banner",
           "--redact",
+          "--verbose",
           "--exit-code",
           "1",
           `--log-opts=--no-merges ${options.baseRef}..${options.headRef}`,
