@@ -73,7 +73,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-04",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. Admin is a 2-of-3 Gnosis Safe; hourly signed proof of reserves is published at kerne.fi/verify.",
+  "launchPhaseDetail": "kUSD v2 is live on Base (first PSM mint 2026-05-14), but Pharos treats it as pre-active until a usable runtime price path exists. The protocol is in a genesis, capacity-capped phase: supply is about 1,113 USD, DefiLlama stablecoin id 402 exposes supply with price=null, CoinGecko does not resolve a Kerne USD coin, and the v1 WETH/Hyperliquid hedge vault leg is disclosed-degraded and excluded from reserves so kUSD is currently 100% USDC-backed through three PSM reserves. Staking wrapper skUSD (ERC-4626, 0x96F5102C15b839757f811A98CEc3725Ac21DfA14) is deployed with a published live APY but near-zero third-party stake. The previous skUSD (0xdEd74F7E) is retired. kUSD role administration and all three PSMs' administration and manager configuration are behind a 48-hour TimelockController; the 2-of-3 Safe is its sole proposer, executor, and canceller, while a fixed PauseGuardian preserves immediate Safe-triggered PSM pausing. skUSD remains directly administered by the Safe, but its non-upgradeable wrapper powers do not confer kUSD minting or PSM control. Hourly signed proof of reserves is published at kerne.fi/verify.",
   "featuredContent": [
     {
       "type": "article",
@@ -124,6 +124,13 @@
       "title": "Hexens publishes final external audit report",
       "description": "First external audit covering kUSD, skUSD, KUSDPSM, KerneVault, and esKERNE: 10 findings, 0 critical, 2 high; 8 fixed and 2 acknowledged, all 10 in KerneVault. The live KerneVault runs pre-audit bytecode with deposits closed pending a remediated redeploy.",
       "sourceUrl": "https://hexens.io/audit-reports/kerne-protocol-july-2026"
+    },
+    {
+      "date": "2026-08-06",
+      "type": "milestone",
+      "title": "kUSD and PSM administration completes 48-hour timelock transition",
+      "description": "A 13-call operation scheduled on 2026-08-03 and executed on 2026-08-06 after 65 hours 32 minutes completed the handover: the TimelockController holds kUSD and PSM default-admin roles plus PSM manager roles, while the Safe's direct downstream roles were removed. The 2-of-3 Safe remains the timelock's sole proposer, executor, and canceller. A fixed PauseGuardian can only forward an immediate pause to the three PSMs.",
+      "sourceUrl": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
     }
   ]
 }

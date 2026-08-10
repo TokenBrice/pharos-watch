@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "concentrated-admin",
     "confidence": "manual-review",
-    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the on-chain Peg Stability Module (10 bps fee, 10,000,000 USDC cap); the PSM holds the kUSD MINTER_ROLE. A 2-of-3 Gnosis Safe is DEFAULT_ADMIN and can grant or revoke that minter role and change PSM parameters, so durable supply authority is concentrated in that multisig.",
+    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the live Peg Stability Module (10 bps fee, 10,000,000 USDC cap), which holds the kUSD MINTER_ROLE. Since 2026-08-06, kUSD role administration and the three PSMs' administration and manager configuration sit behind an OpenZeppelin TimelockController with a 48-hour minimum delay. The 2-of-3 Safe is the timelock's sole proposer, executor, and canceller. A fixed PauseGuardian preserves immediate Safe-triggered PSM pausing but cannot mint, raise caps, unpause, or change configuration. The separate, non-upgradeable skUSD wrapper remains directly administered by the Safe, but its wrapper powers do not authorize kUSD minting or PSM changes.",
     "controls": [
       {
         "chain": "base",
@@ -26,52 +26,135 @@
             "url": "https://base-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Base block 49003308, kUSD hasRole(MINTER_ROLE, 0xaBDE1138) returned true while the same read returned false for 0x07eBb486 and 0xFf3025ec. The live PSM returned mintingEnabled=true, paused=false, supportedStables(USDC)=true, swapFees(USDC)=10, and stableCaps(USDC)=10000000000000 (10,000,000 USDC).",
-        "observedAt": "2026-07-23",
-        "observedBlock": 49003308
+        "evidence": "At Base block 49788701, kUSD hasRole(MINTER_ROLE, 0xaBDE1138) returned true while the same read returned false for 0x07eBb486 and 0xFf3025ec. The live PSM returned mintingEnabled=true, paused=false, supportedStables(USDC)=true, swapFees(USDC)=10, and stableCaps(USDC)=10000000000000 (10,000,000 USDC).",
+        "observedAt": "2026-08-10",
+        "observedBlock": 49788701
       },
       {
         "chain": "base",
         "address": "0x52d3e450ba6c299b1b07298f1e87dd74732d4877",
-        "label": "Kerne admin Gnosis Safe (2-of-3)",
+        "label": "Kerne control Safe (2-of-3; timelock proposer/executor/canceller)",
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
         "threshold": 2,
         "signerCount": 3,
         "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
         "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x14f04ce02f35b29af564a98544dd7e2393993946",
+            "0x0cec7021f4c20f3d5ebb55c1ac591c15efbb7895",
+            "0xf4a43c88b7370bd6e370c7af5fe663c6d223b3fb"
+          ],
           "threshold": 2,
-          "source": "manual"
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 49788701,
+          "observedAt": "2026-08-10",
+          "source": "onchain"
         },
         "sources": [
           {
             "label": "Kerne admin Safe on BaseScan",
             "url": "https://basescan.org/address/0x52d3e450ba6c299b1b07298f1e87dd74732d4877"
+          },
+          {
+            "label": "Safe Transaction Service state",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x52d3E450bA6c299B1B07298F1E87DD74732D4877/"
+          },
+          {
+            "label": "Final timelock handover execution",
+            "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
           }
         ],
-        "evidence": "Per Kerne deployment records the DEFAULT_ADMIN_ROLE across governance-relevant contracts is a 2-of-3 Gnosis Safe (0x52d3E450), which can grant or revoke the PSM minter role and adjust PSM parameters. Owner set, modules, and guard were not independently re-read on-chain in this submission."
+        "evidence": "At Base block 49788701, on-chain reads returned Safe version 1.4.1, the three listed owners, threshold 2, and no enabled modules; the Safe Transaction Service reported no guard and the standard fallback handler. The Safe no longer held DEFAULT_ADMIN_ROLE or MANAGER_ROLE on kUSD or any PSM, but it remained the TimelockController's proposer, executor, and canceller. All authority-expanding seat changes require a timelock self-call; a holder can still renounce its own timelock seat immediately, which can reduce liveness but cannot expand authority. The Safe remained DEFAULT_ADMIN_ROLE on skUSD, whose verified non-upgradeable wrapper code limits admin to vesting-period and role management rather than kUSD minting or PSM configuration.",
+        "observedAt": "2026-08-10",
+        "observedBlock": 49788701
+      },
+      {
+        "chain": "base",
+        "address": "0x36a14976980b7dd33136f6613545eb0a2c0a0d72",
+        "label": "Kerne TimelockController (48-hour kUSD and PSM administration)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The PSM MANAGER_ROLE controls caps and configuration. The timelock holds that role on all three PSMs, so a Safe-originated cap increase or configuration change must be scheduled and wait at least 48 hours. kUSD minter-role changes likewise pass through the timelock's DEFAULT_ADMIN_ROLE.",
+        "sources": [
+          {
+            "label": "TimelockController verified contract",
+            "url": "https://basescan.org/address/0x36a14976980b7dd33136f6613545eb0a2c0a0d72#code"
+          },
+          {
+            "label": "Final timelock handover execution",
+            "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
+          }
+        ],
+        "evidence": "At Base block 49788701, getMinDelay() returned 172800. The timelock held DEFAULT_ADMIN_ROLE on kUSD and all three PSMs plus MANAGER_ROLE on the PSMs; the Safe held none of those downstream roles. The timelock held its own DEFAULT_ADMIN_ROLE while the Safe held its proposer, executor, and canceller seats. Verified constructor arguments name only the Safe as proposer and executor and use the zero-address external admin; the complete 32-log history through the observation block contains no later timelock role change.",
+        "observedAt": "2026-08-10",
+        "observedBlock": 49788701
+      },
+      {
+        "chain": "base",
+        "address": "0xc47adaf51907bb1871d07e18ea21dc75ae93cc8e",
+        "label": "Kerne PauseGuardian (immediate Safe-triggered PSM pause)",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Although it holds MANAGER_ROLE on the PSMs, the guardian's immutable code can only forward pause() to the three fixed PSM addresses when called by the Safe. It cannot mint, raise a cap, change configuration, or unpause.",
+        "sources": [
+          {
+            "label": "PauseGuardian verified contract",
+            "url": "https://basescan.org/address/0xc47adaf51907bb1871d07e18ea21dc75ae93cc8e#code"
+          },
+          {
+            "label": "Final timelock handover execution",
+            "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
+          }
+        ],
+        "evidence": "At Base block 49788701, the guardian held MANAGER_ROLE on the live, retired, and original PSMs. Independently verified source fixes the Safe and three PSM addresses as constructor immutables, rejects every other caller and module, and exposes only pause(address), which forwards the pause() selector. This is an immediate emergency-stop carve-out, not a cap or mint-authority bypass.",
+        "observedAt": "2026-08-10",
+        "observedBlock": 49788701
       }
     ],
     "review": {
       "sources": [
         {
-          "label": "Kerne live stats API",
-          "url": "https://kerne.fi/api/stats"
+          "label": "Timelock operation scheduled on 2026-08-03",
+          "url": "https://basescan.org/tx/0x2c6d001391e219ff375edabe90e590168200a3a2cb20c8abfec3d1dcfd302070"
         },
         {
-          "label": "Kerne security overview",
-          "url": "https://kerne.fi/security"
+          "label": "Timelock operation executed on 2026-08-06",
+          "url": "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8"
+        },
+        {
+          "label": "TimelockController verified contract",
+          "url": "https://basescan.org/address/0x36a14976980b7dd33136f6613545eb0a2c0a0d72#code"
+        },
+        {
+          "label": "PauseGuardian verified contract",
+          "url": "https://basescan.org/address/0xc47adaf51907bb1871d07e18ea21dc75ae93cc8e#code"
+        },
+        {
+          "label": "Kerne admin Safe on BaseScan",
+          "url": "https://basescan.org/address/0x52d3e450ba6c299b1b07298f1e87dd74732d4877"
+        },
+        {
+          "label": "skUSD verified contract",
+          "url": "https://basescan.org/address/0x96f5102c15b839757f811a98cec3725ac21dfa14#code"
         }
       ],
-      "evidence": "Pharos independently read the live contracts at Base block 49003308: 0xaBDE1138 held kUSD MINTER_ROLE with minting enabled, while 0x07eBb486 and 0xFf3025ec did not hold the role and retained their USDC redemption reserves. The 2-of-3 Gnosis Safe 0x52d3E450 remains described as DEFAULT_ADMIN with authority to grant or revoke the minter role and change PSM parameters; its owner set, modules, and guard were not re-read in this review.",
+      "evidence": "Pharos independently reconstructed the handover and re-read the live state at Base block 49788701. Four separate Safe transactions granted the TimelockController DEFAULT_ADMIN_ROLE on kUSD and the three PSMs on 2026-08-03. A 13-call operation was then scheduled at block 49505169 and executed at block 49623130 after 65 hours 32 minutes: it granted the timelock and code-limited PauseGuardian MANAGER_ROLE on every PSM, then removed the Safe's manager and default-admin seats. Current reads confirmed the timelock's 172800-second minimum delay, self-admin role, and the Safe's sole proposer/executor/canceller topology; they also confirmed the live PSM is the only kUSD MINTER_ROLE holder and remains enabled, unpaused, and capped at 10,000,000 USDC. skUSD remains directly administered by the Safe, but verified wrapper code provides no kUSD mint or PSM-control path, so it is recorded as a separate wrapper authority rather than a timelock bypass.",
       "reviewer": "Pharos on-chain review",
-      "reviewedAt": "2026-07-23",
-      "unresolvedQuestions": [
-        "Confirm the Safe owner set, modules, and guard on-chain at a fixed Base block.",
-        "Confirm whether the live KUSDPSM cap can be raised only after a timelock."
-      ]
+      "reviewedAt": "2026-08-10"
     }
   }
 }
