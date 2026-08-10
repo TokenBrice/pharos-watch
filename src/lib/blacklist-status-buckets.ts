@@ -45,6 +45,7 @@ export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketK
 };
 
 type ReportCardMap = Record<string, V9SafetyTableRow>;
+type ResolvedBlacklistStatus = boolean | "possible" | "inherited";
 
 export function resolveBlacklistStatusBucket(
   value: boolean | "possible" | "inherited",
@@ -56,11 +57,29 @@ export function resolveBlacklistStatusBucket(
 }
 
 export function getBlacklistStatusBucketForStablecoin(
-  _stablecoinId: string,
+  stablecoinId: string,
   reportCard?: V9SafetyTableRow | null,
 ): BlacklistStatusBucketKey | null {
+  const trackedStatus = getTrackedBlacklistStatus(stablecoinId);
+  if (trackedStatus !== null) return resolveBlacklistStatusBucket(trackedStatus);
+
   const resolved = getV9ResolvedBlacklistStatus(reportCard);
   return resolved === null ? null : resolveBlacklistStatusBucket(resolved);
+}
+
+function getTrackedBlacklistStatus(stablecoinId: string): ResolvedBlacklistStatus | null {
+  const metadata = TRACKED_META_BY_ID.get(stablecoinId);
+  const reviewedStatus = metadata?.blacklistStatus;
+  if (isResolvedBlacklistStatus(reviewedStatus)) return reviewedStatus;
+
+  const legacyStatus = metadata?.canBeBlacklisted;
+  if (isResolvedBlacklistStatus(legacyStatus)) return legacyStatus;
+
+  return null;
+}
+
+function isResolvedBlacklistStatus(value: unknown): value is ResolvedBlacklistStatus {
+  return value === true || value === false || value === "possible" || value === "inherited";
 }
 
 export function buildBlacklistStatusBuckets(

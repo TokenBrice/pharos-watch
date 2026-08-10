@@ -28,6 +28,11 @@ The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and th
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
 
+The public buckets read the reviewed client-registry blacklistability status first. V9
+`accessPosture.freezeExposure` is only a fallback when no reviewed registry status is available,
+because the V9 scoring branch can publish an inherited review as bounded `possible` exposure while
+the product exposure tier remains `upstream`.
+
 ### Upstream Exposure And The Safety Score V9 Access Branch
 
 `upstream` needs no parent asset: `resolveBlacklistStatusWithoutExplicitOverride()` in

@@ -41,7 +41,7 @@ describe("blacklist status buckets", () => {
     expect(resolveBlacklistStatusBucket(false)).toBe("no");
   });
 
-  it("uses report card overrides when resolving a stablecoin bucket", () => {
+  it("uses reviewed registry status before V9 freeze exposure", () => {
     const response = makeReportCardsV9Response({
       cards: [makeV9Card({
         id: "usdp-parallel",
@@ -51,7 +51,20 @@ describe("blacklist status buckets", () => {
     const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
     const reportCard = projection.status === "available" ? projection.value["usdp-parallel"] : undefined;
 
-    expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("possible");
+    expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("upstream");
+  });
+
+  it("falls back to V9 freeze exposure when no reviewed registry status exists", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({
+        id: "runtime-only",
+        accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "direct" },
+      })],
+    });
+    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
+    const reportCard = projection.status === "available" ? projection.value["runtime-only"] : undefined;
+
+    expect(getBlacklistStatusBucketForStablecoin("runtime-only", reportCard)).toBe("yes");
   });
 
   it("always returns all four buckets, including zero market-cap rows", () => {
@@ -73,7 +86,7 @@ describe("blacklist status buckets", () => {
     const response = makeReportCardsV9Response({
       cards: [
         makeV9Card({ id: "lusd-liquity", accessPosture: { ...baseAccess, freezeExposure: "none-known" } }),
-        makeV9Card({ id: "usdp-parallel", accessPosture: { ...baseAccess, freezeExposure: "upstream" } }),
+        makeV9Card({ id: "usdp-parallel", accessPosture: { ...baseAccess, freezeExposure: "possible" } }),
         makeV9Card({ id: "usdt-tether", accessPosture: { ...baseAccess, freezeExposure: "direct" } }),
       ],
     });
