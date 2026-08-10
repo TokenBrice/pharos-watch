@@ -13,7 +13,6 @@ export { compareText };
 export const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 export const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
 export const ScoreSchema = z.number().finite().min(0).max(100);
-export const CandidatePolicyVersionSchema = z.string().regex(/^candidate-[a-z0-9][a-z0-9._-]*$/);
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
 const AccessPostureFieldSchema = z.enum(["transfer", "freezeExposure", "primaryExit", "governance"]);
 export const RESPONSIBILITIES = [
