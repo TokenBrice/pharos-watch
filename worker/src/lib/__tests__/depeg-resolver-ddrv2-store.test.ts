@@ -2849,7 +2849,7 @@ describe("DDRv2 storage migrations and stores", () => {
   });
 
   it("finalizes publication manifests atomically and records first-publication membership once", async () => {
-      const db = makeSqliteD1();
+    const db = makeSqliteD1();
     try {
       const { prediction } = await sealPredictionFixture(db);
       const rawManifestPayload = sealedPayload(prediction.incidentKey);
@@ -2957,6 +2957,69 @@ describe("DDRv2 storage migrations and stores", () => {
     }
   });
 
+  it("selects a newer valid legacy manifest from a mixed v1/v2 history", async () => {
+    const db = makeSqliteD1();
+    try {
+      const compressed = await writePublicationManifest(db, {
+        snapshotToken: "ddrpub:test:compressed",
+        snapshotGeneration: 2,
+        publishedAt: 200000,
+        validatorVersion: "vitest",
+        basePayload: {
+          _meta: { publicPredictionIds: [], publicPredictionRowHashes: {} },
+          rows: [],
+        },
+      });
+
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_resolver_publication_snapshots
+           (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
+            base_payload_hash, public_prediction_ids_hash, public_prediction_ids_json,
+            public_prediction_row_hashes_json, base_payload_json, base_row_count,
+            public_prediction_count, created_at)
+           VALUES (?, 'ddr_public', 2, 2, ?, ?, ?, '[]', '{}', ?, 0, 0, ?)`,
+        )
+        .run(
+          "ddrpub:test:legacy",
+          200100,
+          compressed.basePayloadHash,
+          compressed.publicPredictionIdsHash,
+          compressed.basePayloadJson,
+          200100,
+        );
+      db.sqlite
+        .prepare(
+          `INSERT INTO depeg_resolver_publication_snapshot_finalizations
+           (snapshot_token, finalized_at, validator_version, validated_base_payload_hash,
+            validated_public_prediction_ids_hash, validated_public_prediction_row_hashes_json,
+            validated_base_row_count, validated_public_prediction_count)
+           VALUES (?, ?, 'vitest-legacy', ?, ?, '{}', 0, 0)`,
+        )
+        .run(
+          "ddrpub:test:legacy",
+          200100,
+          compressed.basePayloadHash,
+          compressed.publicPredictionIdsHash,
+        );
+
+      await expect(loadLatestPublicationManifest(db)).resolves.toMatchObject({
+        snapshotToken: "ddrpub:test:legacy",
+        snapshotSequence: 2,
+        publishedAt: 200100,
+        validatorVersion: "vitest-legacy",
+      });
+
+      db.sqlite.exec("DROP TRIGGER trg_ddr_publication_snapshots_v2_no_delete");
+      db.sqlite.prepare("DELETE FROM depeg_resolver_publication_snapshots_v2").run();
+      await expect(loadLatestPublicationManifest(db)).resolves.toMatchObject({
+        snapshotToken: "ddrpub:test:legacy",
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("rejects malformed publication manifest metadata JSON on read", async () => {
     const db = makeSqliteD1();
     try {
@@ -2992,13 +3055,29 @@ describe("DDRv2 storage migrations and stores", () => {
       });
 
       db.sqlite.exec("DROP TRIGGER trg_ddr_publication_snapshots_v2_no_update");
+      const storedLength = db.sqlite
+        .prepare(
+          `SELECT base_payload_bytes
+             FROM depeg_resolver_publication_snapshots_v2
+            WHERE snapshot_token = ?`,
+        )
+        .get("ddrpub:test:bad-json") as { base_payload_bytes: number };
       db.sqlite
         .prepare(
           `UPDATE depeg_resolver_publication_snapshots_v2
-           SET public_prediction_ids_json = ?
+              SET base_payload_bytes = ?
+            WHERE snapshot_token = ?`,
+        )
+        .run(storedLength.base_payload_bytes + 1, "ddrpub:test:bad-json");
+      await expect(loadLatestPublicationManifest(db)).rejects.toThrow(/payload length mismatch/);
+
+      db.sqlite
+        .prepare(
+          `UPDATE depeg_resolver_publication_snapshots_v2
+           SET base_payload_bytes = ?, public_prediction_ids_json = ?
            WHERE snapshot_token = ?`,
         )
-        .run("{}", "ddrpub:test:bad-json");
+        .run(storedLength.base_payload_bytes, "{}", "ddrpub:test:bad-json");
 
       await expect(loadLatestPublicationManifest(db)).rejects.toThrow(
         /publicPredictionIdsJson must be a JSON array/,
