@@ -64,8 +64,6 @@ The paired Pages Functions contracts live in `functions/lib/ops-env.ts` and `fun
 
 Operational telemetry control: set `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true` on the Worker and/or Pages site-data environment to stop low-value route/source attribution writes. This disables Worker `api_request_consumer_stats` route/source writes and Pages `site_data_request_stats` writes, while preserving API-key authentication, D1-backed rate limiting, last-used metadata updates, and per-key public API load telemetry. During keyed public-API spikes, set `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true` on the Worker to pause only `api_key_request_stats` writes; auth, rate limiting, and last-used metadata still run.
 
-Scheduled job attempt ledger: unset `WORKER_JOB_LEDGER_MODE` defaults to `off`. The checked-in Worker config currently promotes only the isolated `reserve-recovery` cohort with `WORKER_JOB_LEDGER_MODE=write` and `WORKER_JOB_LEDGER_ALLOWLIST=reserve-recovery` after a clean shadow soak. `write` makes bootstrap, heartbeat, lease-state, and terminal ledger write failures fail the owned job. This narrow-write cohort intentionally stops attempt telemetry for non-allowlisted jobs while it is active, because status reads and the raw-snapshot read-scope fingerprint follow the same mode and effective allowlist. Rollback is `shadow` with the broader observed allowlist, then `off` if writes themselves are unsafe.
-
 Measured DEX execution has its own `0,30 * * * *` scheduled slot and `sync-cl-exit-depth` lease. The slot permits three concurrent EVM chain lanes plus serialized Solana and Tron streams and caps EVM work at 1,300 actual RPC requests and eight minutes. Whole EVM coin cohorts are admitted against a 1,220-request estimate that includes one block read per chain, deduplicated deployment verification, quote batches, refinement, and serialized Quoter confirmation; the remaining 80 requests are reserved for adaptive fragmentation and other nondeterministic overhead. A non-fitting cohort anchors the next cursor while later whole cohorts may fill remaining capacity. Solana preserves 12 cursor-rotated admissions and two serialized, exact-identity shadow reservations: HYUSD/USDC Orca and wM/USDC Raydium. The latter reads one bounded pool account before its direct quote and retains evidence only when captured mint order, liquidity, sqrt price, fee, raw output, and post-swap price replay exactly; both reservations execute before the rotating tail and missing or drifted identities degrade the lane. Tron admits the complete current SunSwap inventory because the native consumer reads one published generation and cannot combine a two-run rotation. Both streams record progress through the shared scheduled-runner path. Durable EVM cursor deferral is healthy partial coverage only while the inventory rotates within two half-hour runs; attempted quote failures, oversized coin groups, a longer rotation, or a missing/failed cursor write remain degraded. Each native stream has a seven-minute producer-scoped network deadline; Tron also uses 15-second request timeouts and admits no new request inside its final 20 seconds. Solana quote/slot/pool-account bodies and TronGrid/Smart Router bodies are hard byte-bounded under those same request deadlines before parsing. When every candidate in a successful Smart Router response is a clean V2 multi-hop path, the pinned V2 Router fallback may add three serialized TronGrid reads per quote point for its runtime, factory binding, and exact two-token quote.
 
 The EVM lane first reserves at most one published score-bearing direction packet closest to its adapter-specific expiry, bounded to 20 estimated requests inside the same 1,220-request ceiling. The legacy Curve 3pool packet remains atomic, the reservation does not advance the durable cursor, and the remaining inventory keeps the existing whole-coin rotation.
@@ -210,7 +208,7 @@ When a valid key is present, the worker uses the D1-backed `api_key_rate_limit` 
 
 The no-key public exceptions are `GET /api/health`, `GET /api/og/*`, `POST /api/feedback`, `POST /api/api-key-requests`, `POST /api/api-key-requests/verify`, `POST /api/telegram-webhook`, `POST /api/telegram-mini-app/session`, and `POST /api/telegram-mini-app/mutate`. The Telegram webhook is authenticated separately through `X-Telegram-Bot-Api-Secret-Token`; Telegram Mini App endpoints are authenticated through signed Telegram `initData`.
 
-The three Telegram POST exceptions pass through path-specific Cloudflare Rate Limiting bindings before body reads, Telegram auth, D1, or request attribution. The Worker ceilings are `2,400/min` for webhook updates, `1,600/min` for Mini App sessions, and `9,600/min` for Mini App mutations per Cloudflare location; bodies are capped at 128 KiB for webhook updates and 16 KiB for Mini App requests. Zone WAF exact-path rules are separate required operator configuration, not deployed by Wrangler. The budgets, required broad-rule exclusions, telemetry contract, and rollout procedure are recorded in [`worker/config/telegram-ingress-abuse-policy.json`](../worker/config/telegram-ingress-abuse-policy.json) and [`telegram-ingress-abuse-controls.md`](./runbooks/telegram-ingress-abuse-controls.md).
+The three Telegram POST exceptions pass through path-specific Cloudflare Rate Limiting bindings before body reads, Telegram auth, D1, or request attribution. The Worker ceilings are `2,400/min` for webhook updates, `1,600/min` for Mini App sessions, and `9,600/min` for Mini App mutations per Cloudflare location; bodies are capped at 128 KiB for webhook updates and 16 KiB for Mini App requests. There are no active Telegram-specific zone WAF rules. [`telegram-ingress-abuse-controls.md`](./runbooks/telegram-ingress-abuse-controls.md) owns the deployed posture; `worker/config/telegram-ingress-abuse-policy.json` is an undeployed exact-path proposal, while `scripts/ci/cloudflare-account-state-manifest.json` is the account-state authority.
 
 Self-serve API key requests use `api_key_requests`, `api_key_request_rate_limit_v2`, `api_key_self_serve_email_claims`, and `api_key_self_serve_issuance_limits`. Request intake hashes normalized email, IP, and user-agent values with dedicated self-serve secrets, sends a Resend verification email, and only creates a key after verification. Verification uses an issuance lock on the request row plus a fixed-window issued-key cap keyed by the salted submission IP hash. Requester details are visible only through the Access-gated `ops.pharos.watch/admin-api/` UI and the admin endpoints it calls.
 
@@ -276,7 +274,7 @@ The kill switches are for observability degradation only. They do not disable AP
 
 ### Append-only D1 Retention Policy
 
-The daily `prune-cron-history` job owns bounded cleanup for cron observability, quota, cache, canary, job-attempt, and repair-task rows only. These append-only product/audit tables are intentionally not pruned by that job:
+The daily `prune-cron-history` job owns bounded cleanup for cron/producer/slot observability, quota, block-timestamp cache, canary, recovery-checkpoint, and repair-task rows only. These append-only product/audit tables are intentionally not pruned by that job:
 
 | Table                  | Retention owner ruling                           | Why                                                                                                                                                                                                                                                                  |
 | ---------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -291,17 +289,7 @@ The daily `prune-cron-history` job owns bounded cleanup for cron observability, 
 
 ### Completed D1 Schema Cleanup
 
-The 2026-07-29 operated D1 cleanup removed stale migration-era tables from production after Time Travel verification and fresh zero-use source searches. Historical migration files still define or reference these objects for lineage and fresh-database replay until the next accepted baseline squash, but current production D1 no longer has:
-
-| Removed production object | Current runtime path |
-| --- | --- |
-| `public_api_rate_limit` | Cloudflare zone rule `api-rate-limit-ip` plus keyed `api_key_rate_limit` |
-| `api_request_source_stats` | `api_request_consumer_stats` and `api_key_request_stats` |
-| `api_key_request_rate_limit` | `api_key_request_rate_limit_v2` |
-| `feedback_submissions` | GitHub issue creation plus `feedback_rate_limit`; there is no durable submission persistence today |
-| `alert_broker_conditions`, `alert_broker_deliveries` | Direct-webhook compatibility canary transport was removed; scheduled incident detection continues through cron/status telemetry |
-
-Do not use a normal migration for destructive cleanup. Future stale-table removals still require production backup/Time Travel verification, fresh zero-use evidence, and a dedicated operated rollout after compatible Worker code has soaked.
+The canonical operated-cleanup history, current production removals, rollback limits, and deferred queue live in [`worker/migrations/MANIFEST.md`](../worker/migrations/MANIFEST.md#completed-destructive-cleanup-operations). Do not duplicate that inventory here. Destructive cleanup remains outside the normal migration path and requires production backup/Time Travel verification, fresh zero-use evidence, and a dedicated operated rollout after compatible Worker code has soaked.
 
 ### CORS Headers
 
@@ -738,7 +726,7 @@ Sources tracked (defined in `CIRCUIT_SOURCE` in `worker/src/lib/constants.ts`):
 | `AERODROME_SLIPSTREAM_API`           | `aerodrome-slipstream-api`    | `sync-dex-liquidity-stage` direct Aerodrome Slipstream fetcher                                                            |
 | `VELODROME_SLIPSTREAM_API`           | `velodrome-slipstream-api`    | `sync-dex-liquidity-stage` direct Velodrome Slipstream fetcher                                                            |
 | `CG_TICKER`                          | `coingecko-ticker`            | `enrich-prices` primary consensus (curated ticker corroboration)                                                          |
-| `TWITTER_API`                        | `twitter-api`                 | Twitter helper (not wired into current scheduled digest delivery)                                                         |
+| `TWITTER_API`                        | `twitter-api`                 | `daily-digest` Twitter/X delivery                                                                                          |
 | `TELEGRAM_API`                       | `telegram-api`                | `daily-digest` Telegram posting, `dispatch-telegram-alerts` subscriber fan-out                                            |
 | `ANTHROPIC`                          | `anthropic-api`               | `daily-digest` LLM generation                                                                                             |
 | `BLUECHIP`                           | `bluechip-api`                | `sync-bluechip` safety rating fetch                                                                                       |
@@ -828,8 +816,7 @@ Chunks statements into batches of 100 (D1's batch limit), executes sequentially,
 
 ### Cron Lease Primitives (Phase C)
 
-Lease primitives are implemented in `worker/src/lib/cron-lease-primitives.ts` and are part of `worker/migrations/0000_baseline.sql`.
-Scheduled slot fencing is backed by migration `0074_cron_slot_executions.sql`.
+Lease primitives and scheduled slot fencing are implemented in `worker/src/lib/cron-lease-primitives.ts` and the active `worker/migrations/0000_baseline.sql`; the manifest records historical migration 0074 as their pre-squash origin.
 
 ```sql
 CREATE TABLE IF NOT EXISTS cron_leases (

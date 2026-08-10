@@ -58,7 +58,7 @@ The recommended-setup CTA retains its preloaded Telegram subscription behavior a
 
 ## Triage
 
-1. Confirm migration `0192_telegram_adoption_analytics.sql` is applied to `stablecoin-db`.
+1. Confirm `stablecoin-db` contains `telegram_adoption_daily` and `telegram_adoption_retention_daily`, and that the deployed Worker includes the live adoption producer. Historical migration 0192 is squashed into the active baseline; use the manifest only for lineage.
 2. Confirm the Pages project has its required primary `DB` D1 binding and `TELEGRAM_ADOPTION_IP_HASH_SECRET` pepper.
 3. Check `telegram-retention-cleanup` metadata for adoption table/cache pruning and caps.
 4. Check the Telegram pulse run for `[telegram-adoption] retention refresh failed` warnings.

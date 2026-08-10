@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS depeg_pending (
 CREATE UNIQUE INDEX idx_depeg_pending_coin ON depeg_pending(stablecoin_id);
 ```
 
-One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema, the `reason` column, and the original uniqueness/open-event indexes were all squashed into `0000_baseline.sql` (migrations 0001–0071, squashed 2026-03-25), so their pre-squash migration files no longer exist. The still-extant follow-on migrations layer on top: migration `0091` adds last-seen and peak-seen tracking columns, migration `0105` adds promotion provenance, migration `0164` adds terminal close semantics, and migration `0219` adds the nullable live-event recovery confirmation timestamp.
+One row per coin maximum. Holds depeg candidates awaiting confirmation. The CREATE TABLE blocks above show the cumulative shape: the original `depeg_events` / `depeg_pending` schema and follow-on changes through migration 0227 were squashed into `0000_baseline.sql` on 2026-07-30, so their individual migration files no longer exist. Migration `0228_depeg_resolver_incident_closed_pre_lock.sql` is the current unsquashed tail; use `worker/migrations/MANIFEST.md` for the historical sequence and field ownership.
 
 ### depeg_event_provenance (migration 0127)
 
