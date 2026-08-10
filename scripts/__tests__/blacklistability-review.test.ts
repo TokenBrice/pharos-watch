@@ -41,7 +41,7 @@ describe("blacklistability review data checks", () => {
       blacklistabilityReview: makeReview(true),
     });
     const inherited = makeMeta("inherited", {
-      reserves: [{ name: "Direct reserve", pct: 1, risk: "low", coinId: "direct" }],
+      reserves: [{ name: "Direct reserve", pct: 100, risk: "low", coinId: "direct" }],
       blacklistabilityReview: makeReview("inherited"),
     });
     const missing = makeMeta("missing");
@@ -50,6 +50,7 @@ describe("blacklistability review data checks", () => {
         ...baseFlags,
         governance: "centralized",
       },
+      canBeBlacklisted: true,
       blacklistabilityReview: makeReview(false),
     });
 

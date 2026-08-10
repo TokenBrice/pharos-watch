@@ -10,7 +10,7 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extensio
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9-fact-set";
 
 const AS_OF_SEC = 1_785_456_000;
-const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-09T00:00:00.000Z";
+const REGISTRY_FIXTURE_CAPTURED_AT = "2026-08-10T00:00:00.000Z";
 const REGISTRY_FIXTURE_CLOCK_SEC = Date.parse(REGISTRY_FIXTURE_CAPTURED_AT) / 1_000;
 const ASSET_ID = "authoring-example";
 const REVIEWED_INHERITED_WRAPPERS = [
