@@ -1,4 +1,4 @@
-import { V9_RELEASE_COVERAGE_FLOORS } from "@shared/types/safety-score-v9-coverage";
+import { V9_MINIMUM_RATEABLE_ASSETS } from "@shared/types/safety-score-v9-coverage";
 import type {
   V9PublicationHealth,
   V9PublicationHoldReason,
@@ -131,13 +131,13 @@ function observationCoverageFloors(
     {
       id: "minimum-rateable-assets",
       status:
-        rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
+        rateableCount >= V9_MINIMUM_RATEABLE_ASSETS
           ? "pass"
           : "fail",
       observed: rateableCount,
-      required: `>= ${V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets}`,
+      required: `>= ${V9_MINIMUM_RATEABLE_ASSETS}`,
       detail:
-        rateableCount >= V9_RELEASE_COVERAGE_FLOORS.minimumRateableAssets
+        rateableCount >= V9_MINIMUM_RATEABLE_ASSETS
           ? "The V9 publication meets the active-asset rateability floor"
           : "The V9 publication is below the active-asset rateability floor",
     },

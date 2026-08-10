@@ -29,7 +29,6 @@ export const CANONICAL_ORDER_ASSET_FILE = "canonical-order.json";
 export const PER_COIN_SOURCE_DIR = `${STABLECOIN_DATA_DIR}/coins`;
 export const STABLECOIN_DOMAIN_SOURCE_DIR = `${STABLECOIN_DATA_DIR}/domains`;
 export const GENERATED_PER_COIN_ASSET_FILE = `${STABLECOIN_DATA_DIR}/coins.generated.json`;
-export const STABLECOIN_SOURCE_DOMAINS = [...STABLECOIN_SOURCE_DOMAIN_VALUES];
 
 export interface StablecoinSourceEntry {
   coin: StablecoinMeta;
@@ -184,7 +183,7 @@ function findUnsupportedDomainSourceDirs(rootDir: string): string[] {
     return [];
   }
 
-  const supportedDomains = new Set<string>(STABLECOIN_SOURCE_DOMAINS);
+  const supportedDomains = new Set<string>(STABLECOIN_SOURCE_DOMAIN_VALUES);
   return readdirSync(absoluteDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && !supportedDomains.has(entry.name))
     .map((entry) => `${STABLECOIN_DOMAIN_SOURCE_DIR}/${entry.name}`)
@@ -266,7 +265,7 @@ export function loadStablecoinDomainSidecarEntries(rootDir = process.cwd()): Sta
     );
   }
 
-  return STABLECOIN_SOURCE_DOMAINS.flatMap((domain) => {
+  return STABLECOIN_SOURCE_DOMAIN_VALUES.flatMap((domain) => {
     const absoluteDir = resolve(rootDir, STABLECOIN_DOMAIN_SOURCE_DIR, domain);
     // Repo-owned catalog helpers only enumerate supported checked-in sidecar domain directories.
     if (!existsSync(absoluteDir)) {
