@@ -1327,7 +1327,6 @@ Sky/USDS protocol status — whether the current implementation exposes freeze/b
 ```json
 {
   "freezeCapabilityPresent": false,
-  "freezeActive": false,
   "implementationAddress": "0x1923dfee706a8e78157416c29cbccfde7cdf4102",
   "lastChecked": 1771809338,
   "_meta": { "updatedAt": 1710500000, "ageSeconds": 42, "status": "fresh" }
@@ -1337,7 +1336,6 @@ Sky/USDS protocol status — whether the current implementation exposes freeze/b
 | Field                     | Type      | Description                                                                 |
 | ------------------------- | --------- | --------------------------------------------------------------------------- |
 | `freezeCapabilityPresent` | `boolean` | Whether the current USDS implementation exposes freeze/blacklist capability |
-| `freezeActive`            | `boolean` | Backward-compatible alias for `freezeCapabilityPresent`                     |
 | `implementationAddress`   | `string`  | Address of the current USDS implementation contract                         |
 | `lastChecked`             | `number`  | Unix seconds when this was last fetched on-chain                            |
 

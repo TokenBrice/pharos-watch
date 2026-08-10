@@ -410,7 +410,7 @@ export function buildCommsWorkbenchModel(input: {
         pendingExecutionUnknown: pendingBacklog?.pendingExecutionUnknown ?? null,
         freshExecutionUnknown: pendingBacklog?.freshExecutionUnknown ?? null,
         oldestExecutionUnknownAgeSec: pendingBacklog?.oldestExecutionUnknownAgeSec ?? null,
-        sentCleanup: pendingBacklog?.sentCleanup ?? pendingBacklog?.completedPendingCleanup ?? null,
+        sentCleanup: pendingBacklog?.sentCleanup ?? null,
       },
       backlogAssessment,
       backlogReasons,

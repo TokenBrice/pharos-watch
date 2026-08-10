@@ -8,6 +8,7 @@ import {
   routeAlertEvents,
   selectChatsToFormat,
   splitFreshQueue,
+  strictestAlertTtlSec,
   type AlertsByChatEntry,
   type RoutedSubscriberAlert,
   type SubscriberRow,
@@ -103,6 +104,10 @@ function routedAlert(
 }
 
 describe("dispatch telegram routing helpers", () => {
+  it("fails closed when a planned alert has no alert types", () => {
+    expect(() => strictestAlertTtlSec([])).toThrow("Telegram alert type list cannot be empty");
+  });
+
   it("lets a per-coin row suppress the same chat's global fallback", () => {
     const alertsByChat = new Map<string, AlertsByChatEntry>();
     const specificRows = new Map([

@@ -147,7 +147,6 @@ describe("handleHealth", () => {
     executionUnknownSampleLimit: 5_001,
     executionUnknownLowerBound: false,
     sentCleanup: 0,
-    completedPendingCleanup: 0,
   };
   it("returns 200 with health status", async () => {
     const now = Math.floor(Date.now() / 1000);

@@ -68,7 +68,9 @@ function alertTypesForConsolidated(alerts: ConsolidatedAlerts): TelegramAlertTyp
 }
 
 export function strictestAlertTtlSec(alertTypes: readonly TelegramAlertType[]): number {
-  if (alertTypes.length === 0) return TELEGRAM_ALERT_TTL_SEC.legacy;
+  if (alertTypes.length === 0) {
+    throw new Error("Telegram alert type list cannot be empty");
+  }
   return Math.min(...alertTypes.map((type) => TELEGRAM_ALERT_TTL_SEC[type]));
 }
 
@@ -83,7 +85,7 @@ export interface SubscriberRow {
   quiet_hours_start_utc: number | null;
   quiet_hours_end_utc: number | null;
   timezone: string | null;
-  /** Persisted chat preference generation. Optional only for legacy fixtures/cache payloads. */
+  /** Persisted chat preference generation. Optional only for older fixtures/cache payloads. */
   preference_generation?: number;
   isGlobal: boolean;
   /** A settings/direct write explicitly owns this alert family's local policy. */

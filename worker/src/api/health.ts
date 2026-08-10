@@ -58,7 +58,6 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
           executionUnknownSampleLimit: pendingCapacity.value.executionUnknownSampleLimit,
           executionUnknownLowerBound: pendingCapacity.value.executionUnknownLowerBound,
           sentCleanup: pendingCapacity.value.sentCleanup,
-          completedPendingCleanup: pendingCapacity.value.sentCleanup,
         } : undefined,
         lastDispatchAt: lastDispatch?.started_at ?? null,
         lastDispatchStatus: lastDispatch?.status ?? null,

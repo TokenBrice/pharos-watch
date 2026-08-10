@@ -40,22 +40,18 @@ describe("syncUsdsStatus", () => {
     const metadata = JSON.parse(result.metadata ?? "{}") as {
       implementationAddress: string;
       freezeCapabilityPresent: boolean;
-      freezeActive: boolean;
     };
     expect(metadata.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
     expect(metadata.freezeCapabilityPresent).toBe(false);
-    expect(metadata.freezeActive).toBe(false);
 
     const insert = getCacheInsert(db as MockD1Database);
     expect(insert).toBeDefined();
     const cached = JSON.parse(String(insert?.binds[1])) as {
       freezeCapabilityPresent: boolean;
-      freezeActive: boolean;
       implementationAddress: string;
       lastChecked: number;
     };
     expect(cached.freezeCapabilityPresent).toBe(false);
-    expect(cached.freezeActive).toBe(false);
     expect(cached.implementationAddress).toBe("0x1923dfee706a8e78157416c29cbccfde7cdf4102");
     expect(cached.lastChecked).toBe(Math.floor(Date.now() / 1000));
   });

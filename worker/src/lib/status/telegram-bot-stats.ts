@@ -737,7 +737,6 @@ export function mapTelegramBotStats(input: {
       executionUnknownLowerBound:
         coerceCount(pendingDeliveryTelemetry.execution_unknown_sample_count) >= EXECUTION_UNKNOWN_SAMPLE_LIMIT,
       sentCleanup,
-      completedPendingCleanup: sentCleanup,
     };
   }
   if (webhookEffectUnknown) {
