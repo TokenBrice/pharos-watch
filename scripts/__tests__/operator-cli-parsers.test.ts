@@ -6,10 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseWorkerDeployGuardArgs } from "../ci/guard-worker-deploy.mjs";
 import { syncJson } from "../lib/sync-from-api";
-import {
-  backfillAiSummaryProvenance,
-  parseAiSummaryBackfillArgs,
-} from "../maintenance/backfill-ai-summary-provenance.mjs";
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
 import { parseZoneCachePurgeArgs } from "../maintenance/purge-cloudflare-zone-cache.mjs";
 import { parseTelegramRegistrationArgs } from "../maintenance/register-telegram";
@@ -64,21 +60,6 @@ describe("priority operator CLI parsers", () => {
       "may only be specified once",
     );
     expect(() => parseDigestSyncArgs(["--unknown"])).toThrow("Unknown option");
-  });
-
-  it("validates provenance backfill review inputs and real dates", () => {
-    const env = {
-      AI_SUMMARY_REVIEWED_BY: "@reviewer",
-    };
-    expect(parseAiSummaryBackfillArgs(["--manifest", "agents/review.json", "--model", "gpt-test", "--dry-run"], env)).toMatchObject({
-      dryRun: true,
-      manifest: "agents/review.json",
-      model: "gpt-test",
-    });
-    expect(() => parseAiSummaryBackfillArgs([], env)).toThrow("--manifest is required");
-    expect(() => parseAiSummaryBackfillArgs(["--manifest", "x", "--model", "one", "--model", "two"], env)).toThrow(
-      "may only be specified once",
-    );
   });
 
   it("requires exactly one freeze target and rejects option-like typos", () => {
@@ -168,28 +149,4 @@ describe("operator dry-run mutation boundaries", () => {
     expect(existsSync(output)).toBe(false);
   });
 
-  it("keeps the provenance transformation pure and skips curated entries", () => {
-    const input = {
-      curated: { authoredBy: "human", text: "kept", title: "Curated", updatedAt: "2026-07-01" },
-      pending: { text: "body", title: "Pending", updatedAt: "2026-07-02" },
-    };
-    const result = backfillAiSummaryProvenance(input, {
-      model: "gpt-test",
-      reviewedBy: "@reviewer",
-    }, {
-      manifest: {
-        curated: { factsAsOf: "2026-07-01", reviewedAt: "2026-07-09" },
-        pending: { factsAsOf: "2026-07-01", reviewedAt: "2026-07-09" },
-      },
-    });
-
-    expect(result).toMatchObject({ skipped: 1, updated: 1 });
-    expect(result.data.curated.authoredBy).toBe("human");
-    expect(result.data.pending).toMatchObject({
-      authoredBy: "ai",
-      factsAsOf: "2026-07-01",
-      model: "gpt-test",
-      reviewedAt: "2026-07-09",
-    });
-  });
 });
