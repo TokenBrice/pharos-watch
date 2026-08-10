@@ -1,0 +1,121 @@
+{
+  "id": "cdp-enosys",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "CDP is minted from Enosys Loans overcollateralized vaults on Flare when users deposit Flare-ecosystem collateral. The CDP token (0x6cd3a5ba...) is an EIP-1967 proxy; its owner is a Gnosis Safe 1.3.0 multisig (0xdedda089..., 2-of-6, no modules, no guard). The proxy admin (0xd6363e03) is itself owned by an EOA (0xfc75f3c7). Collateral mint is bounded by per-position overcollateralization and Liquity V2 redemption rules; the admin multisig controls risk parameter updates.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"
+      ],
+      "implementationAddresses": [
+        "0x03dc7269d65018516133987de01104cf2607c884"
+      ],
+      "adminAddresses": [
+        "0xd6363e03cf93d35103592f11ae7160179e0be3ff",
+        "0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Enosys CDP ProxyAdmin owner EOA (implementation upgrade authority)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 65060608,
+      "sources": [
+        {
+          "label": "CDP token proxy on Flare (verified TransparentUpgradeableProxy)",
+          "url": "https://flare-explorer.flare.network/address/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f/contracts"
+        },
+        {
+          "label": "CDP implementation on Flare (verified BoldToken)",
+          "url": "https://flare-explorer.flare.network/address/0x03dc7269d65018516133987de01104cf2607c884/contracts"
+        },
+        {
+          "label": "Flare public RPC",
+          "url": "https://flare-api.flare.network/ext/C/rpc"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Enosys Loans CDP contract (collateral mint)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "flare",
+        "address": "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f",
+        "capDescription": "Mint bounded by per-position overcollateralization against accepted Flare-ecosystem collateral (FXRP, wFLR, sFLR, stXRP), with Liquity V2 redemption and liquidation rules.",
+        "canRaiseCap": true,
+        "evidence": "At Flare block 62712638 (0x3bceb3f), CDP token at 0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f is an EIP-1967 proxy (implementation slot = 0x03dc7269d65018516133987de01104cf2607c884). owner() returned 0xdedda08961216adb9ca09b88986d110127b24270. eth_getCode for the token returns 2258-byte bytecode (confirmed contract)."
+      },
+      {
+        "label": "Enosys admin multisig (owner of CDP token and parameter admin)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "chain": "flare",
+        "address": "0xdedda08961216adb9ca09b88986d110127b24270",
+        "threshold": 2,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "canRaiseCap": true,
+        "safe": {
+          "owners": [
+            "0xebde99acf9b5c288dc8d812fa3e807fc6f06300b",
+            "0x73039477774289364ed416b6017ddbb76bfe21ba",
+            "0xbfed7e24ca4ffc6a246d1fac919c11a094a4e5a9",
+            "0x00ed426e0ef5005c4b1614f988beb3187a9f1f2d",
+            "0x365623e776bc0c4da02ecc097690f5455c3149e9",
+            "0xe1cd8a5d1c6563edcae18764e9ea81781fa77685"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "version": "1.3.0",
+          "observedBlock": 62712638,
+          "source": "onchain"
+        },
+        "evidence": "At Flare block 62712638: owner() on CDP token (0x6cd3a5ba) returned 0xdedda08961216adb9ca09b88986d110127b24270. getOwners() on that address returned 6 EOA addresses. Storage slot3=6 (ownerCount), slot4=2 (threshold). Safe masterCopy at slot0=0xfb1bffc9d739b8d520daf37df666da4c687191ea (VERSION=1.3.0). getModules() returned empty array. Guard storage slot = 0x0. Fallback handler slot = 0x017062a1de2fe6b99be3d9d37841fed19f573804."
+      },
+      {
+        "label": "Enosys CDP ProxyAdmin owner EOA (implementation upgrade authority)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "flare",
+        "address": "0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 65060608,
+        "sources": [
+          {
+            "label": "CDP token proxy on Flare (verified TransparentUpgradeableProxy)",
+            "url": "https://flare-explorer.flare.network/address/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f/contracts"
+          },
+          {
+            "label": "Flare public RPC",
+            "url": "https://flare-api.flare.network/ext/C/rpc"
+          }
+        ],
+        "evidence": "At Flare block 65060608, the CDP token's EIP-1967 admin slot resolves to 0xd6363e03cf93d35103592f11ae7160179e0be3ff; eth_getCode returns 1057 bytes and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", identifying an OpenZeppelin v5 ProxyAdmin whose upgradeAndCall is onlyOwner. owner() on that ProxyAdmin returns 0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, and eth_getCode on that address returns 0x (no bytecode, an EOA). This single key can replace the BoldToken implementation and therefore rewrite mint logic and remove every cap."
+      }
+    ],
+    "review": {
+      "evidence": "On-chain reads at Flare block 62712638: CDP token (0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f) is an EIP-1967 upgradeable proxy whose owner is a Gnosis Safe 1.3.0 multisig (0xdedda08961216adb9ca09b88986d110127b24270, 2-of-6 threshold, 6 EOA signers, no modules, no guard). The proxy admin (0xd6363e03cf93d35103592f11ae7160179e0be3ff) is separately owned by an EOA (0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, confirmed by eth_getCode returning empty bytecode). The 2-of-6 Safe is the effective admin for risk parameter changes on the Enosys Loans protocol.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Enosys Loans docs",
+          "url": "https://help.enosys.global/enosys/enosys-ecosystem/enosys-loans"
+        },
+        {
+          "label": "CDP token on Flare (EIP-1967 proxy)",
+          "url": "https://flarescan.com/token/0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f"
+        }
+      ]
+    }
+  }
+}

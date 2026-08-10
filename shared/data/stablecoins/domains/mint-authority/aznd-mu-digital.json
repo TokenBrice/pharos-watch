@@ -1,0 +1,178 @@
+{
+  "id": "aznd-mu-digital",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "AZND primary issuance is KYC-gated by Mu Digital, while the Monad token's mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA. The Monad AccessManager default admin can change that role set. Ethereum AZND is a UUPS LayerZero OFT spoke whose owner can change trusted peers and whose AccessManager default admin can upgrade mint-critical logic; both controls currently resolve to the same Mu Digital EOA.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0"
+      ],
+      "implementationAddresses": [
+        "0x2e49c14a73210356de9f23a46a98de777b8a0db6"
+      ],
+      "adminAddresses": [
+        "0x8b5f269f68d42490dee19fc4ab275cdd80940068"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ethereum AZND OFT owner and UUPS admin",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530490,
+      "sources": [
+        {
+          "label": "Etherscan AZND proxy and verified implementation",
+          "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+        },
+        {
+          "label": "Ethereum mainnet RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Monad AZND PrimaryMarket minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "monad",
+        "address": "0xe64730de04aeaf8d38925825d77d7a4c00340c89",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "present",
+        "observedAt": "2026-07-14",
+        "observedBlock": 87687688,
+        "evidence": "At Monad block 87687688, AZND 0x4917a5ec...1fE8 returned immutable PRIMARY_MARKET 0xe64730de...0c89 and AccessManager 0x7b14860e...b47f; the AccessManager returned true for TOKEN_MINTER_ROLE on the PrimaryMarket. Verified AZND source restricts mint(receiver, amount) to TOKEN_MINTER_ROLE, while Mu Digital documents PrimaryMarket as its KYC-gated mint/redeem contract.",
+        "sources": [
+          {
+            "label": "MonadScan verified AZND source",
+            "url": "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code"
+          },
+          {
+            "label": "Mu Digital protocol contracts",
+            "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/protocol-contracts"
+          },
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      },
+      {
+        "label": "Monad AZND TOKEN_MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "monad",
+        "address": "0xf6e5255f4dec1473717e1df54310e2b2668d1ca8",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 87687688,
+        "evidence": "At Monad block 87687688, AccessManager 0x7b14860e...b47f returned true for TOKEN_MINTER_ROLE on 0xf6e5255f...1ca8. The account had no deployed bytecode at that block. Verified AZND source allows every current TOKEN_MINTER_ROLE holder to call mint(receiver, amount) without an onchain amount cap.",
+        "sources": [
+          {
+            "label": "MonadScan AccessManager",
+            "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
+          },
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      },
+      {
+        "label": "Monad AZND TOKEN_MINTER_ROLE delegated EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "chain": "monad",
+        "address": "0x8b33f0174e7ef6b4b8f1c55bdf9ec93ea70ebd0b",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 87687688,
+        "evidence": "At Monad block 87687688, AccessManager 0x7b14860e...b47f returned true for TOKEN_MINTER_ROLE on 0x8b33f017...bd0b. Its 23-byte 0xef0100 delegation designator points to 0x63c0c19a...ae32b, identifying an EIP-7702 delegated EOA rather than a standalone contract authority. Verified AZND source permits this role holder to call uncapped mint(receiver, amount).",
+        "sources": [
+          {
+            "label": "MonadScan AccessManager",
+            "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
+          },
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      },
+      {
+        "label": "Monad AccessManager default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "chain": "monad",
+        "address": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 87687688,
+        "evidence": "At Monad block 87687688, AccessManager 0x7b14860e...b47f returned true for DEFAULT_ADMIN_ROLE on 0x8b5f269f...0068, which had no deployed bytecode. Verified AccessManager source makes DEFAULT_ADMIN_ROLE the admin for role grants and revocations, so this EOA can change AZND's TOKEN_MINTER_ROLE holder set.",
+        "sources": [
+          {
+            "label": "MonadScan verified AccessManager source",
+            "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
+          },
+          {
+            "label": "Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ]
+      },
+      {
+        "label": "Ethereum AZND OFT owner and UUPS admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "chain": "ethereum",
+        "address": "0x8b5f269f68d42490dee19fc4ab275cdd80940068",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530490,
+        "evidence": "At Ethereum block 25530490, AZND proxy owner() returned 0x8b5f269f...0068, accessManager() returned 0xe683fcd4...b520, that AccessManager returned true for DEFAULT_ADMIN_ROLE on the same EOA, and the EIP-1967 implementation slot resolved to 0x2e49c14a...0db6. Verified source shows the OFT owner can change trusted peers, inbound trusted LayerZero messages mint through _credit, and UUPS _authorizeUpgrade requires the AccessManager default admin. The EOA therefore can authorize the Ethereum spoke mint path and replace mint-critical implementation logic.",
+        "sources": [
+          {
+            "label": "Etherscan AZND proxy and verified implementation",
+            "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+          },
+          {
+            "label": "Ethereum mainnet RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function.",
+      "reviewer": "Codex V9 mint-authority review",
+      "reviewedAt": "2026-07-14",
+      "sources": [
+        {
+          "label": "Mu Digital mint and redeem documentation",
+          "url": "https://docs.mudigital.net/protocol-overview/asia-dollar-aznd/mint-redeem"
+        },
+        {
+          "label": "Mu Digital protocol contracts",
+          "url": "https://docs.mudigital.net/technical-reference/smart-contract-architecture/protocol-contracts"
+        },
+        {
+          "label": "MonadScan verified AZND source",
+          "url": "https://monadscan.com/address/0x4917a5ec9fcb5e10f47cbb197abe6ab63be81fe8#code"
+        },
+        {
+          "label": "MonadScan verified AccessManager source",
+          "url": "https://monadscan.com/address/0x7b14860ecd88fb65a22a1d259d1248bf199fb47f#code"
+        },
+        {
+          "label": "Etherscan AZND proxy and verified implementation",
+          "url": "https://etherscan.io/address/0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0#code"
+        }
+      ]
+    }
+  }
+}

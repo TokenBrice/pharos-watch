@@ -43,6 +43,12 @@ vi.mock("../helpers", async (importOriginal) => {
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 const CURRENT_DASHBOARD_HTML = readFileSync(join(FIXTURES_DIR, "mento-reserve-composition.html"), "utf8");
+// `refresh:html-fixtures` prepends this header; it is the fixture's own notion
+// of "now", so dashboard-timestamp expectations ride it instead of a pinned second.
+const CURRENT_DASHBOARD_CAPTURED_AT =
+  /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/.exec(CURRENT_DASHBOARD_HTML)?.[1] ?? "";
+/** A dashboard payload more than 3 days behind its own capture is a stale-upstream regression. */
+const CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC = 3 * 24 * 60 * 60;
 
 const MENTO_RESERVE_URL = "https://example.com/mento/reserve";
 const MENTO_DASHBOARD_URL = "https://reserve.mento.org/";
@@ -242,9 +248,23 @@ describe("mento adapter", () => {
   });
 
   it("extracts the current cdp_backings dashboard timestamp with deeper escaped quotes", () => {
-    expect(extractMentoDashboardTimestamp(CURRENT_DASHBOARD_HTML)).toBe(
-      Math.floor(Date.parse("2026-08-09T21:00:51.000Z") / 1000),
-    );
+    // Asserted against the fixture's own `captured-at` header rather than a
+    // pinned second: the payload timestamp moves with every
+    // `refresh:html-fixtures` run, so an exact pin re-reds on each refresh
+    // while proving nothing extra. The window still fails on the real
+    // regressions — the extractor returning null (anchor/escape-depth drift),
+    // a value that is not a sane epoch-second integer, or a payload that lags
+    // its own capture by days.
+    expect(Number.isNaN(Date.parse(CURRENT_DASHBOARD_CAPTURED_AT))).toBe(false);
+    const capturedAtSec = Math.floor(Date.parse(CURRENT_DASHBOARD_CAPTURED_AT) / 1000);
+    const timestamp = extractMentoDashboardTimestamp(CURRENT_DASHBOARD_HTML);
+
+    expect(timestamp).toEqual(expect.any(Number));
+    expect(Number.isSafeInteger(timestamp)).toBe(true);
+    // The dashboard payload is rendered just before the capture, never after it
+    // (one hour of slack absorbs upstream clock skew).
+    expect(timestamp).toBeLessThanOrEqual(capturedAtSec + 3_600);
+    expect(timestamp).toBeGreaterThan(capturedAtSec - CURRENT_DASHBOARD_MAX_PAYLOAD_LAG_SEC);
   });
 
   it("falls back to numeric dashboard dataUpdatedAt milliseconds", () => {

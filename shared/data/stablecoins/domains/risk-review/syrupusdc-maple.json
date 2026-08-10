@@ -1,0 +1,224 @@
+{
+  "id": "syrupusdc-maple",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Explicit Yes retained: syrupUSDC is a tracked strategy-vault variant whose parent USDC has confirmed centralized freeze exposure, so wrapper holders inherit upstream blacklistability.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "syrupUSDC moves cross-chain via Chainlink CCIP using the Cross-Chain Token (CCT) standard in burn-and-mint mode: tokens are burned on the source chain and natively minted on the destination, with no wrapped/lockbox model. Ethereum is canonical; Solana, Arbitrum, and Base are native burn/mint deployments bridged via CCIP (front-ended by Transporter), and users can mint syrupUSDC natively on Solana.",
+    "reviewedAt": "2026-06-21",
+    "reviewer": "Pharos bridge-route re-verification",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Maple Finance — syrupUSDC Expands to Solana (CCIP native availability)",
+        "slug": "chainlink-ccip",
+        "url": "https://maple.finance/insights/syrupusdc-expands-to-solana",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint"
+        ],
+        "note": "States syrupUSDC is natively available on Solana powered by Chainlink CCIP."
+      },
+      {
+        "source": "issuer",
+        "name": "Maple Finance — syrupUSDC Expands to Arbitrum (Transporter)",
+        "slug": "chainlink-ccip",
+        "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum",
+        "bridgeTypes": [
+          "external-validated-network"
+        ],
+        "note": "Directs users to bridge via Transporter, Chainlink's official CCIP bridge front-end."
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP Token Directory — syrupUSDC",
+        "slug": "chainlink-ccip",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC",
+        "bridgeTypes": [
+          "external-validated-network",
+          "burn-mint"
+        ],
+        "note": "syrupUSDC registered as a Cross-Chain Token (CCT) across CCIP mainnet networks; JS-rendered table not machine-readable via fetch but listing confirmed by search and issuer/Chainlink statements."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+        "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+      },
+      {
+        "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+        "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+      },
+      {
+        "label": "Chainlink CCIP Token Directory — syrupUSDC",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+      },
+      {
+        "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+        "url": "https://x.com/chainlink/status/1930656909226315932"
+      },
+      {
+        "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+        "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
+        "protocol": "Maple",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21",
+        "sources": [
+          {
+            "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+          },
+          {
+            "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+          },
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          },
+          {
+            "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+            "url": "https://x.com/chainlink/status/1930656909226315932"
+          },
+          {
+            "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+            "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
+          }
+        ]
+      },
+      {
+        "id": "base:0x660975730059246a68521a3e2fbd4740173100f5",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x660975730059246a68521a3e2fbd4740173100f5",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21",
+        "sources": [
+          {
+            "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+          },
+          {
+            "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+          },
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          },
+          {
+            "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+            "url": "https://x.com/chainlink/status/1930656909226315932"
+          },
+          {
+            "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+            "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x41ca7586cc1311807b4605fbb748a3b8862b42b5",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21",
+        "sources": [
+          {
+            "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+          },
+          {
+            "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+          },
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          },
+          {
+            "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+            "url": "https://x.com/chainlink/status/1930656909226315932"
+          },
+          {
+            "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+            "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
+          }
+        ]
+      },
+      {
+        "id": "solana:AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-21",
+        "sources": [
+          {
+            "label": "Maple — syrupUSDC Expands to Solana (CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-solana"
+          },
+          {
+            "label": "Maple — syrupUSDC Expands to Arbitrum (Transporter/CCIP)",
+            "url": "https://maple.finance/insights/syrupusdc-expands-to-arbitrum"
+          },
+          {
+            "label": "Chainlink CCIP Token Directory — syrupUSDC",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDC"
+          },
+          {
+            "label": "Chainlink official announcement — Maple adopts CCIP CCT burn/mint",
+            "url": "https://x.com/chainlink/status/1930656909226315932"
+          },
+          {
+            "label": "CoinDesk — Maple Finance Expands to Solana With Chainlink",
+            "url": "https://www.coindesk.com/business/2025/06/05/crypto-lender-maple-finance-expands-to-solana-with-chainlink"
+          }
+        ]
+      }
+    ]
+  }
+}

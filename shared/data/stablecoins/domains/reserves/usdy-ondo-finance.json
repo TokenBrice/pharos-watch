@@ -1,0 +1,89 @@
+{
+  "id": "usdy-ondo-finance",
+  "reserves": [
+    {
+      "name": "Short-term U.S. Treasuries and bank deposits",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury, iShares SHV, and U.S. bank counterparties",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo USDY basics",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/basics"
+      },
+      {
+        "label": "Ondo trust and security",
+        "url": "https://docs.ondo.finance/trust-and-security"
+      }
+    ],
+    "rationale": "Current Ondo documentation identifies the USDY collateral envelope as short-term U.S. Treasuries, iShares Short Treasury Bond ETF shares, and U.S. bank demand deposits, but does not publish a durable current category allocation. The reviewed row preserves the exact aggregate identity emitted by the Chainlink NAV adapter.",
+    "compositionBasis": "Current Ondo USDY collateral and legal-structure disclosures",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The current allocation among Treasury bills, SHV shares, and bank demand deposits and the bank identities are not disclosed in the reviewed public materials.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Short-term U.S. Treasuries and bank deposits",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The public collateral envelope identifies eligible asset categories but not current category weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ankura Trust Company",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "US-registered custodial broker-dealers (not publicly identified)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "U.S. bank counterparties (not publicly identified)",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-17",
+    "reviewer": "Kimi FIAT-CTRL shard-18 control-evidence review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo USDY comparison to stablecoins",
+        "url": "https://docs.ondo.finance/general-access-products/usdy/comparison-stablecoins"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      },
+      {
+        "label": "Ondo trust and security",
+        "url": "https://docs.ondo.finance/trust-and-security"
+      }
+    ],
+    "uncertainty": "Ondo documents issuer Ondo Global Markets (BVI) Limited as a bankruptcy-remote SPV with full segregation of assets, books, and accounts from Ondo Finance Inc. and the Ondo Foundation group, and Ankura Trust Company holds a first-priority perfected security interest in the backing assets as verification and collateral agent with contractual wind-down authority. The custodial broker-dealers and bank counterparties, provider shares, custodian-level account segregation, and rehypothecation terms are not identified in the reviewed public materials."
+  }
+}

@@ -1,0 +1,731 @@
+{
+  "id": "usda-avalon",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.avalonfinance.xyz"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.avalonfinance.xyz/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Avalon USDa uses RedStone BTC-USD pricing for its FBTC-backed CeDeFi CDP, with governed LTV thresholds and an operational liquidation algorithm that sells collateral on centralized exchanges.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDa supports collateralized borrowing against FBTC with published maximum, liquidation, and recovery LTV parameters. Its CeDeFi account model and centralized-exchange liquidation differ from permissionless onchain auctions, but they still form a distinct collateral-price and liquidation branch that must be reviewed; 1:1 USDT and USDC deposits are documented as non-liquidatable conversion collateral.",
+      "sources": [
+        {
+          "label": "Avalon USDa risk management",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+        },
+        {
+          "label": "Avalon USDa user flow",
+          "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Avalon USDa risk management",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+      },
+      {
+        "label": "Avalon USDa user flow",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+      }
+    ],
+    "branches": [
+      {
+        "id": "avalon-cedefi-fbtc",
+        "label": "Avalon CeDeFi FBTC collateral",
+        "tier": "standard-external",
+        "summary": "FBTC-backed USDa borrowing uses RedStone BTC-USD pricing, published LTV thresholds, and Avalon-operated centralized-exchange liquidation.",
+        "collateralAssets": [
+          "FBTC"
+        ],
+        "chains": [
+          "Avalon-supported USDa networks"
+        ],
+        "feeds": [
+          {
+            "provider": "RedStone",
+            "path": "RedStone BTC-USD feed -> Avalon CeDeFi risk monitor -> account LTV",
+            "chain": "Avalon-supported USDa networks",
+            "failureDomainKeys": [
+              "redstone",
+              "avalon-risk-monitor",
+              "avalon-operations"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Avalon identifies RedStone as the primary BTC-USD oracle and continuous centralized-exchange monitoring, but the reviewed documentation does not name a secondary contractual feed or automatic onchain fallback.",
+        "observedAt": "2026-07-14",
+        "collateralParameters": [
+          {
+            "asset": "FBTC",
+            "maximumLtvPct": 60,
+            "note": "Avalon publishes a 90% liquidation LTV and an 80% recovery LTV for FBTC-backed positions; USDT and USDC deposits are listed as 100% max LTV and not subject to liquidation."
+          }
+        ],
+        "liquidationMechanism": "When an FBTC account exceeds the 90% liquidation LTV, withdrawals are restricted and Avalon sells part of the collateral on centralized exchanges through its high-frequency execution system until the account reaches the 80% recovery LTV.",
+        "liquidationDelaySec": 0,
+        "backstop": "The reviewed USDa documentation describes collateral sale and institutional custody providers but does not identify a contractual reserve fund, insurance module, or permissionless recapitalization backstop for residual bad debt.",
+        "shutdownOrBadDebtBehavior": "The reviewed USDa materials do not document a global shutdown settlement or a contractual process for allocating losses that remain after centralized-exchange collateral liquidation.",
+        "failureDomainKeys": [
+          "redstone",
+          "avalon-risk-monitor",
+          "avalon-liquidation-operations",
+          "avalon-custody"
+        ],
+        "sources": [
+          {
+            "label": "Avalon USDa risk management",
+            "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+          },
+          {
+            "label": "Avalon USDa user flow",
+            "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "On-chain re-verified 2026-07-20: USDa is a LayerZero OFT mesh. Ethereum is the native home deployment (immutable AccessControl OFT; endpoint() = EndpointV2 0x1a44076050125825900e736c501f859c50fe728c; owner() = the reviewed 5-of-6 Safe 0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9; native minting via two reviewed MINT_ROLE proxies). Every satellite EVM deployment is a live OFT: endpoint() verified per chain (canonical 0x1a44... on ethereum/bsc/mantle/klaytn/taiko/sei/base/avalanche/bob; chain-specific LayerZero endpoints on berachain/sonic/bitlayer/morph-l2 (0x6f475642a6e85809b1c36fa62763669b1b48dd5b), nibiru (0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd), zksync (0xd07c30af3ff30d96bdc9c6044958230eb797ddbf), and corn (0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, from verified constructor args); eid() matches each chain). OFT owner()/delegate is the Avalon 5-of-6 Safe (same six signers) on bsc/mantle/klaytn/berachain/sei/sonic/nibiru/bitlayer/base/avalanche/morph-l2/bob/corn, and signer EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 on taiko/zksync/zircuit (eth_getCode = 0). peers() on the ethereum OFT returns these exact contracts for base/avalanche/zksync/bob/morph-l2/zircuit, and on-chain totalSupply matches DefiLlama's per-chain balances exactly on every new chain. Movement is a MoveVM LayerZero OFT (oft_fa) whose module account is owned by a 3-of-4 Move multisig. The Mode deployment tracked by DefiLlama (0x0000206329b97DB379d5E1Bf586BbDB969C63274) is NOT part of this mesh: no OFT peer on ethereum/bsc, a third-party 4-of-6 upgrade Safe with non-Avalon signers, and an unverified implementation, so that row stays unresolved. Burn-mint OFT routes ride the LayerZero DVN network; the per-application DVN set is not reviewed, so routes are external-validated-network.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Nibiru Avalon USDa token docs",
+        "url": "https://nibiru.fi/docs/use/tokens/avalon-susda.html"
+      },
+      {
+        "label": "LayerZero OFT reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "Avalon docs",
+        "url": "https://docs.avalonfinance.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8a60e489004ca22d775c5f2c657598278d17d9c2",
+        "protocol": "Avalon USDa native issuance (CeDeFi CDP)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical USDa home deployment (58.5% of supply). Verified on-chain 2026-07-20: immutable AccessControl OFT (15,057 bytes), endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c, owner() = 5-of-6 Safe 0xdFB1b1c0E0f697829aF500D73364D863Cb3c6cE9 (the USDa admin Safe reviewed in mintAuthority, 2026-07-14). Native minting runs through the two reviewed MINT_ROLE proxy contracts; no bridge contract holds mint rights on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Ethereum token (endpoint/owner reads, 2026-07-20)",
+            "url": "https://etherscan.io/address/0x8a60e489004ca22d775c5f2c657598278d17d9c2#readContract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x9356086146be5158e98ad827e21b5cf944699894",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9356086146be5158e98ad827e21b5cf944699894",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x423e47f9bcb654b4aeac93fb5dbd710850e17ab4 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x9356086146be5158e98ad827e21b5cf944699894",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bsc:0x9356086146be5158e98ad827e21b5cf944699894"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa BSC token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://bscscan.com/address/0x9356086146be5158e98ad827e21b5cf944699894#readContract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "mantle:0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+        "sourceChain": "ethereum",
+        "destinationChain": "mantle",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x12c71f3611234e5e4175de656fc37e6402299968 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "mantle",
+        "controllerAddress": "0x075df695b8e7f4361fa7f8c1426c63f11b06e326",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:mantle:0x075df695b8e7f4361fa7f8c1426c63f11b06e326"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Mantle token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://mantlescan.xyz/address/0x075df695b8e7f4361fa7f8c1426c63f11b06e326#readContract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "klaytn:0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+        "sourceChain": "ethereum",
+        "destinationChain": "klaytn",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x8773c75c83d497135cef197bd862930a04da77ff (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "klaytn",
+        "controllerAddress": "0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:klaytn:0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Kaia token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://klaytnscope.com/address/0xdc3cf1961b08da169b078f7df6f26676bf6a4ff6"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30362 = Berachain). owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "berachain",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:berachain:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Berachain token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://berascan.com/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc#readContract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "movement:0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650",
+        "sourceChain": "ethereum",
+        "destinationChain": "movement",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650",
+        "protocol": "Avalon USDa via LayerZero OFT (Move oft_fa)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via Movement fullnode REST 2026-07-20 (the Movement EVM-style RPC serves no eth_call data). The fungible-asset metadata object 0x48b904a9...4650 carries name/symbol USDa, project_uri avalonfinance.xyz, 8 decimals, and current supply 36,622,178.538622 USDa — matching DefiLlama's Movement balance exactly. The object is owned by the OFT module account 0x60e7d2fa84c5231e0fb11021b53edd2da49bfd5f13d1da8bcb7351b6795bdde1, which hosts oft_fa::OftImpl, oft_store::OftStore, oapp_store::OAppStore and access_control::Access_Config (LayerZero Move OFT). That module object is owned by 3-of-4 Move multisig 0xb79ef25caca96b35a45d58d771f162bd4c2e87984a2776a1cb029d7941cc9af8 (num_signatures_required = 3, four owners, 36 executed transactions). Access_Config lists minter/burner = two protocol module objects (atomic_mint 0xe6a4b5e1...92bc, lending pool_manager 0x78ed43a3...b086) and pause_admin = multisig account 0x630e9dd4...7dfa; paused = false.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "movement",
+        "controllerAddress": "0x60e7d2fa84c5231e0fb11021b53edd2da49bfd5f13d1da8bcb7351b6795bdde1",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:movement:0x60e7d2fa84c5231e0fb11021b53edd2da49bfd5f13d1da8bcb7351b6795bdde1"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Movement fullnode account resources for the USDa FA object (2026-07-20)",
+            "url": "https://mainnet.movementnetwork.xyz/v1/accounts/0x48b904a97eafd065ced05168ec44638a63e1e3bcaec49699f6b8dabbd1424650/resources"
+          },
+          {
+            "label": "Movement explorer (USDa OFT module account)",
+            "url": "https://explorer.movementnetwork.xyz/account/0x60e7d2fa84c5231e0fb11021b53edd2da49bfd5f13d1da8bcb7351b6795bdde1"
+          }
+        ]
+      },
+      {
+        "id": "nibiru:0xf4e097e36d2064e2bdca96e60439f3a369522003",
+        "sourceChain": "ethereum",
+        "destinationChain": "nibiru",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x2a5e79dee6e3544588bb3b675b1cc3354df2aefd (24,005-byte LayerZero endpoint, eid() = 30369 = Nibiru). owner() = 5-of-6 Safe 0xfe0a8730c0a782d7db369e70ceb5f009d25d4f43 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "nibiru",
+        "controllerAddress": "0xf4e097e36d2064e2bdca96e60439f3a369522003",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:nibiru:0xf4e097e36d2064e2bdca96e60439f3a369522003"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Nibiru token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://explorer.nibiru.fi/address/0xf4e097e36d2064e2bdca96e60439f3a369522003"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30332 = Sonic). owner() = 5-of-6 Safe 0x2c14c3cbc8d0e11a9eafe8289813edbb98b7445b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sonic",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sonic:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Sonic token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://sonicscan.org/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "taiko:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "taiko",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on Taiko; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "taiko",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:taiko:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Taiko token (endpoint/owner reads, 2026-07-20)",
+            "url": "https://taikoscan.io/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "sei:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "sei",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sei",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:sei:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Sei token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://seitrace.com/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "bitlayer:0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
+        "sourceChain": "ethereum",
+        "destinationChain": "bitlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint, eid() = 30314 = Bitlayer). owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bitlayer",
+        "controllerAddress": "0x91bd7f5e328aecd1024e4118ade0ccb786f55db1",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bitlayer:0x91bd7f5e328aecd1024e4118ade0ccb786f55db1"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Bitlayer token (endpoint/owner/Safe reads, 2026-07-20)",
+            "url": "https://www.btrscan.com/address/0x91bd7f5e328aecd1024e4118ade0ccb786f55db1"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "base:0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (15,057 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x61e7b331622b4dbbe22d70d1772af96a64fa2f72 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. The ethereum OFT's peers(30184) returns exactly this address (configured mesh peer), and totalSupply = 48.925168 USDa matches DefiLlama's Base balance exactly. A legacy USDa deployment also exists on Base at 0xff12470a969dd362eb6595ffb44c82c959fe9acc (same 15,057-byte OFT code, EOA owner) but holds zero totalSupply and is not the tracked deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:base:0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Base token (endpoint/owner/Safe/supply reads, 2026-07-20)",
+            "url": "https://basescan.org/address/0x2840f9d9f96321435ab0f977e7fdbf32ea8b304f#readContract"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x691f73f1ff3e915667441bc5e08b4decf222aa26 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30106) on the ethereum OFT returns exactly this address; totalSupply = 4.0 USDa matches DefiLlama's Avalanche balance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:avalanche:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Avalanche token (endpoint/owner/Safe/supply reads, 2026-07-20)",
+            "url": "https://snowscan.xyz/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "zksync:0xb8d7d88d042880ae87bb61de2dfff8441768766d",
+        "sourceChain": "ethereum",
+        "destinationChain": "zksync",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xb8d7d88d042880ae87bb61de2dfff8441768766d",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (69,856 bytes). endpoint() = 0xd07c30af3ff30d96bdc9c6044958230eb797ddbf (LayerZero endpoint on ZKsync Era, eid() = 30165). owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on ZKsync Era; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30165) on the ethereum OFT returns exactly this address; totalSupply = 10 USDa matches DefiLlama's ZKsync Era balance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "zksync",
+        "controllerAddress": "0xb8d7d88d042880ae87bb61de2dfff8441768766d",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:zksync:0xb8d7d88d042880ae87bb61de2dfff8441768766d"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa ZKsync Era token (endpoint/owner/supply reads, 2026-07-20)",
+            "url": "https://explorer.zksync.io/address/0xb8d7d88d042880ae87bb61de2dfff8441768766d"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "bob:0x250fc55c82bce84c991ba25698a142b21cdc778a",
+        "sourceChain": "ethereum",
+        "destinationChain": "bob",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x250fc55c82bce84c991ba25698a142b21cdc778a",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c. owner() = 5-of-6 Safe 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30279) on the ethereum OFT returns exactly this address; totalSupply = 22.00267 USDa matches DefiLlama's BOB balance. name()/symbol() = USDa/USDa.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bob",
+        "controllerAddress": "0x250fc55c82bce84c991ba25698a142b21cdc778a",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:bob:0x250fc55c82bce84c991ba25698a142b21cdc778a"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa BOB token (endpoint/owner/supply reads, 2026-07-20)",
+            "url": "https://explorer.gobob.xyz/address/0x250fC55c82bcE84C991ba25698A142B21cDC778A"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "morph-l2:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "morph-l2",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,910 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint on Morph, eid() = 30322). owner() = 5-of-6 Safe 0x00ab697b428250ab40a31a11c258215feb3d3a65 (171-byte proxy, getThreshold=5, getOwners = the same six Avalon signers: 0xd955F0c1...Cc093, 0x351806B5...B324, 0x85AF4b64...4b8A, 0x2557Ac54...beb1, 0x3b47b6a5...FC92, 0xe9Cd042b...59f6). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30322) on the ethereum and BSC OFTs returns exactly this address; totalSupply = 131.421519 USDa matches DefiLlama's Morph balance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "morph-l2",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:morph-l2:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Morph token (endpoint/owner/Safe/supply reads, 2026-07-20)",
+            "url": "https://explorer.morphl2.io/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "zircuit:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "zircuit",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: live LayerZero OFT (17,989 bytes). endpoint() = 0x6f475642a6e85809b1c36fa62763669b1b48dd5b (24,005-byte LayerZero endpoint on Zircuit, eid() = 30303). owner() = EOA 0xd955f0c167adbf7d553fc4d59a964a1b115cc093 (eth_getCode = 0 on Zircuit; one of the six Avalon Safe signers). Cross-chain mint/burn is OFT burn-mint over LayerZero messaging, so the mint surface on this chain is the OFT itself plus its owner/delegate. peers(30303) on the ethereum OFT returns exactly this address; totalSupply = 18.780684 USDa matches DefiLlama's Zircuit balance exactly.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "zircuit",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:zircuit:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Zircuit token (endpoint/owner/supply reads, 2026-07-20)",
+            "url": "https://explorer.zircuit.com/address/0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "corn:0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "sourceChain": "ethereum",
+        "destinationChain": "corn",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "protocol": "Avalon USDa via LayerZero OFT",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified 2026-07-20 via the Corn Blockscout explorer (all public Corn RPCs are key-gated or rate-limited, so evidence is the verified contract source plus explorer-indexed event logs rather than direct eth_call). The contract is source-verified as Avalon's USDa OFT (contract USDa is OFT, AccessControl, Pausable; MINT_ROLE/BURN_ROLE/ADMIN_ROLE/MANAGER_ROLE/PAUSE_ROLE, blacklist), constructor _lzEndpoint = 0xcb566e3b6934fa77258d68ea18e931fa75e1aaaa, _delegate = 0xd955f0c167adbf7d553fc4d59a964a1b115cc093. Event logs: OwnershipTransferred 0x0 -> 0xd955f0c1... (deploy) then -> 0x28367d583cc6bdfc7b4657cc3b462b6c8984f01b (block 107627), the same 5-of-6 Avalon Safe used on berachain/sei/bitlayer/bob; RoleGranted DEFAULT_ADMIN_ROLE and ADMIN_ROLE to that Safe, and MINT_ROLE + BURN_ROLE to 0x2152282f361d6345ada3b8a9476b5d8174d4973a. DefiLlama reports zero Corn supply (explorer total_supply 58.34 USDa, 17 holders).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "corn",
+        "controllerAddress": "0xff12470a969dd362eb6595ffb44c82c959fe9acc",
+        "failureDomainKeys": [
+          "protocol:layerzero",
+          "contract:corn:0xff12470a969dd362eb6595ffb44c82c959fe9acc"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDa Corn token (verified source + event logs, 2026-07-20)",
+            "url": "https://maizenet-explorer.usecorn.com/address/0xff12470a969Dd362EB6595FFB44C82c959Fe9ACc"
+          },
+          {
+            "label": "LayerZero OFT reference",
+            "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      }
+    ]
+  }
+}

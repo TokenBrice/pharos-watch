@@ -1,0 +1,52 @@
+{
+  "id": "ist-agoric",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "manual-review",
+    "summary": "IST was minted through Agoric Inter Protocol vault and PSM contracts. Governance approved the protocol wind-down in mid-2025, disabled new minting, and completed the sunset process on June 26, 2025.",
+    "controls": [
+      {
+        "chain": "agoric",
+        "label": "Inter Protocol vaults + PSM (minter contracts)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "IST mints only via overcollateralized Inter Protocol vaults or the PSM (1:1 against approved IBC stablecoins), each subject to a governance-set MintLimit; there is no centralized issuer minter.",
+        "evidence": "Inter Protocol docs describe IST minting through overcollateralized vaults and a Parity Stability Module, each with a governance-set mint limit."
+      },
+      {
+        "chain": "agoric",
+        "label": "BLD stakers + Economic Committee governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BLD stakers approve collateral onboarding and contract upgrades; the elected Economic Committee sets risk parameters and PSM/vault mint limits and can pause contracts in emergencies.",
+        "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing."
+      }
+    ],
+    "review": {
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Inter Protocol governance docs",
+          "url": "https://docs.inter.trade/inter-protocol-system-documentation/protocol-and-chain-governance"
+        },
+        {
+          "label": "Inter Protocol docs",
+          "url": "https://docs.inter.trade/"
+        }
+      ],
+      "sourceFreeRationale": "Vault + PSM mint mechanism and BLD/Economic-Committee governance confirmed from docs; Agoric chain governance state is not publicly queryable without a node endpoint, blocking on-chain confirmation.",
+      "unresolvedQuestions": [
+        "Confirm the current Economic Committee member addresses and governance contract state via Agoric REST API (e.g. https://main.api.agoric.net) or a live Agoric node before raising confidence."
+      ]
+    }
+  }
+}

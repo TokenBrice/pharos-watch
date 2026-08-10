@@ -1,0 +1,60 @@
+{
+  "id": "usdh-native-markets",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "USDH is designed by Native Markets and issued by Bridge Building, Inc. (a Stripe company, FinCEN MSB); the HyperEVM ERC-20 proxy uses AccessControl with one MINTER_ROLE holder (EOA) and one DEFAULT_ADMIN (EOA), both confirmed at HyperEVM block 37547275.",
+    "controls": [
+      {
+        "label": "Bridge (Stripe) issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "Bridge Building, Inc. operates the 1:1 mint/redeem for USDH against high-quality liquid reserves; supply is created by the issuer backend rather than any permissionless or user-collateralized route.",
+        "sources": [
+          {
+            "label": "USDH reserves",
+            "url": "https://usdh.com/reserves"
+          }
+        ]
+      },
+      {
+        "label": "USDH HyperEVM MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "chain": "hyperevm",
+        "address": "0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e",
+        "canRaiseCap": "unknown",
+        "evidence": "At HyperEVM block 37547275, MINTER_ROLE (getRoleMember index 0) on the USDH proxy 0x111111a1a0667d36bd57c0a9f569b98057111111 returned 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e; eth_getCode returned no bytecode (EOA confirmed). DEFAULT_ADMIN holder is EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (also EOA, eth_getCode=0x). Proxy impl slot = 0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9.",
+        "sources": [
+          {
+            "label": "USDH HyperEVM contract",
+            "url": "https://hypurrscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At HyperEVM block 37547275: MINTER_ROLE count=1, member=EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e (eth_getCode=0x); DEFAULT_ADMIN=EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (eth_getCode=0x); proxy impl=0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9. HyperCore tokenId 0x54e00a5988577cb0b0c9ab0cb6ef7f4b remains an issuer-controlled HyperCore asset; the on-chain EVM surface is fully confirmed. Issuer-controlled 1:1 mint/redeem through Bridge against HQLA with monthly BPM LLP attestations.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "USDH reserves",
+          "url": "https://usdh.com/reserves"
+        },
+        {
+          "label": "USDH docs",
+          "url": "https://docs.usdh.com"
+        },
+        {
+          "label": "USDH HyperEVM contract",
+          "url": "https://hypurrscan.io/address/0x111111a1a0667d36bd57c0a9f569b98057111111"
+        }
+      ]
+    }
+  }
+}

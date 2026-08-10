@@ -1,0 +1,10 @@
+{
+  "id": "emxn-telcoin",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: eMXN resolves to Yes because the asset is centrally issued by Telcoin and no manual override narrows that status.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  }
+}

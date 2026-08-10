@@ -1,0 +1,82 @@
+{
+  "id": "pathusd-bridge",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "pathUSD functions as Tempo routing and quote-token infrastructure; its payment-stablecoin treatment remains less clear than consumer-facing Bridge issued stablecoins."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Bridge Building Inc. (USDB/stablecoin issuer; a subsidiary of Bridge Ventures LLC — the Stripe-owned Delaware entity and OCC national trust bank charter applicant)",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC (conditional trust charter, Feb 2026); FinCEN / state money transmitter regulators (current)",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge (OCC filing ID 343543) received conditional approval for a federally chartered national trust bank on Feb 12, 2026 — the same track as Circle, Ripple, Paxos, BitGo, and Fidelity Digital Assets. This is a trust charter conditional approval under existing OCC authority, not a PPSI approval under the GENIUS Act; the PPSI application framework itself remains in proposed-rulemaking. Bridge publicly describes its stack as GENIUS Act-ready. pathUSD is Tempo's TIP-20 quote token issued via Bridge infrastructure; no token-specific GENIUS authorization was located.",
+    "references": [
+      {
+        "label": "Tempo pathUSD docs",
+        "url": "https://docs.tempo.xyz/protocol/exchange/pathUSD",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge OCC conditional trust charter approval (Feb 2026)",
+        "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-18",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CoinDesk: Bridge wins OCC initial approval for national trust bank charter",
+        "url": "https://www.coindesk.com/business/2026/02/17/stripe-s-stablecoin-firm-bridge-wins-initial-approval-of-national-bank-trust-charter",
+        "sourceKind": "news",
+        "sourceDate": "2026-02-17",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-12",
+        "accessedAt": "2026-06-18"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC conditional approvals registry (CAAS filing ID 343543)",
+        "Tempo pathUSD documentation",
+        "Bridge issuance documentation and legal terms",
+        "Bridge blog (OCC conditional approval announcement Feb 2026)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No PPSI approval, state-qualified approval, or official GENIUS Act application was located for pathUSD or Bridge; the OCC conditional trust charter is a separate pre-existing pathway. No PPSI approval has been granted to any issuer as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

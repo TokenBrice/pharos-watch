@@ -1,0 +1,93 @@
+{
+  "id": "hchf-hedera-swiss-franc",
+  "mintAuthority": {
+    "mintPath": "immutable-user-collateralized",
+    "authorityPosture": "none-resolved",
+    "confidence": "verified",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0.0.6070122",
+        "0.0.6070094",
+        "0.0.6070118",
+        "0.0.6070108",
+        "0.0.6070082"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 97626563,
+      "sources": [
+        {
+          "label": "Hedera Mirror Node HCHF token state",
+          "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+        },
+        {
+          "label": "HLiquity HCHFToken source",
+          "url": "https://github.com/SwisscoastAG/HLiquity/blob/master/packages/contracts/contracts/HCHFToken.sol"
+        },
+        {
+          "label": "Hedera ContractID key semantics",
+          "url": "https://hips.hedera.com/HIP/hip-206.html"
+        },
+        {
+          "label": "Hedera contract update authorization",
+          "url": "https://docs.hedera.com/hedera/sdks-and-apis/hedera-api/smart-contracts/contractupdate"
+        }
+      ]
+    },
+    "summary": "HCHF is minted only when immutable HLiquity BorrowerOperations creates user debt against HBAR Troves. The HTS supply key decodes to fixed HCHFToken contract 0.0.6070122 rather than an external keypair, and that wrapper accepts mint calls only from fixed BorrowerOperations 0.0.6070094. The token has no admin, freeze, KYC, wipe, pause, fee, or metadata key, and every mint-critical contract has renounced ownership with no contract-update history.",
+    "controls": [
+      {
+        "label": "HLiquity HCHFToken and fixed BorrowerOperations mint path",
+        "role": "other",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "chain": "hedera",
+        "address": "0.0.6070122",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No hard global supply cap. BorrowerOperations permits user debt only under the immutable 110% minimum collateral ratio, 150% critical collateral ratio, 1,780-HCHF minimum net debt, 20-HCHF gas compensation, and 0.5% borrowing-fee floor; HTS also applies its signed-int64 per-call bound.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 97626563,
+        "evidence": "At Hedera block 97626563, token 0.0.6070123 had no admin, freeze, KYC, wipe, pause, fee, or metadata key. Its sole supply-key protobuf decoded to ContractID 0.0.6070122, also the token treasury. Exact HCHFToken source permits only fixed BorrowerOperations 0.0.6070094 to call mint. HCHFToken, BorrowerOperations, TroveManager, StabilityPool, and PriceFeed each had owner() = 0, self-referential ContractID admin keys, no modified timestamp, and no CONTRACTUPDATEINSTANCE history. Transaction 0.0.842806-1783066707-152111688 at block 97172682 traces a user adjustTrove through BorrowerOperations and HCHFToken into HTS mintToken, confirming the live path.",
+        "sources": [
+          {
+            "label": "Hedera Mirror Node HCHF token state",
+            "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+          },
+          {
+            "label": "HLiquity HCHFToken source",
+            "url": "https://github.com/SwisscoastAG/HLiquity/blob/master/packages/contracts/contracts/HCHFToken.sol"
+          },
+          {
+            "label": "Hedera ContractID key semantics",
+            "url": "https://hips.hedera.com/HIP/hip-206.html"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At the fixed cutoff, historical Mirror Node state and contract calls resolved the full HCHF mint path. The token's sole supply key is fixed wrapper contract 0.0.6070122, not an external signer; exact source restricts wrapper mint to fixed BorrowerOperations 0.0.6070094. All five checked mint, collateral, liquidation, and oracle contracts had renounced owners and no external update history. A real mint trace at block 97172682 follows user Trove adjustment through BorrowerOperations into the HTS mint precompile.",
+      "reviewer": "Codex Safety Score V9 evidence audit",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Hedera Mirror Node HCHF token state",
+          "url": "https://mainnet.mirrornode.hedera.com/api/v1/tokens/0.0.6070123"
+        },
+        {
+          "label": "HLiquity HCHFToken source",
+          "url": "https://github.com/SwisscoastAG/HLiquity/blob/master/packages/contracts/contracts/HCHFToken.sol"
+        },
+        {
+          "label": "Hedera ContractID key semantics",
+          "url": "https://hips.hedera.com/HIP/hip-206.html"
+        },
+        {
+          "label": "Hedera contract update authorization",
+          "url": "https://docs.hedera.com/hedera/sdks-and-apis/hedera-api/smart-contracts/contractupdate"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "id": "frxusd-frax",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Financial Reserves and Asset Exploration Inc. (dba FRAX Inc)",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC (targeted; GENIUS Act nonbank PPSI pathway; no application on file as of 2026-06-07)",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://frax.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Frax governance passed FIP-430 (April 2025) and FIP-432 (July 2025) to prepare frxUSD for U.S. GENIUS Act payment-stablecoin charter compliance and formally transfer compliance and collateral management to FRAX Inc (formerly FinresPBC / Financial Reserves and Asset Exploration Inc.). The OCC digital-assets licensing application tracker (checked 2026-06-18) lists no pending application from Frax Finance, Financial Reserves and Asset Exploration Inc., or FRAX Inc. StableCharter.com categorizes status as 'PREPARING.' The GENIUS Act application framework itself remains in proposed-rule stage. authorizationStatus remains issuer-announced-intent — issuer intent is clear and well-documented but no official PPSI application has been filed. issuerPathway set to federal-qualified-nonbank reflecting the OCC nonbank PPSI route being pursued (not an IDI subsidiary, not foreign-registered); neither FIP explicitly names OCC but FRAX Inc. is a US nonbank entity with no state PPSI registration found, making the OCC federal nonbank pathway the only consistent federal route.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications (no Frax application on file)",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "frxUSD docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/frxusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "FIP-430 payment-stablecoin compliance proposal",
+        "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-04-21",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "FIP-432 transfer of compliance to FRAX Inc (passed July 2025)",
+        "url": "https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-07-07",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Frax transparency",
+        "url": "https://frax.com/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Digital Assets Licensing Applications tracker (no Frax/FRAX Inc entry found)",
+        "OCC GENIUS Act NPRM and public releases (Bulletin 2026-3)",
+        "Issuer disclosures and governance proposals (FIP-430, FIP-432)",
+        "StableCharter.com OCC charter tracker (Frax status: PREPARING)",
+        "Public U.S. PPSI approval, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Frax issuer-intent materials confirmed via FIP-430 and FIP-432; OCC licensing tracker checked 2026-06-18 shows no pending application from Frax Finance, Financial Reserves and Asset Exploration Inc., or FRAX Inc.; no PPSI approval, state-qualified approval, or official application found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

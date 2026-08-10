@@ -106,7 +106,7 @@ export function FreshnessIndicator({
               <RefreshCw className="h-3 w-3" aria-hidden="true" />
             ) : (
               <span
-                className={cn("h-1.5 w-1.5 rounded-full", isStale || isUnavailable ? "bg-amber-500" : "bg-green-500")}
+                className={cn("h-1.5 w-1.5 rounded-full", isStale || isUnavailable ? "bg-amber-500" : "bg-emerald-500")}
                 aria-hidden="true"
               />
             )}

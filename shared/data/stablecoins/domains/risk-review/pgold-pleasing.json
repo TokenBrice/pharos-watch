@@ -1,0 +1,152 @@
+{
+  "id": "pgold-pleasing",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: PGOLD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "PGOLD has issuer-native mint surfaces on Arbitrum and Ethereum, an Arbitrum-to-ApeChain LayerZero lock/mint route, and Chainlink CCIP routes whose directory lists an Arbitrum lock/release pool and Ethereum and Pharos burn/mint pools. The external validator and token-pool controls make external-lock-mint the conservative aggregate tier.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockRelease"
+        ]
+      },
+      {
+        "source": "l2beat",
+        "name": "Arbitrum Canonical",
+        "slug": "arbitrum",
+        "url": "https://l2beat.com/interop/protocols/arbitrum",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Chainlink PGOLD CCIP directory (accessed 2026-07-22)",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/PGOLD"
+      },
+      {
+        "label": "Pleasing PGOLD docs (accessed 2026-07-22)",
+        "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0x3e76bb02286bfeaa89dd35f11253f2cbce634f91",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x3e76bb02286bfeaa89dd35f11253f2cbce634f91",
+        "protocol": "Pleasing Gold issuer-native PGOLD (OFTAdapter hub)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native PGOLD on Arbitrum: token owner() = the same issuer EOA 0x142a96da210dec495a76e56058563549ac12bab4 (verified on-chain 2026-07-20); the OFTAdapter 0xbfd47e6098017c04957ba218dade65e23f661793 (token() = this PGOLD, LayerZero EndpointV2, owner 0x25a6a7fbe039c14b06adb6bda434b960981dbaed) locks it to back the ApeChain OFT representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "PGOLD on Arbiscan (owner()/adapter probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x3e76bb02286bfeaa89dd35f11253f2cbce634f91"
+          }
+        ]
+      },
+      {
+        "id": "apechain:0x64ae250e044688ddd04262f17daca23c28d241c2",
+        "sourceChain": "arbitrum",
+        "destinationChain": "apechain",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x64ae250e044688ddd04262f17daca23c28d241c2",
+        "protocol": "LayerZero OFT (Pleasing Gold)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: endpoint() of the ApeChain PGOLD token returns a LayerZero endpoint (0x6f475642a6e85809b1c36fa62763669b1b48dd5b) and peers(30110) returns the Arbitrum OFTAdapter 0xbfd47e6098017c04957ba218dade65e23f661793, so this deployment is the Pleasing Gold OFT and the OFT contract itself is the mint/burn authority for the representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "apechain",
+        "controllerAddress": "0x64ae250e044688ddd04262f17daca23c28d241c2",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:apechain:0x64ae250e044688ddd04262f17daca23c28d241c2"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "PGOLD on ApeChain explorer (endpoint()/peers() probed 2026-07-20)",
+            "url": "https://apescan.io/address/0x64ae250e044688ddd04262f17daca23c28d241c2"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xfb0bd86210d2a10543bb40289e92d108b3a5334f",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfb0bd86210d2a10543bb40289e92d108b3a5334f",
+        "protocol": "Pleasing Gold issuer-native PGOLD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native PGOLD on Ethereum: token owner() = issuer EOA 0x142a96da210dec495a76e56058563549ac12bab4 (verified on-chain 2026-07-20); no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "PGOLD on Etherscan (owner() probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0xfb0bd86210d2a10543bb40289e92d108b3a5334f"
+          }
+        ]
+      },
+      {
+        "id": "pharos:0x531f1e4a3ca96b9f42467659d8088b07fe8d2839",
+        "sourceChain": "arbitrum",
+        "destinationChain": "pharos",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x531f1e4a3ca96b9f42467659d8088b07fe8d2839",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Chainlink's PGOLD directory, observed 2026-07-22, lists this Pharos deployment with Burn/Mint token pool 0x944ED1b0a0f9de55a21F0372652ba1bF05194AA4; the Arbitrum PGOLD leg is listed with a Lock/Release pool, so the Pharos representation inherits CCIP validation and pool-control risk.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "pharos",
+        "controllerAddress": "0x944ED1b0a0f9de55a21F0372652ba1bF05194AA4",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:pharos:0x944ed1b0a0f9de55a21f0372652ba1bf05194aa4"
+        ],
+        "observedAt": "2026-07-22",
+        "sources": [
+          {
+            "label": "Chainlink PGOLD CCIP directory (accessed 2026-07-22)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/PGOLD"
+          }
+        ]
+      }
+    ]
+  }
+}

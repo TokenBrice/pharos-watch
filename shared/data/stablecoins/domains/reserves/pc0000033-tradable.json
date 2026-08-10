@@ -1,0 +1,10 @@
+{
+  "id": "pc0000033-tradable",
+  "reserves": [
+    {
+      "name": "Private-credit receivables / senior secured notes",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

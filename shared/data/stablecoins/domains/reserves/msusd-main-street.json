@@ -1,0 +1,10 @@
+{
+  "id": "msusd-main-street",
+  "reserves": [
+    {
+      "name": "Unverified Main Street redemption reserve and strategy liquidity",
+      "pct": 100,
+      "risk": "very-high"
+    }
+  ]
+}

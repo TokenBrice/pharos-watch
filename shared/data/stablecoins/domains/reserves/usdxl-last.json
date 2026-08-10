@@ -1,0 +1,59 @@
+{
+  "id": "usdxl-last",
+  "reserves": [
+    {
+      "name": "Current USDXL borrower collateral and protocol liquidity (allocation undisclosed)",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "HypurrFi borrowers and Last/HypurrFi protocol-controlled liquidity paths",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T40 wave-2 unknown reduction",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "HypurrFi USDXL docs",
+        "url": "https://docs.hypurrfi.com/products/usdxl"
+      },
+      {
+        "label": "HypurrFi lending market",
+        "url": "https://app.hypurrfi.com/"
+      },
+      {
+        "label": "Last (USDXL) website",
+        "url": "https://www.last.net/"
+      },
+      {
+        "label": "HyperEVM JSON-RPC (facilitator list re-pin)",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "rationale": "Re-opened 2026-07-30: USDXL remains a CDP-style synthetic dollar minted against HypurrFi borrower collateral (Aave V3 fork on HyperEVM) with separate facilitator paths (market loans, flash loans, USDT0 PSM). Live getFacilitatorsList() at HyperEVM block 41877329 still returns the three known facilitators, but neither Last nor HypurrFi publishes a dated collateral inventory or category weights across all paths. The 100% unresolved envelope is retained; no weights are inferred from eligible-asset lists. Wind-down notices (Legacy/Pooled market closure) do not create a published reserve split.",
+    "compositionBasis": "Issuer-documented collateral and liquidity families; current allocation unavailable",
+    "compositionAsOf": "2026-07-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The complete current collateral inventory, position weights, and protocol-liquidity allocation are unpublished. No percentage is inferred from eligible-asset lists or protocol descriptions.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Current USDXL borrower collateral and protocol liquidity (allocation undisclosed)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Reviewed primary materials identify possible collateral and liquidity families but do not publish a current all-path inventory or weights."
+      }
+    ]
+  }
+}

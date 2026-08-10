@@ -1,0 +1,78 @@
+{
+  "id": "zsd-zephyr-protocol",
+  "reserves": [
+    {
+      "name": "ZEPH protocol reserve",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Zephyr Protocol on-chain reserve (ZEPH base coin)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Zephyr reserve snapshots API",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      },
+      {
+        "label": "Zephyr Protocol whitepaper",
+        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+      },
+      {
+        "label": "Zephyr Protocol documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      }
+    ],
+    "rationale": "Zephyr's Djed-inspired design holds a single-asset reserve: ZSD is minted and redeemed only against ZEPH, so the complete reserve composition is 100% ZEPH held by the protocol. The live reserve-snapshot API captured 2026-07-20T20:12Z reports 4,449,790.59 ZEPH in reserve against 422,015.37 ZSD in circulation (reserve ratio 447.5%). The slice is named to match the live zephyr-scanner reserve-adapter identity so the reviewed classification overlays the captured exposure.",
+    "compositionBasis": "Zephyr Protocol single-asset reserve design and live reserve-snapshot API",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve is a single on-chain ZEPH position by protocol design; no other reserve asset exists. ZEPH market depth and the reserve-ratio health of the mechanism are tracked separately from composition.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ZEPH protocol reserve",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ZEPH is Zephyr Protocol's native base coin held as exogenous crypto collateral, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Zephyr Protocol on-chain reserve (protocol consensus custody)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Zephyr reserve snapshots API",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      },
+      {
+        "label": "Zephyr Protocol whitepaper",
+        "url": "https://zephyrprotocol.com/docs/zephyr_whitepaper.pdf"
+      }
+    ],
+    "uncertainty": "The ZEPH reserve is locked in the protocol's on-chain reserve address under consensus rules rather than with a legal custodian; legal segregation, insolvency treatment, and reuse restrictions are not applicable constructs the reviewed sources establish. Reserve balances are publicly verifiable through the snapshot API.",
+    "knownUnknownExposurePct": 100
+  }
+}

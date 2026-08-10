@@ -1,0 +1,94 @@
+{
+  "id": "susd-hedgecore",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "HedgeCore sUSD uses OZ AccessControl. The hUSDC wrapper contract (0x34EEa40FB…) holds MINTER_ROLE; DEFAULT_ADMIN_ROLE is held by EOA 0x30829883…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
+    "controls": [
+      {
+        "label": "HedgeCore hUSDC wrapper contract (MINTER_ROLE holder)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "bsc",
+        "address": "0x34eea40fb819bfc762b836dd6269f975227794d3",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() requires MINTER_ROLE and checks MAX_SUPPLY.",
+        "sources": [
+          {
+            "label": "HedgeCore hUSDC wrapper docs",
+            "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+          },
+          {
+            "label": "sUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0x34eea40fb819bfc762b836dd6269f975227794d3) returned true. wrapper() on sUSD returns the same address, cross-confirming the on-chain wrapper. eth_getCode on 0x34eea… returned 5674-byte contract. MAX_SUPPLY() = 1B tokens (immutable Solidity constant, no setter)."
+      },
+      {
+        "label": "HedgeCore DEFAULT_ADMIN_ROLE (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "chain": "bsc",
+        "address": "0x30829883394adfc36f95a84881be1254f60bdd35",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "sUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(DEFAULT_ADMIN_ROLE, 0x30829883394adfc36f95a84881be1254f60bdd35) returned true. Also confirmed as wrapper() owner(). eth_getCode on 0x30829… returned empty bytecode (EOA). This EOA can grantRole/revokeRole to change the wrapper minter."
+      },
+      {
+        "label": "HedgeCore operator (USDC deposit / Venus strategy / redemption)",
+        "role": "custodian",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "evidence": "HedgeCore docs describe an operator running USDC deposit, Venus lending strategy, and operator-controlled early redemption; wrapper mint is gated behind this operator-controlled flow."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 109836313,
+      "sources": [
+        {
+          "label": "HedgeCore sUSD token source",
+          "url": "https://bscscan.com/address/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d#code"
+        },
+        {
+          "label": "HedgeCore hUSDC wrapper source",
+          "url": "https://bscscan.com/address/0x34eea40fb819bfc762b836dd6269f975227794d3#code"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
+    "economicCapSemantics": "bounded",
+    "review": {
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow. The token and wrapper are non-upgradeable, the 1 billion sUSD ceiling is a Solidity constant, and no authority can raise it; the direct mint call is therefore economically bounded.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "HedgeCore hUSDC wrapper docs",
+          "url": "https://docs.hedgecore.io/docs/protocol/husdc-wrapper"
+        },
+        {
+          "label": "sUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0xbe1922750760c4cae69edb6fe79a22ae9b62a23d"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "id": "acred-apollo-securitize",
+  "reserves": [
+    {
+      "name": "Apollo Diversified Credit Fund NAV",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Apollo Diversified Credit Fund (Apollo Global Management; tokenized and administered by Securitize)",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize ACRED fund page",
+        "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "Chainlink ACRED NAV feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/acred-nav"
+      }
+    ],
+    "rationale": "ACRED is an ERC-4626 feeder share into the Apollo Diversified Credit Fund, so the fund NAV — tracked live by the Chainlink ACRED NAV oracle that backs the configured reserve adapter — is the reserve asset. Securitize describes the fund as multi-strategy private credit (direct lending, structured credit, performing credit, and dislocated credit) without dated public position weights, so the NAV is retained as one classified fund-share slice with the internal allocation recorded as the known unknown.",
+    "compositionBasis": "Chainlink ACRED NAV oracle (the configured live-reserve surface) and Securitize fund disclosures",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The fund's current allocation across its credit strategies, positions, maturities, and cash is not published as dated weights; only strategy-level descriptions are public.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Apollo Diversified Credit Fund NAV",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The fund publishes strategy-level descriptions of its diversified credit book but no dated constituent weights."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Apollo Diversified Credit Fund (underlying fund vehicle; custodian undisclosed in reviewed sources)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (tokenization, fund administration and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Securitize ACRED fund page",
+        "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      }
+    ],
+    "uncertainty": "ACRED represents a share of the Apollo Diversified Credit Fund, a regulated investment vehicle whose assets are held at the fund level apart from Securitize's tokenization stack, supporting structural bankruptcy remoteness; the fund's custodian, segregation terms, and any leverage or reuse are not disclosed in the reviewed public sources.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "id": "fdusd-first-digital",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Binance EEA MiCA restrictions — FDUSD among non-MiCA-compliant stablecoins delisted for EEA users",
+        "url": "https://www.binance.com/en/support/announcement/detail/bcaa1f68d6a6450099056ff694ad6c46"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register — First Digital/FDUSD not listed",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "First Digital Labs FDUSD",
+        "url": "https://www.firstdigitallabs.com/fdusd"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "FDUSD is a BVI-issued U.S. dollar stablecoin with 1:1 redemption, segregated reserves, and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "FD121 (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.firstdigitallabs.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "First Digital publishes reserve and redemption disclosures but no public U.S. GENIUS permitted-issuer approval or foreign-issuer registration was located. The applicable GENIUS Act pathway for FD121 (BVI) Limited is the OCC foreign payment stablecoin issuer (FPSI) registration route; however, the foreign-exception registration framework itself remains in proposed-rulemaking as of 2026-06-18 and no registration has been filed. First Digital has stated general intent to pursue licensing in select markets but has not made a GENIUS-specific public announcement.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Federal Register OCC GENIUS Act NPRM (FR 2026-04089)",
+        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "First Digital Labs transparency",
+        "url": "https://www.firstdigitallabs.com/transparency",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "First Digital Labs FDD terms",
+        "url": "https://www.firstdigitallabs.com/legal/fdd-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "First Digital Labs BVI issuance transition",
+        "url": "https://firstdigitallabs.com/news-and-insights/fdusd-transitions-to-bvi-based-issuance-structure",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act NPRM (FR 2026-04089) and public releases — no FDUSD or FD121 foreign-issuer registration found",
+        "Federal Register FDIC GENIUS Act NPRM (FR 2026-06974) — no FD121 reference",
+        "First Digital Labs news and transparency pages — licensing intent stated but no GENIUS application announced",
+        "SEC enforcement actions public list — no action against First Digital or FDUSD",
+        "OCC conditional trust-charter approvals list — FD121 not present",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified approval, or foreign-issuer registration was located for FDUSD or FD121 (BVI) Limited. The OCC foreign payment stablecoin issuer registration framework remains in proposed-rulemaking; no registrations have been granted to any entity as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

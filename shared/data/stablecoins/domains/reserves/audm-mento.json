@@ -1,0 +1,193 @@
+{
+  "id": "audm-mento",
+  "reserves": [
+    {
+      "name": "AUSD (Agora Dollar)",
+      "pct": 27.2,
+      "risk": "low",
+      "coinId": "ausd-agora",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora (AUSD issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 24.4,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "CELO",
+      "pct": 17.7,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT",
+      "pct": 12.3,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether (USDT issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "EURC (Circle euro stablecoin)",
+      "pct": 12,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (EURC issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC",
+      "pct": 3.9,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle (USDC issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.5,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (stETH liquid staking issuer)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "ETH",
+      "pct": 0.001,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network native asset held in Mento Reserve operations",
+      "riskFactors": [
+        "market",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      }
+    ],
+    "rationale": "AUDm is minted through Mento V3 CDPs collateralized in USDm, and USDm is backed by the shared Mento Reserve; the live mento adapter (breakerScope mento-reserve-audm) captures that shared reserve's constituent rows for AUDm, so the prior 100% USDm slice could not classify the captured CELO and stETH exposures. The envelope is restated at the constituent level on the adapter's exact identities and 2026-07-20 captured weights from the issuer-run reserve analytics API ($19.12M total, grouped across chains and custodians); the USDm CDP leg is described in the collateral field and is not duplicated as a second layer. Each stablecoin constituent links to its tracked asset, and CELO, stETH, and the residual ETH dust now carry explicit classification and failure-domain identity. The live adapter refreshes weights at runtime.",
+    "compositionBasis": "Mento reserve analytics API constituent identities and weights captured 2026-07-20; AUDm CDP collateral is USDm, whose backing is this shared reserve mix",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every constituent of the shared Mento Reserve captured by the live adapter is identified and either linked to a tracked stablecoin or explicitly classified. Constituent weights drift and are refreshed by the live adapter.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 17.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "ETH",
+        "pct": 0.001,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The residual WETH dust grouped by the adapter is external cryptoasset collateral, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Mento Reserve safes and protocol contracts",
+        "role": "other"
+      },
+      {
+        "name": "Mento governance-approved strategies and operational accounts",
+        "role": "other"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "conditional",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento protocol documentation",
+        "url": "https://docs.mento.org/"
+      }
+    ],
+    "uncertainty": "Reserve assets backing USDm (and transitively AUDm) are held in on-chain Mento Reserve safes, liquidity contracts, operational accounts, and governance-approved strategies rather than with a legal custodian, so legal segregation, insolvency treatment, and strategy-specific reuse limits are not established by the reviewed sources; constituent-level custody (e.g. Circle, Tether, Agora, Sky, Lido) sits with each issuer.",
+    "knownUnknownExposurePct": 100
+  }
+}

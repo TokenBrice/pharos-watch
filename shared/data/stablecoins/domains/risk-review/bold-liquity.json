@@ -1,0 +1,621 @@
+{
+  "id": "bold-liquity",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Liquity BOLD verified contract source",
+        "url": "https://etherscan.io/address/0x6440f144b7e50D6a8439336510312d2F54beB01D#code"
+      },
+      {
+        "label": "Liquity V2 technical documentation",
+        "url": "https://docs.liquity.org/v2-documentation/technical-docs-and-audits"
+      },
+      {
+        "label": "Chainlink BOLD CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+      }
+    ],
+    "evidence": "The immutable Ethereum BOLD token has renounced ownership and limits minting and burning to registered Liquity branch contracts; its verified source exposes no holder blacklist, freeze, seizure, or global pause. Non-Ethereum BOLD is transported through reviewed Chainlink CCIP lock/release and burn/mint pools, which control bridge supply but do not establish an issuer-operated holder blacklist on the canonical token.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-13",
+      "reviewer": "Codex data review",
+      "rationale": "BOLD has separately parameterized WETH, wstETH, and rETH collateral branches whose oracle fallback, liquidation thresholds, Stability Pools, and shutdown behavior can differ.",
+      "sources": [
+        {
+          "label": "Liquity V2 contracts and mainnet addresses",
+          "url": "https://github.com/liquity/bold/"
+        },
+        {
+          "label": "Liquity V2 risk disclosure",
+          "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+        }
+      ]
+    },
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Liquity BOLD contract docs",
+        "url": "https://github.com/liquity/bold/"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      }
+    ],
+    "branches": [
+      {
+        "id": "weth",
+        "label": "WETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "WETH collateral uses Liquity V2 external feeds with response validation, last-good-price fallback, and branch shutdown if oracle checks fail.",
+        "collateralAssets": [
+          "WETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Liquity V2 contracts and mainnet addresses",
+            "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          }
+        ],
+        "fallbackBehavior": "An invalid or stale ETH/USD response shuts the WETH branch down and the price feed returns its last good price.",
+        "collateralParameters": [
+          {
+            "asset": "WETH",
+            "maximumLtvPct": 90.91,
+            "minimumCollateralRatioPct": 110,
+            "shutdownCollateralRatioPct": 110
+          }
+        ]
+      },
+      {
+        "id": "wsteth",
+        "label": "wstETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "wstETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Liquity V2 contracts and mainnet addresses",
+            "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "stETH / USD push oracle multiplied by the wstETH / stETH exchange rate",
+            "address": "0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Lido",
+            "path": "wstETH / stETH canonical exchange rate",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "chain": "ethereum"
+          }
+        ],
+        "fallbackBehavior": "A failed stETH/USD feed substitutes ETH/USD times the canonical wstETH rate and takes the minimum with lastGoodPrice; ETH/USD or canonical-rate failure uses lastGoodPrice and shuts the branch.",
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 83.33,
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120
+          }
+        ]
+      },
+      {
+        "id": "reth",
+        "label": "rETH branch",
+        "tier": "redundant-with-failover",
+        "summary": "rETH collateral uses Liquity V2 external feeds with validation, last-good-price handling, and per-branch shutdown behavior.",
+        "collateralAssets": [
+          "rETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Liquity V2 contracts and mainnet addresses",
+            "url": "https://github.com/liquity/bold/"
+          },
+          {
+            "label": "Liquity V2 borrowing and liquidations",
+            "url": "https://docs.liquity.org/v2-faq/borrowing-and-liquidations"
+          },
+          {
+            "label": "Liquity V2 risk disclosure",
+            "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+          }
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25520150,
+        "liquidationMechanism": "Immediate Stability Pool offset, then permissionless just-in-time liquidation or same-branch redistribution.",
+        "liquidationDelaySec": 0,
+        "backstop": "Each branch has a dedicated Stability Pool; uncovered debt can use just-in-time BOLD or same-branch redistribution.",
+        "shutdownOrBadDebtBehavior": "Oracle failure or a low branch collateral ratio permanently shuts that branch and enables urgent redemptions; residual unbacked debt remains a risk to all BOLD holders.",
+        "feeds": [
+          {
+            "provider": "Chainlink",
+            "path": "rETH / ETH push oracle multiplied by ETH / USD",
+            "address": "0x536218f9E9Eb48863970252233c8F271f554C2d0",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "stalenessBoundSec": 172800
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle",
+            "address": "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "stalenessBoundSec": 86400
+          },
+          {
+            "provider": "Rocket Pool",
+            "path": "rETH / ETH canonical exchange rate used as a bound and fallback",
+            "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+            "chain": "ethereum"
+          }
+        ],
+        "fallbackBehavior": "A failed rETH/ETH market feed substitutes the canonical rETH exchange rate and takes the minimum with lastGoodPrice; ETH/USD or canonical-rate failure uses lastGoodPrice and shuts the branch.",
+        "collateralParameters": [
+          {
+            "asset": "rETH",
+            "maximumLtvPct": 83.33,
+            "minimumCollateralRatioPct": 120,
+            "shutdownCollateralRatioPct": 120
+          }
+        ]
+      }
+    ],
+    "branchModel": "multi-branch"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "BOLD is Ethereum-issued by Liquity V2 and its multichain route is documented through Chainlink CCIP. The route uses an external interoperability network with token-transfer validation assumptions, not only a native rollup bridge.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip/concepts/architecture/overview",
+        "bridgeTypes": [
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Liquity BOLD CCIP announcement",
+        "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+      },
+      {
+        "label": "Chainlink CCIP architecture",
+        "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+      },
+      {
+        "label": "Chainlink BOLD CCIP directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+        "protocol": "Liquity V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Arbitrum BOLD BurnMintTokenPool",
+            "url": "https://arbiscan.io/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
+          }
+        ]
+      },
+      {
+        "id": "base:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "base",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Base BOLD BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0x10a9de252eb9e11841fa58b18fd09ab43d4b7d92"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "OP Mainnet BOLD BurnMintTokenPool",
+            "url": "https://optimistic.etherscan.io/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:avalanche:0xcfc5092583c1b2122f221f524c198abdecbf3d1b"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Avalanche BOLD BurnMintTokenPool",
+            "url": "https://snowtrace.io/address/0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b#code"
+          }
+        ]
+      },
+      {
+        "id": "hyperevm:0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "sourceChain": "ethereum",
+        "destinationChain": "hyperevm",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:hyperevm:0x48fd11f0f21bac2d8486e6682fe1e2cb98f9aab1"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "HyperEVM BOLD BurnMintTokenPool",
+            "url": "https://hyperevmscan.io/address/0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1#code"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "sourceChain": "ethereum",
+        "destinationChain": "sonic",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf05a207442f14e446b0e32b12d2043bfc68cb1c9",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "controllerChain": "sonic",
+        "controllerAddress": "0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:sonic:0xcfc5092583c1b2122f221f524c198abdecbf3d1b"
+        ],
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-14",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Sonic BOLD BurnMintTokenPool",
+            "url": "https://sonicscan.org/address/0xCfC5092583C1B2122F221F524C198ABDeCBf3D1b#code"
+          }
+        ]
+      },
+      {
+        "id": "hyperliquid:0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "sourceChain": "ethereum",
+        "destinationChain": "hyperliquid",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x84533b1512a3a23f0c9668d88fdf86feffdbb11a",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "BOLD on Hyperliquid L1 is the L1 representation of the HyperEVM BOLD deployment (same address 0x84533b1512a3a23f0c9668d88fdf86feffdbb11a), reached through Hyperliquid's native L1-EVM linkage — there is no separate external bridge. Mint authority therefore rests with the HyperEVM Chainlink CCIP BurnMintTokenPool 0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1, exactly as for the reviewed HyperEVM route.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "hyperevm",
+        "controllerAddress": "0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:hyperevm:0x48fd11f0f21bac2d8486e6682fe1e2cb98f9aab1"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "HyperEVM BOLD BurnMintTokenPool",
+            "url": "https://hyperevmscan.io/address/0x48Fd11f0F21bAC2D8486E6682fE1E2Cb98f9AAb1#code"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0x03569cc076654f82679c4ba2124d64774781b01d",
+        "sourceChain": "ethereum",
+        "destinationChain": "scroll",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x03569cc076654f82679c4ba2124d64774781b01d",
+        "protocol": "Chainlink CCIP",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "BOLD on Scroll is the Chainlink CCIP representation at the shared CREATE2 address 0x03569cc076654f82679c4ba2124d64774781b01d (code and name 'BOLD Stablecoin' read 2026-07-20); its Scroll CCIP pool 0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92 reports typeAndVersion 'BurnMintTokenPool 1.5.1' and getToken() = the BOLD token (reads 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "scroll",
+        "controllerAddress": "0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:scroll:0x10a9de252eb9e11841fa58b18fd09a4b7d92"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Liquity BOLD CCIP announcement",
+            "url": "https://www.liquity.org/blog/liquity-adopts-the-chainlink-standard-for-cross-chain-interoperability-for-bold"
+          },
+          {
+            "label": "Chainlink CCIP architecture",
+            "url": "https://docs.chain.link/ccip/concepts/architecture/overview"
+          },
+          {
+            "label": "Chainlink BOLD CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/BOLD"
+          },
+          {
+            "label": "Scroll BOLD BurnMintTokenPool (typeAndVersion read 2026-07-20)",
+            "url": "https://scrollscan.com/address/0x10A9DE252EB9e11841fa58B18fD09aB43d4B7D92#code"
+          }
+        ]
+      }
+    ]
+  }
+}

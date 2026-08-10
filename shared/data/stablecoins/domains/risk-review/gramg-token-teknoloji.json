@@ -1,0 +1,69 @@
+{
+  "id": "gramg-token-teknoloji",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: GRAMG resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "GRAMG uses Token Teknoloji issuer-native StableCoin contracts on Avalanche and Polygon. Direct source verification resolves externalTransfer/externalTransferFrom burn/mint functions controlled by the issuer supply manager, so the previous Across/Avalanche route signal is not the durable supply path.",
+    "reviewedAt": "2026-06-30",
+    "reviewer": "Codex static correction review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "Token Teknoloji StableCoin externalTransfer route",
+        "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "bridgeTypes": [
+          "issuer-native-burn-mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Token Teknoloji GRAMG product page",
+        "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
+      },
+      {
+        "label": "GRAMG Avalanche contract source",
+        "url": "https://snowtrace.io/address/0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "destinationChain": "avalanche",
+        "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-30"
+      },
+      {
+        "id": "polygon:0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "destinationChain": "polygon",
+        "contractAddress": "0xae55ab6a966863cb4c774ba8e6c0a37cfbea01f9",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-30"
+      }
+    ]
+  }
+}

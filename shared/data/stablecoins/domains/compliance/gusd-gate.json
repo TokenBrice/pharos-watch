@@ -1,0 +1,66 @@
+{
+  "id": "gusd-gate",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Gate USD (GUSD) is explicitly characterized by Gate as an investment certificate with an appreciation attribute backed by U.S. Treasury RWA assets, not as a payment stablecoin. Users mint GUSD 1:1 with USDT/USDC and receive principal plus accrued interest upon redemption — a return-above-par design inconsistent with GENIUS Act payment stablecoin definition (redeemable at par, designed as medium of payment/settlement). Gate.io also lists the United States as a Restricted Location in its Terms of Service, further removing this token from GENIUS Act payment-stablecoin reach. The issuing entity operates from the Cayman Islands.",
+      "references": [
+        {
+          "label": "Gate GUSD launch press release (Chainwire/Gate, Aug 29 2025)",
+          "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-08-29",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "CoinGecko: What Is Gate's GUSD?",
+          "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin",
+          "sourceKind": "news",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "Gate.io User Agreement (Restricted Locations — includes United States)",
+          "url": "https://www.gate.io/user-agreement",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Gate Technology Inc. (Cayman Islands)",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Gate explicitly brands GUSD as an investment certificate with an appreciation attribute, not a medium of exchange. Upon redemption users receive principal plus compounded interest — a return-above-par mechanism incompatible with the GENIUS Act payment stablecoin definition (par redemption, payment/settlement function). Gate.io lists the US as a Restricted Location. No GENIUS Act pathway assessed.",
+    "references": [
+      {
+        "label": "Gate GUSD product page",
+        "url": "https://www.gate.com/gusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Gate GUSD mint and redeem guide",
+        "url": "https://www.gate.com/blog/how-to-mint-and-redeem-gate-gusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Gate GUSD launch press release (Chainwire, Aug 29 2025)",
+        "url": "https://chainwire.org/2025/08/29/gate-launches-gusd-a-stable-investment-backed-by-real-world-assets/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-08-29",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CoinGecko: What Is Gate's GUSD?",
+        "url": "https://www.coingecko.com/learn/what-is-gusd-gate-stablecoin",
+        "sourceKind": "news",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  }
+}

@@ -23,13 +23,6 @@
     "country": "Brazil",
     "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BRD resolves to Yes because existing metadata classifies the asset as centralized and a single Brazilian issuer (CF Inovacao) controls mint and redemption authority.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "collateralQuality": "rwa",

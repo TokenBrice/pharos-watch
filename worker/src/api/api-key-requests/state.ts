@@ -21,7 +21,6 @@ export async function insertPendingRequest(
     requestId: string;
     normalizedEmail: string;
     emailHash: string;
-    intendedEndpoints: string[];
     ipHash: string;
     userAgentHash: string | null;
     tokenHash: string;
@@ -41,7 +40,6 @@ export async function insertPendingRequest(
        organization,
        project_url,
        use_case,
-       intended_endpoints_json,
        expected_cadence,
        expected_volume,
        accepted_terms,
@@ -55,7 +53,7 @@ export async function insertPendingRequest(
        created_at,
        updated_at
      )
-     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+     VALUES (?, 'pending_verification', ?, ?, 0, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
   )
     .bind(
       input.requestId,
@@ -65,7 +63,6 @@ export async function insertPendingRequest(
       normalizeOptionalText(input.parsed.organization),
       normalizeOptionalText(input.parsed.projectUrl),
       input.parsed.useCase.trim(),
-      JSON.stringify(input.intendedEndpoints),
       input.parsed.expectedCadence,
       normalizeOptionalText(input.parsed.expectedVolume),
       SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,

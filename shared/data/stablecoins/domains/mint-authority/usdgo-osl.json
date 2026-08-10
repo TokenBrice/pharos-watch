@@ -1,0 +1,244 @@
+{
+  "id": "usdgo-osl",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "USDGO is a Solana Token-2022 issuer token. C2QJ... is the externally signable mint and permanent-delegate authority; a finalized mint transaction confirms it as the sole on-chain signer. Separate configuration, pause, freeze, and fee-withdrawal EOAs cannot mint. The shared Token-2022 program remains upgradeable through a 4/6 Squads V3 multisig with no enforced delay.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      ],
+      "implementationAddresses": [
+        "DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY"
+      ],
+      "adminAddresses": [
+        "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Solana Token-2022 shared-program upgrade authority",
+      "observedAt": "2026-07-13",
+      "observedBlock": 432729217,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solana program deployment model",
+          "url": "https://solana.com/docs/programs/deploying"
+        },
+        {
+          "label": "Token-2022 Neodyme audit",
+          "url": "https://neodyme.io/reports/Token%202022%20-%202024.pdf"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "label": "USDGO Token-2022 mint and permanent-delegate authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "capDescription": "No configured per-mint supply cap; the authority can mint up to Token-2022 integer bounds.",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729217,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Observed USDGO mint transaction",
+            "url": "https://explorer.solana.com/tx/2scWvDhJrCU3PbMii4sqhEiyP2pvLDfBLsLW4sYYzYj3rpBLms2xtYUfKo91nU4pBxMEgJzdbfwL4YJP19Ucavy"
+          }
+        ],
+        "evidence": "At finalized slot 432729217 this system-owned, on-curve address was both mintAuthority and permanentDelegate. A successful mintToChecked at slot 432714040 had this address as the transaction's only signer. No address-bound public evidence establishes whether the off-chain key uses MPC or HSM."
+      },
+      {
+        "chain": "solana",
+        "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
+        "label": "Solana Token-2022 shared-program upgrade authority",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729191,
+        "failureDomainKeys": [
+          "platform:solana-token-2022-program"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "Latest Token-2022 upgrade transaction",
+            "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
+          }
+        ],
+        "evidence": "Token-2022 ProgramData DoU57... named AeLm... as upgrade authority. AeLm... is authority index 1 of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ, whose current account data reports threshold 4 and six members. The latest upgrade executed with four recorded approvals. Squads V3 itself is immutable and enforces no timelock."
+      },
+      {
+        "chain": "solana",
+        "address": "8N2NFYQ5VMaoDGMAcUbfzdeJqvok6LQs2E9BxDK6mMAE",
+        "label": "USDGO Token-2022 configuration authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729217,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "System-owned, on-curve authority for metadata, transfer-fee configuration, confidential-transfer configuration, transfer-hook configuration, and mint closure; it is not mintAuthority."
+      },
+      {
+        "chain": "solana",
+        "address": "fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx",
+        "label": "USDGO pause authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729217,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Token-2022 pausableConfig named this system-owned, on-curve address; paused was false."
+      },
+      {
+        "chain": "solana",
+        "address": "FiV6goxf5fYfw9y7XwuG8bVAG6bqTb1sR1rrLomjkXa3",
+        "label": "USDGO freeze authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729217,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "The live Token-2022 mint named this system-owned, on-curve address as freezeAuthority; it cannot mint."
+      },
+      {
+        "chain": "solana",
+        "address": "3WNoR4qjdBehtB6aa6fgz6qX2eceo5UiioV2niFfw26w",
+        "label": "USDGO transfer-fee withdrawal authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432729217,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "The live Token-2022 transfer-fee configuration named this system-owned, on-curve address as the withheld-fee withdrawal authority; it cannot mint."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Deloitte USDGO reserve examination, May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDGO_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "OCC active national banks by name",
+          "url": "https://occ.gov/topics/charters-and-licensing/financial-institution-lists/national-by-name.pdf"
+        },
+        {
+          "label": "OCC news release 2021-6: Anchorage Digital Bank national trust bank charter",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2021/nr-occ-2021-6.html"
+        },
+        {
+          "label": "OCC news release 2025-80: termination of the April 21, 2022 consent order (AA-ENF-2025-44)",
+          "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-80.html"
+        },
+        {
+          "label": "USDGO website",
+          "url": "https://www.usdgo.com/"
+        },
+        {
+          "label": "USDGO reserve attestations",
+          "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+        },
+        {
+          "label": "USDGO token metadata",
+          "url": "https://static.anchorage-production.com/stablecoins/USDGO/metadata.json"
+        },
+        {
+          "label": "USDGO Solscan token",
+          "url": "https://solscan.io/token/72puLt71H93Z9CzHuBRTwFpL4TG3WZUhnoCC7p8gxigu"
+        },
+        {
+          "label": "Observed USDGO mint transaction",
+          "url": "https://explorer.solana.com/tx/2scWvDhJrCU3PbMii4sqhEiyP2pvLDfBLsLW4sYYzYj3rpBLms2xtYUfKo91nU4pBxMEgJzdbfwL4YJP19Ucavy"
+        },
+        {
+          "label": "Squads V3 source",
+          "url": "https://github.com/Squads-Protocol/squads-mpl"
+        },
+        {
+          "label": "Token-2022 Neodyme audit",
+          "url": "https://neodyme.io/reports/Token%202022%20-%202024.pdf"
+        }
+      ],
+      "evidence": "At finalized slot 432729217, Solana Token-2022 account decoding identified the exact mint/permanent-delegate, configuration, pause, freeze, and fee-withdrawal authorities. A successful mintToChecked transaction at slot 432714040 proved the mint authority was the transaction's only signer. Token-2022 ProgramData resolved the shared program upgrade authority to a 4/6 Squads V3 multisig; the latest upgrade executed with four approvals and no enforced timelock. Off-chain MPC/HSM custody remains unclaimed because no address-bound attestation was found.",
+      "reviewer": "Codex Safety Score V9 data research / SOL-IV calibration",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable"
+    }
+  }
+}

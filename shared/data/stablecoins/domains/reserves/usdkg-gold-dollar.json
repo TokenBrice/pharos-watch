@@ -1,0 +1,82 @@
+{
+  "id": "usdkg-gold-dollar",
+  "reserves": [
+    {
+      "name": "Physical gold (LBMA Good Delivery bars)",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "LLC Virelint Group and the USDKG reserve-custody structure",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve re-verification (usdkg-gold-dollar)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kreston Digital Assets Ltd ISRS 4400 AUP gold-reserve report (as of 2025-11-28; letter 2025-11-30)",
+        "url": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf"
+      },
+      {
+        "label": "USDKG transparency — Reserves Composition and Q4 2025 report index",
+        "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Kreston gold-audit summary (2025-12-08)",
+        "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: (1) Kreston Digital Assets Ltd ISRS 4400 (Revised) Agreed-Upon Procedures PDF states gold reserves held on 28 Nov 2025 are the backing asset for USDKG, documents hand-over of 30 bars totaling around 376 kg via LLC Virelint Group into bank storage in 15 sealed boxes, and values the gold at $50,331,256 (LBMA $4,163.475/oz) with no non-gold reserve category in scope. (2) usdkg.com/transparency still presents a single Reserves Composition category—Collateralization (Gold) $54.8M against USDKG in Circulation $50M—indexes the same Q4/November 2025 Kreston PDF, and states quarterly audits verify circulating tokens remain fully backed by physical gold reserves. (3) Issuer audit summary (2025-12-08) independently restates Kreston's AUP covering existence, ownership, quantity, valuation, serial/purity documentation, sealed storage, transport records, and custody agreements for the same 30-bar / ~376 kg physical gold stock, and states the stablecoin is backed entirely by physical gold. Composition remains a single 100% physical-gold slice; no second asset class is disclosed. The active reserve-risk rubric classifies physical bullion as very-low risk; structured risk factors retain gold-market, physical-custody, counterparty, legal, redemption-liquidity, and concentration exposures. Formal quantity pin remains the 2025-11-28 AUP; live portal figures still show gold-only collateralization. Lockstep pin 2026-08-08: compositionAsOf anchored to the November 2025 Kreston AUP that latestReport records - the only artefact valuing the gold ($50.3M, 30 bars ~376kg); the composition is a single allocated-gold category and the live transparency page read of 2026-07-28 is retained as corroboration of category continuity, not of quantity.",
+    "compositionBasis": "Kreston Digital Assets ISRS 4400 gold verification as of 28 November 2025 (single physical-gold category), corroborated by the live gold-only page",
+    "compositionAsOf": "2025-11-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class remains unidentified; current bar-level public allocation, named depository bank, custody concentration, and holder redemption timing remain outside the composition percentage.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Physical gold (LBMA Good Delivery bars)",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold is an exogenous commodity reserve rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "LLC Virelint Group (reserve custodian; gold stored in sealed boxes at an unnamed bank)",
+        "role": "custodian",
+        "jurisdiction": "Kyrgyzstan"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-8 (lead rwausdi-multipli)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "USDKG transparency and Q4 2025 reserve report index",
+        "url": "https://www.usdkg.com/transparency"
+      },
+      {
+        "label": "USDKG Kreston gold-audit summary (2025-12-08)",
+        "url": "https://www.usdkg.com/blog/usdkgs-gold-audit-a-new-standard-for-stablecoins"
+      }
+    ],
+    "uncertainty": "Kreston's quarterly engagement and USDKG's transparency page verify roughly 376 kg of LBMA Good Delivery gold held in sealed boxes at an unnamed bank under LLC Virelint Group's custody; the depository bank, bankruptcy remoteness, and any reuse permissions are not disclosed.",
+    "knownUnknownExposurePct": 100
+  }
+}

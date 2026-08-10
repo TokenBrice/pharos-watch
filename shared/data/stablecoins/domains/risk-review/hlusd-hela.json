@@ -1,0 +1,20 @@
+{
+  "id": "hlusd-hela",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "HeLa HLUSD stablecoin governance (blacklist roles)",
+        "url": "https://docs.helalabs.com/hlusd/stablecoin-governance"
+      },
+      {
+        "label": "HeLa whitepaper §6.2 Stablecoin Governance (blacklist action)",
+        "url": "https://helalabs.com/hela-whitepaper.pdf"
+      }
+    ],
+    "evidence": "2026-07-30 re-read of HeLa stablecoin-governance docs: BlacklistProposer/BlacklistVoter roles submit and vote blacklist proposals; when blacklistQuorum is reached the target becomes BlacklistedUser and cannot send any transactions that change that runtime's state (including queries). The HeLa whitepaper §6.2 independently lists blacklist among the six on-chain stablecoin actions under the same role/quorum model. Scope is runtime-native HLUSD on HeLa Official Runtime (chain id 8668, mainnet-rpc.helachain.com); CoinGecko lists no external-platform contract, and Pharos has no modeled EVM token surface. No separate global transfer-pause or rate-limit control is published; holder-level freeze/censor is the blacklist path. Failure domain: protocol:hela-runtime-stablecoin-governance.",
+    "reviewer": "Grok T10 safety-v9 unknown-reduction w2",
+    "reviewedAt": "2026-07-30"
+  }
+}

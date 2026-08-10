@@ -1,0 +1,60 @@
+{
+  "id": "usdglo-glo",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDGLO is a Brale-issued U.S. dollar payment stablecoin with 1:1 redemption and monthly attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Brale Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://brale.xyz/stablecoins/USDGLO",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "latestReportDate": "2026-05-31",
+    "references": [
+      {
+        "label": "Brale USDGLO",
+        "url": "https://brale.xyz/stablecoins/USDGLO",
+        "sourceKind": "auditor-report"
+      },
+      {
+        "label": "Brale terms",
+        "url": "https://brale.xyz/legal/terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Brale disclosures",
+        "url": "https://brale.xyz/legal/disclosures",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Brale USDGLO reserve, terms, and disclosure pages",
+        "state money-transmitter public licensing context",
+        "Brale blog (brale.xyz/blog) — no GENIUS Act / PPSI filing announcements found as of 2026-06-18",
+        "Web searches for Brale PPSI authorization, OCC charter, and GENIUS Act intent — no public filing or announced intent found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official application source was located for USDGLO. Brale operates as a FinCEN-registered MSB with state money-transmitter licenses; no OCC charter application or PPSI announcement found as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

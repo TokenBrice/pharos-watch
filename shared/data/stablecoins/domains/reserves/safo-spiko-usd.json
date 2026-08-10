@@ -1,0 +1,80 @@
+{
+  "id": "safo-spiko-usd",
+  "reserves": [
+    {
+      "name": "Fully collateralized overnight total-return swap exposure",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "BNP Paribas",
+      "riskFactors": [
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "legal",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Dollar product page",
+        "url": "https://www.spiko.io/spiko-dollar"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      },
+      {
+        "label": "Spiko SAFO share-class totals API",
+        "url": "https://public-api.spiko.io/share-classes/SAFO/totals"
+      }
+    ],
+    "rationale": "The producer emits one 100% fully collateralized overnight total-return swap identity for the Spiko Amundi Overnight Swap Fund USD share class. Spiko's product page identifies BNP Paribas as the current TRS counterparty paying SOFR + 0.35% daily against a fund-owned equity basket with daily margining, daily dealing, and residual counterparty and market-liquidity risk; this review classifies that exact producer identity without treating the fund's changing securities portfolio as a separately weighted reserve slice. This supersedes the prior blocked review: the counterparty and structure are disclosed on the current product page and in the SICAV legal documents.",
+    "compositionBasis": "Exact spiko-api single-asset identity cross-checked against Spiko's current product page, SICAV prospectus, and share-class totals API",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No exposure outside the emitted 100% TRS identity is indicated. The fund's changing equity-basket portfolio and any future change of eligible TRS counterparty are look-through details, not separately reported producer slices.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Fully collateralized overnight total-return swap exposure",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The total-return swap is an external UCITS fund exposure with a bank counterparty rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "CACEIS Bank",
+        "role": "custodian",
+        "jurisdiction": "France"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Dollar product page",
+        "url": "https://www.spiko.io/spiko-dollar"
+      },
+      {
+        "label": "Spiko SICAV prospectus",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf"
+      }
+    ],
+    "uncertainty": "Spiko identifies CACEIS as depositary bank for the AMF-regulated UCITS fund, whose assets are legally segregated from the management company and custodian; the reviewed sources do not publish delegated-provider allocations or rehypothecation terms."
+  }
+}

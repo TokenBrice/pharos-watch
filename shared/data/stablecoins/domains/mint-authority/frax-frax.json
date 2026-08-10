@@ -1,0 +1,121 @@
+{
+  "id": "frax-frax",
+  "mintAuthority": {
+    "mintPath": "amo-or-custodian-hybrid",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "FRAX mint authority is an AMO/governance hybrid; immutable Ethereum token and AMO Minter contracts are controlled by the Frax Comptroller 3-of-5 Safe directly and through its two-day timelock.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x853d955acef822db058eb8505911ed77f175b99e",
+        "0xcf37b62109b537fa0cb9a90af4ca72f6fb85e241"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530270,
+      "sources": [
+        {
+          "label": "FRAX token verified source",
+          "url": "https://eth.blockscout.com/address/0x853d955acef822db058eb8505911ed77f175b99e?tab=contract"
+        },
+        {
+          "label": "FRAX AMO Minter verified source",
+          "url": "https://eth.blockscout.com/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xcf37b62109b537fa0cb9a90af4ca72f6fb85e241",
+        "label": "FRAX AMO Minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The AMO Minter can create FRAX only for approved AMOs within its aggregate 700,000,000 FRAX mint cap; owner or timelock governance can change that cap.",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712139,
+        "sources": [
+          {
+            "label": "Frax AMO docs",
+            "url": "https://docs.frax.finance/amo/overview"
+          },
+          {
+            "label": "FRAX AMO Minter",
+            "url": "https://etherscan.io/address/0xcf37B62109b537fa0Cb9A90Af4CA72f6fb85E241#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25712139, owner() still returned the Frax Comptroller Safe, timelock_address() returned 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca, and frax_mint_cap() remained 700,000,000 FRAX. The contract is the cap-limited mint route; only its owner or timelock can raise the cap."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+        "label": "Frax Comptroller Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+            "0xcbc616d595d38483e6adc45c7e426f44bf230928",
+            "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+            "0xc8de9f45601da8c76158b8caf3e56e8a037f2228",
+            "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25712139,
+          "observedAt": "2026-08-08",
+          "source": "safe-api"
+        },
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712139,
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          },
+          {
+            "label": "Safe Transaction Service",
+            "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          }
+        ],
+        "evidence": "At Ethereum block 25712139, the AMO Minter owner still resolved to this Safe and the configured timelock remained 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Safe API returned the listed 3-of-5 owners, no enabled modules, zero guard and module guard, and Safe v1.3.0. The Safe can authorize AMOs and raise the 700 million FRAX cap directly through its owner path, bypassing the timelock."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "sources": [
+        {
+          "label": "Frax AMO docs",
+          "url": "https://docs.frax.finance/amo/overview"
+        },
+        {
+          "label": "Safe Transaction Service",
+          "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+        }
+      ],
+      "evidence": "At Ethereum block 25712139, FRAX and AMO Minter remained direct non-proxy contracts. The AMO Minter retained a 700 million FRAX aggregate cap, owner Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, and timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The 3-of-5 owner Safe can authorize AMOs and raise the cap through the immediate owner path; Safe API reported no modules and zero guard/module guard. Current issuance is contract-governed and raiseable, with reconciliation not applicable to this on-chain AMO control model and no prudential supervisor. No public mint-authority incident was identified.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

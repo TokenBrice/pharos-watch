@@ -1,0 +1,113 @@
+{
+  "id": "u-united-stables",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: U resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "U is natively issued on Ethereum, BSC, and Tron. Each deployment has its own issuer-controlled token and mint authority rather than a third-party bridge representation.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "U issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "United Stables",
+        "url": "https://u.tech/"
+      },
+      {
+        "label": "United Stables BNB launch",
+        "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xce24439f2d9c6a2289f741120fe202248b666666",
+        "destinationChain": "bsc",
+        "contractAddress": "0xce24439f2d9c6a2289f741120fe202248b666666",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109826831,
+        "sources": [
+          {
+            "label": "United Stables BNB launch",
+            "url": "https://www.bnbchain.org/en/blog/united-stables-launches-u-as-a-native-stablecoin-on-bnb-chain"
+          },
+          {
+            "label": "BSC U token",
+            "url": "https://bscscan.com/address/0xce24439f2d9c6a2289f741120fe202248b666666#code"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xce24439f2d9c6a2289f741120fe202248b666666",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xce24439f2d9c6a2289f741120fe202248b666666",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526649,
+        "sources": [
+          {
+            "label": "United Stables",
+            "url": "https://u.tech/"
+          },
+          {
+            "label": "Ethereum U token",
+            "url": "https://eth.blockscout.com/address/0xce24439f2d9c6a2289f741120fe202248b666666?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "tron:TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
+        "destinationChain": "tron",
+        "contractAddress": "TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ",
+        "protocol": "United Stables",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "observedBlock": 84437097,
+        "sources": [
+          {
+            "label": "United Stables",
+            "url": "https://u.tech/"
+          },
+          {
+            "label": "Tron U token proxy",
+            "url": "https://tronscan.org/#/contract/TFNirp6PbqYE1ZTtWuCMUKJWLNZkoCoeFJ/code"
+          }
+        ]
+      }
+    ]
+  }
+}

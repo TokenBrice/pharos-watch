@@ -1,0 +1,85 @@
+{
+  "id": "isc-international-stable-currency",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "ISC is a standard Solana SPL token whose mint and freeze authority is immutable 2-of-3 SPL Token multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. Its three signers are on-curve externally signable public keys. The mint and multisig are governed only by the immutable Token Program; no custom upgradeable program sits in the issuance path.",
+    "upgradeability": {
+      "model": "immutable",
+      "proxyAddresses": [
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ],
+      "implementationAddresses": [
+        "3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 432714278,
+      "sources": [
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "SPL Token program",
+          "url": "https://explorer.solana.com/address/TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "label": "SPL Token ProgramData",
+          "url": "https://explorer.solana.com/address/3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ",
+        "label": "ISC SPL 2-of-3 mint multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ"
+        ],
+        "evidence": "At Solana slot 432714278, mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD returned mintAuthority and freezeAuthority 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. That Token Program-owned account decoded as an immutable SPL multisig with threshold 2 and signers B6PG7xN8W1G3PA8XoTzUEAdzNzWfDXQeWud5axWtHCPi, FUPe37ryYxB2J8Ckvq3pzpw7EMahYyeT8WtzJqh3Ge3f, and 3kHz9pTwSeCz6JemWsKoKMPS8E1RUbwbU2xg1b1ajFGF. All three are on-curve externally signable public keys. Tokenkeg ProgramData had no upgrade authority.",
+        "sources": [
+          {
+            "label": "ISC SPL mint on Solana Explorer",
+            "url": "https://explorer.solana.com/address/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD"
+          },
+          {
+            "label": "ISC mint authority multisig on Solana Explorer",
+            "url": "https://explorer.solana.com/address/3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Solana slot 432714278, ISC mint and freeze authority both remained SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ with threshold 2 and three on-curve signer public keys. The mint and multisig were both owned by standard Token Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA. Its ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 had no upgrade authority, and no custom program appeared in the mint-authority path.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "ISC SPL mint on Solana Explorer",
+          "url": "https://explorer.solana.com/address/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD"
+        },
+        {
+          "label": "ISC website",
+          "url": "https://www.isc.money/"
+        },
+        {
+          "label": "ISC mint notification",
+          "url": "https://medium.com/@ISC_money/notification-of-isc-mint-were-growing-7ebb637b5f63"
+        }
+      ]
+    }
+  }
+}

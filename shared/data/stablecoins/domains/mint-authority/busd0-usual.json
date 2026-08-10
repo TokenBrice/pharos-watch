@@ -1,0 +1,58 @@
+{
+  "id": "busd0-usual",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "inheritedFrom": "usd0-usual",
+    "summary": "bUSD0 is Usual's bond-maturity wrapper of USD0; depositing 1 USD0 mints 1 bUSD0 against locked USD0, which does not create base USD0 supply, so its mint authority is inherited from USD0 (usd0-usual). Wrapper upgrade is guarded by an 8-of-15 legacy Gnosis Safe.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "label": "Usual bUSD0 bond-leg token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "bUSD0 is minted/burned by the Usual bond contract against locked USD0 (1 USD0 in -> 1 bUSD0 + 1 rt-bUSD0 out, redeemable at maturity); this bond accounting cannot create or destroy base USD0 supply.",
+        "sources": [
+          {
+            "label": "Usual bUSD0 fact sheet",
+            "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+          },
+          {
+            "label": "Ethereum bUSD0 contract",
+            "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+          }
+        ],
+        "evidence": "At Ethereum block 25295204: mint(address,uint256) call reverted (no privileged mint function); totalSupply=526,811,371 USD0 locked; EIP-1967 proxy admin slot = 0x65a7042460932a8e7b6aa9c765c2bae5f4535c22 (ProxyAdmin contract). ProxyAdmin.owner() = 0xaada24358620d4638a2ee8788244c6f4b197ca16 (legacy Gnosis Safe: 15 owners, threshold 8, confirmed via getOwners() and getThreshold() on-chain)."
+      },
+      {
+        "label": "Inherited USD0 (Usual) issuer mint path",
+        "role": "other",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "evidence": "Underlying USD0 supply is created via Usual's protocol-operated issuer mint authority against RWA collateral (issuer-direct-mint, concentrated-admin); bUSD0 locks USD0 and inherits that base mint authority."
+      }
+    ],
+    "review": {
+      "evidence": "bUSD0 (variantOf usd0-usual, variantKind bond-maturity) is a bond-leg wrapper whose supply tracks locked USD0. At Ethereum block 25295204: no privileged mint on wrapper (mint() reverts); EIP-1967 proxy admin chain: ProxyAdmin(0x65a704) -> legacy Gnosis Safe(0xaada24, 15 owners, threshold 8) confirmed via on-chain getOwners()/getThreshold() calls.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Usual bUSD0 fact sheet",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+        },
+        {
+          "label": "Ethereum bUSD0 contract",
+          "url": "https://etherscan.io/address/0x35d8949372d46b7a3d5a56006ae77b215fc69bc0"
+        }
+      ]
+    }
+  }
+}

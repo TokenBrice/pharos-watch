@@ -1,0 +1,123 @@
+{
+  "id": "jtrsy-anemoy",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "JTRSY is a non-upgradeable Centrifuge Tranche token using a ward-based auth system, identical architecture to JAAA. Active wards are Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), and Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Mint authority ultimately resolves to the Centrifuge protocol 4-of-9 Safe via Root's ProtocolGuardian.",
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x8c213ee79581ff4984583c6a801e5263418c4b86"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "Centrifuge protocol vault architecture",
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+        },
+        {
+          "label": "Ethereum JTRSY Tranche token",
+          "url": "https://etherscan.io/address/0x8c213ee79581ff4984583c6a801e5263418c4b86#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Centrifuge Root contract (top-level ward admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "present",
+        "sources": [
+          {
+            "label": "Centrifuge protocol docs - vaults",
+            "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+          },
+          {
+            "label": "Ethereum explorer — JTRSY Tranche token",
+            "url": "https://etherscan.io/token/0x8c213ee79581ff4984583c6a801e5263418c4b86"
+          }
+        ],
+        "evidence": "At Ethereum block 25,296,225, the JTRSY Tranche token wards are: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f, contract), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e, contract), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB, contract). Same ward set as JAAA (shared Centrifuge protocol deployment). Root's ProtocolGuardian routes to the Centrifuge protocol Safe.",
+        "chain": "ethereum",
+        "address": "0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f",
+        "failureDomainKeys": [
+          "contract:ethereum:0x7ed48c31f2fdc40d37407cbabf0870b2b688368f"
+        ]
+      },
+      {
+        "label": "Centrifuge protocol Gnosis Safe (4-of-9)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 9,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xb307f0b2eDdB84EF63f3F9dc99a3A1a66D68EB3a",
+            "0x044671aCf58340Ac9d7AB782D3F93D1943fE24Bf",
+            "0x701Da7A0c8ee46521955CC29D32943d47E2c02b9",
+            "0x5e7A86178252Aeae9cBDa30f9C342c71799A3EE1",
+            "0xE9441B34f71659cCA2bfE90d98ee0e57D9CAD28F",
+            "0x4d47a7a89478745200Bd51c26bA87664538Df541",
+            "0x080001dBE12fA46A1d7C03fa0Cbf1839E367F155",
+            "0xd55114BfE98a2ca16202Aa741BeE571765292616",
+            "0x9eDec77dd2651Ce062ab17e941347018AD4eAEA9"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1",
+          "observedBlock": 25296225,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe API — Centrifuge protocol Safe",
+            "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
+          }
+        ],
+        "evidence": "Safe API at Ethereum block 25,296,225: Safe 0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, threshold 4-of-9, version 1.4.1, no modules, no guard. Shared with JAAA — same Centrifuge protocol Safe.",
+        "chain": "ethereum",
+        "address": "0x9711730060C73Ee7Fcfe1890e8A0993858a7D225",
+        "failureDomainKeys": [
+          "safe:ethereum:0x9711730060c73ee7fcfe1890e8a0993858a7d225"
+        ]
+      },
+      {
+        "label": "Anemoy / Janus Henderson issuer rail",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "Anemoy operates the permissioned same-day subscription/redemption rail for JTRSY on Centrifuge, restricted to whitelisted non-U.S. Professional Investors at fund NAV. Actual on-chain minting executed by BalanceSheet ward."
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25,296,225: JTRSY Tranche is non-upgradeable, ward-based. Wards identical to JAAA: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Cross-chain deployments share the same Centrifuge protocol ward architecture.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Anemoy JTRSY fund",
+          "url": "https://anemoy.io/funds/jtrsy"
+        },
+        {
+          "label": "Centrifuge protocol docs - vaults",
+          "url": "https://docs.centrifuge.io/developer/protocol/architecture/vaults/"
+        },
+        {
+          "label": "Safe API — Centrifuge protocol Safe",
+          "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
+        }
+      ]
+    }
+  }
+}

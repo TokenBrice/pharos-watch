@@ -1,0 +1,355 @@
+{
+  "id": "usdp-paxos",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0x8e870d67f660d95d5be530380d0ec0bd388289e1",
+        "0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d",
+        "0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      ],
+      "implementationAddresses": [
+        "0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d",
+        "0xc896c7777f85cf8edf9dcb2ee40274b7307da488",
+        "0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c",
+        "DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY"
+      ],
+      "adminAddresses": [
+        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4",
+        "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDP Ethereum token proxy-admin EOA",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum USDP token proxy",
+          "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#code"
+        },
+        {
+          "label": "Ethereum USDP implementation source",
+          "url": "https://eth.blockscout.com/address/0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d?tab=contract"
+        },
+        {
+          "label": "Ethereum USDP SupplyControl implementation source",
+          "url": "https://eth.blockscout.com/address/0xc896c7777f85cf8edf9dcb2ee40274b7307da488?tab=contract"
+        },
+        {
+          "label": "BSC Binance-Peg USDP proxy and implementation",
+          "url": "https://bscscan.com/address/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094#code"
+        },
+        {
+          "label": "Paxos Solana programs",
+          "url": "https://github.com/paxosglobal/solana-programs"
+        },
+        {
+          "label": "Token-2022 program source",
+          "url": "https://github.com/solana-program/token-2022"
+        }
+      ]
+    },
+    "summary": "USDP has three independently controlled issuance branches. Ethereum routes minting through a UUPS SupplyControl with two rate-limited controller EOAs, but the Paxos default-admin EOA can change controllers and limits immediately and a separate EOA can replace token logic. On Solana, the Token-2022 mint authority is a 1-of-3 SPL multisig whose Paxos admin signer can mint directly and bypass two immutable, rate-limited controller PDAs. The BSC Binance-Peg representation has an uncapped Binance owner mint path and a separate immediate proxy admin. The shared Token-2022 runtime adds a distinct zero-delay 4-of-6 upgrade domain.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d",
+        "label": "USDP Ethereum SupplyControl two-controller mint surface",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Controller 0x2fb074fa59c9294c71246825c1c9a0c7782d41a4 had a 1,000,000,000-USDP capacity and 277,777.777777777777777777-USDP-per-second refill; controller 0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7 had a 500,000,000-USDP capacity and 138,888-USDP-per-second refill. The controller-manager EOA can change both bounds immediately.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0x2fb074fa59c9294c71246825c1c9a0c7782d41a4",
+          "ethereum:0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum USDP token supplyControl()",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#readContract"
+          },
+          {
+            "label": "Exact USDP SupplyControl source",
+            "url": "https://eth.blockscout.com/address/0xc896c7777f85cf8edf9dcb2ee40274b7307da488?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, token supplyControl() returned this proxy and getAllSupplyControllerAddresses() returned exactly the two no-code EOAs listed in the failure domains. getSupplyControllerConfig() returned the recorded capacities, refill rates, destination whitelists, and allow-any flags. Current USDP supply was 29,650,134.665592428958262426, far below either capacity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "USDP Ethereum DEFAULT_ADMIN and controller-manager EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum USDP token defaultAdmin()/owner()",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#readContract"
+          },
+          {
+            "label": "Exact USDP SupplyControl source",
+            "url": "https://eth.blockscout.com/address/0xc896c7777f85cf8edf9dcb2ee40274b7307da488?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, this no-code EOA was token defaultAdmin/owner, SupplyControl DEFAULT_ADMIN_ROLE holder, and SupplyControl SUPPLY_CONTROLLER_MANAGER_ROLE holder. It can immediately redirect token supplyControl, add or remove controllers, and change controller capacities, refill rates, and whitelists. The three-hour default-admin delay applies only to transferring DEFAULT_ADMIN_ROLE, not these current-admin actions."
+      },
+      {
+        "chain": "solana",
+        "address": "D6ZBbWX2U1uVgcg9U9QvJVWDopD5EZgD1qUEKpnnREeG",
+        "label": "USDP Solana Token-2022 1-of-3 mint multisig",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "directMintAbility": "direct",
+        "threshold": 1,
+        "signerCount": 3,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No token-level supply cap. PDA Amzfx... authorizes EOA HJDz... under a 500,000,000-USDP capacity, 138,888-USDP-per-second refill, and destination whitelist; PDA rmFr9... authorizes EOA 5gUu... under a 1,000,000,000-USDP capacity, 277,777.777777-USDP-per-second refill, and self-only whitelist. Threshold one lets the external Paxos admin signer bypass both controllers.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk",
+          "solana:AmzfxrDiStgYQacy98kC3bXMvnc2xJPWgTihpRnKvhyU",
+          "solana:rmFr9LMyB9h4sYM6bQC9HPUMmoh5sddDHBqG8Gj4n7F"
+        ],
+        "bypassSurfaces": [
+          "Signer 2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk is an externally signable system account and satisfies the 1-of-3 multisig without either controller PDA."
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Token-2022 multisig source",
+            "url": "https://github.com/solana-program/token-2022"
+          }
+        ],
+        "evidence": "At Solana slot 432714278, mint HVbpJAQGNpkgBaYBZQBR1t7yFdvaYVp2vCQQfKKEN4tM named this Token-2022 multisig as mintAuthority. The multisig account decoded as initialized with threshold 1 and three signers: external system account 2apBG..., plus controller PDAs Amzfx... and rmFr9.... The immutable Paxos Minter Controller program enforces the two recorded controller capacities, refill rates, mint identity, and whitelists, but Token-2022 accepts any one signer, so 2apBG... can invoke mintTo or setAuthority directly."
+      },
+      {
+        "chain": "solana",
+        "address": "2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk",
+        "label": "USDP Solana Paxos admin and direct mint signer",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "solana:2apBGMsS6ti9RyF5TwQTDswXBWskiJP2LD4cUEDqYJjk"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Paxos Solana controller source",
+            "url": "https://github.com/paxosglobal/solana-programs"
+          }
+        ],
+        "evidence": "At the cutoff this on-curve, system-owned address was one signer of the threshold-one mint multisig, admin of both Paxos Minter Controller accounts, and the mint's freeze, mint-close, permanent-delegate, confidential-transfer, transfer-hook, metadata-pointer, and metadata-update authority. It can mint directly, change mint authority, raise controller limits, freeze accounts, or transfer tokens as permanent delegate with no enforced delay."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d",
+        "label": "USDP BSC Binance-Peg token owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The generic BEP20 implementation exposes owner-only mint(uint256) with no hard cap while mintable is true.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "failureDomainKeys": [
+          "bsc:0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+        ],
+        "sources": [
+          {
+            "label": "BSC Binance-Peg USDP implementation source",
+            "url": "https://bscscan.com/address/0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c#code"
+          },
+          {
+            "label": "BSC token owner",
+            "url": "https://bscscan.com/address/0xf68a4b64162906eff0ff6ae34e2bb1cd42fef62d"
+          }
+        ],
+        "evidence": "At BSC block 109812367, getOwner() returned this no-code Binance-labeled EOA, mintable() was true, and supply was 2,061,934.30618578 USDP. Verified BEP20TokenImplementation source allows the owner to mint any uint256 amount to itself and transfer ownership. This is an independent Binance-Peg supply path, not the Paxos Ethereum SupplyControl."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "label": "USDP Ethereum token proxy-admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0xc94bcf6e1d8b3558e3b62e743630d50497e3851c"
+        ],
+        "sources": [
+          {
+            "label": "Ethereum USDP proxy",
+            "url": "https://etherscan.io/address/0x8e870d67f660d95d5be530380d0ec0bd388289e1#code"
+          },
+          {
+            "label": "Ethereum USDP implementation source",
+            "url": "https://eth.blockscout.com/address/0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d?tab=contract"
+          }
+        ],
+        "evidence": "At Ethereum block 25526129, the legacy Zeppelinos implementation slot returned 0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d and the legacy admin slot returned this no-code EOA. It can replace outer USDP token logic immediately and thereby bypass the current SupplyControl path."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "USDP Ethereum SupplyControl upgrade EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "failureDomainKeys": [
+          "ethereum:0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b"
+        ],
+        "sources": [
+          {
+            "label": "USDP SupplyControl implementation source",
+            "url": "https://eth.blockscout.com/address/0xc896c7777f85cf8edf9dcb2ee40274b7307da488?tab=contract"
+          }
+        ],
+        "evidence": "At block 25526129, SupplyControl proxy 0xdc55b5f0f2d441c1116dcc3b9d56314da7f5496d used UUPS implementation 0xc896c7777f85cf8edf9dcb2ee40274b7307da488 and this no-code EOA held DEFAULT_ADMIN_ROLE. Verified source restricts _authorizeUpgrade to DEFAULT_ADMIN_ROLE, so the EOA can replace supply-path logic immediately."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4",
+        "label": "USDP BSC Binance-Peg proxy-admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "failureDomainKeys": [
+          "bsc:0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4"
+        ],
+        "sources": [
+          {
+            "label": "BSC Binance-Peg USDP proxy",
+            "url": "https://bscscan.com/address/0xb7f8cd00c5a06c0537e2abff0b58033d02e5e094#code"
+          },
+          {
+            "label": "BSC proxy admin",
+            "url": "https://bscscan.com/address/0xd2f93484f2d319194cba95c5171b18c1d8cfd6c4"
+          }
+        ],
+        "evidence": "At BSC block 109812367, the EIP-1967 implementation slot returned 0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c and the admin slot returned this no-code Binance-labeled EOA. The transparent proxy admin can replace mint logic immediately, independently of token owner 0xf68a...."
+      },
+      {
+        "chain": "solana",
+        "address": "AeLmXCbPaQHGWRLr2saFsEVfmMNuKnxRAbWCT9P5twgz",
+        "label": "Solana Token-2022 shared-program upgrade authority",
+        "role": "other",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "failureDomainKeys": [
+          "platform:solana-token-2022-program"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          },
+          {
+            "label": "Squads V3 source",
+            "url": "https://github.com/Squads-Protocol/squads-mpl"
+          },
+          {
+            "label": "Latest Token-2022 upgrade transaction",
+            "url": "https://explorer.solana.com/tx/2cM3S25AJnHyy4shW7zsoqz5W8JPXPvXiUxk545n5ANf6BET9VvBRfsnSNYi9MqogjVWNBxNfaZpE9QBJX4XCbfn"
+          }
+        ],
+        "evidence": "At the cutoff, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named this authority. It is authority index 1 of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ, whose account reports threshold 4 and six members. Squads V3 is immutable and enforces no execution delay."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Ethereum USDP implementation source",
+          "url": "https://eth.blockscout.com/address/0xf459ff5ec7d1f371cb34754bda5fe5fce2c9054d?tab=contract"
+        },
+        {
+          "label": "Ethereum SupplyControl implementation source",
+          "url": "https://eth.blockscout.com/address/0xc896c7777f85cf8edf9dcb2ee40274b7307da488?tab=contract"
+        },
+        {
+          "label": "Paxos Solana programs",
+          "url": "https://github.com/paxosglobal/solana-programs"
+        },
+        {
+          "label": "BSC Binance-Peg USDP implementation source",
+          "url": "https://bscscan.com/address/0xba5fe23f8a3a24bed3236f05f2fcf35fd0bf0b5c#code"
+        },
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "KPMG USDP Redemption Assets Report - May 2026",
+          "url": "https://framerusercontent.com/assets/aEYkxLoItegSVUhVudrg5lQZQEQ.pdf"
+        },
+        {
+          "label": "OCC active national trust banks - April 2026",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
+        }
+      ],
+      "evidence": "At the fixed cutoff, exact historical state resolved every tracked USDP mint and upgrade surface: Ethereum block 25526129, BSC block 109812367, and Solana slot 432714278. Ethereum had two live SupplyControl controller EOAs plus independent default-admin and token-proxy-admin EOAs. Solana's mint authority was a threshold-one SPL multisig with a directly signable Paxos admin member, while both controller PDAs were governed by an immutable Paxos program. BSC used a generic independently mintable Binance-Peg proxy with separate owner and proxy-admin EOAs. Token-2022 retained a shared zero-delay 4-of-6 upgrade authority. KPMG performs monthly independent examinations; the latest reviewed report covers May 29, 2026 and fully reconciles USDP liabilities to redemption assets. The OCC active trust-bank list dated April 30, 2026 matches Paxos Trust Company, National Association under charter 25379, establishing prudential supervision of the issuer.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

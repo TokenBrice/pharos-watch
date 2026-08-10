@@ -1,0 +1,69 @@
+{
+  "id": "xsgd-straitsx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "XSGD is a MAS-regulated SGD payment stablecoin with Coinbase/Base distribution and public reserve/redemption disclosures."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "StraitsX / Xfers Pte. Ltd.",
+    "issuerDomicile": "Singapore",
+    "licensingRegulator": "Monetary Authority of Singapore Major Payment Institution; MAS SCS substantive-compliance acknowledgement",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.straitsx.com/xsgd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "XSGD is a foreign non-USD payment stablecoin with U.S. availability signals, but no public GENIUS approval or foreign-issuer exception source was found. Treasury has not yet published any comparable-regime list or Singapore MAS determination; the foreign-exception pathway remains open rulemaking as of 2026-06-18. Monthly reserve attestation reports are published by StraitsX (ISCA-listed auditor KK Yap & Associates, 2022–2026 monthly archive on straitsx.com).",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "StraitsX XSGD",
+        "url": "https://www.straitsx.com/xsgd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "StraitsX purchasing and redemption terms",
+        "url": "https://www.straitsx.com/legal/purchasing-and-redemption",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "StraitsX XSGD Coinbase announcement",
+        "url": "https://www.straitsx.com/blog-post/xsgd-live-on-coinbase",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Coinbase XSGD United States buy page",
+        "url": "https://www.coinbase.com/how-to-buy/base-xsgd-e000",
+        "sourceKind": "news"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "StraitsX XSGD, reserve, redemption, and Coinbase/Base disclosures",
+        "Treasury GENIUS Act foreign comparable-regime ANPRM and rulemaking tracker",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for XSGD. Treasury's comparable-regime determination process for Singapore MAS remains open rulemaking with no published determinations as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

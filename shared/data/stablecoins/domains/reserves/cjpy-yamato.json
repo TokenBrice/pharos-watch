@@ -1,0 +1,80 @@
+{
+  "id": "cjpy-yamato",
+  "reserves": [
+    {
+      "name": "ETH",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network and Yamato CDP system",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yamato documentation",
+        "url": "https://docs.yamato.fi/v/en"
+      },
+      {
+        "label": "Yamato Ethereum contract",
+        "url": "https://etherscan.io/address/0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257"
+      }
+    ],
+    "rationale": "Yamato documents CJPY as minted against ETH pledges with a 130% minimum collateral ratio. The tracked reserve envelope is therefore the sole ETH collateral category; live position weights change onchain and are not represented as a static allocation.",
+    "compositionBasis": "Yamato ETH-CDP collateral design",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve exposure outside ETH pledges is documented; current individual pledge positions are dynamic.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "ETH",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native ETH collateral is an external asset rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Yamato Pool contract 0x9C1F0E3D4BD4A513721C028e1D4610CD17745f0B (collateral holding) and CjpyOS pledge registry via Yamato proxy 0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yamato contract addresses",
+        "url": "https://docs.yamato.fi/en/readme/contract-addresses"
+      },
+      {
+        "label": "Yamato Pool contract on Etherscan",
+        "url": "https://etherscan.io/address/0x9C1F0E3D4BD4A513721C028e1D4610CD17745f0B"
+      },
+      {
+        "label": "BlockApex Yamato audit reports",
+        "url": "https://github.com/BlockApex/Audit-Reports"
+      }
+    ],
+    "uncertainty": "All ETH collateral is pooled in the Yamato Pool contract with per-user pledges recorded in CjpyOS; there is no custodian, and the protocol does not lend out collateral by design. The contracts are UUPS-upgradeable by the DeFiGeek Community DAO. Legal segregation and bankruptcy-remoteness terms do not apply to contract custody; on-chain state (about 675.6 ETH pooled at 2026-07-19) is directly readable.",
+    "knownUnknownExposurePct": 0
+  }
+}

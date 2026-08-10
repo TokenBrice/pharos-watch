@@ -1,0 +1,134 @@
+{
+  "id": "cdxusd-cod3x",
+  "mintAuthority": {
+    "mintPath": "facilitator-bucket-mint",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "cdxUSD uses a GHO-style facilitator bucket model on Base. The active 3/9 Safe facilitator mints within a finite bucket. The owner contract is a TimelockController (24h delay) with the 3/9 Safe as PROPOSER and 1/8 guardian Safe as EXECUTOR. The OFT LayerZero extension is present in code but has zero configured peers — no cross-chain mint surface active.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-14",
+      "observedBlock": 48620890,
+      "sources": [
+        {
+          "label": "Sourcify cdxUSD verified source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        },
+        {
+          "label": "Base public RPC",
+          "url": "https://base-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "base",
+        "address": "0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b",
+        "label": "cdxUSD active facilitator Safe",
+        "role": "facilitator",
+        "authorityType": "safe",
+        "directMintAbility": "cap-limited",
+        "threshold": 3,
+        "signerCount": 9,
+        "capDescription": "getFacilitator returned bucket capacity 100000000000000000000000000 and bucket level 6150000000000000000000000 at Base block 46426970.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api",
+          "observedBlock": 47202396
+        },
+        "routeChecks": {
+          "caps": "Finite facilitator bucket capacity read from getFacilitator/getFacilitatorBucket.",
+          "rateLimits": "Token exposes hourlyLimit/slidingHourlyLimitUtilization; hourlyLimit read returned 0 in this pass."
+        },
+        "sources": [
+          {
+            "label": "Cod3x tech stack",
+            "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+          },
+          {
+            "label": "Sourcify cdxUSD source",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+          },
+          {
+            "label": "Base Safe transaction service",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0xfEfcb2fb19b9A70B30646Fdc1A0860Eb12F7ff8b/"
+          }
+        ],
+        "evidence": "getFacilitatorsList returned this address; getFacilitator returned label Multisig and a finite bucket. Base Safe API returned threshold 3, 9 owners, no modules, and zero guard."
+      },
+      {
+        "chain": "base",
+        "address": "0xc0D3700924301AC384E5Eae3272E08220752DE3D",
+        "label": "cdxUSD owner TimelockController (24h delay)",
+        "role": "bucket-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Base blockscout — cdxUSD owner contract",
+            "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
+          }
+        ],
+        "evidence": "Base blockscout confirms contract name TimelockController (OZ, solc 0.8.23). getMinDelay() returned 86400 (24h). hasRole(PROPOSER_ROLE, 3/9 facilitator Safe) = true; hasRole(EXECUTOR_ROLE, 1/8 guardian Safe) = true; hasRole(TIMELOCK_ADMIN_ROLE, self) = false; 0 RoleGranted events emitted (roles set at deploy-time via constructor args, no enumerable log trail). No active admin can bypass the 24h delay."
+      },
+      {
+        "chain": "base",
+        "address": "0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba",
+        "label": "cdxUSD guardian Safe (Timelock executor)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 1,
+        "signerCount": 8,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 1,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "safe-api",
+          "observedBlock": 47202396
+        },
+        "sources": [
+          {
+            "label": "Base cdxUSD contract",
+            "url": "https://basescan.org/address/0xc0d3700000987c99b3c9009069e4f8413fd22330#readContract"
+          },
+          {
+            "label": "Base Safe transaction service",
+            "url": "https://safe-transaction-base.safe.global/api/v1/safes/0x0D1d0f89cb988678B37FD5b5c6C1A5bBdc55f8ba/"
+          }
+        ],
+        "evidence": "guardian() returned this address; Base Safe API returned threshold 1, 8 owners, no modules, zero guard. hasRole(EXECUTOR_ROLE) confirmed true on Timelock."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Cod3x tech stack",
+          "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+        },
+        {
+          "label": "Sourcify cdxUSD source",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xc0d3700000987c99b3c9009069e4f8413fd22330?fields=metadata,abi"
+        },
+        {
+          "label": "Base blockscout — owner TimelockController",
+          "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
+        }
+      ],
+      "evidence": "Base block 47201791: facilitator bucket confirmed (3/9 Safe, finite cap); owner contract confirmed as OZ TimelockController with 24h delay; 3/9 Safe is PROPOSER, 1/8 guardian is EXECUTOR; no admin bypass. LayerZero OFT code present but 0 SetPeer events ever emitted and 0 total token Transfer events (token has supply of 6.15M from prior facilitator mints, minimal activity on-chain).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

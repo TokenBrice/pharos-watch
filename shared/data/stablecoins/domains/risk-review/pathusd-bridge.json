@@ -1,0 +1,28 @@
+{
+  "id": "pathusd-bridge",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tempo TIP-20 specification",
+        "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+      },
+      {
+        "label": "Tempo pathUSD token",
+        "url": "https://explore.tempo.xyz/token/0x20c0000000000000000000000000000000000000"
+      },
+      {
+        "label": "Tempo TIP-20 implementation",
+        "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+      },
+      {
+        "label": "Tempo public RPC",
+        "url": "https://rpc.tempo.xyz"
+      }
+    ],
+    "evidence": "At Tempo block 30043787, pathUSD reported paused() = false and transferPolicyId() = 2. The TIP-20 specification and implementation grant PAUSE_ROLE the ability to halt transfers, allow DEFAULT_ADMIN_ROLE to replace the transfer policy, and grant BURN_BLOCKED_ROLE the ability to burn tokens from accounts blocked by the active policy. The current unpaused state does not remove those privileged transfer-control paths, so direct restriction/freeze capability is established.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  }
+}

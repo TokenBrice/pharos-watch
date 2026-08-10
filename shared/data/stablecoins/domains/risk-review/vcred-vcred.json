@@ -1,0 +1,50 @@
+{
+  "id": "vcred-vcred",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Hemi explorer verified VCRED source (API)",
+        "url": "https://explorer.hemi.xyz/api/v2/smart-contracts/0x71881974e96152643c74a8e0214b877cfb2a0aa1"
+      },
+      {
+        "label": "Hemi explorer VCRED contract page",
+        "url": "https://explorer.hemi.xyz/address/0x71881974e96152643c74a8e0214b877cfb2a0aa1?tab=contract"
+      },
+      {
+        "label": "Hemi public RPC observation block 4965111",
+        "url": "https://rpc.hemi.network/rpc"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is Hemi 0x7188…0aa1. Verified source (explorer API) is OpenZeppelin ERC20 + ERC20Burnable + Ownable and states free transferability; onlyOwner mint(address,uint256) is the sole privileged path; burn paths are the stock holder/allowance burns (burn(uint256) present; no burn(address,uint256) onlyOwner seize). At Hemi block 4965111: non-proxy (EIP-1967 implementation/admin slots zero); owner()=Safe 0x3ede…75Be; bytecode lacks pause/paused/isBlacklisted/blacklist/freeze/setOperator selectors. No upstream stablecoin wrapper inheritance. Freeze reach is none; transfer posture is permissionless. Transfer categorical publication still requires chainCirculatingById for material deployment scope.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "vCRED is a staking and access token for a market-making and perpetual-vault platform; public product docs do not describe borrower-owned collateral positions or a token-level liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "vCred describes an AI liquidity layer with vaults, single-side staking, and market-making strategies for perpetual venues. The reviewed product page does not describe borrower CDPs, collateralized debt positions, or oracle-triggered liquidation branches for vCRED itself.",
+      "sources": [
+        {
+          "label": "vCred product site",
+          "url": "https://vcred.trade/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "vCred docs",
+        "url": "https://vcred.trade/"
+      }
+    ]
+  }
+}

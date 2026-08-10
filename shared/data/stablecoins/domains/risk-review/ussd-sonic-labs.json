@@ -1,0 +1,232 @@
+{
+  "id": "ussd-sonic-labs",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.soniclabs.com/sonic/ussd"
+      },
+      {
+        "label": "Website",
+        "url": "https://soniclabs.com/ussd"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USSD uses Frax/LayerZero OFT-style omnichain infrastructure for cross-chain USSD minting, while CCTP v2 remains a secondary USDC redemption rail. The durable cross-chain risk is therefore the external LayerZero route plus scoped CCTP redemption exposure, not issuer-native CCTP alone. 2026-07-20 cohort dc-1 pass: Sonic row confirmed native; other-chain rows confirmed as the uniform USSD cross-chain deployment (uniform address, admin, implementation reads).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero OFT",
+        "slug": "layerzero",
+        "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/",
+        "bridgeTypes": [
+          "oft",
+          "burnAndMint"
+        ],
+        "note": "Primary USSD cross-chain minting route through Frax/LayerZero infrastructure."
+      },
+      {
+        "source": "l2beat",
+        "name": "CCTP v2",
+        "slug": "cctpv2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2",
+        "bridgeTypes": [
+          "burnAndMint"
+        ],
+        "note": "Secondary USDC redemption/on-off-ramp route, not the primary USSD minting route."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Sonic USSD launch blog",
+        "url": "https://blog.soniclabs.com/ussd-sonics-native-permissionless-usd-stablecoin-built-with-frax/"
+      },
+      {
+        "label": "The Block USSD / Frax infrastructure report",
+        "url": "https://www.theblock.co/post/392860/sonic-labs-taps-frax-infrastructure-native-network-stablecoin"
+      },
+      {
+        "label": "L2BEAT CCTP v2",
+        "url": "https://l2beat.com/interop/protocols/cctpv2"
+      }
+    ],
+    "routes": [
+      {
+        "id": "sonic:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "sonic",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD (Sonic native issuance via BrandedCustodian)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'US Sonic Dollar', symbol USSD, 18 decimals; EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 (Frax ProxyAdmin per the mint-authority review) — native issuance on Sonic.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD issuer-operated cross-chain deployment (uniform proxy, Frax stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "failureDomainKeys": [
+          "protocol:ussd-uniform-deployment",
+          "contract:ethereum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      {
+        "id": "base:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "base",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD issuer-operated cross-chain deployment (uniform proxy, Frax stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 (identical to the five name-verified chains); name()/symbol() reads returned empty via the Base public RPC on 2026-07-20, so identity rests on the uniform proxy fingerprints. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "failureDomainKeys": [
+          "protocol:ussd-uniform-deployment",
+          "contract:base:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD issuer-operated cross-chain deployment (uniform proxy, Frax stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "failureDomainKeys": [
+          "protocol:ussd-uniform-deployment",
+          "contract:arbitrum:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "optimism",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD issuer-operated cross-chain deployment (uniform proxy, Frax stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "failureDomainKeys": [
+          "protocol:ussd-uniform-deployment",
+          "contract:optimism:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      },
+      {
+        "id": "scroll:0x000000000eccff26b795f73fb0a70d48da657fef",
+        "destinationChain": "scroll",
+        "contractAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "protocol": "USSD issuer-operated cross-chain deployment (uniform proxy, Frax stack)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'US Sonic Dollar', symbol USSD, 18 decimals; uniform deployment address with uniform EIP-1967 admin 0x95081db6a3ae3e1d14d66e68c703e463e4faf912 and uniform implementation 0x155384be16fa171e6d97e4136643a9ac31678d04 across Sonic/Ethereum/Arbitrum/Scroll/Optimism. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "scroll",
+        "controllerAddress": "0x000000000eccff26b795f73fb0a70d48da657fef",
+        "failureDomainKeys": [
+          "protocol:ussd-uniform-deployment",
+          "contract:scroll:0x000000000eccff26b795f73fb0a70d48da657fef"
+        ],
+        "sources": [
+          {
+            "label": "USSD on Sonic explorer",
+            "url": "https://sonicscan.org/address/0x000000000eccff26b795f73fb0a70d48da657fef"
+          }
+        ]
+      }
+    ]
+  }
+}

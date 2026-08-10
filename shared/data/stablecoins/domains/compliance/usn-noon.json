@@ -1,0 +1,70 @@
+{
+  "id": "usn-noon",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Noon Capital",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://noon.accountable.capital/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Noon documents USN minting, redemption, and reserve transparency, but no GENIUS issuer pathway was located. Issuer confirmed domiciled in Road Town, British Virgin Islands per May 2025 launch press release. No evidence of US regulatory filing, PPSI application, state-qualified pathway, or foreign-exception registration.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Noon USN docs",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Noon minting and redemption",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Noon reserve transparency",
+        "url": "https://noon.accountable.capital/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Noon Capital launch press release (BVI domicile confirmed)",
+        "url": "https://www.globenewswire.com/news-release/2025/05/08/3076787/0/en/Noon-Capital-Launches-with-a-Bold-Promise-Smarter-Yields-Fairer-Returns-and-Transparent-Staking-for-All.html",
+        "sourceKind": "news",
+        "sourceDate": "2025-05-08",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3) and Federal Register (FR 2026-04089)",
+        "FDIC GENIUS Act NPRMs (FR 2025-23510, FR 2026-06974)",
+        "FinCEN/OFAC AML NPRM (FR 2026-06963)",
+        "Issuer documentation at docs.noon.capital",
+        "Noon Capital launch press release (GlobeNewswire, May 2025)",
+        "Web search for Noon Capital USN GENIUS Act registration or filing",
+        "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS PPSI approval, state-qualified approval, official application, or foreign registration source was located for USN. Issuer is BVI-domiciled with no detected US regulatory footprint. GENIUS Act rulemaking remains at proposed-rules stage with no approved applicants as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "id": "satusd-river",
+  "reserves": [
+    {
+      "name": "BTC and BTC-derivative collateral",
+      "pct": 99.5,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "River protocol user-deposited BTC, WBTC, BTCB, TBTC, SOLVBTC, XSOLVBTC, FBTC, UNIBTC, UBTC, CBBTC, HEMIBTC, BFBTC, STBTC and other bridged BTC collateral",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "ETH and ETH-derivative collateral",
+      "pct": 0.4,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "River protocol user-deposited ETH, WETH and WEETH collateral",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Other protocol assets",
+      "pct": 0.1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "River protocol stablecoin and small-token positions not identified as satUSD collateral",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "River satUSD FAQ",
+        "url": "https://docs.river.inc/intro/faq"
+      },
+      {
+        "label": "River satUSD product overview",
+        "url": "https://river.inc/"
+      },
+      {
+        "label": "DefiLlama River protocol token inventory",
+        "url": "https://api.llama.fi/protocol/river"
+      }
+    ],
+    "rationale": "River FAQ and product pages state satUSD is over-collateralized by BTC, ETH, BNB, and LSTs, but the issuer publishes no category-weighted breakdown. The 2026-08-08 DefiLlama River protocol token inventory (~$81.3M) is overwhelmingly BTC and BTC-derivatives (~99.5% of identified token value), with ETH/WEETH/WETH at ~0.35%, WBNB below display precision, and stablecoins/small tokens at ~0.17%. Because the DefiLlama inventory is aggregate protocol TVL rather than satUSD-specific vault collateral, the split is treated as an approximation: 99.5% BTC-derivative collateral, 0.4% ETH-derivative collateral, and 0.1% residual other protocol assets.",
+    "compositionBasis": "Issuer collateral disclosures plus approximate category grouping of the latest DefiLlama River protocol token inventory (not a satUSD-specific vault attestation)",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "River does not publish current weights among BTC, ETH, BNB, and LSTs for satUSD specifically; the DefiLlama breakdown is aggregate protocol TVL and may include non-satUSD positions.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC and BTC-derivative collateral",
+        "pct": 99.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTC and wrapped/bridged BTC variants are native reserve backing rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "ETH and ETH-derivative collateral",
+        "pct": 0.4,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH and wrapped/staked ETH variants are native reserve backing rather than tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Other protocol assets",
+        "pct": 0.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Residual stablecoin and small-token positions are not tracked stablecoin dependencies."
+      }
+    ]
+  }
+}

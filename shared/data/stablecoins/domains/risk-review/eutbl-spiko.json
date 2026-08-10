@@ -1,0 +1,232 @@
+{
+  "id": "eutbl-spiko",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Spiko website",
+        "url": "https://www.spiko.io/"
+      }
+    ],
+    "evidence": "Spiko acts as transfer agent for EUTBL with permissioned ERC-1967 upgradeable proxy and KYC-gated transfers, retaining freeze and burn authority over fund shares.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Spiko announced Chainlink CCIP as the interoperability standard for moving its regulated money-market fund tokens across multiple blockchains. The route is scored as an external validated network with compliance-aware controls rather than an issuer-only burn/mint path. 2026-07-20 cohort dc-1 pass: all seven listed deployments are verified issuer-native Spiko tokens; the Stellar contract is in Spiko's official registry and the Starknet token has the shared Spiko owner.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko CCIP announcement",
+        "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0xcbeb19549054cc0a6257a77736fc78c367216ce7",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xcbeb19549054cc0a6257a77736fc78c367216ce7",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Arbitrum (proxy whose EIP-1967 implementation matches the uniform Spiko deployment address).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "destinationChain": "polygon",
+        "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Polygon (uniform address).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
+      },
+      {
+        "id": "base:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "destinationChain": "base",
+        "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL — issuer-native Spiko deployment on Base (uniform address).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "destinationChain": "etherlink",
+        "contractAddress": "0xa0769f7a8fc65e47de93797b4e21c073c117fc80",
+        "protocol": "Spiko EUTBL (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Spiko EU T-Bills Money Market Fund', symbol EUTBL, 5 decimals — issuer-native Spiko deployment on Etherlink (uniform address).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko",
+            "url": "https://www.spiko.xyz/"
+          },
+          {
+            "label": "EUTBL on Etherscan",
+            "url": "https://etherscan.io/address/0xa0769f7a8fc65e47de93797b4e21c073c117fc80"
+          }
+        ]
+      },
+      {
+        "id": "stellar:EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
+        "destinationChain": "stellar",
+        "contractAddress": "EUTBL-CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF",
+        "protocol": "Spiko EUTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Spiko's stellar-contracts production registry lists EUTBL at Soroban contract CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF with shared Spiko PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M; its setup script invokes set_permission_manager on EUTBL. The production config records the EUTBL name, symbol, and 5 decimals, and stellar.expert exposes the deployed contract.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko stellar-contracts production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "EUTBL contract on stellar.expert",
+            "url": "https://stellar.expert/explorer/public/contract/CBGV2QFQBBGEQRUKUMCPO3SZOHDDYO6SCP5CH6TW7EALKVHCXTMWDDOF"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2",
+        "destinationChain": "starknet",
+        "contractAddress": "0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2",
+        "protocol": "Spiko EUTBL (issuer-native multichain)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via Starknet RPC at block 12076435: token 0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2 reports name 'Spiko EU T-Bills Money Market Fund', symbol 'EUTBL', decimals 5, and owner 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d, the shared Spiko Starknet owner. It is Spiko's native Starknet fund-token deployment, not a third-party bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 12076435,
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Spiko EU T-Bills fund",
+            "url": "https://www.spiko.io/spiko-treasury-bills-euro"
+          },
+          {
+            "label": "EUTBL on Starknet Voyager",
+            "url": "https://voyager.online/contract/0x04f5e0de717daa6aa8de63b1bf2e8d7823ec5b21a88461b1519d9dbc956fb7f2"
+          },
+          {
+            "label": "Starknet Lava RPC",
+            "url": "https://rpc.starknet.lava.build"
+          }
+        ]
+      }
+    ]
+  }
+}

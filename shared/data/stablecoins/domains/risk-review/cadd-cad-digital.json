@@ -1,0 +1,97 @@
+{
+  "id": "cadd-cad-digital",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "CADD full-match ERC20F implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x0f25045d15c163478bb67c56c5d9d602628f4f62?fields=sources,abi,metadata"
+      },
+      {
+        "label": "CADD Ethereum public RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "CADD Base public RPC",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "At Ethereum block 25540162 and Base block 48677278, canonical proxy 0x16f93ebc5320c89efc8701577efe49d14a276a06 resolves to the full-match verified ERC20F implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62. Current hasRole reads confirm 0x47a5059be8e1876346f4b854377baaa3c0e0d4eb holds PAUSER_ROLE on both chains. Its pause() function is PAUSER_ROLE-gated and every token transfer passes whenNotPaused; transfer and transferFrom also query the active nonzero access registry for both sender and receiver, while recoverTokens can transfer from an account without access. Direct global and holder-level transfer control therefore exists.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "CAD Digital/Tetra announced CADD as a regulated CAD stablecoin live on Base, Ethereum, and Tempo with Solana planned. No separate bridge protocol is documented in issuer materials, so the reviewed route is issuer-native multichain issuance. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native CADD; Base row confirmed via uniform proxy implementation fingerprint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Tetra CADD launch",
+        "url": "https://tetradg.com/cadd-stablecoin/"
+      },
+      {
+        "label": "CADD supported blockchains",
+        "url": "https://tetradg.com/supported-blockchains/"
+      },
+      {
+        "label": "BusinessWire CADD launch",
+        "url": "https://www.businesswire.com/news/home/20260504197679/en/Tetra-Digital-Group-Launches-CADD-Canadas-First-CAD-Backed-Stablecoin-Issued-by-a-Financial-Institution"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "protocol": "CADD (CAD Digital native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'CAD Digital Inc', symbol CADD, 18 decimals — issuer-native deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CADD on Etherscan",
+            "url": "https://etherscan.io/address/0x16f93ebc5320c89efc8701577efe49d14a276a06"
+          }
+        ]
+      },
+      {
+        "id": "base:0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "destinationChain": "base",
+        "contractAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "protocol": "CADD issuer multichain deployment (uniform proxy implementation)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: uniform deployment address on Base with EIP-1967 implementation 0x0f25045d15c163478bb67c56c5d9d602628f4f62 — byte-identical to the verified Ethereum CADD implementation; name()/symbol() reads returned empty via the Base public RPC on 2026-07-20, so identity rests on the uniform proxy fingerprint plus the mint-authority review's shared ETH/Base role holders. The token contract executes mint.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+        "failureDomainKeys": [
+          "protocol:cadd-multichain",
+          "contract:base:0x16f93ebc5320c89efc8701577efe49d14a276a06"
+        ],
+        "sources": [
+          {
+            "label": "CADD on Etherscan",
+            "url": "https://etherscan.io/address/0x16f93ebc5320c89efc8701577efe49d14a276a06"
+          }
+        ]
+      }
+    ]
+  }
+}

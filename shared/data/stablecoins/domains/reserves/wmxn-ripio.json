@@ -1,0 +1,70 @@
+{
+  "id": "wmxn-ripio",
+  "reserves": [
+    {
+      "name": "Mexican-peso fiat deposits in a Mexican bank account",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Mexican financial institution",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex T64 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wMXN - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio wFIAT product page",
+        "url": "https://www.ripio.com/en/wfiat"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 518,689 outstanding wMXN across six chains and MXN937,364.13 of collateral to a Mexican bank statement, then certifies that all outstanding tokens are backed by Mexican pesos at a financial institution in Mexico. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-08-08: the CPA certification PDF still states 100% local-currency bank-deposit collateral, and Ripio's current local-stablecoins and wFIAT pages still identify wMXN as a peso-backed wFIAT product. No later reserve breakdown or named bank was disclosed, so the single 100% bank-deposit slice preserves the documented unknowns.",
+    "compositionBasis": "Independent public accountant certification of the wMXN collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Mexican financial institution, account type, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Mexican bank (single reserve account)",
+        "role": "bank",
+        "jurisdiction": "Mexico"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex T64 reserve review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wMXN - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "uncertainty": "The March 31, 2026 certification by Pablo Eduardo Soto (Certified Public Accountant, Professional Council of Economic Sciences of CABA) reconciled 518,689 outstanding wMXN to MXN 937,364.13 on a Mexican bank statement but is expressly not an audit or review — it is an agreed-procedures certification on client-supplied documents, and it is the first wMXN attestation published. The bank is not named; account segregation, insolvency protections, and rehypothecation terms are undisclosed, and the certified collateral-to-token surplus (~1.81x) is unexplained in the document."
+  }
+}

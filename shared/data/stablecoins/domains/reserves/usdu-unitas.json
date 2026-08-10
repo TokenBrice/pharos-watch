@@ -1,0 +1,160 @@
+{
+  "id": "usdu-unitas",
+  "reserves": [
+    {
+      "name": "Binance",
+      "pct": 15.02,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Binance off-exchange settlement venue (Copper/Ceffu-style custody route)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "basis",
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Solana",
+      "pct": 47.57,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Solana on-chain collateral and hedge positions",
+      "riskFactors": [
+        "market",
+        "basis",
+        "smart-contract",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Bnb_smartchain",
+      "pct": 2.24,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "BNB Smart Chain on-chain collateral and hedge positions",
+      "riskFactors": [
+        "market",
+        "basis",
+        "smart-contract",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Bitcoin",
+      "pct": 35.17,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin/WBTC held as on-chain collateral in Unitas reserves",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos R04 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Accountable Unitas dashboard API (reserves_split snapshot 2026-08-08)",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
+      },
+      {
+        "label": "Accountable Unitas proof-of-solvency dashboard",
+        "url": "https://accountable.unitas.so/"
+      },
+      {
+        "label": "Accountable Unitas dashboard API (reserves_split capture of 2026-07-19)",
+        "url": "https://cache.accountable.capital/dashboard/unitas"
+      },
+      {
+        "label": "Unitas backing, custody, and security overview",
+        "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+      },
+      {
+        "label": "Unitas off-exchange settlement documentation",
+        "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+      }
+    ],
+    "rationale": "Re-opened 2026-08-08: Unitas Accountable dashboard reserves_split snapshot (total reserves $55,511,787.70, supply $53,052,105.13, collateralization 104.64%) exposes four venue/instrument buckets. Curated slice names mirror the adapter reserves_split identities verbatim. Weights refreshed to the 2026-08-08 capture: Solana 47.57%, Bitcoin 35.17%, Binance 15.02%, BNB Smart Chain 2.24%. The Bitcoin bucket is new since the prior review and represents BTC/WBTC on-chain collateral per Unitas docs; the three venue buckets continue to aggregate undisclosed instrument-level composition.",
+    "compositionBasis": "Accountable dashboard API reserves_split venue/instrument allocation captured 2026-08-08; per-venue instrument composition undisclosed",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The venue split identifies where reserves are attested but not what each venue holds: Binance, Solana and BNB Smart Chain aggregate collateral assets, long/short notionals, hedge counterparties, margin, custody-provider shares, and insurance-fund balances per venue. Bitcoin/WBTC is identified as an asset class but its custody arrangement and hedge status are not itemized.",
+    "knownUnknownExposurePct": 64.83,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Binance",
+        "pct": 15.02,
+        "disposition": "basket-needs-split",
+        "rationale": "The Binance venue bucket aggregates off-exchange custodied collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Solana",
+        "pct": 47.57,
+        "disposition": "basket-needs-split",
+        "rationale": "The Solana venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Bnb_smartchain",
+        "pct": 2.24,
+        "disposition": "basket-needs-split",
+        "rationale": "The BNB Smart Chain venue bucket aggregates on-chain collateral and hedge positions without disclosing current instrument-level composition."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "Bitcoin",
+        "pct": 35.17,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Bitcoin/WBTC is an external cryptoasset held as collateral, not a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Copper / Ceffu off-exchange settlement custody routes",
+        "role": "custodian"
+      },
+      {
+        "name": "On-chain protocol contracts (Solana, BNB Smart Chain)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Unitas backing, custody, and security overview",
+        "url": "https://docs.unitas.so/backing-custody-and-security/overview"
+      },
+      {
+        "label": "Unitas off-exchange settlement documentation",
+        "url": "https://docs.unitas.so/backing-custody-and-security/off-exchange-settlement-oes-in-unitas"
+      }
+    ],
+    "uncertainty": "Unitas documents Copper/Ceffu-style off-exchange settlement custody plus on-chain collateral contracts, but the reviewed sources do not establish provider shares, legal segregation, bankruptcy-remoteness, or reuse restrictions for the custodied legs.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -1,0 +1,131 @@
+{
+  "id": "dusd-standx",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "StandX DUSD minting documentation",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+      },
+      {
+        "label": "Solana RPC getAccountInfo",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "evidence": "At Solana slot 425778638, the tracked Token-2022 DUSD mint reported H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h as both mintAuthority and freezeAuthority. That authority is a PDA owned by the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB, so the program can directly freeze individual DUSD token accounts and block their transfers. The separate BSC deployment remains governed through the StandX Gateway role system.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "StandX documents multiple independent price feeds, median selection, deviation circuit breakers, secondary networks, TWAP fallbacks, and manual intervention for its managed collateral and hedging system.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "DUSD is minted from USDT or USDC into a managed vault and offchain hedging system, and redemption uses a seven-day unwind period. StandX monitors collateral, hedge positions, and liquidation triggers operationally, but users do not open permissionless per-collateral debt positions with independently inventoried onchain auction, backstop, and shutdown branches.",
+      "sources": [
+        {
+          "label": "StandX DUSD architecture",
+          "url": "https://docs.standx.com/docs/dusd-solutions"
+        },
+        {
+          "label": "StandX risks and hedging system",
+          "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+        },
+        {
+          "label": "StandX DUSD redemption",
+          "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD minting",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+      },
+      {
+        "label": "StandX DUSD redemption",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "StandX documents DUSD as chain-native on Solana and BNB Chain with StandX Gateway components handling minting and redemption. No third-party bridge route was verified, so the reviewed topology is issuer-native mint/redeem on each supported chain.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "StandX DUSD solutions",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX key addresses",
+        "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+        "destinationChain": "bsc",
+        "contractAddress": "0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122",
+        "protocol": "StandX issuer-native DUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "2026-07-20: a complete RoleGranted/RoleRevoked scan of this token from deployment through block 111,600,000 confirms the sole MINTER_ROLE is the StandX Gateway controller proxy 0x2c02f575cdd0cc87de89ae6a493b05a5ed95065a and DEFAULT_ADMIN_ROLE is the 3-of-4 Safe 0x6c2404092cb1acfe9a06bc7de61bf619933edba5 — StandX mints natively on BSC via its Gateway against collateral deposits. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DUSD token on BscScan",
+            "url": "https://bscscan.com/address/0xaf44a1e76f56ee12adbb7ba8acd3cbd474888122"
+          },
+          {
+            "label": "StandX key addresses",
+            "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+          }
+        ]
+      },
+      {
+        "id": "solana:DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+        "destinationChain": "solana",
+        "contractAddress": "DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+        "protocol": "StandX issuer-native DUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At slot 425778638, this Token-2022 mint has mintAuthority and freezeAuthority H4Mp7WL282pdbY9V9N7AJnsQwB5yyrU1E7svfsH2Ur5h, a PDA of the immutable StandX program STANDKqqZERMKosYH2PAtNtnt6mig4CRPycsRwjuVhB (upgradeAuthority: None) — StandX mints natively on Solana via its program. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "DUSD token on Solscan",
+            "url": "https://solscan.io/token/DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM"
+          },
+          {
+            "label": "StandX key addresses",
+            "url": "https://docs.standx.com/docs/dusd-solutions/key-addresses"
+          }
+        ]
+      }
+    ]
+  }
+}

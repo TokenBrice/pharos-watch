@@ -1,0 +1,74 @@
+{
+  "id": "cash-phantom",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "CASH is a Bridge-issued U.S. dollar payment stablecoin for Phantom with 1:1 redemption through Bridge."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bridge Building Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / state money transmitter regulators",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://apidocs.bridge.xyz/platform/issuance/faq",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Bridge Building Inc. (BBI), the legal issuer of CASH via Bridge Open Issuance, is a Stripe subsidiary and licensed state money transmitter (NMLS #2450917). On Feb 12, 2026, the OCC conditionally approved Bridge Ventures LLC (BVL, BBI's parent) to organize Bridge National Trust Bank (OCC Corporate Decision #1365), a new federally chartered national trust bank that would issue stablecoins and custody digital assets under direct OCC oversight. This conditional trust-bank charter covers a new bank entity under BVL, not BBI directly; BBI remains a state money transmitter. Because the chartered entity is not yet formed and BBI is the actual CASH issuer, issuerPathway remains unknown rather than federal-qualified-nonbank. Bridge markets its platform as GENIUS-ready but no token-specific PPSI approval or official GENIUS application has been filed or publicly disclosed for CASH. authorizationStatus stays issuer-announced-intent. No enforcement actions found.",
+    "references": [
+      {
+        "label": "OCC Corporate Decision #1365 — Bridge Ventures LLC conditional national trust bank charter",
+        "url": "https://www.occ.treas.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1365.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Bridge blog: OCC conditional approval announcement",
+        "url": "https://www.bridge.xyz/blog/bridge-receives-occ-conditional-approval-to-organize-a-federally-chartered-national-trust-bank",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-18",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Bridge Open Issuance",
+        "url": "https://www.bridge.xyz/news/introducing-open-issuance",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Bridge issuance FAQ",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Phantom Cash docs",
+        "url": "https://docs.phantom.com/cash",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC Corporate Decision #1365 (Feb 2026) — conditional trust bank charter for Bridge Ventures LLC (not BBI)",
+        "Bridge Open Issuance documentation and legal terms",
+        "Phantom CASH user-facing disclosures",
+        "Federal Register GENIUS Act NPRMs (OCC, FDIC, FinCEN, NCUA)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, or official PPSI application was located for CASH. The OCC conditional trust bank charter (CD-1365, Feb 2026) applies to a new bank entity under Bridge Ventures LLC, not to BBI (the actual CASH issuer). The PPSI application framework remains in proposed-rulemaking phase as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

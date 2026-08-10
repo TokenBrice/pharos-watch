@@ -1,0 +1,165 @@
+{
+  "id": "cadc-cad-coin",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: CADC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "CADC is a Canadian dollar stablecoin issued by Loon/Paytrie and made available on supported chains through direct network launches. I did not resolve a separate bridge, lockbox, or liquidity route for durable supply, so Pharos treats current route risk as native issuance on each deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Paytrie CADC",
+        "url": "https://paytrie.com/cadc"
+      },
+      {
+        "label": "CADC on Arbitrum",
+        "url": "https://medium.com/paytrie/cadc-on-arbitrum-is-now-live-on-paytrie-39e0b5f7ef1e"
+      },
+      {
+        "label": "CADC on Base",
+        "url": "https://www.einpresswire.com/article/786764431/paytrie-expands-canadian-dollar-stablecoin-cadc-to-base-network-for-faster-low-cost-onchain-transactions"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC: owner()/masterMinter()/pauser()/blacklister() all = the Loon 2-of-N Safe 0x3e30d340c83d068d632e11b5a30507ce973d7700 (read 2026-07-20); legacy proxy admin 0x616c831464c2ef872fd0d1b7bff7973c3a91ae12 (mint-authority review). Loon issues natively per chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9de41aff9f55219d5bf4359f167d1d0c772a396d",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC on Polygon: owner() = Loon Safe 0x9bba7ae7276e352387211384de6f87491162a19c, legacy proxy admin 0x616c831464c2ef872fd0d1b7bff7973c3a91ae12 (read 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2b28e826b55e399f4d4699b85f68666ac51e6f70",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC on Arbitrum: owner() = Loon Safe 0xf78280429f296f44fa2e222bec2e877afff9ac35, legacy proxy admin 0x616c831464c2ef872fd0d1b7bff7973c3a91ae12 (read 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x043eb4b75d0805c43d7c834902e335621983cf03",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x043eb4b75d0805c43d7c834902e335621983cf03",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC on Base: owner() = Loon Safe 0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8 (read 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      },
+      {
+        "id": "linea:0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6",
+        "destinationChain": "linea",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa0b18e70387ba72d1c7038bc0bd3a05e5a2287f6",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC on Linea: owner() = Loon Safe 0x3de3405801f7f6a2fe348a365e07dc4f83c7a6a8, proxy admin EOA 0xa0f5c8e8bcbdf066643c2ea8484cba7a3aff01f9 (mint-authority review, read 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      },
+      {
+        "id": "solana:9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7",
+        "protocol": "Loon native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native CADC on Solana: SPL mint 9ewjJpmD1ES83RDRFnHs7V2hUdH76WAVjdvu6UV6WNo7 (6 decimals, supply 10,001,000,000 raw) has mintAuthority 5PtbcryLdJNVzVxu1FhaJfrHManR4H2Ezg4N5oZ4k3dw and freezeAuthority CwAYsAH3HpJSFvmxUCxd3sExavu9TeEvz49zruhei6w4 — the Loon issuance authorities (read 2026-07-20 via Solana RPC).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "CAD Coin",
+            "url": "https://cadcoin.org/"
+          }
+        ]
+      }
+    ]
+  }
+}

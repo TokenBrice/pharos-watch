@@ -1,0 +1,24 @@
+{
+  "id": "eur-qivalis",
+  "mica": {
+    "status": "pending",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "DNB",
+    "authorizedEntity": "Qivalis B.V.",
+    "references": [
+      {
+        "label": "Qivalis — MiCA-compliant euro stablecoin pending DNB EMI license",
+        "url": "https://qivalis.eu"
+      },
+      {
+        "label": "BNP Paribas joins Qivalis euro-backed stablecoin consortium",
+        "url": "https://group.bnpparibas/en/press-release/bnp-paribas-joins-european-consortium-to-launch-euro-backed-stablecoin"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register — Qivalis not listed; page latest update 2026-06-12, checked 2026-06-18",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  }
+}

@@ -123,10 +123,6 @@ export function useApiKeyRequestFormState() {
   useIssuedKeyFocusEffect(state.issuedKey, copyTokenButtonRef);
   useUnsavedTokenBeforeUnloadEffect(state.issuedKey, tokenSecured);
 
-  const toggleEndpoint = useCallback((path: string): void => {
-    dispatch({ type: "toggleEndpoint", path });
-  }, []);
-
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     dispatch({ type: "submitStarted" });
@@ -175,7 +171,6 @@ export function useApiKeyRequestFormState() {
     requestError: state.requestError,
     requesterName: state.requesterName,
     requestStatus: state.requestStatus,
-    selectedEndpoints: state.selectedEndpoints,
     selectTokenText,
     setAcceptedTerms: (value: boolean) => dispatch({ type: "setAcceptedTerms", value }),
     setEmail: (value: string) => setField("email", value),
@@ -186,7 +181,6 @@ export function useApiKeyRequestFormState() {
     setRequesterName: (value: string) => setField("requesterName", value),
     setUseCase: (value: string) => setField("useCase", value),
     setWebsite: (value: string) => setField("website", value),
-    toggleEndpoint,
     tokenCodeRef,
     tokenSecured,
     trimmedUseCaseLength,

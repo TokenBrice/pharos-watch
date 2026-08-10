@@ -1,0 +1,71 @@
+{
+  "id": "fusd-finchain",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "FUSD has issuer-style 1:1 minting and reserves, but it is natively yield-bearing and backed by tokenized T-bills/MMFs; the GENIUS Act's payment stablecoin definition may exclude yield-bearing/rebasing instruments, leaving applicability genuinely unresolved."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "FinChain Bermuda Limited",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "Bermuda Monetary Authority (digital asset business license)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "FUSD is stablecoin-adjacent, but yield-bearing reserve-token mechanics make GENIUS payment-stablecoin applicability unresolved. Issuer is FinChain Bermuda Limited (a separate accounts company / SAC), a wholly owned subsidiary of FinChain Holdings (Cayman) Limited, itself backed by Fosun Wealth Holdings. BMA digital asset business license confirmed. No US authorization pathway initiated as of 2026-06-18.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "FinChain FUSD website",
+        "url": "https://fusd.finchain.global/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FinChain FUSD introduction",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FinChain FUSD structuring and legal entity",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "FinChain FUSD reserves",
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "FinChain FUSD site (fusd.finchain.global)",
+        "FinChain Gitbook docs — introduction, structuring, reserves pages",
+        "Federal Register search for FinChain / FUSD",
+        "BMA regulated entities search",
+        "Web search: FinChain FUSD GENIUS Act US regulatory 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for FUSD or FinChain Bermuda Limited. Issuer holds a BMA digital asset business license only.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

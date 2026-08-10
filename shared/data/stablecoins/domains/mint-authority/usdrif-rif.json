@@ -1,0 +1,297 @@
+{
+  "id": "usdrif-rif",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDRIF's two direct V3 collateral-bucket minters and both LayerZero administrators are verified, and the privileged upgrade path is also resolved: ProxyAdmin 0x1a1824... is owned by the UpgradeDelegator proxy 0x131564... whose verified implementation gates upgrade/changeProxyAdmin behind Governor.isAuthorizedChanger, so Governor/VotingMachine proxy upgrades can only execute through MOC token-vote-accepted changer contracts. There is no keyholder bypass of the ordinary MOC governance route.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
+      ],
+      "implementationAddresses": [
+        "0x6d1bb87856a2b2351d87ba5772a93dc911325af9"
+      ],
+      "adminAddresses": [
+        "0x3b8853df65afbd94853e6d77ee0ab5590f41bb08",
+        "0x65a5681be95d212f0c90ead40170d8277de81169",
+        "0x1a1824f39d79937dcb80c9d9938ae77e431c2def",
+        "0x131564703310a294c1bfdc09d10ec0659f18e253"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "RIF On Chain MOC token-vote governance",
+      "observedAt": "2026-07-27",
+      "observedBlock": 9114517,
+      "sources": [
+        {
+          "label": "Rootstock explorer: USDRIF token",
+          "url": "https://rootstock.blockscout.com/address/0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
+        },
+        {
+          "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+          "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
+        },
+        {
+          "label": "Rootstock block 9114517",
+          "url": "https://rootstock.blockscout.com/block/9114517"
+        },
+        {
+          "label": "Rootstock explorer: Governor ProxyAdmin",
+          "url": "https://rootstock.blockscout.com/address/0x1a1824f39d79937dcb80c9d9938ae77e431c2def"
+        },
+        {
+          "label": "Rootstock explorer: verified UpgradeDelegator implementation",
+          "url": "https://rootstock.blockscout.com/address/0x6d1cca35aa431f2af0f0f2b9050c582b823ac731"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "RIF On Chain V3 RIF collateral bucket",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "rootstock",
+        "address": "0xA27024Ed70035E46dba712609fc2Afa1c97aA36A",
+        "capDescription": "The bucket can mint USDRIF only through its collateralized operation path, bounded by deposited RIF, coverage thresholds, oracle pricing, and shared multi-collateral rules.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 9077990,
+        "failureDomainKeys": [
+          "protocol:rif-on-chain",
+          "contract:rootstock:0xa27024ed70035e46dba712609fc2afa1c97aa36a"
+        ],
+        "evidence": "At Rootstock block 9077990, AccessControl enumeration on the USDRIF token reports this official V3 MocCore bucket as one of exactly two MINTER_ROLE and BURNER_ROLE members. The bucket's 308,770,106.853842843323055890 RIF collateral and protocol coverage checks bound its user-initiated mint path.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: RIF collateral bucket",
+            "url": "https://rootstock.blockscout.com/address/0xA27024Ed70035E46dba712609fc2Afa1c97aA36A"
+          },
+          {
+            "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+            "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
+          }
+        ]
+      },
+      {
+        "label": "RIF On Chain V3 DOC collateral bucket",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "rootstock",
+        "address": "0x697535055Aa7AfD2C280523C7B062b1F05284661",
+        "capDescription": "The bucket can mint USDRIF only through its collateralized operation path, bounded by deposited DOC, coverage thresholds, oracle pricing, and shared multi-collateral rules.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 9077990,
+        "failureDomainKeys": [
+          "protocol:rif-on-chain",
+          "contract:rootstock:0x697535055aa7afd2c280523c7b062b1f05284661"
+        ],
+        "evidence": "At Rootstock block 9077990, AccessControl enumeration on the USDRIF token reports this official V3 DOC bucket as the second and only other MINTER_ROLE and BURNER_ROLE member. The bucket's collateralized operations and 67.486329105 DOC balance bound its user-initiated mint path.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: DOC collateral bucket",
+            "url": "https://rootstock.blockscout.com/address/0x697535055Aa7AfD2C280523C7B062b1F05284661"
+          },
+          {
+            "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+            "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
+          }
+        ]
+      },
+      {
+        "label": "RIF On Chain MOC token-vote governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "chain": "rootstock",
+        "address": "0x65a5681be95d212f0c90ead40170d8277de81169",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Accepted MOC-holder proposals can authorize changer contracts that alter mint parameters, roles, or UUPS implementations; no immutable numeric supply ceiling applies.",
+        "observedAt": "2026-07-22",
+        "observedBlock": 9077990,
+        "failureDomainKeys": [
+          "governance:moc-token-voting",
+          "protocol:rif-on-chain"
+        ],
+        "routeChecks": {
+          "signingModel": "MOC stakers submit pre-votes and token-weighted votes through VotingMachine; accepted proposals call the controlled Governor, which authorizes the proposal's changer contract.",
+          "caps": "Registry reads at block 9077990 report a 100,000 MOC proposal stake, 5% pre-vote winner threshold, 20% quorum, 50% acceptance threshold, 30% veto threshold, and a seven-day ordinary voting period. The contract also permits early acceptance at its configured high-support threshold, so no hard seven-day execution delay is claimed."
+        },
+        "evidence": "Pinned reads at Rootstock block 9077990 resolve the former apparent cycle: Governor 0x3b8853... is owned by VotingMachine 0x65a568..., while VotingMachine names that Governor as its controlled governor. The verified VotingMachine source executes an accepted proposal by calling controlledGovernor.executeChange; current registry reads report round 23 and the documented stake, quorum, acceptance, veto, and voting-period parameters.",
+        "sources": [
+          {
+            "label": "Money on Chain Areopagus governance at commit 4ae342a",
+            "url": "https://github.com/money-on-chain/Areopagus-Governance/tree/4ae342a733cee1de01b668b1d706fad08641bfd9"
+          },
+          {
+            "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+            "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
+          },
+          {
+            "label": "Rootstock explorer: VotingMachine",
+            "url": "https://rootstock.blockscout.com/address/0x65a5681be95d212f0c90ead40170d8277de81169"
+          }
+        ]
+      },
+      {
+        "label": "USDRIF Arbitrum LayerZero OFT inbound minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "arbitrum",
+        "address": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "observedAt": "2026-07-22",
+        "observedBlock": 486369748,
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "routeChecks": {
+          "trustedPeerOrRemote": "The OFT is peered only to Rootstock EID 30333 and mints only after verified LayerZero V2 messages.",
+          "lockboxOrEscrow": "The route evidence identifies a Rootstock OFT adapter lockbox that locks native USDRIF and matched the Arbitrum OFT supply 1:1 at review."
+        },
+        "evidence": "At Arbitrum block 486369748 (2026-07-22T01:25:29Z), this OFT returned LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and owner 0xb2395E...6305. It mints only on verified messages against native USDRIF locked by the Rootstock adapter, so the mint authority is the OFT contract itself (authorityType contract). Re-confirmed 2026-07-30 at Arbitrum block 490995736: the address still holds contract bytecode and owner() still returns 0xb2395Eaaeb03fb1F46647C423378B24f2E906305.",
+        "sources": [
+          {
+            "label": "USDRIF token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          },
+          {
+            "label": "Arbitrum block 486369748",
+            "url": "https://arbiscan.io/block/486369748"
+          },
+          {
+            "label": "Arbitrum block 490995736",
+            "url": "https://arbiscan.io/block/490995736"
+          }
+        ]
+      },
+      {
+        "label": "USDRIF Rootstock LayerZero adapter owner",
+        "role": "bridge-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 4,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "chain": "rootstock",
+        "address": "0xC61820bFB8F87391d62Cd3976dDc1d35e0cf7128",
+        "observedAt": "2026-07-22",
+        "observedBlock": 9077990,
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "multisig:rootstock:0xc61820bfb8f87391d62cd3976ddc1d35e0cf7128"
+        ],
+        "routeChecks": {
+          "lockboxOrEscrow": "Owns adapter 0xB2eE5502...2C7b, which locks native USDRIF and cannot create native Rootstock supply.",
+          "pausersAdminsUpgraders": "The adapter owner can change LayerZero peers, delegate, options, inspector, and pre-crime configuration; the exact current owner is this 3-of-4 multisig."
+        },
+        "evidence": "At Rootstock block 9077990, adapter 0xB2eE5502...2C7b returned this contract as owner. Its standard legacy multisig interface returned four owners, required() = 3, and bytecode exposes no module or guard system.",
+        "sources": [
+          {
+            "label": "Rootstock explorer: USDRIF LayerZero adapter",
+            "url": "https://rootstock.blockscout.com/address/0xB2eE550266533DC9c989E43BfE7aAb6203ee2C7b"
+          },
+          {
+            "label": "Rootstock explorer: adapter-owner multisig",
+            "url": "https://rootstock.blockscout.com/address/0xC61820bFB8F87391d62Cd3976dDc1d35e0cf7128"
+          },
+          {
+            "label": "Rootstock block 9077990",
+            "url": "https://rootstock.blockscout.com/block/9077990"
+          }
+        ]
+      },
+      {
+        "label": "USDRIF Arbitrum LayerZero OFT owner/delegate",
+        "role": "bridge-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 4,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "chain": "arbitrum",
+        "address": "0xb2395Eaaeb03fb1F46647C423378B24f2E906305",
+        "observedAt": "2026-07-22",
+        "observedBlock": 486369748,
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "safe:arbitrum:0xb2395eaaeb03fb1f46647c423378b24f2e906305"
+        ],
+        "safe": {
+          "version": "1.4.1+L2",
+          "owners": [
+            "0x43a74B73B0363D7883E1a402427F4E302a7F4712",
+            "0x454b5D455aD71Df0fF00A1e0F189b05186800C6C",
+            "0xA46bC6E8dbaDD408A3f27378c1288168BfD1E605",
+            "0xe4822F07C1d988A8f2F53D1817f7e8848897b67A"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedBlock": 486369748,
+          "observedAt": "2026-07-22",
+          "source": "onchain"
+        },
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Safe owns the OFT and can update LayerZero peer and delegate configuration; it cannot mint without the OFT message path or raise native USDRIF supply.",
+          "pausersAdminsUpgraders": "Pinned Safe reads report four owners, threshold 2, no enabled modules, and a zero guard storage slot."
+        },
+        "evidence": "At Arbitrum block 486369748, the OFT returned this Safe as owner. Pinned Safe reads returned version 1.4.1+L2, the enumerated four owners, threshold 2, no enabled modules, zero guard storage, and master copy 0x29fcB4...C762.",
+        "sources": [
+          {
+            "label": "Arbiscan: USDRIF OFT owner Safe",
+            "url": "https://arbiscan.io/address/0xb2395Eaaeb03fb1F46647C423378B24f2E906305"
+          },
+          {
+            "label": "Safe transaction service: USDRIF OFT owner",
+            "url": "https://api.safe.global/tx-service/arb1/api/v1/safes/0xb2395Eaaeb03fb1F46647C423378B24f2E906305/"
+          },
+          {
+            "label": "Arbitrum block 486369748",
+            "url": "https://arbiscan.io/block/486369748"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
+    "review": {
+      "evidence": "Pinned Rootstock block 9077990 reads enumerate both and only direct USDRIF minters (RIF MocCore 0xA27024... and DOC bucket 0x697535...), the UUPS implementation, and the token's Governor; both LayerZero administration endpoints resolve to a 3-of-4 Rootstock multisig and a 2-of-4 Arbitrum Safe. Follow-up at Rootstock block 9114517 (2026-07-27): the recursive upgrade chain terminates in governance. ProxyAdmin 0x1a1824f39d79937dcb80c9d9938ae77e431c2def (EIP-1967 admin of both the Governor 0x3b8853... and VotingMachine 0x65a568... proxies) has owner() = 0x131564703310a294c1bfdc09d10ec0659f18e253, a transparent proxy whose own admin is the same ProxyAdmin and whose implementation is the Blockscout-verified Money on Chain UpgradeDelegator 0x6d1cca35aa431f2af0f0f2b9050c582b823ac731. In that verified source, upgrade(), upgradeAndCall(), and changeProxyAdmin() are all gated by onlyAuthorizedChanger(), which requires governor.isAuthorizedChanger(msg.sender); the UpgradeDelegator's governor() returns Governor 0x3b8853..., whose owner() is VotingMachine 0x65a568.... The Governor and VotingMachine proxy-upgrade path is therefore constrained by the same MOC token voting as the ordinary changer flow — upgrades execute only through MOC-vote-accepted changer contracts, with no enumerated keyholder bypass. M-2 evidence binding 2026-08-08: reconciliation continuous is structural - pinned Rootstock reads (blocks 9077990 and 9114517) prove the only USDRIF minters are the MoC protocol contracts (RIF MocCore and the DOC bucket), which mint exclusively against on-chain collateral under the sourced RIF On Chain V3 deployment; supply cannot exceed protocol-accounted collateral by construction.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "RIF On Chain V3 deployment repository at commit 64734b2",
+          "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
+        },
+        {
+          "label": "Money on Chain Areopagus governance at commit 4ae342a",
+          "url": "https://github.com/money-on-chain/Areopagus-Governance/tree/4ae342a733cee1de01b668b1d706fad08641bfd9"
+        },
+        {
+          "label": "Rootstock block 9077990",
+          "url": "https://rootstock.blockscout.com/block/9077990"
+        },
+        {
+          "label": "Arbitrum block 486369748",
+          "url": "https://arbiscan.io/block/486369748"
+        }
+      ]
+    }
+  }
+}

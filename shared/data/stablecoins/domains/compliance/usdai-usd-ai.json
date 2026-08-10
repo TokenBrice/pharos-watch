@@ -1,0 +1,65 @@
+{
+  "id": "usdai-usd-ai",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "USD.AI Foundation",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USD.AI publishes reserve data through its Proof of Reserves documentation and M0/Usual/Gauntlet vault disclosures, but no U.S. federal GENIUS issuer approval exists. Treat as prospective-pathway-only until a permitted payment stablecoin issuer is identified.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "USDai",
+        "url": "https://usd.ai/usdai",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD.AI technical overview",
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD.AI proof of reserves",
+        "url": "https://docs.usd.ai/app-guide/depositor/proof-of-reserves",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "USD.AI Foundation and CHIP announcement",
+        "url": "https://usd.ai/insights/usdai-foundation-chip",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "USD.AI Foundation announcement confirming Cayman Islands domicile",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS approval, official application, or foreign registration source was located for USDai; USD.AI Foundation confirmed as Cayman Islands DAO steward with no U.S. regulatory presence.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

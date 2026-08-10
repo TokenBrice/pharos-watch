@@ -1,0 +1,97 @@
+{
+  "id": "deuro-deuro",
+  "reserves": [
+    {
+      "name": "WFPS (Wrapped Frankencoin Pool Share)",
+      "pct": 66.3,
+      "risk": "very-high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Frankencoin protocol",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "WBTC (Wrapped BTC)",
+      "pct": 29.3,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BitGo WBTC",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "cbBTC (Coinbase Wrapped BTC)",
+      "pct": 3.9,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase cbBTC",
+      "riskFactors": [
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "Other collateral",
+      "pct": 0.5,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "dEURO approved collateral basket",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dEURO smart contracts",
+        "url": "https://docs.deuro.com/smart-contracts"
+      },
+      {
+        "label": "dEURO reserve documentation",
+        "url": "https://docs.deuro.com/reserve"
+      },
+      {
+        "label": "dEURO collateral positions API",
+        "url": "https://api.deuro.com/ecosystem/collateral/positions/details"
+      }
+    ],
+    "rationale": "The current dEURO collateral positions capture contains four categories totaling 100%: WFPS, WBTC, cbBTC, and an aggregate Other collateral row. dEURO documentation describes immutable, oracle-free collateralized positions and the live API supplies the point-in-time weights; the aggregate residual remains explicitly unresolved rather than being split into unsupported constituents.",
+    "compositionBasis": "Current dEURO collateral positions API and official protocol documentation",
+    "compositionAsOf": "2026-07-14",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The 0.5% Other collateral row is an aggregate live category whose constituent assets and issuer exposure are not disclosed by the reviewed API response.",
+    "knownUnknownExposurePct": 0.5,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 3,
+        "reserveName": "Other collateral",
+        "pct": 0.5,
+        "disposition": "insufficient-evidence",
+        "rationale": "The live API reports an aggregate Other collateral category without constituent identity or weights."
+      }
+    ]
+  }
+}

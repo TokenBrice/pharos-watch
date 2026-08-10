@@ -1,0 +1,87 @@
+{
+  "id": "hbd-hive",
+  "reserves": [
+    {
+      "name": "Hive protocol conversion capacity",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Hive blockchain protocol (witness median price-feed conversion)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive dynamic global properties documentation",
+        "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
+      },
+      {
+        "label": "Hive glossary (HBD conversion and haircut mechanics)",
+        "url": "https://developers.hive.io/glossary/"
+      },
+      {
+        "label": "Pinned Hive debt-ratio implementation",
+        "url": "https://github.com/openhive-network/hive/blob/dab219074fd146d07305bccd4a9f869c9d94d301/libraries/chain/database.cpp"
+      },
+      {
+        "label": "Hive blockchain API",
+        "url": "https://api.hive.blog"
+      }
+    ],
+    "rationale": "HBD is a native Hive protocol liability, not a claim on a segregated reserve portfolio: there are no asset reserves, only the protocol's conversion rule paying up to $1 of HIVE per HBD at the 3.5-day median witness price, bounded by debt controls. At irreversible block 108364554, total supply was 32,394,046.860 HBD and the treasury held 23,179,590.895 HBD; consensus code excludes that treasury balance, leaving 9,214,455.965 HBD in the debt calculation. Against 568,196,982.317 HIVE at 0.048 HBD per HIVE, the resulting debt ratio was 25.25345%: above the 20% print-stop threshold but below the 30% haircut threshold.",
+    "compositionBasis": "Hive protocol conversion and haircut mechanism confirmed against live chain properties",
+    "compositionAsOf": "2026-07-22",
+    "scope": "full-composition",
+    "knownUnknownExposure": "There is no external reserve custodian, asset allocation, or legally segregated collateral pool. HBD holders instead depend on HIVE market value and liquidity, witness price-feed integrity, the 3.5-day conversion delay, and protocol debt controls. Consensus code explicitly excludes the treasury HBD balance from the debt calculation; realized USD value after conversion remains market-dependent.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Hive protocol conversion capacity",
+        "pct": 100,
+        "disposition": "self-reserve",
+        "rationale": "Backing is the Hive protocol's own conversion capacity denominated in HIVE market value — a self-referential protocol reserve rather than an exogenous asset or tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Hive base-layer protocol (conversion mechanism; no reserve custodian)",
+        "role": "other",
+        "jurisdiction": "Hive"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive Backed Dollar overview",
+        "url": "https://hive.io/hbd/"
+      },
+      {
+        "label": "Hive dynamic global properties documentation",
+        "url": "https://developers.hive.io/tutorials-recipes/understanding-dynamic-global-properties.html"
+      }
+    ],
+    "uncertainty": "HBD has no reserve assets to custody: backing is the protocol-native conversion rule against HIVE market value. Custody concepts (segregation, bankruptcy remoteness, rehypothecation) do not apply; the operative risks are witness price-feed integrity, the 3.5-day conversion delay, and the debt-ratio haircut degrading the $1 conversion rate when protocol debt is high.",
+    "knownUnknownExposurePct": 0
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "usda-alpha-partner",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      },
+      {
+        "label": "Website",
+        "url": "https://alphapartner.vip/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  }
+}

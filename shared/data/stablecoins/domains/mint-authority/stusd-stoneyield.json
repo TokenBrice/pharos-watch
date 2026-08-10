@@ -1,0 +1,85 @@
+{
+  "id": "stusd-stoneyield",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "stUSD is a StoneYield wrapper/share token over USDC and yield-bearing USDC positions, so base USDC mint authority is inherited from Circle. The StoneYield wrapper contract (0xb4d3c1bb…) separately holds MINTER_ROLE for stUSD issueFromWrapper; DEFAULT_ADMIN_ROLE is held by an EIP-7702 EOA (0x9ab82f8e…) delegating to 0x63c0c19a…. MAX_SUPPLY is a Solidity constant at 1B tokens.",
+    "inheritedFrom": "usdc-circle",
+    "controls": [
+      {
+        "label": "StoneYield stUSD wrapper contract (MINTER_ROLE / issueFromWrapper)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "bsc",
+        "address": "0xb4d3c1bb59be7b419af4e10e9b240f425782b22a",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAX_SUPPLY is a Solidity constant (≈1B tokens); issueFromWrapper() is gated by MINTER_ROLE and enforces MAX_SUPPLY ceiling.",
+        "sources": [
+          {
+            "label": "StoneYield contract design docs",
+            "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+          },
+          {
+            "label": "stUSD contract (BscScan)",
+            "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a) returned true; wrapper() on stUSD returned 0xb4d3c1bb…. Contract source (BscScan) confirms issueFromWrapper() requires MINTER_ROLE and checks MAX_SUPPLY; MAX_SUPPLY is a Solidity constant with no setter."
+      },
+      {
+        "label": "StoneYield DEFAULT_ADMIN_ROLE (EIP-7702 EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "chain": "bsc",
+        "address": "0x9ab82f8e97bf3202173b92e06e6593f336b76ccf",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "stUSD contract (BscScan)",
+            "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e97bf3202173b92e06e6593f336b76ccf) returned true. eth_getCode on that address returned 23-byte EIP-7702 delegation designator (0xef0100 + 20-byte target 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b); it is an EOA with EIP-7702 delegation. grantRole() is controlled by this EOA."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 111254044,
+      "sources": [
+        {
+          "label": "stUSD contract (BscScan)",
+          "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9#code"
+        },
+        {
+          "label": "StoneYield stUSD wrapper (BscScan)",
+          "url": "https://bscscan.com/address/0xb4d3c1bb59be7b419af4e10e9b240f425782b22a#code"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC; base USDC mint authority is inherited from Circle because stUSD is tracked as a USDC strategy wrapper. 2026-07-20 dc-1 pass: the wrapper's stUSD issuance is deposit-issued (issueFromWrapper) with canRaiseCap=false and no separate cap-raise authority, so the reviewed economic mint cap is bounded. Upgrade-authority follow-up (2026-07-21): both the mint-critical stUSD token (0x806dd21af6de051fb811760a5768d04a99160eb9) and its MINTER_ROLE-holding wrapper (0xb4d3c1bb59be7b419af4e10e9b240f425782b22a) return zero at the EIP-1967 implementation and admin storage slots at BSC block 111254044, i.e. neither is a proxy — both are directly-deployed, non-upgradeable contracts, so stUSD's own mint logic cannot be swapped via a proxy upgrade. (The separately referenced sUSDC deposit-asset proxy, 0xad66385c6db496258771b5fd8ac376e3dd0d1536, is a transparent proxy with implementation 0xe1bf9310f23db3fd05931aa89879d5247bb2a678 and admin 0x6158905db12bc51f01542048546f4ca14a7caa80 — this governs the underlying collateral token, not stUSD's own mint path.)",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
+      "reviewedAt": "2026-07-21",
+      "sources": [
+        {
+          "label": "StoneYield contract design docs",
+          "url": "https://docs.stoneyield.io/docs/protocol/contract-design"
+        },
+        {
+          "label": "stUSD contract (BscScan)",
+          "url": "https://bscscan.com/address/0x806dd21af6de051fb811760a5768d04a99160eb9"
+        }
+      ],
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    },
+    "economicCapSemantics": "bounded"
+  }
+}

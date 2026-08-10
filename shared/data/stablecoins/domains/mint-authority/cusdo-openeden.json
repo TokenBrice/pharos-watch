@@ -1,0 +1,273 @@
+{
+  "id": "cusdo-openeden",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "inheritedFrom": "usdo-openeden",
+    "summary": "cUSDO's Ethereum, Base, and BSC contracts are ERC-4626 USDO wrappers whose public share issuance does not create base USDO; that base issuer path is inherited from usdo-openeden. The EVM wrappers are UUPS-upgradeable by one OpenEden EOA, while the Solana Token-2022 deployment has a direct single-signer mint and freeze authority.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+      ],
+      "implementationAddresses": [
+        "0xb9413a34f68072a362b6a58f46c6af36c4e5d890",
+        "0xc9c0479cd63ffd5e116430189a9eb6550617f287",
+        "0x99c913b3cbddcfc7ed49ff19b00704286a4b3b6b"
+      ],
+      "adminAddresses": [
+        "0x5eaff7af80488033bc845709806d5fae5291eb88"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "OpenEden cUSDO EVM UPGRADE_ROLE admin EOA",
+      "observedAt": "2026-07-15",
+      "observedBlock": 25535942,
+      "sources": [
+        {
+          "label": "OpenEden cUSDO deployment registry",
+          "url": "https://docs.openeden.com/usdo/cusdo-token"
+        },
+        {
+          "label": "Ethereum cUSDO verified implementation",
+          "url": "https://eth.blockscout.com/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890"
+        },
+        {
+          "label": "Base cUSDO verified implementation",
+          "url": "https://base.blockscout.com/address/0xc9c0479cd63ffd5e116430189a9eb6550617f287"
+        },
+        {
+          "label": "BSC cUSDO proxy",
+          "url": "https://bscscan.com/address/0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+        },
+        {
+          "label": "Ethereum PublicNode JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode JSON-RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode JSON-RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0",
+        "label": "OpenEden cUSDO Ethereum ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "cUSDO shares are minted/burned by the OpenEden ERC-4626-style wrapper against USDO wrap/unwrap; this share accounting cannot create or destroy base USDO supply.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25535942,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "Ethereum cUSDO verified implementation",
+            "url": "https://eth.blockscout.com/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25535942, asset() returned USDO 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe; the ERC-1967 implementation slot resolved to 0xb9413a34f68072a362b6a58f46c6af36c4e5d890 and the transparent-admin slot was zero. The verified implementation exposes ERC-4626 deposit/mint against USDO, not issuer-only base-USDO minting."
+      },
+      {
+        "chain": "base",
+        "address": "0x83db73ef5192de4b6a4c92bd0141ba1a0dc87c65",
+        "label": "OpenEden cUSDO Base ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Base cUSDO is the same USDO ERC-4626 wrapper implementation; share issuance requires Base USDO and cannot create base USDO supply.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 48651922,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "Base cUSDO verified implementation",
+            "url": "https://base.blockscout.com/address/0xc9c0479cd63ffd5e116430189a9eb6550617f287"
+          },
+          {
+            "label": "Base PublicNode JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Base block 48651922, asset() returned Base USDO 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0; the ERC-1967 implementation slot resolved to 0xc9c0479cd63ffd5e116430189a9eb6550617f287 and the transparent-admin slot was zero."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef",
+        "label": "OpenEden cUSDO BSC ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "BSC cUSDO is the same USDO ERC-4626 wrapper implementation; share issuance requires BSC USDO and cannot create base USDO supply.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 110075208,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "BSC cUSDO proxy",
+            "url": "https://bscscan.com/address/0x64748ea3e31d0b7916f0ff91b017b9f404ded8ef"
+          },
+          {
+            "label": "BSC PublicNode JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At BSC block 110075208, asset() returned BSC USDO 0x302e52afF9815B9D1682473DBFB9C74F9B750AA8; the ERC-1967 implementation slot resolved to 0x99c913b3cbddcfc7ed49ff19b00704286a4b3b6b and the transparent-admin slot was zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5eaff7af80488033bc845709806d5fae5291eb88",
+        "label": "OpenEden cUSDO EVM UPGRADE_ROLE admin EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25535942,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "Ethereum cUSDO verified implementation",
+            "url": "https://eth.blockscout.com/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890"
+          },
+          {
+            "label": "Ethereum PublicNode JSON-RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Base PublicNode JSON-RPC",
+            "url": "https://base-rpc.publicnode.com"
+          },
+          {
+            "label": "BSC PublicNode JSON-RPC",
+            "url": "https://bsc-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, this address had no bytecode and held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on the respective cUSDO wrappers. Verified cUSDO source makes UUPS _authorizeUpgrade() require UPGRADE_ROLE; no timelock was observed."
+      },
+      {
+        "chain": "solana",
+        "address": "FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i",
+        "label": "cUSDO Solana Token-2022 mint and freeze authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-15",
+        "observedBlock": 433002244,
+        "sources": [
+          {
+            "label": "OpenEden cUSDO deployment registry",
+            "url": "https://docs.openeden.com/usdo/cusdo-token"
+          },
+          {
+            "label": "Solana cUSDO Token-2022 mint",
+            "url": "https://solscan.io/token/BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs"
+          },
+          {
+            "label": "Solana mainnet JSON-RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 433002244, getAccountInfo for cUSDO mint BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs returned this same public key as mintAuthority and freezeAuthority. Its account is system-program owned, not a Token-2022 multisig or program account."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "At Ethereum block 25535942, Base block 48651922, and BSC block 110075208, the three EVM cUSDO deployments resolved through zero-admin-slot EIP-1967 proxies to the listed implementations. The same no-bytecode EOA held DEFAULT_ADMIN_ROLE, UPGRADE_ROLE, and PAUSE_ROLE on all three, and verified source makes UUPS upgrades depend on UPGRADE_ROLE. These wrappers mint cUSDO only against their chain's USDO asset, so base-USDO issuance remains inherited from usdo-openeden. At finalized Solana slot 433002244, cUSDO's Token-2022 mint and freeze authority was the direct system-account signer FPyi9yJKNX8y5gkadeFvbC2pDB9VVqxpwfofHxJ6Ed7i. Reserve reconciliation: cUSDO is a wrapped form of USDO, and OpenEden's transparency materials describe Chainlink Proof of Reserve as an independent, real-time verification feed for USDO reserve coverage; this is recurring third-party reconciliation rather than issuer-only reporting. Prudential supervision: the Bermuda Monetary Authority registry lists OpenEden Digital Limited (registration number 202403468) with a Class F digital-asset-business licence effective 2026-05-26, matching the legal entity identified for the USDO/cUSDO product. Reviewed 2026-07-15. Economic-control adjudication (2026-07-20): each cUSDO ERC-4626 wrapper mints shares only against USDO actually deposited into that chain's vault and exposes no privileged net-claim mint entry point, so the wrapper cap is economically bounded; base USDO issuance discretion is scored on the parent usdo-openeden profile. M-1 evidence review 2026-08-08: supervision 'prudential' upgraded to primary evidence - BMA register entry read directly (OpenEden Digital Limited, Class F, reg. 202403468, effective 2026-05-26; previously a time-limited Class M expiring 2026-03-31, with an unverifiable ~8-week register gap before Class F took effect) under the DABA prudential regime (BR 98/2018: audited financial statements, business plan, compliance certificate). Reconciliation downgraded continuous -> periodic: no issuer artefact names a reconciliation series; the only named series is the Chainlink usdo-por feed with a daily 86400s heartbeat and porAuditor 'Cross-chain' (no accounting firm), whose declared scope (U.S. Treasury bills only) and value (24,718,359.89 on 2026-08-08) diverge ~9% from the issuer API's full-basket figure (27,161,572.74 incl. RLUSD/USDC/BUIDL/VBILL); the docs transparency page is 7 months stale and still future-tense about a public dashboard.",
+      "reviewer": "OpenAI Codex control verification; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "OpenEden cUSDO deployment registry",
+          "url": "https://docs.openeden.com/usdo/cusdo-token"
+        },
+        {
+          "label": "Ethereum cUSDO verified implementation",
+          "url": "https://eth.blockscout.com/address/0xB9413a34f68072a362B6a58F46c6AF36C4e5d890"
+        },
+        {
+          "label": "Base cUSDO verified implementation",
+          "url": "https://base.blockscout.com/address/0xc9c0479cd63ffd5e116430189a9eb6550617f287"
+        },
+        {
+          "label": "Solana cUSDO Token-2022 mint",
+          "url": "https://solscan.io/token/BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs"
+        },
+        {
+          "label": "Ethereum PublicNode JSON-RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode JSON-RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode JSON-RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        },
+        {
+          "label": "Solana mainnet JSON-RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "OpenEden USDO transparency",
+          "url": "https://openeden.com/usdo/transparency"
+        },
+        {
+          "label": "OpenEden and Chainlink USDO proof-of-reserve announcement",
+          "url": "https://openeden.com/news/openeden-chainlink-partner-stablecoin-usdo-interoperability/"
+        },
+        {
+          "label": "BMA regulated-entities register: OpenEden Digital Limited, Digital Assets Business, Class F, reg. 202403468, effective 26 May 2026",
+          "url": "https://www.bma.bm/regulated-entities"
+        },
+        {
+          "label": "BMA Digital Asset Business (Prudential Standards) (Annual Return) Rules 2018 (BR 98/2018)",
+          "url": "https://cdn.bma.bm/documents/2023-11-27-15-56-27-Digital-Asset-Business-Prudential-Standards-Annual-Return-Rules-2018.pdf"
+        },
+        {
+          "label": "Chainlink USDO Reserves feed metadata (usdo-por: 86400s heartbeat, porAuditor Cross-chain)",
+          "url": "https://reference-data-directory.vercel.app/feeds-ethereum-mainnet-base-1.json"
+        }
+      ]
+    },
+    "economicCapSemantics": "bounded"
+  }
+}

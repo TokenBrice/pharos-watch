@@ -1,0 +1,70 @@
+{
+  "id": "usdr-ring",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.ring.exchange/"
+      },
+      {
+        "label": "Website",
+        "url": "https://ring.exchange/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "USDR is minted by Core-authorized accounts rather than borrower collateral positions; its verified deployed token and current minter set expose no collateral-price liquidation branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-DRAIN data review",
+      "rationale": "The verified USDR AssetToken permits Core-authorized minters to mint directly. At finalized Ethereum block 25531699, the minter set comprised three EOAs and RingLaunchpad; the verified launchpad deploys and wraps tokens and seeds AMM liquidity, not borrower vaults. No current minter exposes a borrower-owned collateral position, collateral-ratio check, or liquidation engine, so market-specific oracle branches do not apply to USDR issuance.",
+      "sources": [
+        {
+          "label": "USDR AssetToken verified source",
+          "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+        },
+        {
+          "label": "Ring Protocol Core verified source",
+          "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+        },
+        {
+          "label": "RingLaunchpad verified source",
+          "url": "https://eth.blockscout.com/address/0x8814a2aa2384d65672c7dc0650454e56f62fba8b?tab=contract"
+        },
+        {
+          "label": "Finalized Ethereum block 25531699",
+          "url": "https://eth.blockscout.com/block/25531699"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-DRAIN data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDR AssetToken verified source",
+        "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+      },
+      {
+        "label": "Ring Protocol Core verified source",
+        "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+      },
+      {
+        "label": "RingLaunchpad verified source",
+        "url": "https://eth.blockscout.com/address/0x8814a2aa2384d65672c7dc0650454e56f62fba8b?tab=contract"
+      },
+      {
+        "label": "Finalized Ethereum block 25531699",
+        "url": "https://eth.blockscout.com/block/25531699"
+      }
+    ]
+  }
+}

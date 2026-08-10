@@ -1,0 +1,167 @@
+{
+  "id": "rlusd-ripple",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "RLUSD Ethereum minting is gated by Ripple's custom 2-of-31 MultiSign minter. The proxy creation calldata and current role reads identify separate 7-of-12 Ripple MultiSign contracts for DEFAULT_ADMIN_ROLE and UPGRADER_ROLE. The XRPL issuer account has its master key active and no signer list.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+      ],
+      "implementationAddresses": [
+        "0x9747a0d261c2d56eb93f542068e5d1e23170fa9e"
+      ],
+      "adminAddresses": [
+        "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+        "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530195,
+      "sources": [
+        {
+          "label": "Ethereum: RLUSD proxy creation transaction",
+          "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+        },
+        {
+          "label": "Ethereum: RLUSD implementation source",
+          "url": "https://eth.blockscout.com/address/0x9747a0d261c2d56eb93f542068e5d1e23170fa9e?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "RLUSD Ethereum minter - Ripple MultiSign contract (2-of-31)",
+        "role": "direct-minter",
+        "authorityType": "multisig",
+        "address": "0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "threshold": 2,
+        "signerCount": 31,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD token contract",
+            "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+          },
+          {
+            "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
+            "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+          }
+        ],
+        "evidence": "RLUSD ETH (0x8292) is a StablecoinProxy (UUPS), implementation StablecoinUpgradeableV2 at 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. hasRole(MINTER_ROLE, 0x97e9) = true (MINTER_ROLE bytes32 obtained via MINTER_ROLE() getter 0xd5391393). Contract 0x97e9 verified on Blockscout as Ripple's MultiSign (EIP-712 multisig): signers() returns 31 addresses, quorum() = 2, each signerWeight = 1, nonce = 350. No GnosisSafe module structure — custom Ripple EIP-712 multisig."
+      },
+      {
+        "label": "RLUSD XRPL issuer account (Ripple master key)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
+            "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
+          }
+        ],
+        "evidence": "XRPL account_info for rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De: Flags = 0x819a0000 (RequireDestTag, DisallowXRP, DefaultRipple, DepositAuth SET; NoFreeze NOT set; GlobalFreeze NOT set). RegularKey = none. No signer_list present. Master key active; XRPL issuance fully controlled by Ripple. Total XRPL RLUSD obligations = 761,696,376 RLUSD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
+        "label": "RLUSD Ethereum role-admin MultiSign (7-of-12)",
+        "role": "governor",
+        "authorityType": "multisig",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 7,
+        "signerCount": 12,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530195,
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD proxy creation transaction",
+            "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+          },
+          {
+            "label": "Ethereum: Ripple role-admin MultiSign",
+            "url": "https://eth.blockscout.com/address/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RLUSD proxy initialization calldata assigns DEFAULT_ADMIN_ROLE to 0x66fc. At block 25530195, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc) returned true; the verified Ripple MultiSign reports quorum 7 and 12 signers. This role can grant and revoke mint-critical roles."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
+        "label": "RLUSD Ethereum upgrader MultiSign (7-of-12)",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "threshold": 7,
+        "signerCount": 12,
+        "modulesOrGuardsStatus": "none-detected",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25530195,
+        "sources": [
+          {
+            "label": "Ethereum: RLUSD proxy creation transaction",
+            "url": "https://eth.blockscout.com/tx/0x811c963004b19c2e3724850cda6bffd7cab7ff8f34d5670f86b51a9e1390327d"
+          },
+          {
+            "label": "Ethereum: Ripple upgrader MultiSign",
+            "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "RLUSD proxy initialization calldata assigns UPGRADER_ROLE to 0x863c. At block 25530195, hasRole(UPGRADER_ROLE, 0x863c) returned true; the verified Ripple MultiSign reports quorum 7 and the same 12-signer set as the role-admin MultiSign."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "RLUSD May 2026 Deloitte reserve attestation",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/00bb3899f244c392ab77e55e65dee33cf271dfce.pdf/RLUSD_Attestation_Report_-_May_2026_Final.pdf"
+        },
+        {
+          "label": "NYDFS virtual-currency businesses and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "Ripple stablecoin",
+          "url": "https://ripple.com/solutions/stablecoin/"
+        },
+        {
+          "label": "Ethereum: RLUSD token contract",
+          "url": "https://eth.blockscout.com/address/0x8292bb45bf1ee4d140127049757c2e0ff06317ed"
+        },
+        {
+          "label": "Ethereum: Ripple MultiSign contract (Blockscout verified)",
+          "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
+        }
+      ],
+      "evidence": "ETH: MINTER_ROLE holder is 0x97e9 (Ripple MultiSign, quorum 2 of 31). The proxy creation calldata names 0x66fc as DEFAULT_ADMIN_ROLE and 0x863c as UPGRADER_ROLE; current hasRole reads at block 25530195 confirm both assignments, and both verified MultiSign contracts report quorum 7 of 12. XRPL: issuer rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De has its master key active and no signer list.",
+      "reviewer": "Codex V9 control curation / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

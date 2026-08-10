@@ -1,0 +1,12 @@
+{
+  "id": "kusd-kerne",
+  "reserves": [
+    {
+      "name": "USDC held 1:1 in the on-chain Peg Stability Module",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral"
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "eurcv-societe-generale-forge",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "Société Générale - Forge",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 2026-06-04)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "SG-Forge official announcement: EMI license from ACPR, July 2024",
+        "url": "https://www.sgforge.com/stablecoin-elevation/"
+      },
+      {
+        "label": "SG-FORGE EURCV MiCA white paper (Oct 2025)",
+        "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
+      }
+    ]
+  }
+}

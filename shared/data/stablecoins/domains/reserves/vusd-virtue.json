@@ -1,0 +1,132 @@
+{
+  "id": "vusd-virtue",
+  "reserves": [
+    {
+      "name": "IOTA collateral (vault 0xaf306be8419cf059642acdba3b4e79a5ae893101ae62c8331cefede779ef48d5)",
+      "pct": 2.19,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "IOTA network and Virtue CDP vault on IOTA Rebased",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "stIOTA collateral (vault 0xc9cb494657425f350af0948b8509efdd621626922e9337fd65eb161ec33de259)",
+      "pct": 97.51,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Swirl stIOTA NativePool 0x02d641d7b021b1cd7a2c361ac35b415ae8263be0641f9475ec32af4b9d8a8056 and Virtue CDP vault on IOTA Rebased",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "vIOTA collateral (vault 0x53b6405d2672be1e73f8ddea1766dbda57f1fed677be58fbfedc9fdddaafdd26)",
+      "pct": 0.2,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "TokenLabs vIOTA NativePool 0xb435fa61ee8d5473ab36de02c88756f8c74fcc031b4e3a2fe2a6647bb06b2872 and Virtue CDP vault on IOTA Rebased",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "iBTC collateral (vault 0xcc094d9e3b491b0c943bb18daf07a49bd951f34688f9610d90982de06fc0c5c9)",
+      "pct": 0.1,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "iBTC issuer/wrapper and Virtue CDP vault on IOTA Rebased",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 reserve-composition review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Virtue CDP documentation — supported collateral and repay-to-unlock flow",
+        "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
+      },
+      {
+        "label": "Virtue technical resources — mainnet package and object IDs",
+        "url": "https://docs.virtue.money/resources/technical-resources"
+      },
+      {
+        "label": "IOTA mainnet JSON-RPC — iota_getLatestCheckpointSequenceNumber and iota_getObject reads at checkpoint 172877784",
+        "url": "https://api.mainnet.iota.cafe"
+      },
+      {
+        "label": "IOTA mainnet GraphQL — NativePool and cert::Metadata object reads",
+        "url": "https://graphql.mainnet.iota.cafe"
+      },
+      {
+        "label": "Pyth Hermes — IOTA/USD and BTC/USD feed values published 2026-07-30",
+        "url": "https://hermes.pyth.network/api/latest_price_feeds?ids[]=c7b72e5d860034288c9335d4d325da4272fe50c92ab72249d58f6cbba30e4c44&ids[]=e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43"
+      }
+    ],
+    "rationale": "Fresh capture 2026-07-31 at IOTA checkpoint 172877784 (timestamp 2026-07-30 23:13:50 UTC) reads all four live shared Virtue vaults and the shared Stability Pool. Vault balances were 669,463.125762316 IOTA, 25,940,400.259379815 stIOTA, 57,017.073454695 vIOTA, and 0.0149549784 iBTC; VUSD debt supplies were 14,725.933422, 538,673.551046, 1,138.959800, and 732.517975 respectively. Current Swirl and TokenLabs NativePool objects plus cert::Metadata objects give exchange rates 1.1466223329 IOTA/stIOTA and 1.0500262411 IOTA/vIOTA. Pyth Hermes prices published 2026-07-30 23:16:58 UTC were $0.03252683 IOTA/USD and $64,876.40913043 BTC/USD. The resulting collateral values are approximately $21,775.51, $967,472.90, $1,947.36, and $970.23, normalized to 2.19%, 97.51%, 0.20%, and 0.10% (100.00% total). The shared Stability Pool read separately showed 176,231.229596 VUSD across 190 positions. The composition is fully identified at the capture point; no independent reserve attestation or legal custody assurance is published.",
+    "compositionBasis": "Current on-chain branch balances and NativePool exchange rates, valued with the exact Pyth feeds consumed by Virtue's deployed oracle rules and cross-checked against Virtue's CDP collateral documentation",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified direct collateral or tracked-stablecoin dependency remains at the 2026-07-31 checkpoint capture; all four slices are external cryptoasset identities rather than Pharos-tracked stablecoins. Independent reserve assurance, legal segregation, and guaranteed liquidation liquidity are not disclosed and are recorded in custodyProfile rather than as an unidentified composition slice.",
+    "knownUnknownExposurePct": 0,
+    "compositionAsOf": "2026-07-31"
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Virtue CDP vaults and shared Stability Pool Move objects on IOTA Rebased (package 0xd3b63e...904f)",
+        "role": "other",
+        "jurisdiction": "IOTA"
+      }
+    ],
+    "segregation": "omnibus",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "Codex Safety Score V9 custody review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Virtue CDP documentation — collateral locked in protocol positions",
+        "url": "https://docs.virtue.money/mechanisms/cdp-collateralized-debt-position"
+      },
+      {
+        "label": "Virtue technical resources (mainnet object IDs)",
+        "url": "https://docs.virtue.money/resources/technical-resources"
+      },
+      {
+        "label": "IOTA mainnet JSON-RPC — vault and shared Stability Pool reads at checkpoint 172877784",
+        "url": "https://api.mainnet.iota.cafe"
+      },
+      {
+        "label": "IOTA mainnet GraphQL — current NativePool and metadata object reads",
+        "url": "https://graphql.mainnet.iota.cafe"
+      }
+    ],
+    "uncertainty": "The fresh capture shows collateral in four shared protocol vault objects and VUSD in one shared Stability Pool (190 positions), so on-chain custody is omnibus at the protocol/branch level rather than an identified bank or segregated account. The package is immutable but an AdminCap gates supply limits and module versions, and liquidations run through a configured executor. No independent reserve attestation, legal segregation statement, bankruptcy-remoteness opinion, rehypothecation policy, or other assurance report covering the current collateral was found in the reviewed issuer documentation, audit, or on-chain sources; latest assurance scope is therefore unavailable.",
+    "knownUnknownExposurePct": 100
+  }
+}

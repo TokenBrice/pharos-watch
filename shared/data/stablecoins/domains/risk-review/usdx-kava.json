@@ -1,0 +1,273 @@
+{
+  "id": "usdx-kava",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Kava x/cdp params API (live read at height 21878704)",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Kava evmutil params API (no USDX conversion pair)",
+        "url": "https://api.data.kava.io/kava/evmutil/v1beta1/params"
+      },
+      {
+        "label": "Kava CDP module docs",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
+      },
+      {
+        "label": "Tracked Osmosis IBC USDX denom",
+        "url": "https://www.mintscan.io/osmosis/ibc/C78F65E1648A3DFE0BAEB6C4CDA69CC2A75437F1793C0E6386DFDA26393790AE"
+      },
+      {
+        "label": "Kava application bank-keeper governance wiring",
+        "url": "https://github.com/Kava-Labs/kava/blob/686d591443a1de7c5566bc7d92faf5b56743f25f/app/app.go#L462-L468"
+      },
+      {
+        "label": "Kava USDX bank send-enabled state",
+        "url": "https://api.data.kava.io/cosmos/bank/v1beta1/send_enabled?denoms=usdx"
+      },
+      {
+        "label": "Kava live CDP inventory",
+        "url": "https://api.data.kava.io/kava/cdp/v1beta1/cdps?pagination.limit=10000"
+      }
+    ],
+    "evidence": "Re-verified at Kava height 22013136 on 2026-08-08. USDX is the native Cosmos bank denom usdx; the live send_enabled query returned no override, so sends are currently enabled. Kava nevertheless wires the governance authority into the bank keeper, and the active Cosmos SDK MsgSetSendEnabled path lets that authority disable ordinary bank sends for the individual usdx denom. That live global transfer-pause mechanism resolves the direct access verdict to true even though it is not currently exercised. Custodial collateral remains a separate upstream impairment exposure.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Kava Mint prices each collateral type through a governance-whitelisted x/pricefeed market whose reports are medianized onchain; liquidation uses the configured per-type liquidation market, while a missing price suspends price-dependent CDP operations rather than switching to a secondary feed.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Kava documents each CDP as scoped to one collateral type, and current x/cdp parameters assign each type its own liquidation ratio and price-feed market. The common x/cdp liquidation and auction engine is reviewed as one grouped branch with every current collateral type and feed path enumerated.",
+      "sources": [
+        {
+          "label": "Kava CDP concepts",
+          "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/"
+        },
+        {
+          "label": "Kava x/cdp params API",
+          "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Kava CDP concepts",
+        "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/"
+      },
+      {
+        "label": "Kava pricefeed module",
+        "url": "https://docs.kava.io/docs/cosmos/modules/pricefeed/"
+      },
+      {
+        "label": "Kava x/cdp params API",
+        "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+      },
+      {
+        "label": "Kava pricefeed params API",
+        "url": "https://api.kava-rpc.com/kava/pricefeed/v1beta1/params"
+      }
+    ],
+    "branches": [
+      {
+        "id": "kava-mint-collateral-types",
+        "label": "Kava Mint current x/cdp collateral types",
+        "tier": "standard-external",
+        "summary": "Ten current x/cdp collateral parameter sets use eight liquidation-market paths through Kava's common medianized x/pricefeed and common collateral/debt auction engine.",
+        "collateralAssets": [
+          "bnb-a",
+          "btcb-a",
+          "busd-a",
+          "busd-b",
+          "xrpb-a",
+          "ukava-a",
+          "hard-a",
+          "hbtc-a",
+          "swp-a",
+          "usdt-a"
+        ],
+        "chains": [
+          "kava"
+        ],
+        "feeds": [
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "bnb:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:bnb-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "btc:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:btc-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "busd:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:busd-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "xrp:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:xrp-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "kava:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:kava-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "hard:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:hard-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "swp:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:swp-usd-30"
+            ]
+          },
+          {
+            "provider": "Kava x/pricefeed whitelisted-oracle median",
+            "path": "usdt:usd:30 liquidation market",
+            "chain": "kava",
+            "observedAt": "2026-07-14",
+            "observedBlock": 21630982,
+            "failureDomainKeys": [
+              "oracle:kava:usdt-usd-30"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The x/cdp module checks each collateral pricefeed at the beginning of a block. If no price is returned, it suspends liquidation, fee accrual, collateral deposits and withdrawals, CDP creation, and new debt draws for that collateral until a price is reported; no secondary feed is documented.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 21630982,
+        "collateralParameters": [
+          {
+            "asset": "bnb-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market bnb:usd:30."
+          },
+          {
+            "asset": "btcb-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market btc:usd:30."
+          },
+          {
+            "asset": "busd-a",
+            "minimumCollateralRatioPct": 101,
+            "note": "Current x/cdp liquidation ratio 1.01; liquidation market busd:usd:30."
+          },
+          {
+            "asset": "busd-b",
+            "minimumCollateralRatioPct": 110,
+            "note": "Current x/cdp liquidation ratio 1.10; liquidation market busd:usd:30."
+          },
+          {
+            "asset": "xrpb-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market xrp:usd:30."
+          },
+          {
+            "asset": "ukava-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market kava:usd:30."
+          },
+          {
+            "asset": "hard-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market hard:usd:30."
+          },
+          {
+            "asset": "hbtc-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market btc:usd:30."
+          },
+          {
+            "asset": "swp-a",
+            "minimumCollateralRatioPct": 150,
+            "note": "Current x/cdp liquidation ratio 1.50; liquidation market swp:usd:30."
+          },
+          {
+            "asset": "usdt-a",
+            "minimumCollateralRatioPct": 101,
+            "note": "Current x/cdp liquidation ratio 1.01; liquidation market usdt:usd:30."
+          }
+        ],
+        "liquidationMechanism": "The current x/cdp configuration performs its periodic liquidation sweep every 50 blocks. When a checked CDP is below its type's liquidation ratio, the module seizes its collateral and debt, splits collateral into auction lots, sells it for USDX, and burns the recovered USDX against seized debt. No separate post-detection grace period is specified, but execution is subject to the periodic sweep rather than continuous checking.",
+        "liquidationDelaySec": 0,
+        "backstop": "If collateral auctions do not recover the desired USDX, the shortfall enters global system debt; once the configured threshold is reached, debt auctions mint and sell KAVA governance tokens for USDX to recapitalize the CDP system.",
+        "shutdownOrBadDebtBehavior": "A missing collateral price suspends that collateral's price-dependent CDP operations until reporting resumes. Failed collateral-auction recovery is tracked as global debt and handled by KAVA debt auctions; the reviewed module documentation does not describe a separate global settlement path.",
+        "failureDomainKeys": [
+          "oracle:kava:x-pricefeed",
+          "liquidation:kava:x-cdp",
+          "backstop:kava:debt-auction"
+        ],
+        "sources": [
+          {
+            "label": "Kava CDP concepts",
+            "url": "https://docs.kava.io/docs/cosmos/modules/cdp/concepts/"
+          },
+          {
+            "label": "Kava pricefeed module",
+            "url": "https://docs.kava.io/docs/cosmos/modules/pricefeed/"
+          },
+          {
+            "label": "Kava auction concepts",
+            "url": "https://docs.kava.io/docs/cosmos/modules/auction/concepts/"
+          },
+          {
+            "label": "Kava x/cdp params API at block 21630982",
+            "url": "https://api.kava-rpc.com/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Kava pricefeed params API at block 21630982",
+            "url": "https://api.kava-rpc.com/kava/pricefeed/v1beta1/params"
+          }
+        ]
+      }
+    ]
+  }
+}

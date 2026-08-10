@@ -1,0 +1,83 @@
+{
+  "id": "usp-pikudao",
+  "reserves": [
+    {
+      "name": "Piku reserve-strategy envelope",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "PikuDAO, Balsa Technologies, and third-party DeFi strategy counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "legal",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Piku documentation",
+        "url": "https://docs.piku.co/piku"
+      },
+      {
+        "label": "Stablewatch Piku USP analysis (secondary current-deployment table, not issuer attestation)",
+        "url": "https://www.stablewatch.io/research/piku-yield-optimized-stablecoin"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-08-08: Piku docs still describe USP backing as BMMF Turkey FX arbitrage, carry trades, on-chain yield and RWAs, but publish no dated primary-source allocation table or holdings snapshot. Stablewatch's secondary research (published 2025-10-15, modified 2026-03-11) includes a current-deployment table stating BMMF Turkey FX Arbitrage 50%, Giza Arma Agent 10%, Almanak Autonomous Liquidity USD 10%, USD.AI sUSDai 10%, Ethena USDe & sUSDe 10%, Aave aUSDT 5%, and cash stablecoins 0%; the article also says 40% is spread over six DeFi protocols. Because this is a third-party analysis, not an issuer attestation, and is at least 150 days old as of this review, the envelope is kept as 100% strategy other with knownUnknownExposurePct=100 rather than adopting the secondary split as reviewed fact.",
+    "compositionBasis": "Issuer strategy-category documentation plus Stablewatch secondary current-deployment table; no issuer-published dated weights or holdings snapshot",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current strategy weights, off-chain positions and venues, DeFi protocol weights, RWA holdings, stablecoin-buffer weights, and custody balances are not published in a dated primary-source snapshot.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Piku reserve-strategy envelope",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Issuer materials describe the strategy categories but publish no current component weights, so the aggregate cannot be split or dependency-linked without fabrication.",
+        "candidateCoinIds": [
+          "usde-ethena",
+          "usdai-usd-ai",
+          "stcusd-cap"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Balsa Technologies (BMMF off-chain strategy operator)",
+        "role": "other"
+      },
+      {
+        "name": "PikuDAO-governed on-chain strategy contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "unknown",
+    "sources": [
+      {
+        "label": "Piku documentation",
+        "url": "https://docs.piku.co/piku"
+      }
+    ],
+    "uncertainty": "Piku publishes no custodian identities, account structures, or insolvency terms for either the off-chain BMMF leg or the on-chain DeFi allocations. Reserve deployment into third-party strategies is the disclosed design; whether any independent custodian holds assets is not documented."
+  }
+}

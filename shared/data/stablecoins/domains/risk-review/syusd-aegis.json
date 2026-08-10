@@ -1,0 +1,126 @@
+{
+  "id": "syusd-aegis",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: sYUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "sYUSD is an ERC-4626 staking receipt over YUSD whose exchange rate accrues strategy yield; it is not a borrower debt market with collateral liquidation oracles.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 20",
+      "rationale": "Aegis documents sYUSD as a yield-bearing YUSD staking token with a cooldown before withdrawal. The reviewed product and smart-contract references describe receipt-token accounting and strategy yield, not borrower-specific collateral positions or oracle-triggered liquidation branches.",
+      "sources": [
+        {
+          "label": "Aegis sYUSD documentation",
+          "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+        },
+        {
+          "label": "Aegis smart-contract documentation",
+          "url": "https://docs.aegis.im/smart-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 20",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aegis sYUSD documentation",
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      },
+      {
+        "label": "Aegis smart-contract documentation",
+        "url": "https://docs.aegis.im/smart-contracts"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "sYUSD is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native sYUSD; BSC row confirmed Aegis cross-chain deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "sYUSD issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Aegis sYUSD docs",
+        "url": "https://docs.aegis.im/tokens/syusd"
+      },
+      {
+        "label": "Aegis smart contracts",
+        "url": "https://docs.aegis.im/smart-contracts"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64",
+        "protocol": "Aegis sYUSD (native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Staked YUSD', symbol sYUSD, 18 decimals — Aegis issuer-native deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Aegis",
+            "url": "https://aegis.im/"
+          },
+          {
+            "label": "sYUSD on Etherscan",
+            "url": "https://etherscan.io/address/0xfe0ccc9942e98c963fe6b4e5194eb6e3baa4cb64"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "destinationChain": "bsc",
+        "contractAddress": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "protocol": "Aegis sYUSD cross-chain deployment",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'Staked YUSD', symbol sYUSD, 18 decimals on BSC; EIP-1967 admin 0x87696e700eb66a4c807731f68ad33d9dba2036a8. The token contract executes mint for this issuer-operated cross-chain deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x24db057b19241eefb9b522e8627c293ed8f93af2",
+        "failureDomainKeys": [
+          "protocol:aegis-crosschain",
+          "contract:bsc:0x24db057b19241eefb9b522e8627c293ed8f93af2"
+        ],
+        "sources": [
+          {
+            "label": "Aegis",
+            "url": "https://aegis.im/"
+          }
+        ]
+      }
+    ]
+  }
+}

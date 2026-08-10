@@ -1,0 +1,150 @@
+{
+  "id": "wbrl-ripio",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "WBRL is an issuer-managed Ripio wFIAT token. All chains use the same contract address with identical role holders: EOA 0x466c02e2 (DEFAULT_ADMIN + MINTER), Safe 0x2b839174 (4/7, DEFAULT_ADMIN), and two AccessControl minter-router contracts whose own admins are the same EOA and Safe.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+      ],
+      "implementationAddresses": [
+        "0xfbab5dcb1647787ec8402a6509add256fa6c7f9d"
+      ],
+      "adminAddresses": [
+        "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ripio shared WBRL admin and MINTER_ROLE holder (EOA)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530763,
+      "sources": [
+        {
+          "label": "Ethereum WBRL proxy and verified UUPS implementation",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0#code"
+        },
+        {
+          "label": "WBRL implementation source",
+          "url": "https://etherscan.io/address/0xfbab5dcb1647787ec8402a6509add256fa6c7f9d#code"
+        },
+        {
+          "label": "Ethereum, Base, BSC, Polygon, and Gnosis PublicNode RPC",
+          "url": "https://ethereum.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base.publicnode.com"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor.publicnode.com"
+        },
+        {
+          "label": "Gnosis PublicNode RPC",
+          "url": "https://gnosis.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "multichain",
+        "address": "0x466c02e2cc67b81a696af5afdb61605c41fe247b",
+        "label": "Ripio shared WBRL admin and MINTER_ROLE holder (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) and hasRole(MINTER_ROLE) both returned true. eth_getCode returned 0x (EOA). Same role confirmed via hasRole on Base, BSC, Polygon, Gnosis, and Worldchain at same block range."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2b839174fe62466067c22e2a4c8054071f9d8d68",
+        "label": "Ripio WBRL Safe multisig (DEFAULT_ADMIN_ROLE)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x067823401127ca6647481c68011805b90d42231e",
+            "0x5ca3f8eeba12d83408fc097c2dad79212456f20f",
+            "0x5b72e13f78feb8f5b44392f2e32940d4f37fa313",
+            "0x23cec92f92bde95e401f0a2b50b072a6069dfbd5",
+            "0x9850b4f631f1cae37bb1c42c8004ffc2cd31dcbe",
+            "0x00a74411ddbc50c04353543d5d3f4296936da645",
+            "0xa40d7d22873001f0140d76afc0ff0779e4210ed0"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295015,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295015, hasRole(DEFAULT_ADMIN_ROLE) returned true. getOwners() returned 7 owners; getThreshold() returned 4. getModulesPaginated returned empty array (no modules). slot0 masterCopy = 0x41675c...61a (Safe v1.4.1 singleton). fallbackHandler = 0xfd0732...ec99 (standard CompatibilityFallbackHandler). getGuard() reverted (no guard)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd168cfbbe260d48cd119497a9a2ee8482080c5e7",
+        "label": "Ripio WBRL Ethereum minter-router contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295015, hasRole(MINTER_ROLE) returned true on WBRL token. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe). Not deployed on other chains (eth_getCode = 0x on Base)."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "label": "Ripio WBRL cross-chain minter-router contract",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WBRL token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
+      }
+    ],
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Ripio local stablecoins",
+          "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+        },
+        {
+          "label": "Ethereum WBRL contract",
+          "url": "https://etherscan.io/address/0xd76f5faf6888e24d9f04bf92a0c8b921fe4390e0"
+        },
+        {
+          "label": "Ripio Safe multisig",
+          "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        },
+        {
+          "label": "Independent public accountant's certification of collateral backing wBRL tokens as of 2026-03-31",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+        },
+        {
+          "label": "wFIAT whitepaper v1.0: attestations may be published periodically; wFIAT do not represent e-money and carry no redemption right",
+          "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
+        }
+      ],
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): an independent third-party reserve certification exists - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 719,448 wBRL outstanding across six chains against R$809,597.28 in a Brazilian bank account as of 2026-03-31 - so reserve evidence is attestation-backed rather than absent. Reconciliation stays unknown because Ripio labels this the first attestation of wBRL collateral, the wFIAT whitepaper commits only to attestations that 'may' be published periodically, and later-period certifications return 404. No prudential regime applies: the issuer is described only as a Ripio group affiliate, and the disclosed CNV PSAV and Florida money-transmitter registrations cover other group entities.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-08-08"
+    }
+  }
+}

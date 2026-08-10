@@ -1,0 +1,147 @@
+{
+  "id": "usdq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDQ resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Quantoz announced LayerZero and Stargate interoperability for USDQ and EURQ, but on-chain reads on 2026-07-20 confirm the live Ethereum and Polygon HadronToken deployments have no OFT/bridge endpoint functions and are issuer-owned, and the XRPL and Algorand deployments are issuer-native (XRPL issued currency, Algorand ASA); no active bridge representation carries USDQ supply today.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex static correction review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "LayerZero / Stargate",
+        "slug": "layerzero",
+        "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint"
+        ],
+        "note": "Quantoz announced LayerZero messaging and Stargate liquidity transport for EURQ/USDQ cross-chain transfers; final on-chain adapter topology remains to be re-reviewed."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Quantoz LayerZero/Stargate announcement",
+        "url": "https://www.quantoz.com/blog/layerzero-enables-cross-chain-interoperability-for-quantoz-stablecoins-eurq-and-usdq"
+      },
+      {
+        "label": "Quantoz USDQ product page",
+        "url": "https://www.quantoz.com/products/eurq-usdq"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc83e27f270cce0a3a3a29521173a83f402c1768b",
+        "protocol": "Quantoz issuer-native USDQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: HadronToken proxy (EIP-1967 implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, admin 0xa6724f792002d5677a7bc370986e1b580b8773e7) with owner() = issuer multisig 0x284Df7B9d9F471554E9257bD9b116189f7997D45, matching the reviewed mintAuthority; no OFT/bridge endpoint functions exist on the token. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDQ token on Etherscan",
+            "url": "https://etherscan.io/address/0xc83e27f270cce0a3a3a29521173a83f402c1768b"
+          },
+          {
+            "label": "Quantoz USDQ documentation",
+            "url": "https://quantoz.com/usdq"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0xb291996477504506bf5f583102b5b5ea5d1e40e0",
+        "protocol": "Quantoz issuer-native USDQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: HadronToken proxy (EIP-1967 implementation 0x43f2f77664c29626f4756f6b22fa73dbd59306b0, admin 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8) with owner() = issuer multisig 0x84e8d731fCBe186B803DB51e9E58142083417929, matching the reviewed mintAuthority; no OFT/bridge endpoint functions exist on the token. Issuer-native deployment; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDQ token on Polygonscan",
+            "url": "https://polygonscan.com/address/0xb291996477504506bf5f583102b5b5ea5d1e40e0"
+          },
+          {
+            "label": "Quantoz USDQ documentation",
+            "url": "https://quantoz.com/usdq"
+          }
+        ]
+      },
+      {
+        "id": "xrpl:USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "destinationChain": "xrpl",
+        "contractAddress": "USDQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "protocol": "Quantoz issuer-native USDQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "XRPL mainnet reads 2026-07-20 (xrplcluster.com account_info + gateway_balances): issuer account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs natively issues the USDQ currency (hex 55534451...) with ~1M outstanding. Issuer-native XRPL issuance; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDQ issuer account on XRPScan",
+            "url": "https://xrpscan.com/account/rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+          },
+          {
+            "label": "Quantoz USDQ documentation",
+            "url": "https://quantoz.com/usdq"
+          }
+        ]
+      },
+      {
+        "id": "algorand:2768603795",
+        "destinationChain": "algorand",
+        "contractAddress": "2768603795",
+        "protocol": "Quantoz issuer-native USDQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Algorand mainnet API reads 2026-07-20 (algonode): ASA 2768603795 'Quantoz USDQ' (USDQ, 6 decimals) with manager UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M and reserve/freeze/clawback 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. Issuer-native Algorand Standard Asset; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ASA 2768603795 on Allo",
+            "url": "https://allo.info/asset/2768603795"
+          },
+          {
+            "label": "Quantoz USDQ documentation",
+            "url": "https://quantoz.com/usdq"
+          }
+        ]
+      }
+    ]
+  }
+}

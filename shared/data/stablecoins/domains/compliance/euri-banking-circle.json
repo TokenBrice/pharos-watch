@@ -1,0 +1,36 @@
+{
+  "id": "euri-banking-circle",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "credit-institution",
+    "competentAuthority": "CSSF",
+    "authorizedEntity": "Banking Circle S.A.",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register – EMT issuers (EMTWP.csv, Banking Circle S.A. entry, whitepaper date 28/08/2024)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA MiCA register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "CSSF – Issuers of E-Money Tokens (EMTs)",
+        "url": "https://www.cssf.lu/en/issuers-of-e-money-tokens-emts/"
+      },
+      {
+        "label": "Banking Circle regulatory information (credit institution, LEI 213800W1NGBLERUS6M39, LUB00000408)",
+        "url": "https://www.bankingcircle.com/regulatory-information/"
+      },
+      {
+        "label": "Paperjam: Banking Circle first to hold banking, EMT and CASP licences in Luxembourg (CASP effective 15 April 2026)",
+        "url": "https://en.paperjam.lu/article/banking-circle-first-to-hold-banking-emt-and-casp-licences-in-luxembourg"
+      },
+      {
+        "label": "EURI whitepaper",
+        "url": "https://www.eurite.com/download-whitepaper/"
+      }
+    ]
+  }
+}

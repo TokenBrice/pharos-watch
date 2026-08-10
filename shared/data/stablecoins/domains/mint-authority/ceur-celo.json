@@ -1,0 +1,110 @@
+{
+  "id": "ceur-celo",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "EURm minting on Celo routes through the Mento Broker contract (confirmed isMinter), while token ownership resolves to a 4/6 Mento Safe; identical structure to verified GBPm.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+      ],
+      "implementationAddresses": [
+        "0x815795c30d0758a297b08cd4e0643620c974c318"
+      ],
+      "adminAddresses": [
+        "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Mento EURm token owner Safe",
+      "observedAt": "2026-07-20",
+      "observedBlock": 72682852,
+      "sources": [
+        {
+          "label": "Celo EURm proxy",
+          "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73#code"
+        },
+        {
+          "label": "Mento StableTokenEURProxy source",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-core/main/contracts/tokens/StableTokenEURProxy.sol"
+        },
+        {
+          "label": "Celo Proxy implementation source",
+          "url": "https://raw.githubusercontent.com/celo-org/celo-monorepo/master/packages/protocol/contracts/common/Proxy.sol"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker — authorized minter for EURm",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Mento Broker minting is rate-limited by Mento exchange limits and circuit breakers on the EURm FPMM pool.",
+        "sources": [
+          {
+            "label": "Celo EURm contract",
+            "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+          }
+        ],
+        "evidence": "At Celo block 69291541, isMinter(0x777A8255cA72412f0d706dc03C9D1987306B4CaD) returned true. Minting is rate-limited by Mento exchange limits and circuit breakers on the FPMM pool."
+      },
+      {
+        "chain": "celo",
+        "address": "0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458",
+        "label": "Mento EURm token owner Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1+L2",
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "source": "safe-api",
+          "observedBlock": 69293381
+        },
+        "sources": [
+          {
+            "label": "Mento reserve docs",
+            "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+          },
+          {
+            "label": "Safe Transaction Service - Celo",
+            "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+          }
+        ],
+        "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously — signer was rotated out), no modules, zero guard. Follow-up 2026-07-20: as EURm token owner this Safe administers the minter set (it can authorize or replace the Broker and its exchange limits), so the Broker's mint cap is raiseable by this control."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Mento reserve docs",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+        },
+        {
+          "label": "Safe Transaction Service - Celo",
+          "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
+        },
+        {
+          "label": "Celo EURm contract",
+          "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
+        }
+      ],
+      "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+      "reviewedAt": "2026-07-20"
+    }
+  }
+}

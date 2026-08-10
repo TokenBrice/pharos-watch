@@ -1,0 +1,94 @@
+{
+  "id": "iauon-ondo",
+  "reserves": [
+    {
+      "name": "iShares Gold Trust (IAU) shares and cash in transit held for Ondo Global Markets",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock (iShares Gold Trust, IAU) via Ondo Global Markets",
+      "riskFactors": [
+        "custody",
+        "counterparty",
+        "market",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo IAUon product page",
+        "url": "https://app.ondo.finance/assets/iauon"
+      },
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28 of Ondo Stocks overview and trust-and-transparency docs (Global Markets URLs redirect to ondo-stocks paths): each Ondo tokenized stock is fully backed by the underlying security together with cash in transit; Ankura Trust verifies holdings. IAUon product page remains live. Cash vs share weights undisclosed → 100% IAU fund-share envelope with knownUnknownExposurePct=100.",
+    "compositionBasis": "Ondo IAUon product disclosure and Ondo Global Markets backing and transparency documentation",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The aggregate basket is known to contain IAU shares and cash in transit, but their current weights are not published. Because the 100% reserve entry cannot be split between those categories, the full basket remains known-unknown for composition scoring; custodial broker-dealer identities and provider allocation are also undisclosed.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "iShares Gold Trust (IAU) shares and cash in transit held for Ondo Global Markets",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Ondo identifies IAU shares and cash in transit as the backing categories but does not publish their current weights, so the 100% aggregate reserve basket cannot be itemized without fabrication."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "US-registered custodial broker-dealer(s) holding the underlying IAU shares (undisclosed)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ankura Trust Company",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-5 (lead ylds-figure); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ondo Global Markets overview",
+        "url": "https://docs.ondo.finance/ondo-global-markets/overview"
+      },
+      {
+        "label": "Ondo Global Markets important notes",
+        "url": "https://docs.ondo.finance/ondo-global-markets/important-notes"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+      }
+    ],
+    "uncertainty": "Ondo documents a bankruptcy-remote SPV with segregated assets and accounts, daily Ankura verification, and a first-priority security interest over the collateral, with holdings at one or more US-registered custodial broker-dealers. The broker-dealer identities, provider shares, cash-in-transit allocation, and any reuse restrictions are not published.",
+    "knownUnknownExposurePct": 100
+  }
+}

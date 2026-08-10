@@ -1,0 +1,149 @@
+{
+  "id": "brlm-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Mento BRLm Celo availability documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento deployment address inventory",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "BRLm proxy and implementation (Blockscout verified)",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+      },
+      {
+        "label": "Mento StableTokenV2 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/5cad9ee941b1e27efcfca7fe44a283f3b180dc82/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento patched ERC20 source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/5cad9ee941b1e27efcfca7fe44a283f3b180dc82/contracts/tokens/patched/ERC20Upgradeable.sol"
+      },
+      {
+        "label": "Mento deployment addresses",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "Mento BRLm availability documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Celo Forno control reads",
+        "url": "https://forno.celo.org"
+      },
+      {
+        "label": "Mento Reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento decentralized-governance statement",
+        "url": "https://www.mento.org/"
+      },
+      {
+        "label": "Mento direct-distribution model",
+        "url": "https://www.mento.org/blog/the-evolution-of-mento-direct-distribution-and-modularity-for-enhanced-stability"
+      }
+    ],
+    "evidence": "At Celo block 74318085 (2026-08-08T19:54:03Z; hash 0x4f92837c8e7a0c52346e7727cf0aef289de42f4a06786ffb498a2f3f96701433), the sole tracked BRLm proxy returned owner/admin 0x890db8a597940165901372dd7db61c9f246e2147, broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, exchange zero, and implementation 0x434563b0604be100f04b7ae485bcafe3c9d8850e; the Mento Timelock delay remained 172800 seconds. Verified StableTokenV2 exposes ordinary transfers, permissioned mint, broker/exchange-scoped burn, and Celo-VM-only gas debiting, with no blacklist, freeze, pause, seizure, arbitrary-holder burn, or transfer-hook restriction. Official Mento materials describe community governance and direct protocol distribution rather than a separate issuer freeze power. Direct holder freeze is therefore false; reserve controls and the two-day upgrade path remain upstream and restrictability risks.",
+    "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "BRLm's live Celo USDm/BRLm Broker exchange uses one Mento SortedOracles BRL/USD reporter with a 360-second freshness/reset window. MedianDeltaBreaker and MarketHoursBreaker gate trading; no alternate provider or fallback path is configured.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "At Celo block 72138428, BRLm used the Mento v2 Broker/BiPoolManager constant-sum USDm/BRLm exchange with minimumReports 1 and a 360-second reset/expiry window. The current deployment registry has no BRLm CDP contracts, Mento's backing config classifies BRLm as reserve-backed, and the reserve API lists active troves only for GBPm, JPYm, and CHFm. BRLm therefore has no borrower-specific oracle or liquidation branch; its oracle governs swap pricing and trading validity.",
+      "sources": [
+        {
+          "label": "Pinned Mento Celo deployment registry",
+          "url": "https://github.com/mento-protocol/deployments-v2/blob/e2022291340d6883ef7a026cf83e38d2f10be94d/packages/contracts/contracts.json"
+        },
+        {
+          "label": "Pinned Mento stablecoin backing config",
+          "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned Mento BiPoolManager source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/BiPoolManager.sol"
+      },
+      {
+        "label": "Pinned Mento Broker source",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
+      },
+      {
+        "label": "BRLm on Celo Blockscout",
+        "url": "https://celo.blockscout.com/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "BRLm is documented as a Mento stable on Celo and the editable registry has only a Celo deployment. The row was reviewed as native/single-chain for bridge-route scoring. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Celo",
+        "slug": "celo",
+        "url": "https://l2beat.com/scaling/projects/celo"
+      }
+    ],
+    "sources": [
+      {
+        "label": "Mento stablecoin docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento website",
+        "url": "https://www.mento.org/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "destinationChain": "celo",
+        "contractAddress": "0xe8537a3d056da446677b9e9d6c5db704eaab4787",
+        "protocol": "Mento BRLm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "BRLm on Celoscan",
+            "url": "https://celoscan.io/address/0xe8537a3d056da446677b9e9d6c5db704eaab4787"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento Brazilian Real', symbol BRLm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
+      }
+    ]
+  }
+}

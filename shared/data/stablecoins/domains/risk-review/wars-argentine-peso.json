@@ -1,0 +1,222 @@
+{
+  "id": "wars-argentine-peso",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ripio Wallet terms (Argentina)",
+        "url": "https://terms.ripio.com/ar/wallet"
+      },
+      {
+        "label": "Ethereum WARS ERC-1967 proxy",
+        "url": "https://eth.blockscout.com/address/0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d?tab=contract"
+      },
+      {
+        "label": "Ethereum WARS LatamStable implementation",
+        "url": "https://eth.blockscout.com/address/0xba0030bba7112171a8a5bcc417ee1994051321b9?tab=contract"
+      },
+      {
+        "label": "Independent public accountant certification for wARS - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Base PublicNode RPC fixed-block reads",
+        "url": "https://base.publicnode.com"
+      },
+      {
+        "label": "BSC PublicNode RPC fixed-block reads",
+        "url": "https://bsc.publicnode.com"
+      },
+      {
+        "label": "Polygon PublicNode RPC fixed-block reads",
+        "url": "https://polygon-bor.publicnode.com"
+      },
+      {
+        "label": "Gnosis PublicNode RPC fixed-block reads",
+        "url": "https://gnosis.publicnode.com"
+      },
+      {
+        "label": "Worldchain RPC fixed-block reads",
+        "url": "https://worldchain-mainnet.gateway.tenderly.co"
+      }
+    ],
+    "evidence": "The verified Ethereum LatamStable implementation inherits ERC20PausableUpgradeable, grants PAUSER_ROLE, and exposes pause() and unpause(); its transfer path is halted while paused. At Ethereum block 25534802, Base block 48645001, BSC block 110044458, Polygon block 90249572, Gnosis block 47207655, and Worldchain block 32371857, hasRole(PAUSER_ROLE, 0x466c02e2cc67b81a696af5afdb61605c41fe247b) returned true on each tracked WARS contract. This EOA can halt token transfers system-wide across every tracked deployment; this is active pause authority, not mint or upgrade exposure alone.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "WARS is one of Ripio's wrapped local stablecoins deployed across several chains. The workflow's route signal points to Across/World-style liquidity routing rather than issuer-native bridging, so Pharos scores this as a liquidity-or-intent route with probable confidence.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "Non-minting"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "wFIAT whitepaper",
+        "url": "https://www.ripio.com/en/assets/wars/whitepaper"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "worldchain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "destinationChain": "gnosis",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "protocol": "Ripio native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native wARS: 163-byte EIP-1967 proxy, identical implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9 on every chain (read 2026-07-20). Ripio mints natively on each chain via the WARS admin/MINTER_ROLE holder 0x466c02e2cc67b81a696af5afdb61605c41fe247b and minter-router contracts (per the mint-authority review); no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio",
+            "url": "https://www.ripio.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

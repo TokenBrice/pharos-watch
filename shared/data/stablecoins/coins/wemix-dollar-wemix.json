@@ -32,73 +32,7 @@
   "jurisdiction": {
     "country": "Singapore"
   },
-  "genius": {
-    "applicability": "apparent-payment-stablecoin",
-    "applicabilityBasis": {
-      "summary": "WEMIX Dollar (WEMIX$) is a USD-pegged, fiat-backed stablecoin issued by WEMIX PTE. LTD. (Singapore) under a permissioned mint-and-redemption model collateralized by USDC and fiat reserves. It circulated as the native settlement currency of the WEMIX3.0 gaming blockchain and was accessible to US-person users via international exchanges, matching the GENIUS Act definition of a payment stablecoin. The issuer announced a wind-down and transition to USDC.e in 2025; circulating supply has declined significantly but remains non-zero as of mid-2026 (CoinGecko reports approximately 14.5M WEMIX$ in circulation). Applicability is assessed on the basis of the token's design and issuance during its active life.",
-      "references": [
-        {
-          "label": "WEMIX3.0 USD Stablecoin Transition Plan",
-          "url": "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
-        },
-        {
-          "label": "WEMIX Stablecoin Transition announcement (X)",
-          "url": "https://x.com/WemixNetwork/status/1965310595655500170",
-          "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
-        }
-      ]
-    },
-    "authorizationStatus": "no-public-authorization-found",
-    "issuerPathway": "unknown",
-    "issuerEntity": "WEMIX PTE. LTD.",
-    "issuerDomicile": "Singapore",
-    "foreignExceptionStatus": "unknown",
-    "enforcementStatus": "no-public-action-found",
-    "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
-    "monthlyAttestationPresent": false,
-    "notes": "WEMIX PTE. LTD. (UEN 201903432D, formerly WEMADE TREE PTE. LTD.) is a Singapore-incorporated subsidiary of South Korean game developer WEMADE. The issuer announced in 2025 that WEMIX$ would be wound down and replaced by USDC.e (Circle bridged USDC via Chainlink CCIP). As of June 2026, CoinGecko (the coin's configured detailProvider) reports approximately 14.5M WEMIX$ still in circulation with minimal trading activity (~$33/day volume on WEMIX.Fi), indicating the wind-down is substantially advanced but not yet complete. No GENIUS Act PPSI application, foreign-issuer registration, or authorization announcement has been located. The foreign exception status is not-applicable because the GENIUS Act's foreign-issuer registration framework (Treasury comparability rule) remains in proposed-rules phase as of June 2026 and no determinations have been made. The issuer has made no public announcement of intent to engage with the GENIUS framework.",
-    "negativeEvidenceReview": {
-      "sourcesChecked": [
-        "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
-        "https://www.sgpbusiness.com/company/Wemix-Pte-Ltd",
-        "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
-        "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
-      ],
-      "summary": "Checked WEMIX official news (no GENIUS engagement found), Singapore corporate registry sources confirming entity identity (UEN 201903432D, formerly WEMADE TREE PTE. LTD.), OCC GENIUS NPRM and Federal Register (no mention of WEMIX or its issuer entity), and web searches for WEMIX + GENIUS Act or US payment stablecoin compliance (no results found). The token is being wound down and the issuer has made no public statements about US stablecoin regulation compliance.",
-      "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
-    },
-    "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
-  },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: WEMIX$ resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "USDC held in the WEMIX3.0 Treasury",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle"
-    }
-  ],
   "notices": [
     {
       "type": "info",
@@ -111,54 +45,6 @@
       "message": "WEMIX Foundation announced that WEMIX$ is being discontinued and ecosystem stablecoin activity is transitioning to USDC.e. Pharos keeps this record as legacy coverage until runtime sources fully remove it."
     }
   ],
-  "mintAuthority": {
-    "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "WEMIX$ on WEMIX chain (0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1) is an onlyOwner mint contract; owner() resolves to EOA 0x7a907b9df3f4843522b905758c2f542c9c028e4d (WEMIX foundation custody), confirmed on-chain at block 114958903.",
-    "controls": [
-      {
-        "chain": "wemix",
-        "address": "0x7a907b9df3f4843522b905758c2f542c9c028e4d",
-        "label": "WEMIX$ token owner (EOA — WEMIX foundation)",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "WEMIX$ stabilizer docs",
-            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
-          },
-          {
-            "label": "WEMIX chain RPC",
-            "url": "https://api.wemix.com"
-          }
-        ],
-        "evidence": "At WEMIX chain block 114958903, owner() on contract 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1 (name()=WEMIX$) returned 0x7a907b9df3f4843522b905758c2f542c9c028e4d. eth_getCode at that address returned 0x (no bytecode) confirming an EOA. EIP-1967 proxy admin slot is empty (not a proxy). No masterMinter or MINTER_ROLE found."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "WEMIX$ stabilizer docs",
-          "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
-        },
-        {
-          "label": "WEMIX chain RPC (api.wemix.com)",
-          "url": "https://api.wemix.com"
-        },
-        {
-          "label": "CoinGecko WEMIX$ platforms",
-          "url": "https://api.coingecko.com/api/v3/coins/wemix-dollar"
-        }
-      ],
-      "evidence": "At WEMIX block 114958903: contract 0x8e81fcc2 confirmed name=WEMIX$; owner()=0x7a907b9d (EOA, no bytecode); not a proxy. CoinGecko confirmed wemix-network contract address 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1. Mint is controlled solely by the owner EOA (WEMIX foundation custody).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
-    }
-  },
   "obituary": {
     "causeOfDeath": "abandoned",
     "deathDate": "2026-04",

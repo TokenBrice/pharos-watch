@@ -1,0 +1,55 @@
+{
+  "id": "susd-synthetix",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: SUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Synthetix sUSD historically relies on Chainlink-decentralized price feeds for synth pricing, with no stronger failover tier verified here.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Synthetix Chainlink integration",
+        "url": "https://blog.synthetix.io/chainlink-decentralizes-first-wave-of-synthetix-price-feeds/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "sUSD has reviewed Synthetix bridge evidence through the Synthetix Teleporter and Chainlink CCIP, plus the legacy native Optimism bridge path. Because the durable cross-chain route depends on external CCIP messaging for Teleporter transfers, Pharos scores it as external validated network.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/resources/bridge-risks",
+        "bridgeTypes": [
+          "external-messaging",
+          "validated-network"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Synthetix Teleporter CCIP launch",
+        "url": "https://blog.synthetix.io/synthetix-launches-teleporters-with-chainlinks-ccip/"
+      },
+      {
+        "label": "Synthetix sUSD bridge enabled",
+        "url": "https://blog.synthetix.io/susd-bridge-enabled/"
+      },
+      {
+        "label": "Chainlink bridge-risk docs",
+        "url": "https://docs.chain.link/resources/bridge-risks"
+      }
+    ]
+  }
+}

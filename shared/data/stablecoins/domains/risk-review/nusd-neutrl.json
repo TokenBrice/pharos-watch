@@ -1,0 +1,54 @@
+{
+  "id": "nusd-neutrl",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.neutrl.finance/"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.neutrl.finance/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "NUSD is minted 1:1 from admitted liquid assets and backed by a managed delta-neutral portfolio, not by user debt positions subject to oracle-triggered collateral liquidation.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Neutrl documents permissionless 1:1 Router minting from USDC, USDT, or USDe, institutional custody and strategy deployment, and KYC-gated redemptions served by an AssetReserve buffer or queue. It does not document borrower-specific collateral ratios, debt health, or liquidatable collateral branches.",
+      "sources": [
+        {
+          "label": "Neutrl protocol design",
+          "url": "https://docs.neutrl.finance/protocol-design/how-neutrl-works"
+        },
+        {
+          "label": "Neutrl NUSD docs",
+          "url": "https://docs.neutrl.finance/protocol-design/nusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Neutrl protocol design",
+        "url": "https://docs.neutrl.finance/protocol-design/how-neutrl-works"
+      },
+      {
+        "label": "Neutrl NUSD docs",
+        "url": "https://docs.neutrl.finance/protocol-design/nusd"
+      }
+    ]
+  }
+}

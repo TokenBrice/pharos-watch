@@ -14,7 +14,6 @@
   "mechanismArchetype": "rwa-credit-fund",
   "detailProvider": "coingecko",
   "geckoId": "na-post-settlement-legal-financing-receivables",
-  "canBeBlacklisted": true,
   "links": [
     {
       "label": "Website",
@@ -43,45 +42,9 @@
       "decimals": 6
     }
   ],
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sources": [
-      {
-        "label": "Tradable",
-        "url": "https://www.tradable.xyz/"
-      }
-    ],
-    "evidence": "PC0000101 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
-    "reviewer": "Codex 2026-05-14 execution-ready expansion",
-    "reviewedAt": "2026-05-14"
-  },
-  "bridgeRouteRisk": {
-    "tier": "single-chain-or-native",
-    "summary": "PC0000101 has one tracked ZKsync contract and no resolved token bridge route. The ZKsync candidate signal is canonical chain context, so the asset is reviewed as native to its current deployment.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Tradable docs",
-        "url": "https://doc.tradable.xyz/product-docs"
-      },
-      {
-        "label": "L2BEAT ZKsync Era",
-        "url": "https://l2beat.com/interop/protocols/zksync-era"
-      }
-    ]
-  },
   "collateralQuality": "rwa",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Legal-finance receivables",
-      "pct": 100,
-      "risk": "high"
-    }
-  ],
   "notices": [
     {
       "type": "warning",
@@ -89,125 +52,6 @@
       "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
     }
   ],
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "PC0000101 is minted through its permissioned Tradable DealManager on zkSync. AccessManager currently gives two EOAs immediate mint permission, while one of them also has immediate control of the shared token and DealManager beacons and can replace both mint-critical implementations.",
-    "upgradeability": {
-      "model": "beacon",
-      "proxyAddresses": [
-        "0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81",
-        "0x02d539c957a60453363ec3682b9d5df887adc0eb"
-      ],
-      "implementationAddresses": [
-        "0x85774b6c4a2f72315050084efa3b982df5a7ea67",
-        "0x14e6025079a15f03bb67a0dea11621dbb9237a47"
-      ],
-      "adminAddresses": [
-        "0x1e2f5e41ea5dcb62c8303e240e1d513ed4ec3d74",
-        "0xcd00fef133fd9b01cd278b4f0fa78cb0c87c9a3c",
-        "0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717",
-        "0x0ff03b6c9d30cbc4926c5773e7c72dfffd868809",
-        "0x08aceeaccd6aa12d547d64b63e8e815e8e7b29ab"
-      ],
-      "canChangeMintLogic": true,
-      "delaySec": 0,
-      "controlRef": "Tradable shared beacon admin / deployer EOA (zkSync)",
-      "observedAt": "2026-07-13",
-      "observedBlock": 71158867,
-      "sources": [
-        {
-          "label": "PC0000101 token proxy",
-          "url": "https://explorer.zksync.io/address/0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81"
-        },
-        {
-          "label": "PC0000101 DealManager proxy",
-          "url": "https://explorer.zksync.io/address/0x02d539c957a60453363ec3682b9d5df887adc0eb"
-        },
-        {
-          "label": "Tradable AccessManager",
-          "url": "https://explorer.zksync.io/address/0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717"
-        },
-        {
-          "label": "Tradable Deal implementation",
-          "url": "https://explorer.zksync.io/address/0x85774b6c4a2f72315050084efa3b982df5a7ea67"
-        },
-        {
-          "label": "Tradable DealManager implementation",
-          "url": "https://explorer.zksync.io/address/0x14e6025079a15f03bb67a0dea11621dbb9237a47"
-        }
-      ]
-    },
-    "controls": [
-      {
-        "label": "Tradable issuance EOA (zkSync)",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "chain": "zksync",
-        "address": "0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 71158867,
-        "sources": [
-          {
-            "label": "Tradable AccessManager",
-            "url": "https://explorer.zksync.io/address/0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717"
-          }
-        ],
-        "evidence": "At zkSync finalized block 71158867, AccessManager 0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717 returned hasRole(1, 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe)=true with zero delay. mintDealTokens() on DealManager 0x02d539c957a60453363ec3682b9d5df887adc0eb resolves to role 1 and canCall() is immediate. Historical transactions show this EOA exercised minting, but it is not the sole current minter."
-      },
-      {
-        "label": "Tradable shared beacon admin / deployer EOA (zkSync)",
-        "role": "proxy-admin",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "chain": "zksync",
-        "address": "0x08aCeEACcD6aA12d547d64B63e8e815e8E7b29Ab",
-        "timelockDelaySec": 0,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-07-13",
-        "observedBlock": 71158867,
-        "sources": [
-          {
-            "label": "Tradable AccessManager",
-            "url": "https://explorer.zksync.io/address/0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717"
-          },
-          {
-            "label": "Tradable DealFactory implementation",
-            "url": "https://explorer.zksync.io/address/0x6c978532d5bfdccf622303049922171dccc58a05"
-          }
-        ],
-        "evidence": "At zkSync finalized block 71158867, this no-code EOA held AccessManager roles 0 and 1 with zero delay. It had immediate canCall() for upgradeTo(address) on both shared beacons and mintDealTokens() on this DealManager. The only other role-0 member is DealFactory 0x0ff03b6c9d30cbc4926c5773e7c72dfffd868809; its current UUPS implementation exposes no generic or beacon-upgrade call path and is itself immediately upgradeable under this same role-0 EOA."
-      }
-    ],
-    "review": {
-      "evidence": "At zkSync finalized block 71158867, token 0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81 and DealManager 0x02d539c957a60453363ec3682b9d5df887adc0eb were BeaconProxy instances. Their beacon slots pointed respectively to shared beacons 0x1e2f5e41ea5dcb62c8303e240e1d513ed4ec3d74 and 0xcd00fef133fd9b01cd278b4f0fa78cb0c87c9a3c, resolving to Deal implementation 0x85774b6c4a2f72315050084efa3b982df5a7ea67 and DealManager implementation 0x14e6025079a15f03bb67a0dea11621dbb9237a47. Both beacons use AccessManager 0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717, where EOA 0x08aCeEACcD6aA12d547d64B63e8e815e8E7b29Ab has immediate role-0 upgrade permission and also immediate role-1 mint permission. EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe independently retains immediate role-1 mint permission.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
-      "sources": [
-        {
-          "label": "Tradable",
-          "url": "https://www.tradable.xyz/"
-        },
-        {
-          "label": "zkSync Era explorer — PC0000101 token",
-          "url": "https://explorer.zksync.io/address/0x3d19625bb8e4b52ac4ca28ecec2b5e243ae2ee81"
-        },
-        {
-          "label": "PC0000101 DealManager proxy",
-          "url": "https://explorer.zksync.io/address/0x02d539c957a60453363ec3682b9d5df887adc0eb"
-        },
-        {
-          "label": "Tradable AccessManager",
-          "url": "https://explorer.zksync.io/address/0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717"
-        }
-      ]
-    }
-  },
   "priceBasis": "contractual-par",
   "exitMechanism": "discretionary",
   "status": "delisted",

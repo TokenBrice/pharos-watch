@@ -8,7 +8,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
-import { THREAT_BAND_COLORS } from "@shared/lib/classification";
+import { THREAT_BAND_STYLES } from "@shared/lib/classification";
 import type { HeroCardViewModel, HeroTertiaryMetricViewModel } from "@/lib/stablecoin-detail-view-model";
 import type { HeroDewsDisplay } from "@/lib/stablecoin-detail-hero-metrics";
 import {
@@ -36,7 +36,7 @@ function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode
     return (
       <Badge
         variant="outline"
-        className={`px-2 py-0.5 text-xs font-semibold tracking-tight ${THREAT_BAND_COLORS[display.band]}`}
+        className={`px-2 py-0.5 text-xs font-semibold tracking-tight ${THREAT_BAND_STYLES[display.band].cls}`}
       >
         {display.value}
       </Badge>

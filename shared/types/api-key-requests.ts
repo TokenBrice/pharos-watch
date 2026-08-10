@@ -28,8 +28,6 @@ export interface ApiKeySelfServeRequest {
   organization?: string;
   projectUrl?: string;
   useCase: string;
-  /** Free-text operator note describing which endpoints the requester expects to call. */
-  intendedEndpoints?: string[];
   expectedCadence: ApiKeySelfServeCadence;
   expectedVolume?: string;
   acceptedTerms: boolean;
@@ -98,8 +96,6 @@ export interface ApiKeySelfServeRequestAdminSummary {
   organization: string | null;
   projectUrl: string | null;
   useCase: string;
-  /** Free-text operator note; carries no authorization effect. */
-  intendedEndpoints: string[];
   expectedCadence: string | null;
   expectedVolume: string | null;
   acceptedTerms: boolean;
@@ -132,7 +128,6 @@ export const ApiKeySelfServeRequestAdminSummarySchema = z.object({
   organization: z.string().nullable(),
   projectUrl: z.string().nullable(),
   useCase: z.string(),
-  intendedEndpoints: z.array(z.string()),
   expectedCadence: z.string().nullable(),
   expectedVolume: z.string().nullable(),
   acceptedTerms: z.boolean(),

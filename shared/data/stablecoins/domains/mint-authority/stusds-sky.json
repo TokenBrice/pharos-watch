@@ -1,0 +1,118 @@
+{
+  "id": "stusds-sky",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "stUSDS is an ERC-4626 risk-capital wrapper over USDS; wrapper minting is deposit/share accounting while durable USDS mint authority is inherited from reviewed Sky governance controls.",
+    "inheritedFrom": "usds-sky",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9",
+        "label": "stUSDS ERC-4626 wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
+        "sources": [
+          {
+            "label": "Sky stUSDS docs",
+            "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+          },
+          {
+            "label": "stUSDS token",
+            "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25573289, asset() returned USDS 0xdC035D45d973E3EC169d2276DDab16f1e407384F. The UUPS implementation slot resolved to 0x7A61B7adCFD493f7CF0F86dFCECB94b72c227F22 while the EIP-1967 admin and beacon slots were zero. Current wrapper shares are created against USDS deposits and do not create durable USDS supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+        "label": "stUSDS Sky Pause Proxy upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "dao-governor",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The Sky governance executor is warded on the UUPS wrapper and can authorize an implementation that changes local share-mint logic after the Sky Pause delay.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573289,
+        "sources": [
+          {
+            "label": "Sky stUSDS implementation (pinned)",
+            "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+          },
+          {
+            "label": "stUSDS token",
+            "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+          },
+          {
+            "label": "Sky DSPause",
+            "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25573289, stUSDS.wards(0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) returned 1. PauseProxy.owner() returned DSPause 0xbE286431454714F511008713973d3B053A2d38f3, whose delay() returned 172800 seconds. The proxy reported UPGRADE_INTERFACE_VERSION 5.0.0, and the pinned implementation source gates _authorizeUpgrade with the wards-based auth modifier."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
+      ],
+      "implementationAddresses": [
+        "0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22"
+      ],
+      "adminAddresses": [
+        "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "stUSDS Sky Pause Proxy upgrade authority",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573289,
+      "sources": [
+        {
+          "label": "Sky stUSDS implementation (pinned)",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+        },
+        {
+          "label": "stUSDS token",
+          "url": "https://etherscan.io/address/0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9#readContract"
+        },
+        {
+          "label": "Sky DSPause",
+          "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Sky stUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+        },
+        {
+          "label": "Sky stUSDS implementation (pinned)",
+          "url": "https://github.com/sky-ecosystem/stusds/blob/486bfe342c01afab7387a920dfcd7eeaaf91f4b7/src/StUsds.sol#L142-L156"
+        },
+        {
+          "label": "Sky DSPause",
+          "url": "https://etherscan.io/address/0xbE286431454714F511008713973d3B053A2d38f3#readContract"
+        }
+      ],
+      "evidence": "Re-reviewed 2026-07-20 at Ethereum block 25573289. asset() confirms that stUSDS wraps USDS. Its EIP-1967 implementation slot resolves to 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22 with zero external admin and beacon slots, and the proxy reports UPGRADE_INTERFACE_VERSION 5.0.0. stUSDS.wards(Sky Pause Proxy 0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB) is 1; PauseProxy.owner() resolves to DSPause 0xbE286431454714F511008713973d3B053A2d38f3, whose delay() is 172800 seconds. The pinned implementation source makes UUPS authorization wards-gated, so this delayed governance path can replace local logic; current public share minting remains USDS-deposit backed. No independent wrapper reserve reconciliation or named prudential supervisor is established.",
+      "reviewer": "GPT SOL-BIND wave6",
+      "reviewedAt": "2026-07-22",
+      "disposition": "scoreable"
+    }
+  }
+}

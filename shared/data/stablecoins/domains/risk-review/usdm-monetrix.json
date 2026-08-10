@@ -1,0 +1,70 @@
+{
+  "id": "usdm-monetrix",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USDM implementation on HyperEVM explorer",
+        "url": "https://hyperevmscan.io/address/0x05faf9cfa7143804e7fb0db423fde8330cd586df"
+      },
+      {
+        "label": "Monetrix audits and contracts",
+        "url": "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts"
+      },
+      {
+        "label": "Monetrix mint USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "HyperEVM public RPC",
+        "url": "https://rpc.hyperliquid.xyz/evm"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at HyperEVM block 42660392: proxy 0xe2d2959f89b6389deb624bf076fe7d9e5401f377 still resolves through its EIP-1967 implementation slot to 0x05faf9cfa7143804e7fb0db423fde8330cd586df, paused() returned false, and vault() returned 0x5586c2c8223c73ec0b41d6352748e6c173372e11. The verified implementation exposes pause(), unpause(), paused(), and OpenZeppelin's transfer-path pause errors, so the MonetrixAccessController pause role can halt every USDM holder transfer system-wide. The ABI has no per-address blacklist, but a live global pause is itself a direct transfer restriction. Pause authority and UUPS upgrades route through the central ACL whose UPGRADER sits behind the reviewed 48-hour timelock; USDC backing remains a separate upstream Circle exposure.",
+    "reviewer": "Codex C08 control/access audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "USDM is minted and redeemed 1:1 against USDC while Monetrix deploys backing into a delta-neutral Hyperliquid strategy; it has no user-owned collateral debt or token-level liquidation branch. The reviewed docs do not identify a public strategy price feed or failover path.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 24",
+      "rationale": "Monetrix documents USDM minting by depositing USDC, redemption by burning USDM and claiming USDC after a configured cooldown, and a protocol-managed long-spot/short-perpetual delta-neutral strategy. The reviewed product does not expose borrower-specific collateral positions, collateral ratios, liquidation auctions, backstops, or shutdown branches for USDM; the remaining strategy valuation and operational feed details are retained as opaque rather than invented.",
+      "sources": [
+        {
+          "label": "Monetrix mint USDM documentation",
+          "url": "https://doc.monetrix.xyz/guide/mint"
+        },
+        {
+          "label": "Monetrix redeem USDM documentation",
+          "url": "https://doc.monetrix.xyz/guide/redeem"
+        },
+        {
+          "label": "Monetrix delta-neutral strategy documentation",
+          "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 24",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Monetrix mint USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/mint"
+      },
+      {
+        "label": "Monetrix redeem USDM documentation",
+        "url": "https://doc.monetrix.xyz/guide/redeem"
+      },
+      {
+        "label": "Monetrix delta-neutral strategy documentation",
+        "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy"
+      }
+    ]
+  }
+}

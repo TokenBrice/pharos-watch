@@ -1,0 +1,141 @@
+{
+  "id": "witry-brix",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "wiTRY is Brix's yield-bearing staking wrapper over iTRY. The wiTRY wrapper owner and the underlying iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3-of-5 threshold, no modules, no guard) sharing the same 5 signers, confirming issuer-controlled mint authority.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "0xb492b4afd9658093694cf9452d5c272e8230f3b0"
+      ],
+      "implementationAddresses": [
+        "0x0679eaa2443e5fea70eea7ac9508fd357406fdad"
+      ],
+      "adminAddresses": [
+        "0xbdb430adf64ff1c8201c10221ddb846fa62613b6"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "iTRY underlying token owner (Brix Safe 3/5)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580037,
+      "sources": [
+        {
+          "label": "Brix iTRY product and wrapper disclosure",
+          "url": "https://brix.money/itry"
+        },
+        {
+          "label": "iTRY Ethereum proxy",
+          "url": "https://etherscan.io/address/0xb492b4afd9658093694cf9452d5c272e8230f3b0#code"
+        },
+        {
+          "label": "wiTRY Ethereum wrapper",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "wiTRY staking wrapper owner (Brix Safe 3/5)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x7ac3bb10225a4ef27134bcf54454d545a1738662",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
+            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
+            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
+            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
+            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.3.0 L2",
+          "observedBlock": 25295016,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Brix wiTRY",
+            "url": "https://brix.money/itry"
+          }
+        ],
+        "evidence": "At Ethereum block 25295016: owner() on wiTRY (0xe346c29b5b60ef870b9724c57ccfbbc631e47dee) returned 0x7ac3bb10225a4ef27134bcf54454d545a1738662. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned 5 signers. getThreshold() = 3. getModulesPaginated returned empty array. guard slot = 0x0 (no guard)."
+      },
+      {
+        "label": "iTRY underlying token owner (Brix Safe 3/5)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xbdb430adf64ff1c8201c10221ddb846fa62613b6",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x56c2cfdcf0693a446c7c076179b78f97912851b1",
+            "0x53cb02e296d374bc20805c3076ae53b6681f8ec8",
+            "0x9f1868a2893ea5b6a139c0e15860c683bb486b41",
+            "0x19adcd0a19dc61dd7219734fafec770564cecb70",
+            "0x38cfe4a510ea46a24c45c4783e4fb66580e489fd"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": null,
+          "version": "1.3.0 L2",
+          "observedBlock": 25295016,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Brix wiTRY",
+            "url": "https://brix.money/itry"
+          }
+        ],
+        "evidence": "At Ethereum block 25295016: iTRY token at 0xb492b4afd9658093694cf9452d5c272e8230f3b0; owner() = 0xbdb430adf64ff1c8201c10221ddb846fa62613b6. masterCopy() = 0x41675c099f32341bf84bfc5382af534df5c7461a (Gnosis Safe v1.3.0 L2). getOwners() returned same 5 signers as wiTRY owner, threshold = 3. These Safe contracts share the same signer set confirming unified Brix issuer control."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "evidence": "At Ethereum block 25295016: wiTRY wrapper owner and iTRY token owner are both Gnosis Safe v1.3.0 L2 multisigs (3/5, same 5 signers) confirming issuer-controlled architecture. MegaETH OFT adapter (0x15b271d9012b5820fc42b1c495b4c1e206547de5) owner could not be confirmed — MegaETH public RPCs returned errors — but the Ethereum primary chain is fully verified. MegaETH is a bridged deployment; the Ethereum Safe controls the canonical supply. Accountable independently reconciles the iTRY and wiTRY liabilities to backing assets. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-24, so the observed evidence supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision over wiTRY issuance.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
+      "sources": [
+        {
+          "label": "Brix iTRY",
+          "url": "https://brix.money/itry"
+        },
+        {
+          "label": "Brix",
+          "url": "https://brix.money/"
+        },
+        {
+          "label": "wiTRY Ethereum token",
+          "url": "https://etherscan.io/address/0xe346c29b5b60ef870b9724c57ccfbbc631e47dee"
+        },
+        {
+          "label": "Accountable independent Brix proof of solvency",
+          "url": "https://accountable.brix.money/"
+        }
+      ]
+    }
+  }
+}

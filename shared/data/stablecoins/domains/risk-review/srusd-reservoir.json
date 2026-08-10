@@ -1,0 +1,141 @@
+{
+  "id": "srusd-reservoir",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Reservoir srUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Reservoir smart contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Reservoir official Savingcoin source",
+        "url": "https://github.com/reservoir-protocol/reservoir/blob/master/src/Savingcoin.sol"
+      },
+      {
+        "label": "Ethereum srUSD verified Savingcoin source",
+        "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31#code"
+      },
+      {
+        "label": "Berachain srUSD verified SrusdOft source",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+      },
+      {
+        "label": "Reservoir terms of service",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
+      },
+      {
+        "label": "Reservoir live reserve transparency API",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      },
+      {
+        "label": "Archived Reservoir srUSD documentation availability record",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fdocs.reservoir.xyz%2Fproducts%2Fsavings-srusd-and-wsrusd&timestamp=20260715"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "Berachain public RPC control reads",
+        "url": "https://rpc.berachain.com"
+      }
+    ],
+    "evidence": "Direct Ethereum route: verified 0x738d1115b90efa71ae468f1287fc864775e23a31 is the immutable Savingcoin implementation documented in Reservoir's official repository. At Ethereum block 25535628, its DEFAULT_ADMIN_ROLE was held by EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 and its MINTER role by Savings Module 0x5475611dffb8ef4d697ae39df9395513b6e947d7; both EIP-1967 slots were zero. The source permits MINTER issuance and the admin can grant or revoke that role, but it has no blacklist, freeze, pause, seizure, or transfer-hook function. burnFrom follows ERC-20 allowance: an arbitrary-address, one-unit simulation reverted for insufficient allowance, while zero-value transfer and transferFrom simulations returned true. Direct Berachain route: verified 0x5475611dffb8ef4d697ae39df9395513b6e947d7 is a non-proxy SrusdOft deployment. At Berachain block 23537440, owner() returned the same EOA, msgInspector() was zero, token() returned the contract itself, its endpoint was 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, both EIP-1967 slots were zero, and zero-value transfer and transferFrom simulations returned true. Its owner can change LayerZero peer, options, inspector, or ownership, which can affect cross-chain send routing, but verified OFT source has no local holder blacklist, pause, seizure, or transfer restriction; this is a future route-control surface, not a current local-balance control. Reservoir's terms impose interface eligibility and suspension conditions, not an on-chain holder-control function. The live transparency API was reviewed and continues to expose the rUSD balance sheet, including USDC and USD1 positions. Inherited route: srUSD remains a claim on rUSD, whose separately reviewed PSM and reserve exposure remains upstream; no direct override is authored to suppress it. The archive record preserves the reviewed product documentation snapshot.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "srUSD is a Reservoir wrapper with Ethereum and Berachain deployments. Reviewed Reservoir materials show protocol-owned contract deployments but do not point to a third-party bridge, so Pharos classifies the route as issuer/protocol-native at probable confidence.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir contract addresses",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+      },
+      {
+        "label": "Reservoir docs",
+        "url": "https://docs.reservoir.xyz"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "protocol": "Reservoir native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native srUSD savings vault on Ethereum (4,585-byte token, no LayerZero endpoint). totalSupply $630M read 2026-07-20.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Etherscan token",
+            "url": "https://etherscan.io/token/0x738d1115b90efa71ae468f1287fc864775e23a31"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
+      },
+      {
+        "id": "berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "protocol": "LayerZero NativeOFT (Reservoir)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "NativeOFT srUSD: the token contract itself is the LayerZero OFT (12,275-byte code, endpoint() = the chain's LZ V2 endpoint, read 2026-07-20) with owner() = Reservoir operations EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on every chain. DefiLlama records this chain's srUSD as bridgedFromETH; the OFT burns/mints under LayerZero verification.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:berachain:0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+        ],
+        "sources": [
+          {
+            "label": "berachain explorer token",
+            "url": "https://berascan.com/token/0x5475611dffb8ef4d697ae39df9395513b6e947d7"
+          },
+          {
+            "label": "Reservoir docs",
+            "url": "https://docs.reservoir.xyz"
+          },
+          {
+            "label": "LayerZero on L2BEAT",
+            "url": "https://l2beat.com/interop/protocols/layerzero"
+          },
+          {
+            "label": "DefiLlama reservoir-stablecoin layerzeroConfig + adapter",
+            "url": "https://github.com/DefiLlama/peggedassets-server/tree/master/src/adapters/peggedAssets/reservoir-stablecoin"
+          }
+        ]
+      }
+    ]
+  }
+}

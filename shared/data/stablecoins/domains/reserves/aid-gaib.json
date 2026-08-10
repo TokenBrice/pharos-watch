@@ -1,0 +1,85 @@
+{
+  "id": "aid-gaib",
+  "reserves": [
+    {
+      "name": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States Treasury and GAIB-approved stablecoin issuers",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GAIB AID product documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      },
+      {
+        "label": "GAIB transparency documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/transparency"
+      },
+      {
+        "label": "GAIB AID transparency dashboard",
+        "url": "https://aid.gaib.ai/transparency"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: AID product docs still state AID is a synthetic dollar fully backed by U.S. Treasuries and stable assets and minted 1:1 by depositing USDC, USDT, and other accepted stablecoins. Transparency docs still point to aid.gaib.ai/transparency for real-time capital deployment and reserves status and describe quarterly third-party audits for portfolio disclosures. The public materials do not reproduce a current AID reserve component allocation among Treasuries and stable assets, so the complete envelope remains one unsplit basket with basket-needs-split. No inventing of category weights.",
+    "compositionBasis": "GAIB AID product and transparency disclosures; constituent weights undisclosed",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The Treasury/stable-asset weights, stablecoin identities, custodians, and public assets-and-liabilities reconciliation are not reproduced in accessible source material.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "AID reserve envelope (U.S. Treasuries and accepted stable assets)",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "GAIB identifies the reserve categories but does not publish a reproducible current split among them."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "GAIB AID Minter contracts (Ethereum 0xE2E1424687EB676b3807693CBb439362b8eA908E, Base 0x81c1FBa2C7Df54aC76de5Ebe373e89bCad3b8632, Arbitrum 0x04DfA27c7D1Ade09dDfccfA233FB3c8490CA2b18)",
+        "role": "other"
+      },
+      {
+        "name": "Undisclosed off-chain reserve custodians (post-mint Treasury and stable-asset conversion)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-2 (lead buidl-blackrock)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "GAIB AID and sAID contracts",
+        "url": "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts"
+      },
+      {
+        "label": "GAIB AID product documentation",
+        "url": "https://docs.gaib.ai/products/gaib-products/ai-dollar-aid"
+      }
+    ],
+    "uncertainty": "GAIB documents the on-chain Minter and Redeemer contracts that accept USDC/USDT, but what happens to proceeds after minting — conversion into Treasuries, custodian identities, account segregation, insolvency protections, and reuse terms — is off-chain and undocumented. The June 2026 Spiceflow assurance report covers GPU-financing asset deployment, not AID reserve custody, and no AID reserve attestation is publicly retrievable.",
+    "knownUnknownExposurePct": 100
+  }
+}

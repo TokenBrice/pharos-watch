@@ -1,0 +1,84 @@
+{
+  "id": "a7a5-old-vector",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: A7A5 resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "A7A5's issuer publishes exact Ethereum and Tron contracts and describes issuance on both networks. No independent bridge or active CEX-based bridge was evidenced, so both routes are treated as issuer-native minting.",
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "A7A5 token contracts",
+        "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
+      },
+      {
+        "label": "A7A5 roadmap",
+        "url": "https://docs.a7a5.io/introduction-to-a7a5/roadmap"
+      },
+      {
+        "label": "A7A5 Ethereum verified source",
+        "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9",
+        "canonicalChain": "ethereum",
+        "protocol": "A7A5 native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-15",
+        "observedBlock": 25536902,
+        "sources": [
+          {
+            "label": "A7A5 token contracts",
+            "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
+          },
+          {
+            "label": "A7A5 Ethereum verified source",
+            "url": "https://eth.blockscout.com/address/0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9?tab=contract"
+          }
+        ]
+      },
+      {
+        "id": "tron:TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
+        "destinationChain": "tron",
+        "contractAddress": "TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ",
+        "canonicalChain": "ethereum",
+        "protocol": "A7A5 native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-15",
+        "sources": [
+          {
+            "label": "A7A5 token contracts",
+            "url": "https://docs.a7a5.io/a7a5-token/token-contracts"
+          },
+          {
+            "label": "A7A5 Tron verified contract code",
+            "url": "https://tronscan.org/#/contract/TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ/code"
+          }
+        ]
+      }
+    ]
+  }
+}

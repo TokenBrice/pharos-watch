@@ -1,0 +1,84 @@
+{
+  "id": "stac-securitize",
+  "reserves": [
+    {
+      "name": "AAA CLO tranches and PGIM AAA CLO ETF",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "public-credit",
+      "issuerOrObligor": "Diversified CLO issuers held by Securitize AAA CLO Tokenized Fund, Ltd.",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days",
+      "maturityDaysMax": 5473
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex Chronicle Proof of Asset review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Securitize BNY CLO Fund offering page",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Securitize STAC launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+      },
+      {
+        "label": "Chronicle STAC Proof of Asset holdings dashboard (source date 2026-07-23; proof verified 2026-07-24)",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+      }
+    ],
+    "rationale": "Chronicle's independently verified holdings table identifies all 60 positions as of 2026-07-23: one $28.03 million PGIM AAA CLO ETF position and 59 individually identified CLO tranches, totaling $376.28 million of portfolio market value. The static reserve view aggregates those uniformly high-risk public-credit positions into one scoring bucket; the Chronicle source preserves every position identity, value, and disclosed maturity.",
+    "compositionBasis": "Chronicle Proof of Asset position-level market values",
+    "compositionAsOf": "2026-07-23",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unidentified position remains in the dated holdings table. Disclosed maturities cover 92.55% of market value and span 3,836 to 5,473 days from the source date; the 7.45% PGIM AAA CLO ETF position has no stated maturity. Chronicle reports $376.28 million of gross holdings against $353.79 million NAV, retained as a 1.0636 gross-holdings-to-NAV reference rather than a contractual collateralization ratio.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon (BNY)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "BNY Investments (sub-advisor)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize (fund tokenization and transfer agent)",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize BNY CLO Fund offering page",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Chronicle STAC proof of asset",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+      }
+    ],
+    "uncertainty": "The fund documentation names BNY as custodian and BNY Investments as sub-advisor for the BVI private fund holding the CLO portfolio, a structure that holds fund assets apart from Securitize's own balance sheet. Account-level segregation terms, rehypothecation restrictions, and custody of any interim cash balances are not publicly reproduced."
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "usat-tether",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USAT contract source",
+        "url": "https://etherscan.io/address/0x07041776f5007aca2a54844f50503a18a72a8b68#code"
+      }
+    ],
+    "evidence": "USAT proxies to an implementation that imports WithBlockedList.sol (Tether-family blocked-list/freeze surface) and is upgradeable via a TransparentUpgradeableProxy admin.",
+    "reviewer": "Accuratis swarm review",
+    "reviewedAt": "2026-05-13"
+  }
+}

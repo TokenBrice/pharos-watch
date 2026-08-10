@@ -25,13 +25,6 @@
   "jurisdiction": {
     "country": "India"
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: ARC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "status": "pre-launch",

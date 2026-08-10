@@ -28,13 +28,6 @@
   "jurisdiction": {
     "country": "United Kingdom"
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: KLARNAUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "status": "pre-launch",
   "announcedDate": "2025-11",
   "expectedLaunchDate": "2026",

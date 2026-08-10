@@ -1,0 +1,99 @@
+{
+  "id": "eurcv-societe-generale-forge",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "EURCV Ethereum mint is restricted to SG-FORGE's immutable registrar EOA. The token is a UUPS SmartCoin V4 proxy: the immutable technical EOA executes upgrades only after the registrar has authorized the candidate implementation; there is no separate proxy-admin slot.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x5f7827fDeb7c20b443265Fc2F40845B715385fF2"
+      ],
+      "implementationAddresses": [
+        "0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b"
+      ],
+      "adminAddresses": [
+        "0x54124a6834AF252a0f9ac7F478001aa500428955",
+        "0x7dE0bbdfCd4A6a956F149bEFcca30D6B5Bc5DA69"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURCV SmartCoin technical upgrade executor",
+      "observedBlock": 25530438,
+      "sources": [
+        {
+          "label": "EURCV SmartCoin V4 proxy",
+          "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2#code"
+        },
+        {
+          "label": "EURCV SmartCoin V4 implementation",
+          "url": "https://etherscan.io/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x7dE0bbdfCd4A6a956F149bEFcca30D6B5Bc5DA69",
+        "label": "EURCV SmartCoin registrar and direct minter",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530438,
+        "sources": [
+          {
+            "label": "SG-FORGE CoinVertible",
+            "url": "https://www.sgforge.com/product/coinvertible/"
+          },
+          {
+            "label": "EURCV SmartCoin V4 implementation",
+            "url": "https://etherscan.io/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530438, getOperators() returned this address as registrar and eth_getCode returned empty bytecode. Verified SmartCoin V4 source gates mint() with onlyAllowedMinter and uses the registrar as its immutable mint authority; no numeric token cap is imposed. The registrar must also authorize a proposed implementation before the technical operator can execute a UUPS upgrade."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x54124a6834AF252a0f9ac7F478001aa500428955",
+        "label": "EURCV SmartCoin technical upgrade executor",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 25530438,
+        "sources": [
+          {
+            "label": "EURCV SmartCoin V4 implementation",
+            "url": "https://etherscan.io/address/0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25530438, getOperators() returned this address as technical operator and eth_getCode returned empty bytecode. Verified SmartCoin V4 source gates _authorizeUpgrade() with onlyTechnical and additionally requires consumeAuthorizeImplementation() for a candidate previously authorized by the registrar. The EIP-1967 implementation is 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b and the proxy-admin slot is zero."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "SG-FORGE CoinVertible",
+          "url": "https://www.sgforge.com/product/coinvertible/"
+        },
+        {
+          "label": "Ethereum EURCV token",
+          "url": "https://etherscan.io/address/0x5f7827fdeb7c20b443265fc2f40845b715385ff2"
+        },
+        {
+          "label": "White & Case - SG-FORGE ACPR e-money institution licence for EURCV",
+          "url": "https://www.whitecase.com/news/press-release/white-case-advises-sg-forge-transformative-updates-eur-coinvertible-stablecoin"
+        }
+      ],
+      "evidence": "At Ethereum block 25530438, getOperators() returned unchanged registrar, operations, and technical EOAs; version() returned V4, newImplementation() returned zero, and the EIP-1967 implementation slot returned 0xf4ccc80c4b831a0d8d1414f2aca82a3d760ff05b. Verified source establishes registrar-only minting and the registrar-authorization plus technical-execution UUPS upgrade sequence. XRPL, Stellar, and Solana remain separate issuer-operated deployments outside this Ethereum control review. SG-FORGE is an ACPR-authorised Electronic Money Institution and EURCV is structured as a MiCA electronic-money token, so the issuer is prudentially supervised. However SG-FORGE publishes only a self-reported daily 100%-collateral figure on its own website; no named independent accounting/verification firm attests EURCV reserves (the Hacken work is smart-contract-only and RWA.xyz lists no auditor), so supply is not independently reconciled and reconciliation is unknown. Under the rubric an unreconciled mint stays critical regardless of prudential supervision.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
+      "disposition": "scoreable"
+    }
+  }
+}

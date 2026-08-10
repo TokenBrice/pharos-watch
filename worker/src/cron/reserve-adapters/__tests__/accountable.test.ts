@@ -5,6 +5,7 @@ import { fetchAccountableReserves } from "../accountable";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 import apxusd from "@shared/data/stablecoins/coins/apxusd-apyx.json";
+import apxusdReserves from "@shared/data/stablecoins/domains/reserves/apxusd-apyx.json";
 import usdu from "@shared/data/stablecoins/coins/usdu-unitas.json";
 import yusd from "@shared/data/stablecoins/coins/yusd-aegis.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
@@ -506,7 +507,7 @@ describe("adaptAccountableDashboard", () => {
       { name: "Inventory", pct: 13, risk: "high" },
       { name: "Cash & Equivalents (USDC, U.S. Treasury Bills)", pct: 10, risk: "very-low" },
     ]);
-    expect(apxusd.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
+    expect(apxusdReserves.reserves.map(({ name, pct, risk }) => ({ name, pct, risk }))).toEqual(result.slices);
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 6, 18, 14) / 1000,

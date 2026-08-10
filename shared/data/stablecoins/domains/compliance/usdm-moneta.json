@@ -1,0 +1,90 @@
+{
+  "id": "usdm-moneta",
+  "mica": {
+    "status": "pending",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "Finanstilsynet",
+    "authorizedEntity": "Norwegian Block Exchange AS (NBX)",
+    "references": [
+      {
+        "label": "USDM EU Issuer white paper notified to Finanstilsynet (25 Sep 2024)",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/671252e5de22175efb179b4b_USDM%20White%20paper%20notification%20date%2025th%20September%202024.pdf"
+      },
+      {
+        "label": "NBX USDM terms",
+        "url": "https://nbx.com/en/usdm-terms"
+      },
+      {
+        "label": "Finanstilsynet registry - Norwegian Block Exchange AS",
+        "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
+      },
+      {
+        "label": "Norway kryptoeiendelsloven (MiCA) enacted 1 Jul 2025 - Finanstilsynet is NCA",
+        "url": "https://www.finanstilsynet.no/nyhetsarkiv/nyheter/2025/lov-om-kryptoeiendeler-kryptoeiendelsloven-og-lov-om-endringer-i-hvitvaskingsloven-tfr-ii-trer-i/"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register — NBX/USDM not listed; page latest update 2026-06-12, checked 2026-06-18",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Moneta Digital LLC / Norwegian Block Exchange AS",
+    "issuerDomicile": "United States / Norway",
+    "licensingRegulator": "FinCEN MSB #31000327040139; Finanstilsynet / NBX EEA issuance",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDM has dual U.S./EEA issuer structure: Moneta Digital LLC (FinCEN MSB) for USA issuance, NBX (Finanstilsynet EMI) for EEA issuance. Norway enacted MiCA via kryptoeiendelsloven effective 1 Jul 2025; NBX whitepaper filed Sep 2024. ESMA EMTWP.csv re-checked Jun 2026: no NBX/USDM row present. GENIUS pathway remains unresolved; no PPSI approval exists for any issuer under the still-pending Act.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Moneta USDM - FinCEN MSB #31000327040139",
+        "url": "https://moneta.global/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "NBX USDM terms",
+        "url": "https://nbx.com/en/usdm-terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Charli3 USDM reserve feed",
+        "url": "https://portal.charli3.io/dev/feeds/usdm-reserves?network=Mainnet",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "Moneta Digital LLC issuer disclosures (moneta.global) - FinCEN MSB only, no PPSI claim",
+        "ESMA EMTWP.csv (re-checked Jun 2026)",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Moneta Digital LLC is a FinCEN-registered MSB (#31000327040139) and NBX holds a Norwegian EMI license; no token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for USDM. No PPSI approvals have been granted to any issuer as of Jun 2026.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

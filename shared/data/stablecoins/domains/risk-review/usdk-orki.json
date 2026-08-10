@@ -1,0 +1,41 @@
+{
+  "id": "usdk-orki",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/products/usdk"
+      },
+      {
+        "label": "Contract addresses",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/contract-addresses"
+      },
+      {
+        "label": "Swell explorer",
+        "url": "https://explorer.swellnetwork.io/address/0x0000baa0b1678229863c0a941c1056b83a1955f5"
+      }
+    ],
+    "evidence": "USDK is deployed behind an EIP-1967 proxy with Orki AccessManager authority. No active direct blacklist or freeze function was confirmed, but the holder-facing token surface is mutable.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Orki USDK documents RedStone oracle feeds for its Liquity V2-style collateral markets, with no stronger failover behavior verified.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Orki RedStone oracles",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/oracles-by-redstone.md"
+      },
+      {
+        "label": "Orki CDP design",
+        "url": "https://orki-finance.gitbook.io/orki-finance-docs/infra/cdp-design-by-liquity-v2.md"
+      }
+    ]
+  }
+}

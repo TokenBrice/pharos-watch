@@ -1,0 +1,262 @@
+{
+  "id": "bib01-backed",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "bIB01 has independently mintable native transparent proxies on seven chains. Three chain-group Safe authorities can mint without an on-chain cap, while every chain-local token owner and ProxyAdmin owner resolves to the same separate zero-delay 2-of-3 EOA signer set.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xca30c93b02514f86d5c86a6e375e3a330b435fb5"
+      ],
+      "implementationAddresses": [
+        "0x28a0b491650fe761c8a66528422bc7ca24ecaeda"
+      ],
+      "adminAddresses": [
+        "0xf2057bdff8439dbffce073e14a9854945d5e5644"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Backed deployment-wide token-owner / ProxyAdmin signer authority",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Backed token implementation",
+          "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+        },
+        {
+          "label": "Backed ProxyAdmin",
+          "url": "https://etherscan.io/address/0xf2057bdff8439dbffce073e14a9854945d5e5644#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xdd276f57e40d745e09855ba5711613f5da0c4a71",
+        "label": "Backed Ethereum/Gnosis direct-minter Safe signer group",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0xdd276f57e40d745e09855ba5711613f5da0c4a71",
+          "gnosis:0xfe4c27e80e0e1cd11aabcc27432e684c73c832f3"
+        ],
+        "safe": {
+          "owners": [
+            "0x414f6cb44cd975165f8299a5ccbed92aa1a26f58",
+            "0x297c815a70ec3cf394aa3db5b4aa166448961541",
+            "0xa0807ca21101fd097b60795a786569f6a5f5522e"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 25526129,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "evidence": "At the pinned Ethereum and Gnosis blocks, token minter() returned chain-local 2-of-3 Safes 0xdd276f57e40d745e09855ba5711613f5da0c4a71 and 0xfe4c27e80e0e1cd11aabcc27432e684c73c832f3. Both had the same three EOA owners, no modules or guard, and zero delay. Verified BackedTokenImplementation mint() imposes no numeric cap.",
+        "sources": [
+          {
+            "label": "Ethereum direct-minter Safe",
+            "url": "https://etherscan.io/address/0xdd276f57e40d745e09855ba5711613f5da0c4a71"
+          },
+          {
+            "label": "Gnosis direct-minter Safe",
+            "url": "https://gnosisscan.io/address/0xfe4c27e80e0e1cd11aabcc27432e684c73c832f3"
+          }
+        ]
+      },
+      {
+        "chain": "base",
+        "address": "0x20eb617cc8e8bf3c9b53fc2cf2444cf026da704f",
+        "label": "Backed Base direct-minter Safe",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "base:0x20eb617cc8e8bf3c9b53fc2cf2444cf026da704f"
+        ],
+        "safe": {
+          "owners": [
+            "0xce54047c812434da2c03ce58dc3097459ba87056",
+            "0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad",
+            "0x414f6cb44cd975165f8299a5ccbed92aa1a26f58",
+            "0x297c815a70ec3cf394aa3db5b4aa166448961541",
+            "0xa0807ca21101fd097b60795a786569f6a5f5522e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "masterCopy": "0xfb1bffc9d739b8d520daf37df666da4c687191ea",
+          "version": "1.3.0",
+          "observedBlock": 48592766,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 48592766,
+        "evidence": "At Base block 48592766, token minter() returned Safe 0x20eb617cc8e8bf3c9b53fc2cf2444cf026da704f. It was 3-of-5 with no modules or guard and zero delay. Verified BackedTokenImplementation mint() imposes no numeric cap.",
+        "sources": [
+          {
+            "label": "Base direct-minter Safe",
+            "url": "https://basescan.org/address/0x20eb617cc8e8bf3c9b53fc2cf2444cf026da704f"
+          }
+        ]
+      },
+      {
+        "chain": "polygon",
+        "address": "0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+        "label": "Backed Polygon/BSC/Arbitrum/Avalanche direct-minter Safe signer group",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "capDescription": "No on-chain mint cap; the configured minter may mint an arbitrary uint256 amount.",
+        "threshold": 3,
+        "signerCount": 5,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "polygon:0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+          "bsc:0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+          "arbitrum:0x8768cda7a463dae1baa6b2500efb025ebd7ffc50",
+          "avalanche:0x8768cda7a463dae1baa6b2500efb025ebd7ffc50"
+        ],
+        "safe": {
+          "owners": [
+            "0x1f8ffcabcc654e17bac0aff509dc9f95335a6668",
+            "0x5f7a4c11bde4f218f0025ef444c369d838ffa2ad",
+            "0x414f6cb44cd975165f8299a5ccbed92aa1a26f58",
+            "0x297c815a70ec3cf394aa3db5b4aa166448961541",
+            "0xa0807ca21101fd097b60795a786569f6a5f5522e"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "version": "1.3.0",
+          "observedBlock": 90179923,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 90179923,
+        "evidence": "At the pinned Polygon, BSC, Arbitrum, and Avalanche blocks, token minter() returned the same-address Safe 0x8768cda7a463dae1baa6b2500efb025ebd7ffc50. Each instance was 3-of-5 with the same EOA owner set, no modules or guard, and zero delay. Verified BackedTokenImplementation mint() imposes no numeric cap.",
+        "sources": [
+          {
+            "label": "Polygon direct-minter Safe",
+            "url": "https://polygonscan.com/address/0x8768cda7a463dae1baa6b2500efb025ebd7ffc50"
+          }
+        ]
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603",
+        "label": "Backed deployment-wide token-owner / ProxyAdmin signer authority",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "timelockDelaySec": 0,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603",
+          "gnosis:0xaeae255184c0f986a10c23785e3a8a692e8a3721",
+          "base:0xd1966bd72695789ec9c245f0bf5a8512b56c1d80",
+          "base:0x49754062e35f7591b93cc4f9915965be89643a65",
+          "polygon:0x8127cca189ef4dd9b8da3dca4553edd8046b7a94",
+          "bsc:0x49754062e35f7591b93cc4f9915965be89643a65",
+          "bsc:0x41e170dab2499ddbae1959932ada1b414a0956bc",
+          "arbitrum:0x49754062e35f7591b93cc4f9915965be89643a65",
+          "avalanche:0x49754062e35f7591b93cc4f9915965be89643a65"
+        ],
+        "safe": {
+          "owners": [
+            "0x2860a2051a93113cb6e931022b658ed1dc68d444",
+            "0xe25b606f393b60adcb85cc127a2d79f78c9cb658",
+            "0xd49fbb0711e91ef730c23f0d2fef4e5c5bf96eb1"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "version": "1.3.0",
+          "observedBlock": 25526129,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "evidence": "Across all seven pinned deployments, token owner() and ProxyAdmin.owner() resolved to chain-local 2-of-3 Safes with the same three EOA owners, no modules or guard, and zero delay. These owners can replace the configured direct minter and can immediately upgrade the shared transparent-proxy implementation. The failure-domain list preserves every distinct chain-local Safe address.",
+        "sources": [
+          {
+            "label": "Backed token implementation",
+            "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+          },
+          {
+            "label": "Backed representative owner Safe",
+            "url": "https://etherscan.io/address/0x22f2dfe84a2eacfe5d3ca81d26e610cb94eb1603"
+          }
+        ]
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Backed Finance docs",
+          "url": "https://docs.backed.fi/"
+        },
+        {
+          "label": "Backed token implementation",
+          "url": "https://etherscan.io/address/0x28a0b491650fe761c8a66528422bc7ca24ecaeda#code"
+        },
+        {
+          "label": "Backed ProxyAdmin",
+          "url": "https://etherscan.io/address/0xf2057bdff8439dbffce073e14a9854945d5e5644#code"
+        },
+        {
+          "label": "Backed proof-of-reserves methodology",
+          "url": "https://docs.backed.fi/backed-ecosystem/proof-of-reserves"
+        },
+        {
+          "label": "Backed Chainlink Proof of Reserve announcement",
+          "url": "https://backed.fi/news-updates/chainlink-proof-of-reserve-is-now-active"
+        },
+        {
+          "label": "Backed Assets Jersey registration document",
+          "url": "https://www.mfsa.mt/wp-content/uploads/2025/06/Backed-Assets-JE-Limited-Registration-Document-dated-08-May-2025.pdf"
+        }
+      ],
+      "evidence": "Pinned blocks were Ethereum 25526129, Gnosis 47187209, Base 48592766, Polygon 90179923, BSC 109812367, Arbitrum 483535601, and Avalanche 90233120. Every bIB01 deployment was a transparent proxy at the tracked address with implementation 0x28a0b491650fe761c8a66528422bc7ca24ecaeda, ProxyAdmin 0xf2057bdff8439dbffce073e14a9854945d5e5644, and zero beacon. Proxy, implementation, and ProxyAdmin runtime hashes were identical across all seven chains. Direct minters were chain-local 2-of-3 or 3-of-5 Safes, and every token-owner/ProxyAdmin-owner Safe instance resolved to the same separate 2-of-3 EOA signer set. Verified mint() has no cap; setMinter() and ProxyAdmin upgrades are immediate owner-only actions. Economic-control evidence reviewed 2026-07-15: The Network Firm obtains custody data directly and Chainlink refreshes Backed proof-of-reserve values every 24 hours or after a material deviation. The Jersey registration document expressly does not confer regulated status on Backed Assets (JE) Limited, so the recurring reconciliation has no qualifying prudential supervisor.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

@@ -1,0 +1,250 @@
+{
+  "id": "spkcc-spiko",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ],
+    "evidence": "SPKCC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "SPKCC publishes its fund NAV on-chain through a Chainlink AggregatorV3-style oracle, so valuation depends on an external feed. It is a permissioned fund share rather than a borrower CDP, and no token-level collateral liquidation path is documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Spiko describes SPKCC as a regulated fund share whose strategy rotates between BTC or ETH cash-and-carry trades and Treasury bills. Primary-market access is permissioned and fund NAV is calculated and published for the share; tokenholders do not open borrower-owned collateral positions, so there are no SPKCC collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "Spiko Cash and Carry",
+          "url": "https://www.spiko.io/spiko-cash-and-carry"
+        },
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "SPKCC is issued natively by Spiko on all six chains: every deployment was re-verified on-chain 2026-07-20 as the canonical Spiko fund share (EVM authority() = Spiko PermissionManager; Starknet owner = Spiko's Starknet owner account; Stellar contract in Spiko's official stellar-contracts registry). Cross-chain transfers run over Chainlink CCIP, Spiko's documented interoperability rail, so the profile tier reflects an external validated-network transfer rail over issuer-native deployments.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko CCIP announcement",
+        "url": "https://www.spiko.io/blog/spiko-chainlink-ccip"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      },
+      {
+        "label": "Spiko Cash and Carry",
+        "url": "https://www.spiko.io/spiko-cash-and-carry"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x4f33acf823e6eeb697180d553ce0c710124c8d59",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (ethereum block 25571110): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on ethereum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) — no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25571110,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on ethereum explorer (authority() probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x4f33acf823e6eeb697180d553ce0c710124c8d59"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (polygon block 90541049): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on polygon, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) — no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 90541049,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on polygon explorer (authority() probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x903d5990119bc799423e9c25c56518ba7dd19474"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x99f70a0e1786402a6796c6b0aa997ef340a5c6da",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (arbitrum block 485706358): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (Arbitrum proxy to the same PermissionManager implementation as Ethereum). Issuer-native Spiko fund share on arbitrum, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) — no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 485706358,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on arbitrum explorer (authority() probed 2026-07-20)",
+            "url": "https://arbiscan.io/address/0x99f70a0e1786402a6796c6b0aa997ef340a5c6da"
+          }
+        ]
+      },
+      {
+        "id": "base:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (base block 48863611): name() = 'Spiko Digital Assets Cash and Carry Fund', symbol() = 'SPKCC', decimals() = 5; authority() = Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472. Issuer-native Spiko fund share on base, minted/burned via the PermissionManager (mint restricted to Spiko operator groups) — no third-party wrapped representation; cross-chain transfers use Spiko's documented Chainlink CCIP rail.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48863611,
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on base explorer (authority() probed 2026-07-20)",
+            "url": "https://basescan.org/address/0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
+        "destinationChain": "starknet",
+        "canonicalChain": "starknet",
+        "contractAddress": "0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified via starknet_call 2026-07-20 (rpc.starknet.lava.build, cross-checked on 1rpc.io/onfinality): token 0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d reports symbol() = 'SPKCC', decimals() = 5 and owner() = 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d — the same Spiko Starknet owner account as USTBL/EURSPKCC (3/5 Argent multisig per the EURSPKCC 2026-07-15 mint-authority sweep). name() string storage reads back partially corrupted (zero-padded after the first bytes) identically on two independent RPCs — a storage quirk of this deployment, recorded as a data-quality note. Issuer-native Spiko deployment; no third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko Cash and Carry",
+            "url": "https://www.spiko.io/spiko-cash-and-carry"
+          },
+          {
+            "label": "SPKCC on Starknet Voyager (probed 2026-07-20)",
+            "url": "https://voyager.online/contract/0x04bade88e79a6120f893d64e51006ac6853eceeefa1a50868d19601b1f0a567d"
+          }
+        ]
+      },
+      {
+        "id": "stellar:CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT",
+        "destinationChain": "stellar",
+        "canonicalChain": "stellar",
+        "contractAddress": "CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT",
+        "protocol": "Spiko SPKCC (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified 2026-07-20: Spiko's stellar-contracts repository (spiko-tech/stellar-contracts, address/production.json) lists SPKCC at Soroban contract CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT under the shared Spiko PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M. stellar.expert shows the contract created 2025-10-01 (ledger epoch 1759338356) by Spiko owner account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H (Horizon: single ed25519 signer, all thresholds 0) with the same token wasm (f48f10d9...) as the EURSPKCC contract. Issuer-native Spiko deployment; no third-party bridge.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Spiko stellar-contracts production addresses",
+            "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/address/production.json"
+          },
+          {
+            "label": "SPKCC contract on stellar.expert (verified 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CDS2GCAQTNQINSCJUJIVBJXILKBWP5PU7LOBGHMP3X47QCQBFKPMTCNT"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "eurr-stablr",
+  "reserves": [
+    {
+      "name": "Fiat reserves (euro cash at regulated financial institutions)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "id": "pyusd-paypal",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken EEA stablecoin restrictions – PYUSD explicitly listed",
+        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+      },
+      {
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "ESMA interim MiCA register (issuers of EMTs) – no PYUSD/Paxos row found",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "PYUSD is a Paxos-issued U.S. dollar payment stablecoin distributed by PayPal with 1:1 redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "federal-qualified-nonbank",
+    "issuerEntity": "Paxos Trust Company, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "On December 12, 2025, the OCC granted Paxos Trust Company conditional approval to convert from its NYDFS limited purpose trust charter to a national trust bank charter (OCC NR-2025-125). This is a conditional trust-charter conversion, not a PPSI approval under the GENIUS Act (whose application framework remains in proposed-rules rulemaking). Paxos publicly announced PYUSD will align with GENIUS Act requirements as rules are finalized. The authorizationStatus remains issuer-announced-intent because no PPSI approval framework or application process yet exists. The OCC rulemaking (Bulletin 2026-3) is also scrutinizing PayPal's 4% PYUSD reward program as a potential indirect interest payment prohibited under GENIUS.",
+    "references": [
+      {
+        "label": "OCC NR-2025-125: Conditional approval for Paxos Trust Company, N.A. national trust charter",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2025/nr-occ-2025-125.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Paxos press release: OCC approves Paxos conversion to OCC Trust",
+        "url": "https://www.paxos.com/newsroom/occ-approves-paxos-application-to-convert-to-occ-trust-paxos-to-complete-conversion-imminently-to-become-a-federally-regulated-blockchain-infrastructure-provider",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-12-12",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "PayPal PYUSD page",
+        "url": "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Paxos PYUSD transparency",
+        "url": "https://www.paxos.com/pyusd-transparency",
+        "sourceKind": "auditor-report"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC NR-2025-125 (Dec 12, 2025) – conditional trust-charter approval, not a PPSI approval",
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3)",
+        "Paxos OCC national trust charter conversion press release (Dec 12, 2025)",
+        "Paxos PYUSD transparency and terms",
+        "PayPal PYUSD issuer disclosures",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Paxos received OCC conditional trust-charter approval Dec 2025, but no PPSI approval exists – the GENIUS Act PPSI application framework remains in proposed-rules rulemaking as of June 7, 2026.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

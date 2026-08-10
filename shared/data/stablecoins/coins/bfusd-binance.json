@@ -30,40 +30,6 @@
   "detailProvider": "coingecko",
   "geckoId": "bfusd",
   "cmcSlug": "bfusd",
-  "oracleRisk": {
-    "tier": "opaque-or-unknown",
-    "summary": "BFUSD is a Binance account balance backed by Binance-managed hedging, staking, and reserve-fund strategies rather than an onchain borrower market with a public collateral oracle.",
-    "branchModel": "single-path",
-    "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 data research",
-      "rationale": "Binance describes BFUSD as a non-withdrawable, balance-based platform product purchased and redeemed against supported USD stablecoins. Binance manages the backing strategies and may delay redemption; holders do not open collateralized debt positions and no onchain collateral-liquidation branches exist for V9 to inventory.",
-      "sources": [
-        {
-          "label": "Binance BFUSD product FAQ",
-          "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
-        },
-        {
-          "label": "Binance Academy: What Is BFUSD?",
-          "url": "https://academy.binance.com/en/articles/what-is-bfusd"
-        }
-      ]
-    },
-    "reviewedAt": "2026-07-14",
-    "reviewer": "Codex Safety Score V9 data research",
-    "confidence": "verified",
-    "sources": [
-      {
-        "label": "Binance BFUSD product FAQ",
-        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
-      },
-      {
-        "label": "Binance Academy: What Is BFUSD?",
-        "url": "https://academy.binance.com/en/articles/what-is-bfusd"
-      }
-    ]
-  },
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0",
@@ -85,62 +51,9 @@
       "url": "https://bin.bnbstatic.com/static/cms/cg08ou2ak0tn7mcplvfg/file/c1dd5e9f6a6191ca85b3cd256bd831884372530e3b4204b9006bf273650c6f5b.pdf"
     }
   ],
-  "canBeBlacklisted": true,
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sources": [
-      {
-        "label": "Docs",
-        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
-      },
-      {
-        "label": "Website",
-        "url": "https://www.binance.com/en/bfusd"
-      }
-    ],
-    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
-  },
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
-  "reserves": [
-    {
-      "name": "Binance BFUSD collateral pool, hedging portfolio, and reserve fund",
-      "pct": 100,
-      "risk": "very-high"
-    }
-  ],
-  "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-5 Safety Score V9 reserve review",
-    "confidence": "probable",
-    "sources": [
-      {
-        "label": "Binance BFUSD FAQ",
-        "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
-      },
-      {
-        "label": "Binance BFUSD product page",
-        "url": "https://www.binance.com/en/bfusd"
-      }
-    ],
-    "rationale": "Binance identifies the BFUSD collateral pool, hedging portfolio, and reserve fund but does not publish a dated constituent allocation or current custody and provider split.",
-    "compositionBasis": "Binance BFUSD product disclosures",
-    "scope": "selected-slices",
-    "knownUnknownExposure": "The full BFUSD collateral, hedge, and reserve-fund composition and allocation are undisclosed.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Binance BFUSD collateral pool, hedging portfolio, and reserve fund",
-        "pct": 100,
-        "disposition": "insufficient-evidence",
-        "rationale": "Binance describes the aggregate product envelope but does not publish the current underlying assets, weights, or failure-domain identity."
-      }
-    ]
-  },
   "yieldConfig": {
     "yieldSource": "Binance BFUSD daily APR / rewards",
     "yieldType": "governance-set"
@@ -152,37 +65,6 @@
       "message": "BFUSD is not a withdrawable on-chain token in Pharos metadata. Reserve and redemption claims depend on Binance product terms and account eligibility rather than independently verifiable collateral."
     }
   ],
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "BFUSD is a Binance account product, not a withdrawable on-chain token; Binance creates and redeems BFUSD on its internal exchange ledger 1:1 against supported USD stablecoins, controlling fees, limits, delays, and suspension rights, with no public on-chain mint contract.",
-    "controls": [
-      {
-        "label": "Binance BFUSD product ledger",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "evidence": "Binance creates/redeems BFUSD inside its centralized exchange against an opaque collateral pool and hedging portfolio; supply, fees, limits, and suspension are fully Binance-controlled. No public on-chain mint contract is exposed in Pharos metadata."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "Binance BFUSD FAQ",
-          "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
-        }
-      ],
-      "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",
-      "unresolvedQuestions": [
-        "BFUSD has no on-chain contract in Pharos metadata; the entire mint path is Binance's internal exchange ledger. If Binance later exposes an on-chain token contract, resolve its owner/minter admin at that time."
-      ]
-    }
-  },
   "launchDate": "2024-11-27",
   "priceBasis": "contractual-par",
   "exitMechanism": "ordinary-redemption",

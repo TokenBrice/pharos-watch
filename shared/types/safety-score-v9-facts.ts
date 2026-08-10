@@ -927,6 +927,17 @@ const V9TransferAccessReviewV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
     posture: z.enum(["permissionless", "restrictable", "permissioned"]).nullable(),
+    /**
+     * Owner ruling 2026-08-10 (same shape as the freeze `structuralDisposition`
+     * below): the reviewed-deployment scope machinery is contract-addressed, so
+     * an asset that has no contract deployment by design cannot ever satisfy it.
+     * `non-contract-native` = the reviewed surface lies entirely outside the
+     * contract-addressable chain registry and no material supply sits on an
+     * addressable chain, so the curated review IS the complete deployment scope.
+     * The disposition records the applicability basis for a known transfer fact;
+     * it never manufactures one where no current curated review exists.
+     */
+    structuralDisposition: z.enum(["non-contract-native"]).optional(),
   })
   .strict()
   .superRefine((review, ctx) => {
@@ -939,6 +950,13 @@ const V9TransferAccessReviewV2Schema = z
     }
     if (review.status.applicability.state === "not-applicable" && review.posture !== null) {
       ctx.addIssue({ code: "custom", path: ["posture"], message: "Not-applicable transfer review has no posture" });
+    }
+    if (review.structuralDisposition !== undefined && review.status.observationState !== "known") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["structuralDisposition"],
+        message: "Structural transfer disposition requires a known reviewed fact",
+      });
     }
   });
 
@@ -984,13 +1002,18 @@ export const V9AccessReviewV2Schema = z
          * Owner ruling 2026-07-27: a current, evidenced review whose honest
          * verdict is structural rather than boolean. `inherited-upstream` =
          * no direct freeze surface; exposure inherited from a named tracked
-         * upstream asset. `none-upgradeable` (reserved; no producer emits it
-         * yet) = verified absence in the current implementation behind a
-         * named upgrade authority. The freeze facts stay bounded-unknown for
-         * scoring; the disposition only stops them from being reported as
-         * missing data.
+         * upstream asset. `inherited-untracked-upstream` (owner ruling
+         * 2026-08-10) = the same evidenced inherited verdict where the upstream
+         * is not a tracked asset, so no `upstreamAssetId` may be asserted; the
+         * exposure is still measured rather than dropped. `none-upgradeable`
+         * (reserved; no producer emits it yet) = verified absence in the
+         * current implementation behind a named upgrade authority. The freeze
+         * facts stay bounded-unknown for scoring; the disposition only stops
+         * them from being reported as missing data.
          */
-        structuralDisposition: z.enum(["inherited-upstream", "none-upgradeable"]).optional(),
+        structuralDisposition: z
+          .enum(["inherited-upstream", "inherited-untracked-upstream", "none-upgradeable"])
+          .optional(),
       })
       .strict(),
   })

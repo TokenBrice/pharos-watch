@@ -1,0 +1,52 @@
+{
+  "id": "ousg-ondo-finance",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "OUSG is a Reg D Rule 506(c) / Section 3(c)(7) tokenized fund share restricted to U.S. Qualified Purchasers; it is a security (fund interest in Ondo I LP) not a payment stablecoin.",
+      "references": [
+        {
+          "label": "Ondo OUSG docs — qualified-access product",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Ondo Finance",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC Reg D / qualified purchaser context",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "OUSG is treated as outside GENIUS payment-stablecoin tracking because Ondo presents it as a qualified-access tokenized Treasury fund product. The SEC closed its two-year investigation into Ondo Finance without charges in November 2025, confirming no enforcement action.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ondo OUSG docs — qualified-access product",
+        "url": "https://docs.ondo.finance/qualified-access-products/ousg",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "SEC drops Ondo Finance investigation — no charges (Nov 2025)",
+        "url": "https://unchainedcrypto.com/sec-drops-biden-era-investigation-into-ondo-finance/",
+        "sourceKind": "news",
+        "sourceDate": "2025-12-09",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  }
+}

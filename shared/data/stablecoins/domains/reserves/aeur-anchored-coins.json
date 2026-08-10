@@ -1,0 +1,10 @@
+{
+  "id": "aeur-anchored-coins",
+  "reserves": [
+    {
+      "name": "Euro deposits at Swissquote Bank SA",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

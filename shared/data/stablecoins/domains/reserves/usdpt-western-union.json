@@ -1,0 +1,103 @@
+{
+  "id": "usdpt-western-union",
+  "reserves": [
+    {
+      "name": "Demand deposits at FDIC-insured depository institutions",
+      "pct": 2.54898,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "FDIC-insured depository institutions",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "legal"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+      "pct": 97.45102,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "BlackRock and United States Treasury",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Deloitte USDPT reserve examination for June 2026",
+        "url": "https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf"
+      },
+      {
+        "label": "Anchorage Digital USDPT reserve-attestation index",
+        "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+      }
+    ],
+    "rationale": "Deloitte's June 30, 2026 examination (report dated 2026-07-28, PDF read this pass): reserves $122,245 against 21,581 redeemable USDPT (Solana only) - $119,129 in a single money market fund (CUSIP 46655R119) and $3,116 cash in FDIC-insured demand deposits (uninsured portion $0). Surplus $100,664 (~566% collateralization on a near-zero-supply token).",
+    "compositionBasis": "Deloitte examination of the USDPT Reserve Report as of June 30, 2026",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All positive reserve categories and values in the examination are identified. The report does not name the depository institutions, but that provider-level omission does not leave an unidentified reserve slice.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Demand deposits at FDIC-insured depository institutions",
+        "pct": 2.54898,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The examination identifies the deposit category and exact value; the depository institutions are not tracked stablecoin dependencies."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+        "pct": 97.45102,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "TFFXX is an identified regulated money market fund rather than another tracked stablecoin."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "FDIC-insured depository institutions (not named in the May 2026 report)",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Custodian or subcustodian for TFFXX fund shares (not disclosed)",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Deloitte USDPT reserve examination for May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "BlackRock Select Treasury Based Liquidity Fund",
+        "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
+      }
+    ],
+    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of TFFXX shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

@@ -55,30 +55,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "canBeBlacklisted": "possible",
-  "blacklistabilityReview": {
-    "reviewedStatus": "possible",
-    "sources": [
-      {
-        "label": "GitHub",
-        "url": "https://github.com/jpycoin"
-      },
-      {
-        "label": "Website",
-        "url": "https://jpyc.co.jp/"
-      }
-    ],
-    "evidence": "Explicit Possible retained: reviewed metadata indicates direct token, vault, issuer, pause, proxy, or admin-control uncertainty, but available registry sources do not prove an active holder-balance blacklist path.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
-  },
-  "reserves": [
-    {
-      "name": "JPY reserve assets for legacy JPYC v1",
-      "pct": 100,
-      "risk": "low"
-    }
-  ],
   "notices": [
     {
       "type": "info",
@@ -86,104 +62,7 @@
       "message": "JPYC v1 is tracked separately from the current JPYC funds-transfer-token deployment."
     }
   ],
-  "mintAuthority": {
-    "mintPath": "permissioned-minter",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "JPYC v1 is a non-upgradeable legacy ERC-20 ('JPYC is ERC20, owned') with an owner-restricted mint(address,uint256) function; JPYC Inc. as contract owner is the sole minter against yen reserves.",
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0x94c2d94a786e1aaa07e95d084e88cd3a0680d152",
-        "label": "JPYC v1 Ethereum owner/minter (EOA)",
-        "role": "direct-minter",
-        "authorityType": "eoa",
-        "directMintAbility": "direct",
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Ethereum JPYC v1 contract",
-            "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
-          }
-        ],
-        "evidence": "At Ethereum block 25295183: eth_getStorageAt slot 5 of 0x2370f9d504c7a6e775bf6e14b3f12846b594cd53 returned 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152; eth_getCode returned no bytecode (EOA). EIP-1967 impl slot is zero (non-upgradeable)."
-      },
-      {
-        "chain": "polygon",
-        "label": "JPYC v1 Polygon (UChildERC20Proxy / PoS bridge)",
-        "role": "direct-minter",
-        "authorityType": "bridge",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "Blockscout confirms Polygon JPYC v1 (0x6ae7dfc7...) is a UChildERC20Proxy controlled by the Polygon PoS bridge predicate, not JPYC Inc. directly."
-      },
-      {
-        "chain": "gnosis",
-        "label": "JPYC v1 Gnosis (OmniBridge EternalStorageProxy)",
-        "role": "direct-minter",
-        "authorityType": "bridge",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "evidence": "At Gnosis block 25295183: storage slots 6–7 of 0x417602f4fbdd471a431ae29fb5fe0a681964c11b returned 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (EternalStorageProxy = Gnosis OmniBridge); mint on Gnosis is bridge-mediated."
-      }
-    ],
-    "review": {
-      "evidence": "At Ethereum block 25295183: storage slot 5 returned EOA 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152 as owner/minter; contract is non-upgradeable. Polygon deployment is UChildERC20Proxy (Polygon PoS bridge). Gnosis deployment is OmniBridge-controlled (EternalStorageProxy 0xf6a780...). Ethereum direct-minter EOA is JPYC Inc.'s issuer key.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
-      "sources": [
-        {
-          "label": "Ethereum JPYC v1 contract",
-          "url": "https://etherscan.io/address/0x2370f9d504c7a6e775bf6e14b3f12846b594cd53"
-        },
-        {
-          "label": "JPYC GitHub",
-          "url": "https://github.com/jpycoin/jpyc"
-        }
-      ]
-    }
-  },
   "launchDate": "2021-01-26",
-  "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "JPYC v1 legacy deployments on Polygon and Gnosis use third-party bridge rails from Ethereum rather than purely issuer-native multichain issuance. The reviewed durable route is Polygon PoS plus Gnosis OmniBridge lock/mint exposure for the non-Ethereum contracts.",
-    "reviewedAt": "2026-06-30",
-    "reviewer": "Codex static correction review",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "docs",
-        "name": "Polygon PoS Bridge",
-        "slug": "polygon-pos",
-        "url": "https://docs.polygon.technology/pos/concepts/bridge/",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
-      },
-      {
-        "source": "docs",
-        "name": "Gnosis OmniBridge",
-        "slug": "gnosis-omnibridge",
-        "url": "https://docs.gnosischain.com/bridges/OmniBridge/",
-        "bridgeTypes": [
-          "lockAndMint"
-        ]
-      }
-    ],
-    "sources": [
-      {
-        "label": "JPYC site",
-        "url": "https://jpyc.jp/"
-      },
-      {
-        "label": "JPYC SDK docs",
-        "url": "https://jpyc-support.freshdesk.com/support/solutions/articles/70000675847-jpyc-sdk%EF%BC%88english%EF%BC%89"
-      }
-    ]
-  },
   "obituary": {
     "causeOfDeath": "regulatory",
     "deathDate": "2025-06-01",

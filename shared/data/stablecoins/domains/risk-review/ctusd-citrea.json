@@ -1,0 +1,60 @@
+{
+  "id": "ctusd-citrea",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://citrea.xyz/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ctUSD is documented as Citrea USD, the native stablecoin for Bitcoin on Citrea, and the registry has only a Citrea deployment. No material bridge route was resolved for this asset. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Citrea ctUSD docs",
+        "url": "https://docs.citrea.xyz/developer-documentation/citrea-usd-ctusd"
+      },
+      {
+        "label": "Citrea ctUSD launch blog",
+        "url": "https://www.blog.citrea.xyz/introducing-citrea-usd-ctusd-the-native-stablecoin-for-bitcoin-issued-by-moonpay-and-powered-by-m0/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "citrea:0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+        "destinationChain": "citrea",
+        "contractAddress": "0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d",
+        "protocol": "Citrea USD (native issuance on Citrea)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ctUSD on Citrea explorer",
+            "url": "https://explorer.mainnet.citrea.xyz/address/0x8d82c4e3c936c7b5724a382a9c5a4e6eb7ab6d5d"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Citrea USD', symbol ctUSD — native issuance on Citrea (the asset's home chain)."
+      }
+    ]
+  }
+}

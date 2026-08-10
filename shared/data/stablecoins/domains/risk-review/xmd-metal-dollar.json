@@ -1,0 +1,28 @@
+{
+  "id": "xmd-metal-dollar",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "XPR Network explorer - xmd.token",
+        "url": "https://explorer.xprnetwork.org/account/xmd.token"
+      },
+      {
+        "label": "XPR Network mainnet node repository (Leap-based network)",
+        "url": "https://github.com/XPRNetwork/xpr.start"
+      },
+      {
+        "label": "Antelope Leap producer blacklist API",
+        "url": "https://docs.antelope.io/leap-plugins/latest/producer.api/"
+      },
+      {
+        "label": "XPR Network public API (get_info / get_abi / get_account)",
+        "url": "https://proton.eosusa.io/v1/chain/get_abi"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at XPR Network head block 397059419 (last irreversible 397059090). xmd.token still exposes only the standard eosio.token close/create/issue/open/retire/transfer actions and accounts/stat tables, so the token contract has no native holder freeze. The controlling 2-of-4 swapscold permission can replace contract code, but that upgrade path is not the basis for this Yes verdict. XPR Network's official mainnet node repository confirms the chain runs Antelope Leap, whose producer API exposes set_whitelist_blacklist with actor_blacklist, contract_blacklist, action_blacklist, and key_blacklist. A coordinated elected-producer actor blacklist prevents a named XPR account from submitting the transfer action needed to move its XMD, providing a protocol-level holder censorship/freeze mechanism even while the current xmd.token code is plain eosio.token. Upstream XUSDC/MPD controls remain separate reserve and redemption risks.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
+  }
+}

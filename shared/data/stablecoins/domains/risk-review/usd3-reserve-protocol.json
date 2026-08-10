@@ -1,0 +1,117 @@
+{
+  "id": "usd3-reserve-protocol",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Reserve Protocol pause/freeze states documentation",
+        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/pause-freeze-states.md"
+      },
+      {
+        "label": "USD3 RToken proxy on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/address/0x0d86883faf4ffd7aeb116390af37746f45b6f378"
+      },
+      {
+        "label": "USD3 RTokenP1 implementation on Ethereum Blockscout",
+        "url": "https://eth.blockscout.com/address/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      },
+      {
+        "label": "USD3 Base OptimismMintableERC20 on Sourcify",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0xefb97aaf77993922ac4be4da8fbc9a2425322677?fields=all"
+      },
+      {
+        "label": "USD3 Base OptimismMintableERC20 on Blockscout",
+        "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+      },
+      {
+        "label": "Reserve Protocol DTF discovery API",
+        "url": "https://api.reserve.org/discover/dtfs"
+      },
+      {
+        "label": "Reserve Protocol terms and conditions",
+        "url": "https://reserve.org/terms-and-conditions"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. At Ethereum block 25712317, the USD3 proxy still resolved to verified RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That implementation and the verified Base OptimismMintableERC20 representation expose ordinary ERC-20 transfers with no holder blacklist, seizure, arbitrary holder burn, or transfer pause. Reserve Protocol's Main freeze controls halt issue, redeem, and protocol trading while explicitly leaving ERC-20 functions open. Reserve's terms describe ABC Labs as a non-custodial interface contributor and reserve only the ability to restrict access to the services, not an issuer right to freeze USD3 balances.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "USD3 is issued natively on Ethereum by Reserve Protocol. Its Base deployment is an immutable OptimismMintableERC20 representation whose constructor-set bridge is the canonical Base L2StandardBridge and whose remote token is Ethereum USD3; it is not issuer-native multichain issuance or a liquidity bridge.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve docs",
+        "url": "https://docs.reserve.org/"
+      },
+      {
+        "label": "USD3 transparency",
+        "url": "https://api.reserve.org/discover/dtfs"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x0d86883faf4ffd7aeb116390af37746f45b6f378",
+        "protocol": "USD3 (Reserve Protocol native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Web 3 Dollar', symbol USD3, 18 decimals — Reserve Protocol issuer-native deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD3 on Etherscan",
+            "url": "https://etherscan.io/address/0x0d86883faf4ffd7aeb116390af37746f45b6f378"
+          },
+          {
+            "label": "Reserve Protocol",
+            "url": "https://reserve.org/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xefb97aaf77993922ac4be4da8fbc9a2425322677",
+        "protocol": "Base Standard Bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Base block 48622147, the verified OptimismMintableERC20 returned BRIDGE() = 0x4200000000000000000000000000000000000010 and REMOTE_TOKEN() = Ethereum USD3 0x0d86883FAf4FfD7aEb116390af37746F45b6F378. This is the canonical Base lock/mint representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-standard-bridge",
+          "contract:base:0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+        ],
+        "observedAt": "2026-07-14",
+        "observedBlock": 48622147,
+        "sources": [
+          {
+            "label": "USD3 Base OptimismMintableERC20 source",
+            "url": "https://base.blockscout.com/address/0xefb97aaf77993922ac4be4da8fbc9a2425322677"
+          },
+          {
+            "label": "Base Standard Bridge documentation",
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
+          }
+        ]
+      }
+    ]
+  }
+}

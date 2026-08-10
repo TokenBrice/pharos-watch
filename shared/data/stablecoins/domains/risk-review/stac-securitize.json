@@ -1,0 +1,99 @@
+{
+  "id": "stac-securitize",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Securitize",
+        "url": "https://securitize.io/"
+      },
+      {
+        "label": "CoinGecko",
+        "url": "https://www.coingecko.com/en/coins/securitize-tokenized-aaa-clo-fund"
+      }
+    ],
+    "evidence": "STAC is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Securitize launched STAC as issuer-administered digital fund shares on Ethereum and later expanded the same regulated fund to Solana. The reviewed deployment evidence describes native issuer issuance on both networks rather than a holder-operated third-party bridge.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Securitize Digital Securities",
+        "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx",
+        "bridgeTypes": [
+          "nativeIssuance"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Securitize STAC Ethereum launch",
+        "url": "https://investors.securitize.io/news/news-details/2025/Securitize-Launches-Tokenized-AAA-CLO-Fund-with-Services-Provided-by-BNY-Bringing-Institutional-Structured-Credit-Onchain-10-29-2025/default.aspx"
+      },
+      {
+        "label": "Securitize STAC Solana expansion",
+        "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+        "protocol": "STAC (Securitize native issuance on Ethereum)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Securitize Tokenized AAA CLO Fund', symbol STAC, 6 decimals; owner() = 0x59c1eacec450c57dcb9b8725d0f96635c2b676ee — Securitize issuer-native deployment on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize",
+            "url": "https://securitize.io/"
+          },
+          {
+            "label": "STAC on Etherscan",
+            "url": "https://etherscan.io/address/0x51c2d74017390cbbd30550179a16a1c28f7210fc"
+          }
+        ]
+      },
+      {
+        "id": "solana:u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+        "destinationChain": "solana",
+        "contractAddress": "u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk",
+        "protocol": "STAC (Securitize native issuance on Solana)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Securitize's issuer release identifies the Solana expansion. Solana RPC verified on 2026-07-20 that the Token-2022 mint reports the STAC name/symbol, 6 decimals, and mint authority GSM7ZTDNByoGwayftzcSrDqWmMF9L3mU6KLVrca57j2M; this is issuer-native issuance rather than a third-party bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Securitize STAC Solana expansion",
+            "url": "https://investors.securitize.io/news/news-details/2026/Securitize-Expands-STAC-Tokenized-AAA-CLO-Fund-to-Solana/default.aspx"
+          },
+          {
+            "label": "STAC on Solscan (mint authority verified 2026-07-20)",
+            "url": "https://solscan.io/token/u49MwZqu4bHRHRsciaBarHK7JZDYGxuaNnwyMBdEKYk"
+          }
+        ]
+      }
+    ]
+  }
+}

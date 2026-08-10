@@ -1,0 +1,48 @@
+{
+  "id": "uusd-anything-labs",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "UUSD official developer resources",
+        "url": "https://uusd.ai/developers"
+      },
+      {
+        "label": "UUSD official issuance controls",
+        "url": "https://uusd.ai/issuance"
+      },
+      {
+        "label": "UUSD official smart-contract repository",
+        "url": "https://github.com/uusdai/uusd"
+      },
+      {
+        "label": "UUSD whitepaper",
+        "url": "https://uusd.ai/whitepaper.pdf"
+      },
+      {
+        "label": "UUSD BSC transparent proxy",
+        "url": "https://bscscan.com/address/0x61a10e8556bed032ea176330e7f17d6a12a10000#code"
+      },
+      {
+        "label": "UUSD BSC verified implementation",
+        "url": "https://bscscan.com/address/0xa4f44c290cc693fc0c985d679281c61e99d9be9a#code"
+      },
+      {
+        "label": "PublicNode BSC RPC used for current-live verification",
+        "url": "https://bsc-rpc.publicnode.com"
+      },
+      {
+        "label": "SlowMist UUSD audit report",
+        "url": "https://github.com/slowmist/Knowledge-Base/blob/master/open-report-V2/smart-contract/UUSD%20-%20SlowMist%20Audit%20Report.pdf"
+      },
+      {
+        "label": "UUSD archive availability check (Arquivo.pt)",
+        "url": "https://arquivo.pt/textsearch?versionHistory=uusd.ai&maxItems=50"
+      }
+    ],
+    "evidence": "At a current-live BSC PublicNode read on 2026-07-15 (head 110070558), tracked UUSD proxy 0x61a10e8556bed032ea176330e7f17d6a12a10000 had EIP-1967 implementation 0xA4f44c290CC693fC0c985d679281c61e99d9Be9a and proxy-admin slot 0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE. The verified implementation exposes freeze/unfreeze and pause/unpause to admin or owner; its _update path rejects frozen senders and recipients and all updates while paused, transferFrom separately rejects a frozen spender, and approvals reject frozen owners or spenders. The live proxy reported owner=4/6 Safe 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4, admin=zero, paused=false, and frozen(random)=false. Safe-origin eth_call simulations of freeze(random) and pause() both succeeded without broadcast; an unprivileged random-account zero-value transfer returned true. The free BSC endpoint rejects archival calls without a personal token, so this is a current-live observation rather than a retained fixed-block claim. The proxy-admin chain is 0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE -> owner 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 -> the same Safe, so it also retains an upgrade path, although the live direct freeze/pause functions already resolve this as Yes. UUSD's official issuance page and repository describe the same controls, and the March 2026 SlowMist report identifies arbitrary account freeze and global pause; its then-reported 3/5 Safe configuration is treated as historical because the current live read is 4/6. The current UUSD pages did not link Terms, Privacy, or a reserve-attestation page, and Arquivo.pt returned no UUSD site snapshot; neither the whitepaper nor the contract audit supplies a proof of reserves. Those legal/transparency gaps are not used to infer the direct on-chain result.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  }
+}

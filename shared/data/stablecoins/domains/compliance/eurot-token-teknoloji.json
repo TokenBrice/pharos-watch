@@ -1,0 +1,12 @@
+{
+  "id": "eurot-token-teknoloji",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Token Teknoloji A.S. - Euro Token (Turkey-domiciled issuer; traded on Bitlo)",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+      }
+    ]
+  }
+}

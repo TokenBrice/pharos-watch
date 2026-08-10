@@ -1,0 +1,10 @@
+{
+  "id": "usnd-nerite",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver as no identified direct, upstream, or possible freeze exposure; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USND resolves to No because existing metadata does not identify direct, upstream, or possible freeze exposure.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  }
+}

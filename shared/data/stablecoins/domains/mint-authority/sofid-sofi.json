@@ -1,0 +1,114 @@
+{
+  "id": "sofid-sofi",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "SOFID is issued by SoFi Bank, N.A. (OCC-chartered) with BitGo Bank & Trust providing Stablecoin-as-a-Service. The on-chain contract (Ethereum ERC1967 UUPS proxy) has three EOA controls operated by BitGo: DEFAULT_ADMIN, MASTER_MINTER_ROLE, and UPGRADER_ROLE. All confirmed as EOAs (no bytecode).",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x0cb6d03b0ac88a463f67b7ad99f9f3ec4678092e"
+      ],
+      "implementationAddresses": [
+        "0x69edf9fa820df057e493635ed1db6b9e5f8124a0"
+      ],
+      "adminAddresses": [
+        "0x564fd647254ec3e0bd704c463c1d4494307e88b4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "SOFID UPGRADER_ROLE (EOA)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295030,
+      "sources": [
+        {
+          "label": "SOFID contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "BitGo issuance backend (Stablecoin-as-a-Service for SoFi)",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "BitGo Bank & Trust operates mint, burn, custody, and smart-contract management for SOFID on behalf of issuer SoFi Bank; supply is created 1:1 against cash at SoFi's Federal Reserve master account. No permissionless mint route.",
+        "sources": [
+          {
+            "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
+            "url": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+          }
+        ]
+      },
+      {
+        "label": "SOFID DEFAULT_ADMIN (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0xd84519fc7137e55d37674be353379a27a9bd21fe",
+        "chain": "ethereum",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295030, owner() returned 0xd84519fc7137e55d37674be353379a27a9bd21fe; eth_getCode returned no bytecode (EOA). Confirmed has DEFAULT_ADMIN role via hasRole(). Contract is AccessControlDefaultAdminRules; owner() returns the DEFAULT_ADMIN.",
+        "sources": [
+          {
+            "label": "SOFID contract on Etherscan",
+            "url": "https://etherscan.io/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+          }
+        ]
+      },
+      {
+        "label": "SOFID MASTER_MINTER_ROLE (EOA)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "address": "0x06720dec0fa18bb540eea24c7f196c0bd0c26b7a",
+        "chain": "ethereum",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "evidence": "At Ethereum block 25295030, RoleGranted event and hasRole(MASTER_MINTER_ROLE, 0x06720dec...) returned true; eth_getCode returned no bytecode (EOA). MASTER_MINTER_ROLE = 0x4d722a319ebda03eb1179096607e87f360b089b3919a0d764a65ea950521a6c9.",
+        "sources": [
+          {
+            "label": "SOFID contract on Etherscan",
+            "url": "https://etherscan.io/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+          }
+        ]
+      },
+      {
+        "label": "SOFID UPGRADER_ROLE (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "address": "0x564fd647254ec3e0bd704c463c1d4494307e88b4",
+        "chain": "ethereum",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "evidence": "At Ethereum block 25295030, RoleGranted event and hasRole(UPGRADER_ROLE, 0x564fd...) returned true; eth_getCode returned no bytecode (EOA). UPGRADER_ROLE = 0xcf6f9f892731e14b8859835f2ff35575f447fb501f46243c4eb8bac19e31a050. Can upgrade the UUPS proxy implementation.",
+        "sources": [
+          {
+            "label": "SOFID contract on Etherscan",
+            "url": "https://etherscan.io/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295030: proxy 0x0CB6d03B...678092E (ERC1967 UUPS) has impl 'Stablecoin' at 0x69edf9fa820df057e493635ed1db6b9e5f8124a0. owner()/DEFAULT_ADMIN = EOA 0xd84519fc... (no bytecode confirmed). MASTER_MINTER_ROLE = EOA 0x06720dec... (no bytecode confirmed, hasRole true). UPGRADER_ROLE = EOA 0x564fd... (no bytecode confirmed, hasRole true). No proxy admin (EIP-1967 admin slot = 0x0). All three EOAs confirmed as BitGo-operated; on-chain mint surface fully addressed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
+          "url": "https://www.bitgo.com/resources/blog/bitgo-selected-by-sofi-to-provide-stablecoin-infrastructure/"
+        },
+        {
+          "label": "SoFi launches fully reserved stablecoin",
+          "url": "https://investors.sofi.com/news/news-details/2025/SoFi-Launches-Fully-Reserved-Stablecoin-to-Power-Financial-Infrastructure-for-Banks-Fintechs-and-Enterprise-Partners/default.aspx"
+        },
+        {
+          "label": "SOFID contract on Blockscout (impl: Stablecoin)",
+          "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+        }
+      ]
+    }
+  }
+}

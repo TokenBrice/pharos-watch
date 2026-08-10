@@ -20,7 +20,7 @@ import {
 type RecentRunTone = "success" | "warning" | "skipped" | "failed";
 
 const RECENT_RUN_TONE_COPY: Readonly<Record<RecentRunTone, { label: string; className: string }>> = {
-  success: { label: "Succeeded", className: "bg-green-500" },
+  success: { label: "Succeeded", className: "bg-emerald-500" },
   warning: { label: "Completed with warnings", className: "bg-amber-500" },
   skipped: { label: "Skipped", className: "bg-zinc-500" },
   failed: { label: "Failed", className: "bg-red-500" },

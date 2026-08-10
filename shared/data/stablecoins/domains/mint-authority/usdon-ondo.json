@@ -1,0 +1,135 @@
+{
+  "id": "usdon-ondo",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "USDon (ETH) is an ERC1967 proxy (impl=USDon contract with AccessControlEnumerable); ProxyAdmin (0x5244…) is owned by a TimelockController (2h delay, 0x3715…); MINTER_ROLE held by GMTokenManager (0x2c15…) and a 3-of-6 Safe (0x7607…); DEFAULT_ADMIN = Timelock. BSC is structurally equivalent.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xace8e719899f6e91831b18ae746c9a965c2119f1"
+      ],
+      "adminAddresses": [
+        "0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd",
+        "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 7200,
+      "controlRef": "TimelockController ProxyAdmin owner (Ethereum)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 25295047,
+      "sources": [
+        {
+          "label": "USDon ProxyAdmin on Etherscan",
+          "url": "https://etherscan.io/address/0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd"
+        },
+        {
+          "label": "USDon TimelockController on Etherscan",
+          "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "GMTokenManager (Ethereum MINTER_ROLE[0])",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295047 (2026-06-11), getRoleMemberCount(MINTER_ROLE) on USDon proxy (0xace8e719899f6e91831b18ae746c9a965c2119f1) returned 2. getRoleMember(MINTER_ROLE, 0) = 0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c (GMTokenManager, a 12828-byte contract). GMTokenManager's DEFAULT_ADMIN_ROLE[0] = 0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (same TimelockController as ProxyAdmin owner).",
+        "sources": [
+          {
+            "label": "USDon token on Etherscan",
+            "url": "https://etherscan.io/address/0xace8e719899f6e91831b18ae746c9a965c2119f1"
+          }
+        ],
+        "address": "0x2c158bc456e027b2affccadf1bdbd9f5fc4c5c8c"
+      },
+      {
+        "label": "Ondo Safe 3-of-6 (Ethereum MINTER_ROLE[1])",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xe2cbb2fd440133946cd5171f675e1075570c5cae",
+            "0x5cd1e413ec933114c52f00545261ce00fd1b037c",
+            "0x81961c315e38badc02c014a13dd1d4b3dab81d15",
+            "0xde9825455932279f3c2b833b59a04029693f3e1b",
+            "0xd16e51667cd56b5d03b2acdd8567088fc5cdd579",
+            "0x61eac1f1c50c501af35a48d6ab7c42c24b399536"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": null,
+          "version": "GnosisSafe L2",
+          "observedBlock": 25295047,
+          "source": "onchain"
+        },
+        "evidence": "At Ethereum block 25295047 (2026-06-11), getRoleMember(MINTER_ROLE, 1) = 0x7607c08928bdbab77f88872b49667dcb877524db. getOwners() returned 6 owners; threshold()=3; getModulesPaginated returned 0 modules.",
+        "sources": [
+          {
+            "label": "USDon Ondo Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x7607c08928bdbab77f88872b49667dcb877524db"
+          }
+        ],
+        "address": "0x7607c08928bdbab77f88872b49667dcb877524db"
+      },
+      {
+        "label": "TimelockController ProxyAdmin owner (Ethereum)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "evidence": "At Ethereum block 25295047 (2026-06-11), EIP-1967 proxy admin slot of USDon returned 0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd (ProxyAdmin contract). ProxyAdmin.owner()=0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1 (TimelockController). Timelock minDelay=7200s (2h), PROPOSER_ROLE count=1 (PROPOSER[0]=0x71a4d411b5f7941dee020417fca30413712f1646 is a 4-of-7 Safe), EXECUTOR_ROLE count=2 (EXECUTOR[0]=0x2e55b738f5969eea10fb67e326bee5e2fa15a2cc is 1-of-8 Safe; EXECUTOR[1]=0xff1621ee754512b34a6bd62a941cc4d5e4d0b85b is EOA). DEFAULT_ADMIN_ROLE on USDon token = same Timelock.",
+        "sources": [
+          {
+            "label": "USDon ProxyAdmin on Etherscan",
+            "url": "https://etherscan.io/address/0x5244a3d8e6534d253c11b9459a4c4c6d3b2361dd"
+          },
+          {
+            "label": "USDon TimelockController on Etherscan",
+            "url": "https://etherscan.io/address/0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+          }
+        ],
+        "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Ondo GM trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency"
+        },
+        {
+          "label": "Ondo contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "USDon token on Etherscan",
+          "url": "https://etherscan.io/address/0xace8e719899f6e91831b18ae746c9a965c2119f1"
+        },
+        {
+          "label": "Ondo Global Markets disclaimer (no regulator registration)",
+          "url": "https://docs.ondo.finance/ondo-global-markets/disclaimer"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,348 @@
+{
+  "id": "usdf-falcon",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "USDf uses an Ethereum transparent proxy whose ProxyAdmin is owned by a 4/6 Safe. Ethereum minting is delegated to a PreCollateralizedMinter; BSC, Base, and XDC use immutable Chainlink BurnMintERC20 deployments whose local token pools and default-admin Safes have been enumerated on-chain.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xfa2b947eec368f42195f24f36d2af29f7c24cec2"
+      ],
+      "implementationAddresses": [
+        "0x3adf34c09dac24e4baefb1b1df4c2992edc2b789"
+      ],
+      "adminAddresses": [
+        "0x3ef1127fdf81b553066dae0faea58785a2aa6e14"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDf default admin Safe",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526500,
+      "sources": [
+        {
+          "label": "Ethereum USDf transparent proxy",
+          "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+        },
+        {
+          "label": "Ethereum USDf implementation",
+          "url": "https://etherscan.io/address/0x3adf34c09dac24e4baefb1b1df4c2992edc2b789#code"
+        },
+        {
+          "label": "Ethereum USDf ProxyAdmin",
+          "url": "https://etherscan.io/address/0x3ef1127fdf81b553066dae0faea58785a2aa6e14#code"
+        },
+        {
+          "label": "BSC USDf immutable BurnMintERC20",
+          "url": "https://bscscan.com/address/0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2#code"
+        },
+        {
+          "label": "Base USDf immutable BurnMintERC20",
+          "url": "https://basescan.org/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+        },
+        {
+          "label": "XDC USDf immutable BurnMintERC20",
+          "url": "https://xdcscan.com/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x1e482B60Bf19CB1CC859389E0eA3ded153F16BD7",
+        "label": "USDf default admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25294739,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Ethereum USDf contract",
+            "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25294739, hasRole(DEFAULT_ADMIN_ROLE=0x00, 0x1e482b60) returned true (confirmed). getOwners() returned 6 owners, getThreshold()=4, guard storage slot=zero, getModules() returned empty array, masterCopy slot=0x41675c (Gnosis Safe 1.4.1). All reads via publicnode RPC."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3A4F41dac6000a59B79669B9356B5eB71bF4Cc59",
+        "label": "USDf PreCollateralizedMinter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum USDf contract",
+            "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+          }
+        ],
+        "evidence": "At block 25294739, hasRole(MINTER_ROLE=0x9f2df0fe, 0x3A4F41) returned true (confirmed via Blockscout RoleGranted scan). Contract is named PreCollateralizedMinter (verified source, 3395 bytes). hasRole(DEFAULT_ADMIN_ROLE, 0x1e482b60) on this contract returned true — the admin Safe controls it. No RoleRevoked events found."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "label": "USDf BSC default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 109823336,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 109823336,
+        "sources": [
+          {
+            "label": "BSC USDf token",
+            "url": "https://bscscan.com/address/0xb3b02e4a9fb2bd28cc2ff97b0ab3f6b3ec1ee9d2#code"
+          },
+          {
+            "label": "BSC default-admin Safe grant",
+            "url": "https://bscscan.com/tx/0xa53333bff4b17d0591b3939acc66769ca8a14ee570e8274828c5f540271036a8"
+          },
+          {
+            "label": "BSC USDf default-admin Safe",
+            "url": "https://bscscan.com/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          }
+        ],
+        "evidence": "At BSC block 109823336, this Safe was the sole DEFAULT_ADMIN_ROLE member on the immutable USDf BurnMintERC20. The Safe returned the same six owners as Ethereum, threshold 4, no enabled modules, zero guard and module guard, and the standard Safe fallback handler. The deployer had revoked its default-admin role."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x4b66431f9e5f5cd026ae48e617902207b43048d4",
+        "label": "USDf BSC CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 109823336,
+        "sources": [
+          {
+            "label": "BSC USDf BurnMintTokenPool",
+            "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
+          },
+          {
+            "label": "BSC pool MINTER_ROLE grant",
+            "url": "https://bscscan.com/tx/0x7791b76e1a47ca820c9f6d268e8bb9d77b47cd315ac6da6e1b42bd1bf01152f5"
+          }
+        ],
+        "evidence": "At BSC block 109823336, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole MINTER_ROLE member. getToken() returned the BSC USDf token and owner() returned the reviewed 4/6 USDf Safe; the deployer had renounced its mint role."
+      },
+      {
+        "chain": "base",
+        "address": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "label": "USDf Base default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 48595298,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 48595298,
+        "sources": [
+          {
+            "label": "Base USDf token",
+            "url": "https://basescan.org/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+          },
+          {
+            "label": "Base default-admin Safe grant",
+            "url": "https://basescan.org/tx/0xcf855c277a731ea1b4c9737ddc86b1d57d8d9289c19cc96f722fd2b54820f807"
+          },
+          {
+            "label": "Base USDf default-admin Safe",
+            "url": "https://basescan.org/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          }
+        ],
+        "evidence": "At Base block 48595298, this Safe was the sole DEFAULT_ADMIN_ROLE member on the immutable USDf BurnMintERC20. The Safe returned the same six owners as Ethereum, threshold 4, no enabled modules, zero guard and module guard, and the standard Safe fallback handler. The deployer had revoked its default-admin role."
+      },
+      {
+        "chain": "base",
+        "address": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "label": "USDf Base CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48595298,
+        "sources": [
+          {
+            "label": "Base USDf BurnMintTokenPool",
+            "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+          },
+          {
+            "label": "Base pool MINTER_ROLE grant",
+            "url": "https://basescan.org/tx/0x801510bf0ee15b635e84b8dba7a3a9287404089b17cee21a90c37790344a2060"
+          }
+        ],
+        "evidence": "At Base block 48595298, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole MINTER_ROLE member. getToken() returned the Base USDf token and owner() returned the reviewed 4/6 USDf Safe; the deployer had revoked its mint role."
+      },
+      {
+        "chain": "xdc",
+        "address": "0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7",
+        "label": "USDf XDC default-admin Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.4.1",
+          "owners": [
+            "0x804016c31e52805eb00e0ef42126fd3e980a0b33",
+            "0xf4161ed9cfa2ac91068556387f9ce225fce6893f",
+            "0xe313dbd8693d656fe760ba3e766c80eb08f06734",
+            "0xa91472acc85272fd4119a946796aaf6c8392b0c0",
+            "0x276c580545293da6c7c0fdd12038cc75accbd211",
+            "0xa76095b4a145055c3cc46ed64dd1bcf8a8544e6c"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+          "masterCopy": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+          "observedBlock": 104892489,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 104892489,
+        "sources": [
+          {
+            "label": "XDC USDf token",
+            "url": "https://xdcscan.com/address/0x8210c0634AB8f273806e4b7866E9Db353773c44B#code"
+          },
+          {
+            "label": "XDC default-admin Safe grant",
+            "url": "https://xdcscan.com/tx/0xb74c00c662bdb9a6a0117d198c925cbbbdbd8b42f5657b0ae1b4d85d5c61aed4"
+          },
+          {
+            "label": "XDC USDf default-admin Safe",
+            "url": "https://xdcscan.com/address/0x1e482b60bf19cb1cc859389e0ea3ded153f16bd7#code"
+          }
+        ],
+        "evidence": "At XDC block 104892489, this Safe was the sole DEFAULT_ADMIN_ROLE member on the immutable USDf BurnMintERC20. The Safe returned the same six owners as Ethereum, threshold 4, no enabled modules, zero guard and module guard, and the standard Safe fallback handler. The deployer had revoked its default-admin role and the Safe had revoked its temporary mint role."
+      },
+      {
+        "chain": "xdc",
+        "address": "0x33570299e0d73f07c82d005de75de54cf4582fcc",
+        "label": "USDf XDC CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 104892489,
+        "sources": [
+          {
+            "label": "XDC USDf BurnMintTokenPool",
+            "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+          },
+          {
+            "label": "XDC pool MINTER_ROLE grant",
+            "url": "https://xdcscan.com/tx/0x3a34804ac2b6d8555c6fc5ba7435e7301d0d5c30aceaac9e681b28a9ddf77f97"
+          }
+        ],
+        "evidence": "At XDC block 104892489, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole MINTER_ROLE member. getToken() returned the XDC USDf token and owner() returned the reviewed 4/6 USDf Safe; the deployer and Safe had revoked their mint roles."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Falcon docs",
+          "url": "https://docs.falcon.finance"
+        },
+        {
+          "label": "Ethereum USDf contract",
+          "url": "https://etherscan.io/address/0xfa2B947eEc368f42195f24F36d2aF29f7c24CeC2#code"
+        },
+        {
+          "label": "Falcon Finance smart-contract addresses",
+          "url": "https://docs.falcon.finance/resources/app-smart-contracts"
+        },
+        {
+          "label": "BSC USDf BurnMintTokenPool",
+          "url": "https://bscscan.com/address/0x4b66431f9e5f5cd026ae48e617902207b43048d4#code"
+        },
+        {
+          "label": "Base USDf BurnMintTokenPool",
+          "url": "https://basescan.org/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+        },
+        {
+          "label": "XDC USDf BurnMintTokenPool",
+          "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
+        }
+      ],
+      "evidence": "Ethereum block 25526500 resolved the transparent proxy implementation and ProxyAdmin; ProxyAdmin.owner() is the reviewed 4/6 USDf Safe and there is no timelock. On BSC block 109823336, Base block 48595298, and XDC block 104892489, the token contracts are direct immutable Chainlink BurnMintERC20 deployments. Complete RoleGranted/RoleRevoked enumeration and current hasRole reads identified one local BurnMintTokenPool as MINTER_ROLE holder and the chain-local 4/6 Safe as sole DEFAULT_ADMIN_ROLE holder on each chain; prior deployer and temporary Safe mint roles are revoked.",
+      "reviewer": "Codex Safety Score V9 data research",
+      "reviewedAt": "2026-07-13"
+    }
+  }
+}

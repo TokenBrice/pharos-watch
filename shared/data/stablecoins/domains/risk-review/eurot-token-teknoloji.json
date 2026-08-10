@@ -1,0 +1,75 @@
+{
+  "id": "eurot-token-teknoloji",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EUROT resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex Worker B metadata pass",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "EUROT is described by Token Teknoloji as created on its supported blockchains with euro backing for each token issued. No separate cross-chain mint, lockbox, or liquidity bridge route was resolved, so Pharos treats the profile as native issuance on each listed chain.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Token Teknoloji EUROT",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "protocol": "Token Teknoloji issuer-native EUROT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: immutable (non-proxy) 'EURO Token' contract with owner() = issuer EOA 0xff80b391b286887d446b1124820f87d5b049b4fb, matching the reviewed mintAuthority; issuer-native deployment, no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EUROT token on Snowscan",
+            "url": "https://snowscan.xyz/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Token Teknoloji EUROT documentation",
+            "url": "https://www.tokenteknoloji.com.tr/en"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "destinationChain": "polygon",
+        "contractAddress": "0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "protocol": "Token Teknoloji issuer-native EUROT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: immutable (non-proxy) 'EURO Token' contract with owner() = issuer EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, matching the reviewed mintAuthority; issuer-native deployment, no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "EUROT token on Polygonscan",
+            "url": "https://polygonscan.com/address/0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c"
+          },
+          {
+            "label": "Token Teknoloji EUROT documentation",
+            "url": "https://www.tokenteknoloji.com.tr/en"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "id": "zarm-mento",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Mento Celo deployment inventory",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
+      },
+      {
+        "label": "ZARm proxy exact-match source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42220/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Mento StableTokenV2 verified implementation source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/42220/0x434563b0604be100f04b7ae485bcafe3c9d8850e?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Mento StableTokenV2 source archive",
+        "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/tokens/StableTokenV2.sol"
+      },
+      {
+        "label": "Mento governance proxy-upgrade example",
+        "url": "https://forum.mento.org/t/mgp-16-copm-and-brlm-renaming/105"
+      },
+      {
+        "label": "Mento Protocol Foundation privacy notice",
+        "url": "https://www.mento.org/privacy"
+      },
+      {
+        "label": "Mento live reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Archived Mento Reserve dashboard",
+        "url": "https://arquivo.pt/wayback/20250213024357/https://reserve.mento.org/"
+      },
+      {
+        "label": "Celo Forno fixed-block RPC",
+        "url": "https://forno.celo.org"
+      }
+    ],
+    "sourceFreeRationale": "The current holder-facing ZARm token has no direct governance-controlled blacklist, freeze, pause, seizure, arbitrary-account burn, or transfer-hook restriction. Broker/exchange burn and Celo-VM gas debiting are protocol-scoped, not governance holder-freeze controls. Timelocked proxy upgrade authority is a governance surface but is not itself a currently executable holder-freeze surface. This direct conclusion does not suppress reserve-derived upstream exposure.",
+    "evidence": "Re-verified 2026-08-08 at Celo block 74317848. ZARm 0x4c35853a3b4e647fd266f4de678dcc8fec410bf6 still returned Mento Timelock 0x890db8a597940165901372dd7db61c9f246e2147 as owner, Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad, validators 0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58, and a zero exchange; its implementation remained verified StableTokenV2 0x434563b0604be100f04b7ae485bcafe3c9d8850e. Verified transfer paths have no blacklist, freeze, pause, seizure, arbitrary-holder burn, allowlist, or governance transfer hook. Broker/exchange burn is caller-scoped and debitGasFees is Celo-VM scoped. Mento governance can replace implementation only through the observed 172800-second timelock, so current direct blacklistability is false while deployment posture remains restrictable. USDC, USDT, EURC, and related shared-reserve exposures can impair backing but cannot restrict ZARm balances and are therefore dependency risk, not an inherited direct-access verdict.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Mento's current Celo oracle-priced stable paths use external rate sources through OracleAdapter/SortedOracles and BreakerBox validity gates. The current reserve inventory has no active ZARm borrower-CDP branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Mento's current reserve API reports active CDP troves only for GBPm, JPYm, and CHFm, all against USDm; it reports no active ZARm troves. Mento's current Celo/CDP docs identify GBPm as the live collateralized stable path, while oracle-priced FPMM assets use the swap-rate path. There is therefore no current ZARm borrower-specific liquidation branch to inventory under V9.",
+      "sources": [
+        {
+          "label": "Mento stable assets on Celo",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "Mento stable token contracts",
+          "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+        },
+        {
+          "label": "Mento FPMM oracles and circuit breakers",
+          "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+        },
+        {
+          "label": "Mento reserve analytics API",
+          "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento stable assets on Celo",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      },
+      {
+        "label": "Mento stable token contracts",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento FPMM oracles and circuit breakers",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/fpmm/oracles-and-circuit-breakers"
+      },
+      {
+        "label": "Mento reserve analytics API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ZARm has one tracked Celo deployment and reviewed Mento docs describe obtaining Mento stables on Celo. No durable cross-chain route was verified for this asset, so it is triaged as single-chain/native. 2026-07-20 cohort dc-1 pass: added the reviewed native home-chain route row.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento docs",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "celo:0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+        "destinationChain": "celo",
+        "contractAddress": "0x4c35853a3b4e647fd266f4de678dcc8fec410bf6",
+        "protocol": "Mento ZARm (native issuance on Celo)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Mento",
+            "url": "https://www.mento.org/"
+          },
+          {
+            "label": "ZARm on Celoscan",
+            "url": "https://celoscan.io/address/0x4c35853a3b4e647fd266f4de678dcc8fec410bf6"
+          }
+        ],
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Mento South African Rand', symbol ZARm; owner() = 0x890db8a597940165901372dd7db61c9f246e2147 (Mento governance) — native issuance on Celo (the asset's home chain)."
+      }
+    ]
+  }
+}

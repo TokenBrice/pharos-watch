@@ -16,16 +16,6 @@
     "yieldSource": "70% of protocol borrow fees distributed to gynUSD Stability Pool depositors",
     "yieldType": "fee-sharing"
   },
-  "canBeBlacklisted": "possible",
-  "blacklistabilityReview": {
-    "reviewedStatus": "possible",
-    "sources": [
-      { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf" }
-    ],
-    "evidence": "gynUSD contracts are non-upgradable with no direct blacklist function; however, the sole collateral (cbBTC) is controlled by Coinbase, which can freeze cbBTC addresses and impair the protocol collateral pool.",
-    "reviewer": "Pharos pre-launch addition 2026-05-19",
-    "reviewedAt": "2026-05-19"
-  },
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-02",
@@ -49,12 +39,33 @@
   ],
   "featuredContent": [],
   "links": [
-    { "label": "Website", "url": "https://www.gyndore.com/" },
-    { "label": "Twitter", "url": "https://x.com/gyndore" },
-    { "label": "Telegram", "url": "https://t.me/gyndore" },
-    { "label": "Medium", "url": "https://medium.com/@gyndore" },
-    { "label": "YouTube", "url": "https://www.youtube.com/@Gyndore" },
-    { "label": "GitHub", "url": "https://github.com/Ayeteasea" },
-    { "label": "Whitepaper", "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf" }
+    {
+      "label": "Website",
+      "url": "https://www.gyndore.com/"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/gyndore"
+    },
+    {
+      "label": "Telegram",
+      "url": "https://t.me/gyndore"
+    },
+    {
+      "label": "Medium",
+      "url": "https://medium.com/@gyndore"
+    },
+    {
+      "label": "YouTube",
+      "url": "https://www.youtube.com/@Gyndore"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/Ayeteasea"
+    },
+    {
+      "label": "Whitepaper",
+      "url": "https://www.gyndore.com/Gyndore-TLDR-Paper.pdf"
+    }
   ]
 }

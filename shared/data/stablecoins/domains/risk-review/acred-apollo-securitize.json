@@ -1,0 +1,193 @@
+{
+  "id": "acred-apollo-securitize",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Securitize ACRED page",
+        "url": "https://www.securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      }
+    ],
+    "evidence": "Securitize operates ACRED with permissioned token transfers restricted to KYC-onboarded qualified purchasers and retains transfer-agent freeze and burn authority on behalf of Apollo.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "ACRED has issuer-native Securitize deployments on all six tracked chains. Wormhole supplies the external validated messaging layer for near-instant native transfers through Securitize's own smart contracts; it does not create wrapped representations or control ordinary local issuance.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole / Securitize interoperability",
+        "url": "https://wormhole.com/case-studies/securitize",
+        "note": "Wormhole identifies ACRED as a multichain tokenized fund and describes Securitize using its own smart contracts for near-instant native transfers."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Securitize ACRED launch",
+        "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+      },
+      {
+        "label": "Wormhole Securitize case study",
+        "url": "https://wormhole.com/case-studies/securitize"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x17418038ecf73ba4026c4f428547bf099706f27b",
+        "protocol": "Securitize",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize ACRED launch",
+            "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x7c64925002bfa705834b118a923e9911bee32875",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x7c64925002bfa705834b118a923e9911bee32875",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize ACRED launch",
+            "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "ink:0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+        "destinationChain": "ink",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x53ad50d3b6fcacb8965d3a49cb722917c7dae1f3",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize ACRED launch",
+            "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfce60bbc52a5705cec5b445501fbaf3274dc43d0",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize ACRED launch",
+            "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize Solana ACRED launch",
+            "url": "https://securitize.io/learn/press/securitize-brings-tokenized-real-world-assets-to-ink-and-solana-networks"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+        "destinationChain": "aptos",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88",
+        "protocol": "Securitize / Wormhole",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-13",
+        "sources": [
+          {
+            "label": "Securitize ACRED launch",
+            "url": "https://securitize.io/learn/press/apollo-and-securitize-announce-partnership-and-launch-tokenized-access-to-credit-fund"
+          },
+          {
+            "label": "Wormhole and Securitize native transfer architecture",
+            "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      }
+    ]
+  }
+}

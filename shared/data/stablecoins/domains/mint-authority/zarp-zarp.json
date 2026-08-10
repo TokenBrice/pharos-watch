@@ -1,0 +1,144 @@
+{
+  "id": "zarp-zarp",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "ZARP exposes AccessControl MINTER_ROLE minting. Enumerated via RoleGranted/RoleRevoked events and confirmed via hasRole: MINTER_ROLE = 0x37b1af (EOA), DEFAULT_ADMIN = 0xf50064 (EOA), UPGRADER_ROLE currently held by no one (all grants revoked). Consistent across Ethereum, Base, Polygon. Solana mintAuthority = system-owned wallet (EOA-equivalent), same address on the current Solana mint.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+        "0xb755506531786c8ac63b756bab1ac387bacb0c04"
+      ],
+      "implementationAddresses": [
+        "0xe6695c23592e84ef37de8b31f24a020af82030e4"
+      ],
+      "adminAddresses": [
+        "0xf50064312857ee94f378bc79675297a82e4f61bf"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "ZARP DEFAULT_ADMIN (Ethereum/Base/Polygon)",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580037,
+      "sources": [
+        {
+          "label": "Sourcify ZARP implementation source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+        },
+        {
+          "label": "ZARP Ethereum proxy",
+          "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Base PublicNode RPC",
+          "url": "https://base-rpc.publicnode.com"
+        },
+        {
+          "label": "Polygon PublicNode RPC",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x37b1af2606b4db2a3e07075efdd034ba864979cd",
+        "label": "ZARP MINTER_ROLE holder (Ethereum/Base/Polygon)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Sourcify ZARP source",
+            "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+          },
+          {
+            "label": "ZARP Ethereum token",
+            "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023: hasRole(MINTER_ROLE, 0x37b1af...) = true; eth_getCode = 0x (EOA). RoleGranted events confirmed this address received MINTER_ROLE; no corresponding RoleRevoked. hasRole confirmed true on Base and Polygon at same address."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf50064312857ee94f378bc79675297a82e4f61bf",
+        "label": "ZARP DEFAULT_ADMIN (Ethereum/Base/Polygon)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "ZARP Ethereum token",
+            "url": "https://etherscan.io/address/0xb755506531786c8ac63b756bab1ac387bacb0c04"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023: hasRole(DEFAULT_ADMIN_ROLE, 0xf50064...) = true; eth_getCode = 0x (EOA). RoleGranted event at genesis plus transfer confirmed. hasRole also true on Base and Polygon."
+      },
+      {
+        "chain": "solana",
+        "address": "797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j",
+        "label": "ZARP Solana mint authority (both mints)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "ZARP Solana mint dngKhBQ",
+            "url": "https://solscan.io/token/dngKhBQM3BGvsDHKhrLnjvRKfY5Q7gEnYGToj9Lk8rk"
+          }
+        ],
+        "evidence": "Solana getAccountInfo on both ZARP SPL mints (dngKhBQ... and 8v8aBHR...) returned mintAuthority = 797qLH2ZBvMrroZwxsLiWxgvDeLfUeJaHL1xWjfC7J4j. Account owner_program = 11111111111111111111111111111111 (System Program) = EOA-equivalent wallet, not a program."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "ZARP docs",
+          "url": "https://docs.zarpstablecoin.com/zarp-stablecoin"
+        },
+        {
+          "label": "Sourcify ZARP source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0xe6695c23592e84ef37de8b31f24a020af82030e4/sources/contracts/Zarp.sol"
+        },
+        {
+          "label": "ZARP Ethereum RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xb755506531786c8ac63b756bab1ac387bacb0c04&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "Kempen ZARP February 2026 report",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/03/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-02-27-1773397665324.pdf"
+        },
+        {
+          "label": "FSCA crypto-asset service providers",
+          "url": "https://www.fsca.co.za/Regulated%20Entities/Pages/Crypto-Assets-Service-Providers.aspx"
+        },
+        {
+          "label": "Kempen Audit ISRS 4400 agreed-upon-procedures report on ZARP tokens, 1 July 2026",
+          "url": "https://kempengroup.co.za/wp-content/uploads/2026/07/ZARP-Stablecoin-Pty-Ltd-Agreed-upon-procedures-report-2026-07-01-1782976189690.pdf"
+        },
+        {
+          "label": "ZARP transparency archive: nine Kempen agreed-upon-procedures reports, May 2024 to July 2026",
+          "url": "https://www.zarpstablecoin.com/transparency/"
+        }
+      ],
+      "evidence": "Role enumeration via Blockscout RoleGranted/RoleRevoked events plus hasRole confirmation at block 25295023. MINTER_ROLE = one EOA (0x37b1af), DEFAULT_ADMIN = one EOA (0xf50064), UPGRADER_ROLE = nobody currently (prior holder 0xfa4eb9 had all roles revoked). Same MINTER and ADMIN confirmed on Base and Polygon. Solana both SPL mints share one system-wallet mintAuthority. All addressable controls confirmed. Mint-tier review (2026-07-15): Kempen Audit issued quarterly agreed-upon-procedures reports through 2026-02-27, published 2026-03-03, but the next expected quarterly report is overdue as of 2026-07-15; current recurring reconciliation is therefore not established. No exact prudential issuer authorization for ZARP Stablecoin (Pty) Ltd was established in FSCA's crypto-asset provider records. Reconciliation review (2026-08-08): the report the 2026-07-15 pass recorded as overdue has since been published - Kempen Audit Incorporated (Chartered Accountants SA, Registered Auditor) issued an ISRS 4400 agreed-upon-procedures report as of 2026-07-01 reconciling R91,205,857.45 at Old Mutual Wealth Trust Company and R1,144,210 at Standard Bank against 83,196,465.61 ZARP asserted in circulation, verifying supply directly on Ethereum, Solana, Base and Polygon. Nine such reports run from May 2024 to July 2026, so a recurring third-party reconciliation is established. Supervision remains non-prudential: ZARP Stablecoin (Pty) Ltd acts as a representative of Inves Capital (Pty) Ltd with a CASP licence still pending, and is explicitly not SARB-endorsed, so attestation-only.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-08-08"
+    }
+  }
+}

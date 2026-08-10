@@ -1,0 +1,67 @@
+{
+  "id": "sofid-sofi",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "SOFID is a U.S. dollar payment stablecoin issued by SoFi Bank, N.A. with 1:1 mint and redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "SoFi Bank, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC",
+    "primaryFederalRegulator": "OCC",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.sofi.com/crypto/sofiusd/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-09",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "SoFiUSD page",
+        "url": "https://www.sofi.com/crypto/sofiusd/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "SoFiUSD launch announcement",
+        "url": "https://investors.sofi.com/news/news-details/2026/SoFiUSD-Becomes-the-First-Stablecoin-Issued-by-a-US-National-Bank-to-Launch-on-a-Banking-Platform/default.aspx",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Deloitte April 2026 attestation (SEC ABS-15G filing, SoFi Bank N.A., filed 2026-04-24)",
+        "url": "https://www.sec.gov/Archives/edgar/data/0002012974/000114036126016624/ef20070215_abs15g.htm",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-04-09",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "OCC SoFi Bank approval and charter materials",
+        "SoFiUSD product and investor-relations pages",
+        "Web search for SoFi PPSI application filings June 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, or official application source was located for SOFID as of 2026-06-18. GENIUS Act is law (enacted July 2025) but implementing regulations remain in proposed-rules phase; no PPSI applications have been accepted yet. SoFi Bank N.A. is an OCC-supervised IDI and under GENIUS would issue via a subsidiary; no such subsidiary PPSI application was found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

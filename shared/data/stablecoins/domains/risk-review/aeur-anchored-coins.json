@@ -1,0 +1,23 @@
+{
+  "id": "aeur-anchored-coins",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: AEUR resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "AEUR is issuer-documented as available on Ethereum and BNB Chain, with no public bridge route required for holder-facing supply. The multichain posture is reviewed as issuer-native issuance/redemption exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Anchored Coins AEUR",
+        "url": "https://www.anchoredcoins.com/en/landing/aeur"
+      }
+    ]
+  }
+}

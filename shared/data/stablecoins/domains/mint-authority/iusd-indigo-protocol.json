@@ -1,0 +1,86 @@
+{
+  "id": "iusd-indigo-protocol",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "iUSD is minted on Cardano by opening overcollateralized CDPs in Indigo Protocol against approved Cardano-native collateral; INDY token holders govern collateral onboarding, parameters, and stability mechanisms.",
+    "controls": [
+      {
+        "chain": "cardano",
+        "label": "Indigo CDP minting validators",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "iUSD (an iAsset) is minted only against overcollateralized Indigo CDP vaults of approved Cardano collateral; supply expands and contracts with collateralized positions and liquidations, not an issuer minter.",
+        "evidence": "Koios script_info re-verified 2026-07-20: the iUSD minting policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880 is a plutusV2 script (1189 bytes, creation tx 99329591f444f68ed4a33ed664c146fbf278cf9202067974cfa1a26d09a34107, deployed Nov 2022). Cardano minting policies are immutable: the policy hash is the asset identity and its mint rules (overcollateralized CDP validation) cannot be replaced or upgraded for the existing iUSD asset. Indigo docs describe iUSD minted only against overcollateralized CDPs with Stability Pool liquidations.",
+        "address": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880",
+        "failureDomainKeys": [
+          "protocol:indigo-protocol",
+          "contract:cardano:f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
+        ],
+        "observedAt": "2026-07-20"
+      },
+      {
+        "chain": "cardano",
+        "label": "Indigo INDY DAO governance",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "INDY stakers vote on collateral types, CDP risk parameters, and protocol stability mechanisms through Indigo on-chain governance.",
+        "evidence": "Indigo's official mainnet V3 system parameters (config.indigoprotocol.io) name the on-chain governance surface: GOV_NFT policy 2fccae8bc1c8553a2185b2e77ccdea22f2e1d6e87beb80ef4eaf8cce, poll manager validator 2c64c712d8ea012866a0e52119409992dcbee828b5e89f58b6c13c68, governance execute validator 0e764163b06d954f2dcfecf8d3b257e2bfe3d326d5670e54ca1974ce (this control's address), treasury validator 46ffe1d162ef5c1c4d4c0b92eb410e8148c59c547952ebac39622abd, UPGRADE token ca72f111cc130ac311259181e0720516c044cee30704706a0299c2a8, and VERSION_RECORD token d626ddf398b0bca6e112cf0b78c8124b989a6ca4e7c0dfe8c18c7c2e. Koios script_info on 2026-07-20 confirmed all six resolve to live on-chain scripts (plutusV2 token policies, plutusV3 validators). INDY stakers vote through the poll manager; execution flows through the gov-execute validator against the treasury. Governance controls parameters and validator versions via the upgrade-token mechanism but cannot replace the immutable iUSD minting policy.",
+        "address": "0e764163b06d954f2dcfecf8d3b257e2bfe3d326d5670e54ca1974ce",
+        "failureDomainKeys": [
+          "protocol:indigo-protocol",
+          "contract:cardano:0e764163b06d954f2dcfecf8d3b257e2bfe3d326d5670e54ca1974ce",
+          "contract:cardano:2c64c712d8ea012866a0e52119409992dcbee828b5e89f58b6c13c68",
+          "contract:cardano:46ffe1d162ef5c1c4d4c0b92eb410e8148c59c547952ebac39622abd"
+        ],
+        "observedAt": "2026-07-20"
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Indigo CDP minting validators",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Koios: iUSD Plutus script",
+          "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
+        },
+        {
+          "label": "Indigo V3 mainnet system parameters",
+          "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "2026-07-20 re-review. Koios script_info confirms the iUSD minting policy f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880 is a plutusV2 script (1189 bytes, creation tx 99329591f444f68ed4a33ed664c146fbf278cf9202067974cfa1a26d09a34107): no privileged owner or minter address, minting enforced by CDP collateral logic, and immutable — Cardano policy hashes permanently bind the script, so neither the DAO nor any admin can upgrade or replace the iUSD minting validator for the existing asset. The INDY DAO on-chain governance surface named in Indigo's official mainnet V3 system parameters (GOV_NFT 2fccae8b..., poll manager 2c64c712..., gov execute 0e764163..., treasury 46ffe1d1..., UPGRADE ca72f111..., VERSION_RECORD d626ddf3...) was verified on-chain via Koios: all six scripts exist (plutusV2/plutusV3). Governance authority is therefore parameter-and-version control through the upgrade-token mechanism, not mint authority over iUSD. Economic cap semantics: bounded — iUSD mints only against overcollateralized CDP collateral.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Indigo Protocol docs",
+          "url": "https://docs.indigoprotocol.io/"
+        },
+        {
+          "label": "Indigo V3 mainnet system parameters",
+          "url": "https://config.indigoprotocol.io/mainnet/mainnet-system-params-v3.json"
+        },
+        {
+          "label": "Koios: iUSD Plutus script",
+          "url": "https://api.koios.rest/api/v1/plutus_script_list?script_hash=eq.f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b69880"
+        }
+      ]
+    },
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none"
+  }
+}

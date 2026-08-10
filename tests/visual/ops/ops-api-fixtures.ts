@@ -92,7 +92,6 @@ const apiKeyRequestsResponse: ApiKeySelfServeRequestAdminListResponse = {
       organization: "Fixture Integration Lab",
       projectUrl: "https://integration.example.invalid",
       useCase: "Read-only fixture analytics for monitored stablecoin data.",
-      intendedEndpoints: ["/api/stablecoins"],
       expectedCadence: "hourly",
       expectedVolume: "100 requests/day",
       acceptedTerms: true,

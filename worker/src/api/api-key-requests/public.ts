@@ -25,7 +25,6 @@ import {
   parseSelfServeVerifyRequest,
   requireInitialSelfServeEnv,
   requireVerifySelfServeEnv,
-  normalizeIntendedEndpoints,
 } from "./request";
 import {
   buildSelfServeKeyName,
@@ -34,7 +33,6 @@ import {
   selfServeError,
   selfServeUnavailable,
 } from "./responses";
-import { parseJsonStringArray } from "./serialization";
 import {
   acquireEmailClaim,
   acquireIssuanceIpCap,
@@ -75,8 +73,6 @@ export async function handleApiKeyRequest(
 
     const normalizedEmail = normalizeSelfServeEmail(parsed.email);
     if (normalizedEmail instanceof Response) return normalizedEmail;
-
-    const intendedEndpoints = normalizeIntendedEndpoints(parsed.intendedEndpoints);
 
     const nowSec = getNowSec();
     const emailHash = await hashForLookup(initialEnv.API_KEY_SELF_SERVE_EMAIL_HASH_PEPPER, normalizedEmail);
@@ -167,7 +163,6 @@ export async function handleApiKeyRequest(
         requestId,
         normalizedEmail,
         emailHash,
-        intendedEndpoints,
         ipHash,
         userAgentHash,
         tokenHash,
@@ -495,7 +490,6 @@ export async function handleApiKeyRequestVerify(
         "created",
         {
           requestId: row.request_id,
-          intendedEndpoints: parseJsonStringArray(row.intended_endpoints_json),
           expectedCadence: row.expected_cadence,
           expectedVolume: row.expected_volume,
           selfServeDefaultQuota: SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,

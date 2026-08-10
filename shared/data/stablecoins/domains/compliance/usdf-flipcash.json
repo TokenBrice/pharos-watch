@@ -1,0 +1,68 @@
+{
+  "id": "usdf-flipcash",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Coinbase, Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS virtual currency and money transmitter licenses; OCC conditional national trust charter context for Coinbase custody operations, not a GENIUS PPSI approval",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USDF is a Coinbase Custom Stablecoin backed 1:1 by USDC; Coinbase is the functional issuer per its User Agreement and manages issuance, reserves, and smart contract deployment. Flipcash holds the branded identity. No token-specific GENIUS PPSI approval or state-qualified approval has been located. Coinbase received conditional OCC approval for a national trust charter (Coinbase National Trust Company) on April 2, 2026 — this is a custody/trust charter, not a PPSI approval under the GENIUS Act, and does not alter the authorization status here. GENIUS Act rulemaking remains at NPRM stage as of 2026-06-18; no PPSI approvals exist for any issuer.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Coinbase USDF / Custom Stablecoin announcement",
+        "url": "https://www.coinbase.com/blog/coinbase-powers-usdf-flipcashs-custom-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "NYDFS virtual currency businesses",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Coinbase OCC conditional national trust charter approval (April 2, 2026)",
+        "url": "https://www.cryptotimes.io/2026/04/03/coinbase-receives-conditional-approval-for-national-trust-charter/",
+        "sourceKind": "news",
+        "sourceDate": "2026-04-03",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases (Bulletin 2026-3)",
+        "Coinbase Custom Stablecoin platform page and blog disclosures",
+        "Coinbase OCC conditional national trust charter (April 2026) — custody-only, not PPSI",
+        "Issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "NYDFS virtual currency business registry",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "Coinbase holds NYDFS BitLicense, NYDFS limited-purpose trust charter, and OCC conditional national trust charter (custody), but none of these constitute GENIUS Act PPSI approval. No PPSI approval, state-qualified approval, or official PPSI application has been publicly filed for any issuer; the GENIUS Act framework is still at NPRM stage as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

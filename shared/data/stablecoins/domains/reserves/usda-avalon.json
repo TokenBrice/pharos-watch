@@ -1,0 +1,102 @@
+{
+  "id": "usda-avalon",
+  "reserves": [
+    {
+      "name": "FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Avalon Labs protocol; FBTC collateral custodied by Cobo with protocol assets also held at Fireblocks and Coinbase Prime",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "market",
+        "smart-contract",
+        "concentration",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research (R02 refresh)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Avalon USDa usage documentation",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+      },
+      {
+        "label": "Avalon USDa risk parameters",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+      },
+      {
+        "label": "DefiLlama Avalon USDa CDP adapter (TVL methodology and live TVL)",
+        "url": "https://defillama.com/protocol/avalon-usda"
+      },
+      {
+        "label": "DefiLlama Avalon USDa adapter source (pool/owner token list)",
+        "url": "https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/avalon-finance-usda/index.js"
+      },
+      {
+        "label": "DefiLlama stablecoins API (Avalon USDa circulating supply)",
+        "url": "https://stablecoins.llama.fi/stablecoins?includePrices=true"
+      }
+    ],
+    "rationale": "R02 refresh 2026-08-08: Avalon documentation still describes two mint paths (FBTC-backed CeDeFi CDP loan; USDT/USDC deposited 1:1) and 1:1 USDT conversion via an Ethereum vault, with no published supply-weighted split between FBTC-collateralized debt and 1:1 fiat-token deposits. Risk-management still lists FBTC (60% max LTV / 90% liquidation / 80% recovery, liquidatable) plus USDC and USDT at 100% max LTV and not subject to liquidation, and names Cobo, Fireblocks, and Coinbase Prime for protocol-asset custody without publishing addresses, provider shares, or segregation terms. DefiLlama's avalon-usda CDP adapter methodology counts FBTC collateral plus optional USDT/USDe/sUSDe at documented pool and USDaMinter Safe owners; the live protocol endpoint reports ~$2 TVL (residual USDe only) versus ~$148M DefiLlama circulating USDa. The adapter source explicitly excludes Avalon-minted wrappers (lfbtc, WFBTC) and V3/Movement treasuries as team-only/dead-liquidity positions. On-chain adapter balances therefore do not reconcile circulating liability, and no dual-source percentage split is available, so the single reserve is dispositioned as an untracked exogenous asset rather than a splittable basket.",
+    "compositionBasis": "Officially documented issuance and collateral paths; constituent shares remain undisclosed; independent DefiLlama CDP TVL and circulating-supply read confirm non-reconciliation",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The single disclosed reserve category is now classified as an untracked exogenous CeDeFi envelope. Avalon does not publish the current proportions of FBTC-backed debt, USDT deposits, and USDC deposits, and on-chain adapter balances do not measure full backing.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "FBTC-backed CDP positions and USDT/USDC 1:1 mint reserves",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The supported constituents are documented, but no current supply-weighted split supports individual stablecoin or cryptoasset dependency weights. DefiLlama's adapter does not capture the material FBTC collateral backing circulating USDa, and on-chain adapter owners do not hold material measured reserves, so the aggregate is treated as an exogenous CeDeFi envelope rather than a splittable stablecoin basket.",
+        "candidateCoinIds": [
+          "usdt-tether",
+          "usdc-circle"
+        ]
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cobo (FBTC collateral custody)",
+        "role": "custodian"
+      },
+      {
+        "name": "Fireblocks",
+        "role": "custodian"
+      },
+      {
+        "name": "Coinbase Prime",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Avalon USDa usage documentation",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/how-to-use-usda"
+      },
+      {
+        "label": "Avalon USDa risk parameters",
+        "url": "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda/risk-management"
+      }
+    ],
+    "uncertainty": "Write-time re-open 2026-07-28: risk-management still names Cobo, Fireblocks, and Coinbase Prime and asserts custody addresses are publicly available, but the reviewed pages do not list those addresses, provider share, legal segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

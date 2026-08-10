@@ -1,0 +1,63 @@
+{
+  "id": "honey-berachain",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Honey is a Berachain-native asset with stablecoin-like use and reserve-backed mechanics, but current public materials do not establish an issuer obligation that clearly resolves GENIUS payment-stablecoin applicability."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Berachain Foundation (Cayman Islands)",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://honey.berachain.com/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "GENIUS applicability remains unclear because Honey is protocol-native and reserve-backed, but the public source set does not clearly establish an issuer-redeemable payment stablecoin obligation.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://occ.treas.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Berachain HONEY docs",
+        "url": "https://docs.berachain.com/learn/pol/tokens/honey",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Berachain honey.berachain.com reserve display",
+        "url": "https://honey.berachain.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (bulletin-2026-3, FR 2026-04089)",
+        "FinCEN/OFAC joint NPRM (FR 2026-06963)",
+        "Federal Register search for Berachain or HONEY PPSI filings",
+        "Berachain HONEY documentation (docs.berachain.com)",
+        "Berachain Foundation corporate profile (Cayman Islands, George Town)",
+        "Web search for Berachain GENIUS Act compliance filings 2026",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or announced intent was located for HONEY or the Berachain Foundation. The issuer is a Cayman Islands foundation with no publicly disclosed U.S. regulatory pathway under the GENIUS Act.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

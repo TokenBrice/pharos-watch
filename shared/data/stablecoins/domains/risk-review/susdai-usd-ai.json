@@ -1,0 +1,223 @@
+{
+  "id": "susdai-usd-ai",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "USD.AI contract addresses",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "USD.AI technical protocol overview",
+        "url": "https://docs.usd.ai/technical-protocol-overview"
+      },
+      {
+        "label": "USD.AI Terms of Service",
+        "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service"
+      },
+      {
+        "label": "USD.AI official StakedUSDai source",
+        "url": "https://github.com/usdai-foundation/usdai-contracts/blob/66e974e884cc62ab755b144d140e9eab4f03ed79/src/StakedUSDai.sol"
+      },
+      {
+        "label": "USD.AI archived blacklist migration source",
+        "url": "https://github.com/usdai-foundation/usdai-contracts/blob/421a1e7adfd9536b5517f849a06322a96770c7a2/src/StakedUSDai.sol"
+      },
+      {
+        "label": "Ethereum sUSDai OToken exact-match source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Arbitrum sUSDai verified implementation",
+        "url": "https://arbitrum.blockscout.com/address/0x23783ee86db1a05dfc6dc2f042606a92c97a374c?tab=contract"
+      },
+      {
+        "label": "Base sUSDai OToken verified source and ABI",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=abi,metadata,sources"
+      },
+      {
+        "label": "Plasma sUSDai verified implementation",
+        "url": "https://plasmascan.to/address/0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc/contract/9745/code"
+      },
+      {
+        "label": "USD.AI proof-of-reserves API",
+        "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+      },
+      {
+        "label": "Archived USD.AI contract-address documentation",
+        "url": "https://web.archive.org/web/20260511113253/https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "Ethereum PublicNode current-live RPC (no archive replay)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Arbitrum PublicNode current-live RPC (no archive replay)",
+        "url": "https://arbitrum-one-rpc.publicnode.com"
+      },
+      {
+        "label": "Base PublicNode current-live RPC (no archive replay)",
+        "url": "https://base-rpc.publicnode.com"
+      },
+      {
+        "label": "Plasma current-live RPC (no archive replay)",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Ethereum satellite Safe authority",
+        "url": "https://eth.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+      },
+      {
+        "label": "Base satellite Safe authority",
+        "url": "https://base.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+      },
+      {
+        "label": "Plasma satellite Safe authority",
+        "url": "https://plasmascan.to/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+      }
+    ],
+    "evidence": "Current-live RPC observations on 2026-07-15, not archival replay, resolve the Ethereum, Base, and Plasma same-address sUSDai proxies 0x0b2b2b2076d95dda7817e785989fe353fe955ef9 to OToken-style satellite implementations. Their verified source exposes burn(address from, uint256 amount) under BRIDGE_ADMIN_ROLE. On each current satellite, Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F held DEFAULT_ADMIN_ROLE and OAdapter 0xffB20098FD7B8E84762eea4609F299D101427f24 held BRIDGE_ADMIN_ROLE. A nonpersistent current-live multicall from that Safe that first grantRole(BRIDGE_ADMIN_ROLE, Safe) and then burn(0x0000000000000000000000000000000000000002, 0) succeeded on all three routes. Source permits a positive arbitrary-holder amount without allowance, so this is direct holder-balance burn/seizure authority, not merely upstream reserve risk. The satellite Safe explorer pages are included because that Safe execution authority is the basis of the direct conclusion. On Arbitrum, the verified StakedUSDai source gates _update for sender, from, and to through USDai.isBlacklisted, so a USDai blacklist also blocks sUSDai transfers there. Current PublicNode endpoints are treated only as live-state checks: the review makes no historical block-state assertion and does not rely on an archive replay, including where an archive request is unavailable. The current Terms reserve Service-level freeze/restrict powers; they are context, not the technical basis for this result. The proof-of-reserves API and archived address page establish transparency and historical route scope but do not narrow the direct conclusion.",
+    "reviewer": "Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "sUSDai is native on Arbitrum (ERC-4626 vault). Ethereum, Base, and Plasma deployments are satellite OTokens minted by USD.AI's own LayerZero OAdapter under BRIDGE_ADMIN_ROLE (owner is the reviewed 3-of-3 Safe).",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-CORP-A wave6",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USD.AI contract addresses",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
+        "destinationChain": "ethereum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on ethereum: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on ethereum, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:ethereum:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
+      },
+      {
+        "id": "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "protocol": "USD.AI native deposit-mint vault (sUSDai ERC-4626)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sUSDai on Arbitrum is the native ERC-4626 deposit-mint vault (asset() = USDai, verified in the mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
+        "destinationChain": "base",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on base: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on base, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:base:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
+      },
+      {
+        "id": "plasma:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "sourceChain": "arbitrum",
+        "destinationChain": "plasma",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+        "protocol": "USD.AI LayerZero OAdapter (OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "plasma",
+        "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Satellite sUSDai OToken on plasma: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on plasma, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USD.AI Docs",
+            "url": "https://docs.usd.ai/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:susdai-usd-ai",
+          "contract:plasma:0xffb20098fd7b8e84762eea4609f299d101427f24"
+        ]
+      }
+    ]
+  }
+}

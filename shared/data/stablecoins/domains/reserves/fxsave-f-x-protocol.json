@@ -1,0 +1,46 @@
+{
+  "id": "fxsave-f-x-protocol",
+  "reserves": [
+    {
+      "name": "fxSP stability-pool shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "fxusd-f-x-protocol",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "f(x) Protocol fxSP Stability Pool and fxUSD",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "f(x) fxSAVE integration documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+      },
+      {
+        "label": "f(x) Stability Pool documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
+      },
+      {
+        "label": "Pinned SavingFxUSD implementation",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/59551dba909da826f54d090c552cc8dceaa29bd9/contracts/core/SavingFxUSD.sol"
+      }
+    ],
+    "rationale": "fxSAVE shares represent an f(x) Stability Pool position funded through fxUSD. The exact direct reserve is one protocol position with explicit market, liquidity, counterparty, and smart-contract risks.",
+    "compositionBasis": "Exact live single-asset row, f(x) Stability Pool documentation, and pinned SavingFxUSD implementation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct fxSAVE reserve slice is identified; changing Stability Pool deployment remains an internal attribute of the classified position.",
+    "knownUnknownExposurePct": 0
+  }
+}

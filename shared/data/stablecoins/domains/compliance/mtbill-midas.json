@@ -1,0 +1,45 @@
+{
+  "id": "mtbill-midas",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mTBILL is a Liechtenstein Derivative Debt Instrument (blockchain-based certificate) classified as a MiFID II financial instrument/security, issued by Midas Software GmbH under EU Prospectus Regulation with prospectus approved by the Liechtenstein FMA. The GENIUS Act's definition of 'payment stablecoin' explicitly excludes digital assets that are securities under federal securities laws; mTBILL's fluctuating NAV, yield-bearing structure, and classification as a debt security place it squarely outside the payment-stablecoin perimeter. mTBILL is also not offered to US persons."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority for Liechtenstein Derivative Debt Instrument; issuer domiciled in Germany under EU Prospectus Regulation / MiFID II financial-instrument framework)",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "mTBILL is a tokenized debt instrument (Blockchain-based Certificate) classified as a MiFID II security under European law, with prospectus approved by the Liechtenstein FMA on 17 July 2024 (renewed July 2025). Issuer is Midas Software GmbH (Berlin, Germany); the FMA approved only the prospectus under EU Prospectus Regulation — the issuer is not licensed or registered with the FMA. mTBILL is not a payment stablecoin under the GENIUS Act: its value is NAV-accreting (fluctuating, not stable), it pays yield to holders, it is structured as a debt security, and it is explicitly not offered to US persons. The GENIUS Act's definition of 'payment stablecoin' excludes securities under federal securities laws, placing mTBILL entirely outside the Act's scope.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Midas mTBILL docs",
+        "url": "https://docs.midas.app/tokens/mtbill",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Readi.fi mTBILL analysis — MiFID II debt security, Liechtenstein FMA prospectus",
+        "url": "https://readi.fi/asset/structured-product-mtbill-midas-mtbill-by-midas/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "GENIUS Act S.1582 text — payment stablecoin definition excludes securities",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

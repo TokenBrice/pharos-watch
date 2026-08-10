@@ -1,0 +1,69 @@
+{
+  "id": "xo-exodus",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "XO is a MoonPay-issued U.S. dollar payment token using M0 infrastructure with wallet-based consumer distribution."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MoonPay USA LLC",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "FinCEN / NYDFS / state money transmitter regulators",
+    "stateRegulator": "NYDFS",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.moonpay.com/legal/stablecoin_terms",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "MoonPay holds an NYDFS Limited Purpose Trust Company (LPTC) charter (MoonPay Trust Company, LLC, authorized Nov 2025), BitLicense, and money transmitter licenses across 49 states. The NYDFS LPTC is the state regulatory pathway most aligned with the GENIUS Act state-qualified issuer track. No PPSI approval has been granted to any issuer as of 2026-06-18; the state-qualified certification framework is still in proposed rulemaking (Treasury NPRM, Apr 2026). issuerPathway reflects the anticipated regulatory track, not an active approval.",
+    "references": [
+      {
+        "label": "Exodus, MoonPay, and M0 XO announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MoonPay stablecoin terms",
+        "url": "https://www.moonpay.com/legal/stablecoin_terms",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MoonPay licenses",
+        "url": "https://www.moonpay.com/de/legal/licenses",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MoonPay NYDFS Limited Purpose Trust Charter press release",
+        "url": "https://www.prnewswire.com/news-releases/moonpay-secures-new-york-trust-charter-to-expand-regulated-financial-infrastructure-302625161.html",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-11-25",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Treasury NPRM on state-regime comparability (Apr 2026)",
+        "MoonPay stablecoin issuance, terms, and licensing pages",
+        "MoonPay NYDFS trust charter press release (Nov 2025)",
+        "Exodus XO launch materials",
+        "M0 reserve dashboard",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No public GENIUS issuer intent, token-specific PPSI approval, state-qualified approval, or official PPSI application source was located for XO Cash; no state has yet been certified as substantially similar under GENIUS as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

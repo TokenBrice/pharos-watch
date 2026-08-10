@@ -1,0 +1,66 @@
+{
+  "id": "zys-zephyr-protocol",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "Zephyr native-asset documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr v2.3.0 transaction-type source",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_protocol/enums.h#L46-L62"
+      },
+      {
+        "label": "Zephyr v2.3.0 native transfer routing",
+        "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L478-L535"
+      },
+      {
+        "label": "Zephyr Explorer current HF11 block 837231",
+        "url": "https://explorer.zephyrprotocol.com/api/block/9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d"
+      },
+      {
+        "label": "Zephyr reserve snapshot",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 against official Zephyr v2.3.0 source commit 67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a and native-chain HF11 block 837231 (2026-08-08 19:36:16 UTC; hash 9e024c96ef5e31b25daa407c0715a43e74f9fdfc18c258bf4c50077ef15f160d). ZYS is the native Zephyr yield asset, not a production EVM token. Same-asset ZYS sends map to YIELD_TRANSFER, and the reviewed source exposes no separate address-level blacklist, holder freeze, seize, privileged burn, or current issuer transfer-control path. ZYS shares the historical 2025 network-wide audit/hardfork transaction restriction with ZSD; this was a consensus-wide migration rather than a current holder-targeted issuer control. No direct blacklistability established.",
+    "reviewer": "Codex C10 wave1 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "ZYS is a share of Zephyr's ZSD yield reserve rather than a borrower debt market; it inherits the underlying ZSD reserve-pricing risk, whose production oracle provider and failure handling remain unpublished.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "Zephyr documents ZYS as a share of the ZSD yield reserve that provides variable yield from ZSD holdings. ZYS holders do not open borrower positions or control collateral liquidation, so there are no ZYS-specific collateral or liquidation branches to inventory; the underlying ZSD parent carries the protocol-wide reserve and oracle risk.",
+      "sources": [
+        {
+          "label": "Zephyr official documentation",
+          "url": "https://zephyrprotocol.com/documentation"
+        },
+        {
+          "label": "Zephyr repository",
+          "url": "https://github.com/ZephyrProtocol/zephyr"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Zephyr documentation",
+        "url": "https://zephyrprotocol.com/documentation"
+      },
+      {
+        "label": "Zephyr repository",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      }
+    ]
+  }
+}

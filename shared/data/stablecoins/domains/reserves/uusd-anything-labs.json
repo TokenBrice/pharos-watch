@@ -1,0 +1,97 @@
+{
+  "id": "uusd-anything-labs",
+  "reserves": [
+    {
+      "name": "Undisclosed UUSD backing assets",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Anything Labs and undisclosed backing counterparties",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "market",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok Safety Score V9 wave-8 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "UUSD official website (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "UUSD whitepaper (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/whitepaper.pdf"
+      },
+      {
+        "label": "UUSD smart-contract repository (re-opened 2026-07-28)",
+        "url": "https://github.com/uusdai/uusd"
+      },
+      {
+        "label": "UUSD issuance page (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/issuance"
+      },
+      {
+        "label": "UUSD developer resources (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/developers"
+      },
+      {
+        "label": "DefiLlama stablecoin module 407 mint/redeem description (checked 2026-07-28; not dual-sourced for composition)",
+        "url": "https://stablecoins.llama.fi/stablecoin/407"
+      }
+    ],
+    "rationale": "Write-time re-open on 2026-07-28 of the UUSD website, whitepaper PDF, GitHub repository README, /issuance, and /developers pages still finds no disclosure of backing assets, category weights, named counterparties, redemption rails, custody, or a reserve-assurance/attestation report. The whitepaper is a conceptual peer-to-peer AI-settlement essay with no reserve section. DefiLlama module 407 states mint/redeem text that UUSD is 'backed by a reserve of stablecoins including USDT and USDC', but no matching claim appears on any re-opened issuer primary; under the two-source rule that single aggregator line is not admitted as composition. The honest full-composition posture remains one 100% undisclosed-backing envelope with knownUnknownExposurePct 100.",
+    "compositionBasis": "UUSD official disclosures and repository review; DefiLlama module 407 checked as non-corroborating aggregator claim",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The entire backing envelope is unclassified; no current composition, custody, redemption, or reserve-to-liability assurance evidence was found on issuer primaries.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Undisclosed UUSD backing assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Issuer primaries re-opened 2026-07-28 still do not identify reserve assets or provide an auditable composition; DefiLlama USDT/USDC mint text lacks independent issuer corroboration."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed UUSD backing custodians",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok Safety Score V9 wave-8 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "UUSD official website (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/"
+      },
+      {
+        "label": "UUSD whitepaper (re-opened 2026-07-28)",
+        "url": "https://uusd.ai/whitepaper.pdf"
+      },
+      {
+        "label": "UUSD smart-contract repository (re-opened 2026-07-28)",
+        "url": "https://github.com/uusdai/uusd"
+      }
+    ],
+    "uncertainty": "Public materials re-opened on 2026-07-28 still do not identify backing custodians, account segregation, bankruptcy remoteness, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

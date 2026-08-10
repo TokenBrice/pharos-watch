@@ -1,0 +1,116 @@
+{
+  "id": "jpyt-dephaser",
+  "reserves": [
+    {
+      "name": "USDT locked on Optimism DepositManager and supplied to Aave V3 (aOptUSDT)",
+      "pct": 87,
+      "risk": "medium",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether via DePhaser UsdtDepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 and Aave V3 Optimism aOptUSDT 0x6ab707aca953edaefbc4fd23ba73294241490620",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USDC locked on Base DepositManager and supplied to Aave V3 (aBasUSDC)",
+      "pct": 13,
+      "risk": "medium",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "blacklistable": true,
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle via DePhaser UsdcDepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 and Aave V3 Base aBasUSDC 0x4e65fe4dba92790696d040ac24aa414708f5c0ab",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DePhaser JPYT overview (USDT/USDC lock routes)",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt.md"
+      },
+      {
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+      },
+      {
+        "label": "UsdtDepositManager source (Aave supply + totalDepositToken)",
+        "url": "https://github.com/0xDephaser/contracts/blob/main/src/UsdtDepositManager.sol"
+      },
+      {
+        "label": "Optimism RPC aOptUSDT balanceOf DepositManager @ block 154923376",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "Base RPC aBasUSDC balanceOf DepositManager @ block 49328091",
+        "url": "https://mainnet.base.org"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-30. Issuer docs and UsdtDepositManager source confirm dual routes: users lock USDT on Optimism or USDC on Base; DepositManager supplies the deposit token into Aave V3 and mints JPYT. Live aToken balances of the DepositManager proxies measure the reserve envelope: Optimism aOptUSDT (0x6ab707aca953edaefbc4fd23ba73294241490620) balanceOf(0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) = 44,797.16 USDT at block 154923376; Base aBasUSDC (0x4e65fe4dba92790696d040ac24aa414708f5c0ab) balanceOf(0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) = 6,893.12 USDC at block 49328091; combined 51,690.27 USD -> 86.66%/13.34% rounded to 87/13 integer slices. Matching totalDepositToken reads (40,544.29 USDT / 6,059.53 USDC) confirm the same ~87/13 liability split. Operator-claimable Aave surplus (getCurrentAaveProfit) is included in aToken balances and is not a separate reserve class. Residual unknowns: Aave utilization-driven withdrawal latency and legal custody terms beyond on-chain smart-contract custody.",
+    "compositionBasis": "On-chain aToken balances of DePhaser DepositManager proxies plus issuer money-flow docs",
+    "compositionAsOf": "2026-07-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Legal segregation/bankruptcy-remoteness of Aave positions and instantaneous redeemable liquidity under high Aave utilization are not published as static legal terms; weights themselves are measured.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "DePhaser UsdtDepositManager (Optimism UUPS proxy 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9) holding aOptUSDT",
+        "role": "other",
+        "sharePct": 87,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "DePhaser UsdcDepositManager (Base UUPS proxy 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276) holding aBasUSDC",
+        "role": "other",
+        "sharePct": 13,
+        "jurisdiction": "Onchain protocol"
+      },
+      {
+        "name": "Aave V3 Pool (Optimism/Base) as aToken lending venue",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "mixed",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Grok T25 safety-v9 unknown-reduction w2",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "UsdtDepositManager source (supplies deposit token to Aave; aToken held by manager)",
+        "url": "https://github.com/0xDephaser/contracts/blob/main/src/UsdtDepositManager.sol"
+      },
+      {
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+      },
+      {
+        "label": "Optimism/Base aToken balance pins (DepositManager holders)",
+        "url": "https://mainnet.optimism.io"
+      }
+    ],
+    "uncertainty": "Reserves are held as Aave aTokens by upgradeable DepositManager contracts; Aave markets rehypothecate supply to borrowers. No off-chain segregated custody, bankruptcy-remote trust, or legal segregation opinion was located. DepositManager DEFAULT_ADMIN can self-grant UPGRADER_ROLE and replace the implementation."
+  }
+}

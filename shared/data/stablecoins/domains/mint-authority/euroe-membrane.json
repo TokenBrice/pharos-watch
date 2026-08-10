@@ -1,0 +1,55 @@
+{
+  "id": "euroe-membrane",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "EUROe was a Finnish EMI-licensed euro EMT solely issued by Membrane Finance (later Paxos Issuance Europe), now in redemption-only wind-down. MINTER_ROLE and DEFAULT_ADMIN_ROLE are both held by EOAs; no multisig migration occurred despite earlier plans. UUPS proxy with no timelock.",
+    "controls": [
+      {
+        "label": "Membrane/Paxos MINTER_ROLE EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "evidence": "At Ethereum block 25295054, hasRole(MINTER_ROLE=0x9f2df0fe…, 0x74424510108a8ad9aa6a5b506048948e6a16706b) = true; eth_getCode on that address returned no bytecode (EOA). RoleGranted events scanned from creation block 16432602; no RoleRevoked for this address was found. The minter role was never migrated to a multisig.",
+        "sources": [
+          {
+            "label": "EUROe Ethereum contract",
+            "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          }
+        ]
+      },
+      {
+        "label": "DEFAULT_ADMIN_ROLE EOA (UUPS upgrade authority)",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25295054, hasRole(DEFAULT_ADMIN_ROLE=0x00…, 0xd5731b8c97b61cdede6c612ec963b3f86af0c3f7) = true; eth_getCode returned no bytecode (EOA). The UUPS proxy has no separate proxy-admin slot (empty). PROXYOWNER_ROLE was self-assigned to the proxy contract at creation (pattern for UUPS self-administration). No multisig migration occurred.",
+        "sources": [
+          {
+            "label": "EUROe Ethereum contract",
+            "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "Verified at Ethereum block 25295054. UUPS proxy at 0x820802fa8a99901f52e39acd21177b0be6ee2974; impl 0x85c427aa5605c242ff693c1e45b8641a9cb8279d (EUROe contract, verified). MINTER_ROLE active holder: EOA 0x74424510 (hasRole confirmed, no revoke). DEFAULT_ADMIN_ROLE: EOA 0xd5731b8c (hasRole confirmed). No multisig migration ever occurred despite earlier plans; both key roles remain EOA-held. Token is in redemption-only wind-down; total supply 20510 EUROe as of block 25295054, no minting events in last 50k blocks.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "EUROe Access & Admin Controls (developer portal)",
+          "url": "https://dev.euroe.com/docs/Stablecoin/access-controls"
+        },
+        {
+          "label": "EUROe Ethereum contract",
+          "url": "https://etherscan.io/address/0x820802fa8a99901f52e39acd21177b0be6ee2974"
+        }
+      ]
+    }
+  }
+}

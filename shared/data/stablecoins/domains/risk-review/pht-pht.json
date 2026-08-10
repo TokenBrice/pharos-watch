@@ -1,0 +1,574 @@
+{
+  "id": "pht-pht",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "APACX PHT overview",
+        "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+      },
+      {
+        "label": "APACX Ethereum contract addresses",
+        "url": "https://docs.apacx.io/technical-references/contract-addresses"
+      },
+      {
+        "label": "Verified PHT Ethereum deployment",
+        "url": "https://etherscan.io/address/0xbe370ad45d44eb45174c4ec60b88839fef32c077#code"
+      },
+      {
+        "label": "Sourcify exact-match Polygon PhtOFTUpgradeable implementation",
+        "url": "https://sourcify.dev/server/v2/contract/137/0x98210a4b34eafd668838108c99ad13a2b4340618?fields=sources,compilation,abi"
+      },
+      {
+        "label": "Tronscan PHT contract metadata",
+        "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+      },
+      {
+        "label": "Tron observation block 85182167",
+        "url": "https://tronscan.org/#/block/85182167"
+      }
+    ],
+    "evidence": "Re-reviewed all three tracked deployments on 2026-08-08. Ethereum 0xbe370ad45d44eb45174c4ec60b88839fef32c077 is a direct, non-proxy MakerDAO Dai-source token: transferFrom requires holder allowance, authorized wards may mint, and no pause, blacklist, freeze, seizure, or arbitrary holder-burn path exists. Polygon 0xe75220cb014dfb2d354bb59be26d7458bb8d0706 still resolved to exact-match PhtOFTUpgradeable implementation 0x98210a4b34eafd668838108c99ad13a2b4340618 at block 91674718. Its current implementation adds no transfer restriction to LayerZero OFT ERC-20 behavior, but owner 0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5 can replace that implementation through UUPS. Tron TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs remained material and unresolved: at block 85182167, Tronscan returned name=PhtOFT, is_proxy=false, verify_status=0, and a method map containing transfer, transferFrom, send, lzReceive, setPeer, and setDelegate but no visible pause/freeze selector; owner() returned EOA hex 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee (base58 TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4). Because the Tron runtime is unverified, selector absence cannot prove that its transfer path lacks a fallback or indirect holder restriction. The prior inherited verdict had no resolvable variantOf or mintAuthority.inheritedFrom parent and was therefore structurally invalid for the V9 freeze adapter. It is corrected to possible, which honestly preserves the unresolved material Tron deployment rather than asserting false.",
+    "reviewer": "OpenAI Codex C07 access review; SONG-5 Safety Score V9 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Five debt-bearing Ethereum ilks were retained. Three divide a Chainlink stablecoin/USD numerator by an owner-set APACX PHP/USD denominator without contract-enforced freshness, while two zero-ceiling legacy ilks with outstanding debt use owner-set APACX feeds directly; liquidation is immediate through independent Dutch auctions.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-DRAIN data review",
+      "rationale": "The live ILK Registry enumerated seven independently parameterized Ethereum branches at finalized block 25531795. USDT-A, cPHP-A, ApcxUSDT-A, demoUSDT-A, and USDC-A all retained positive normalized Vat debt and are reviewed below; cPHP-A and demoUSDT-A are retained despite zero debt ceilings. dUSDT-A and dUSDT2-A had both zero normalized debt and zero ceilings and are excluded from current debt-bearing coverage, although their joins, Clips, and Dog configuration remained live and callable.",
+      "sources": [
+        {
+          "label": "APACX deployed contract registry",
+          "url": "https://docs.apacx.io/technical-references/contract-addresses.md"
+        },
+        {
+          "label": "PHT ILK Registry",
+          "url": "https://eth.blockscout.com/address/0xc2bd6a0985a66885ef187b9a6c91be34e89c6be9?tab=contract"
+        },
+        {
+          "label": "Finalized Ethereum block 25531795",
+          "url": "https://eth.blockscout.com/block/25531795"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-DRAIN data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "APACX system architecture",
+        "url": "https://docs.apacx.io/technical-references/system-architecture.md"
+      },
+      {
+        "label": "APACX deployed contract registry",
+        "url": "https://docs.apacx.io/technical-references/contract-addresses.md"
+      },
+      {
+        "label": "PHT ILK Registry",
+        "url": "https://eth.blockscout.com/address/0xc2bd6a0985a66885ef187b9a6c91be34e89c6be9?tab=contract"
+      },
+      {
+        "label": "PHT Vat",
+        "url": "https://eth.blockscout.com/address/0xee0cde42bb6841736d809d2bb63ebf59db6e336c?tab=contract"
+      },
+      {
+        "label": "PHT Dog liquidation controller",
+        "url": "https://eth.blockscout.com/address/0xb091e867d61c0556a230ac97c6900e54ab4fc3c8?tab=contract"
+      },
+      {
+        "label": "PHT Vow bad-debt accounting",
+        "url": "https://eth.blockscout.com/address/0x62206318c99f03a93e091fedd39f324069834498?tab=contract"
+      },
+      {
+        "label": "PHT Flop debt auction",
+        "url": "https://eth.blockscout.com/address/0x95956061338fc0109286a0e7d867ce9dd055d813?tab=contract"
+      },
+      {
+        "label": "PHT End shutdown controller",
+        "url": "https://eth.blockscout.com/address/0x98b0f1cf5f1cf9b4779a80837125c23c19d6bb76?tab=contract"
+      },
+      {
+        "label": "PHT ESM trigger",
+        "url": "https://eth.blockscout.com/address/0x53f20bc584454c24cec635b9329a7a86b8e5a13c?tab=contract"
+      },
+      {
+        "label": "APACX owner-set PHP/USD feed",
+        "url": "https://etherscan.io/address/0x6829aaafa90739946c62a13ee4a9c5d99bac7af8#code"
+      },
+      {
+        "label": "Finalized Ethereum block 25531795",
+        "url": "https://eth.blockscout.com/block/25531795"
+      }
+    ],
+    "branches": [
+      {
+        "id": "pht-usdt-a",
+        "label": "USDT-A",
+        "tier": "opaque-or-unknown",
+        "summary": "Debt-bearing USDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
+        "collateralAssets": [
+          "USDT"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink numerator and owner-set APACX denominator through ratio DataFeed and Pip",
+            "path": "Pip 0xf68658dEc2Ed65D347031852038661Cb572D1B4E -> ratio DataFeed 0x587a9590a78A72c86796bA9C2A369E81268d4284 -> Chainlink USDT/USD 0x3E7d1eAB13ad0104d2750B8863b489D65364e32D divided by owner-set APACX PHP/USD 0x6829AAaFa90739946C62a13eE4A9c5d99baC7aF8",
+            "address": "0xf68658dEc2Ed65D347031852038661Cb572D1B4E",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531795,
+            "failureDomainKeys": [
+              "chainlink-usdt-usd",
+              "apacx-php-usd-manual-admin",
+              "apacx-ratio-feed-admin"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No fallback or stored last-good value. The ratio feed combines a Chainlink numerator with an owner-set PHP/USD denominator; the Pip rejects only a negative result and does not inspect timestamps. The documented 24-hour update policy is not contract-enforced.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531795,
+        "collateralParameters": [
+          {
+            "asset": "USDT",
+            "minimumCollateralRatioPct": 105,
+            "note": "Vat normalized debt Art was 6,939.383963243451574983 and the branch debt ceiling was positive. Dog applies a 1% liquidation penalty."
+          }
+        ],
+        "liquidationMechanism": "Any caller may immediately bark an unsafe vault through Dog, starting its independent Clip Dutch auction at 120% of the reference price; the auction may reset after 7,200 seconds or after price falls below 75% of its start.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds cancel debt through Vat/Vow accounting. At the observation block, Vow queued bad debt for 561,600 seconds and required its configured 50 PHT sump before the live Flop could auction APCX recapitalization; Flop was connected to Vow and authorized to mint and burn APCX.",
+        "shutdownOrBadDebtBehavior": "End was live and ward-cageable. ESM required 10 raw APCX, but its collected Sum and APCX total supply were both zero, so no holder-funded ESM trigger capacity existed at the observation block. Without an authorized cage, residual debt remains in Vat/Vow for the conditional auction path.",
+        "failureDomainKeys": [
+          "chainlink-usdt-usd",
+          "apacx-php-usd-manual-admin",
+          "apacx-ratio-feed-admin",
+          "pht-vow-flop"
+        ],
+        "sources": [
+          {
+            "label": "USDT-A Pip deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0xf68658dec2ed65d347031852038661cb572d1b4e?tab=contract"
+          },
+          {
+            "label": "USDT-A ratio DataFeed deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0x587a9590a78a72c86796ba9c2a369e81268d4284?tab=contract"
+          },
+          {
+            "label": "APACX owner-set PHP/USD feed",
+            "url": "https://etherscan.io/address/0x6829aaafa90739946c62a13ee4a9c5d99bac7af8#code"
+          },
+          {
+            "label": "USDT-A Clip",
+            "url": "https://eth.blockscout.com/address/0xde81f18c1d29311eb2bced6152ac3c4d67c43091?tab=contract"
+          },
+          {
+            "label": "APACX system architecture",
+            "url": "https://docs.apacx.io/technical-references/system-architecture.md"
+          },
+          {
+            "label": "Finalized Ethereum block 25531795",
+            "url": "https://eth.blockscout.com/block/25531795"
+          }
+        ]
+      },
+      {
+        "id": "pht-cphp-a",
+        "label": "cPHP-A",
+        "tier": "opaque-or-unknown",
+        "summary": "Debt-bearing zero-ceiling cPHP legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
+        "collateralAssets": [
+          "cPHP"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "APACX owner-set DataFeed through Pip",
+            "path": "Pip 0xD4129464C5CFdf490E96528243A8F203f6826394 -> owner-set DataFeed 0xf49240E5912A4bF0117f2dd0BF49Bf400A1dC16B",
+            "address": "0xD4129464C5CFdf490E96528243A8F203f6826394",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531795,
+            "failureDomainKeys": [
+              "apacx-manual-feed-admin"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No fallback, independent provider, or contract-enforced freshness. The data-feed owner can set the answer and the Pip accepts any non-negative latestRoundData result without inspecting its timestamp.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531795,
+        "collateralParameters": [
+          {
+            "asset": "cPHP",
+            "minimumCollateralRatioPct": 101,
+            "note": "The debt ceiling was zero, but Vat normalized debt Art remained 2,999.525361016758063260, so this legacy branch is retained. Dog applies a 1% liquidation penalty."
+          }
+        ],
+        "liquidationMechanism": "Any caller may immediately bark an unsafe vault through Dog, starting its independent Clip Dutch auction at 120% of the reference price; the auction may reset after 7,200 seconds or after price falls below 75% of its start.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds cancel debt through Vat/Vow accounting. At the observation block, Vow queued bad debt for 561,600 seconds and required its configured 50 PHT sump before the live Flop could auction APCX recapitalization; Flop was connected to Vow and authorized to mint and burn APCX.",
+        "shutdownOrBadDebtBehavior": "End was live and ward-cageable. ESM required 10 raw APCX, but its collected Sum and APCX total supply were both zero, so no holder-funded ESM trigger capacity existed at the observation block. Without an authorized cage, residual debt remains in Vat/Vow for the conditional auction path.",
+        "failureDomainKeys": [
+          "apacx-manual-feed-admin",
+          "pht-vow-flop"
+        ],
+        "sources": [
+          {
+            "label": "cPHP-A Pip deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0xd4129464c5cfdf490e96528243a8f203f6826394?tab=contract"
+          },
+          {
+            "label": "cPHP-A data feed deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0xf49240e5912a4bf0117f2dd0bf49bf400a1dc16b?tab=contract"
+          },
+          {
+            "label": "cPHP-A Clip",
+            "url": "https://eth.blockscout.com/address/0xcd3789ae80c772fd025da0e8ed2188b2ee989da8?tab=contract"
+          },
+          {
+            "label": "Finalized Ethereum block 25531795",
+            "url": "https://eth.blockscout.com/block/25531795"
+          }
+        ]
+      },
+      {
+        "id": "pht-apcxusdt-a",
+        "label": "ApcxUSDT-A",
+        "tier": "opaque-or-unknown",
+        "summary": "Debt-bearing apcxUSDT branch dividing a Chainlink USDT/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
+        "collateralAssets": [
+          "apcxUSDT"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink numerator and owner-set APACX denominator through ratio DataFeed and Pip",
+            "path": "Pip 0x40E1512C3b9e69B793c9Ab9a9B3bA4184b88AdB0 -> ratio DataFeed 0x9ae2772eB41a61CAef3153ce26CedF8c2F8f2Af4 -> Chainlink USDT/USD 0x3E7d1eAB13ad0104d2750B8863b489D65364e32D divided by owner-set APACX PHP/USD 0x6829AAaFa90739946C62a13eE4A9c5d99baC7aF8",
+            "address": "0x40E1512C3b9e69B793c9Ab9a9B3bA4184b88AdB0",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531795,
+            "failureDomainKeys": [
+              "chainlink-usdt-usd",
+              "apacx-php-usd-manual-admin",
+              "apacx-ratio-feed-admin"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No fallback or stored last-good value. The ratio feed combines a Chainlink numerator with an owner-set PHP/USD denominator; the Pip rejects only a negative result and does not inspect timestamps. The documented 24-hour update policy is not contract-enforced.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531795,
+        "collateralParameters": [
+          {
+            "asset": "apcxUSDT",
+            "minimumCollateralRatioPct": 105,
+            "note": "Vat normalized debt Art was 224,856,650.766427693998490710 and the branch debt ceiling was positive. Dog applies a 1% liquidation penalty."
+          }
+        ],
+        "liquidationMechanism": "Any caller may immediately bark an unsafe vault through Dog, starting its independent Clip Dutch auction at 120% of the reference price; the auction may reset after 7,200 seconds or after price falls below 75% of its start.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds cancel debt through Vat/Vow accounting. At the observation block, Vow queued bad debt for 561,600 seconds and required its configured 50 PHT sump before the live Flop could auction APCX recapitalization; Flop was connected to Vow and authorized to mint and burn APCX.",
+        "shutdownOrBadDebtBehavior": "End was live and ward-cageable. ESM required 10 raw APCX, but its collected Sum and APCX total supply were both zero, so no holder-funded ESM trigger capacity existed at the observation block. Without an authorized cage, residual debt remains in Vat/Vow for the conditional auction path.",
+        "failureDomainKeys": [
+          "chainlink-usdt-usd",
+          "apacx-php-usd-manual-admin",
+          "apacx-ratio-feed-admin",
+          "pht-vow-flop"
+        ],
+        "sources": [
+          {
+            "label": "ApcxUSDT-A Pip deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0x40e1512c3b9e69b793c9ab9a9b3ba4184b88adb0?tab=contract"
+          },
+          {
+            "label": "ApcxUSDT-A ratio DataFeed deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0x9ae2772eb41a61caef3153ce26cedf8c2f8f2af4?tab=contract"
+          },
+          {
+            "label": "APACX owner-set PHP/USD feed",
+            "url": "https://etherscan.io/address/0x6829aaafa90739946c62a13ee4a9c5d99bac7af8#code"
+          },
+          {
+            "label": "ApcxUSDT-A Clip",
+            "url": "https://eth.blockscout.com/address/0x27ba0c16d0aa6374cca29b83895d14271eb1db23?tab=contract"
+          },
+          {
+            "label": "APACX multi-collateral system",
+            "url": "https://docs.apacx.io/what-is-pht/multi-collateral-system.md"
+          },
+          {
+            "label": "Finalized Ethereum block 25531795",
+            "url": "https://eth.blockscout.com/block/25531795"
+          }
+        ]
+      },
+      {
+        "id": "pht-demousdt-a",
+        "label": "demoUSDT-A",
+        "tier": "opaque-or-unknown",
+        "summary": "Debt-bearing zero-ceiling demoUSDT legacy branch using an owner-set APACX data feed with no external source, freshness check, or fallback.",
+        "collateralAssets": [
+          "demoUSDT"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "APACX owner-set DataFeed through Pip",
+            "path": "Pip 0x647B260e2e1cD4Ca58eaAe22022097512368f77a -> owner-set DataFeed 0x823c9660C1D2f07aCb8019F221362D2c1fbFD6fb",
+            "address": "0x647B260e2e1cD4Ca58eaAe22022097512368f77a",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531795,
+            "failureDomainKeys": [
+              "apacx-manual-feed-admin"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No fallback, independent provider, or contract-enforced freshness. The data-feed owner can set the answer and the Pip accepts any non-negative latestRoundData result without inspecting its timestamp.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531795,
+        "collateralParameters": [
+          {
+            "asset": "demoUSDT",
+            "minimumCollateralRatioPct": 105,
+            "note": "The debt ceiling was zero, but Vat normalized debt Art remained 999.999082956889630361, so this legacy branch is retained. Dog applies a 1% liquidation penalty."
+          }
+        ],
+        "liquidationMechanism": "Any caller may immediately bark an unsafe vault through Dog, starting its independent Clip Dutch auction at 120% of the reference price; the auction may reset after 7,200 seconds or after price falls below 75% of its start.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds cancel debt through Vat/Vow accounting. At the observation block, Vow queued bad debt for 561,600 seconds and required its configured 50 PHT sump before the live Flop could auction APCX recapitalization; Flop was connected to Vow and authorized to mint and burn APCX.",
+        "shutdownOrBadDebtBehavior": "End was live and ward-cageable. ESM required 10 raw APCX, but its collected Sum and APCX total supply were both zero, so no holder-funded ESM trigger capacity existed at the observation block. Without an authorized cage, residual debt remains in Vat/Vow for the conditional auction path.",
+        "failureDomainKeys": [
+          "apacx-manual-feed-admin",
+          "pht-vow-flop"
+        ],
+        "sources": [
+          {
+            "label": "demoUSDT-A Pip deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0x647b260e2e1cd4ca58eaae22022097512368f77a?tab=contract"
+          },
+          {
+            "label": "demoUSDT-A data feed deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0x823c9660c1d2f07acb8019f221362d2c1fbfd6fb?tab=contract"
+          },
+          {
+            "label": "demoUSDT-A Clip",
+            "url": "https://eth.blockscout.com/address/0xb61465946e689a616e3d994af65f9475c0ebfa8f?tab=contract"
+          },
+          {
+            "label": "Finalized Ethereum block 25531795",
+            "url": "https://eth.blockscout.com/block/25531795"
+          }
+        ]
+      },
+      {
+        "id": "pht-usdc-a",
+        "label": "USDC-A",
+        "tier": "opaque-or-unknown",
+        "summary": "Debt-bearing USDC branch dividing a Chainlink USDC/USD numerator by an owner-set APACX PHP/USD denominator; neither the ratio feed nor Pip enforces source freshness.",
+        "collateralAssets": [
+          "USDC"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink numerator and owner-set APACX denominator through ratio DataFeed and Pip",
+            "path": "Pip 0xD53E1F9FD7522a79367d3475401c11e8FbC7b330 -> ratio DataFeed 0xE798eF84C04d1D2F45510a9A0EE97d4e20Eb5D71 -> Chainlink USDC/USD 0x8fFfFfd4AfB6115b954Bd326cbe7B4BA576818f6 divided by owner-set APACX PHP/USD 0x6829AAaFa90739946C62a13eE4A9c5d99baC7aF8",
+            "address": "0xD53E1F9FD7522a79367d3475401c11e8FbC7b330",
+            "chain": "ethereum",
+            "observedAt": "2026-07-14",
+            "observedBlock": 25531795,
+            "failureDomainKeys": [
+              "chainlink-usdc-usd",
+              "apacx-php-usd-manual-admin",
+              "apacx-ratio-feed-admin"
+            ]
+          }
+        ],
+        "fallbackBehavior": "No fallback or stored last-good value. The ratio feed combines a Chainlink numerator with an owner-set PHP/USD denominator; the Pip rejects only a negative result and does not inspect timestamps. The documented 24-hour update policy is not contract-enforced.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25531795,
+        "collateralParameters": [
+          {
+            "asset": "USDC",
+            "minimumCollateralRatioPct": 105,
+            "note": "Vat normalized debt Art was 995.885101000557152111 and the branch debt ceiling was positive. Dog applies a 1% liquidation penalty."
+          }
+        ],
+        "liquidationMechanism": "Any caller may immediately bark an unsafe vault through Dog, starting its independent Clip Dutch auction at 120% of the reference price; the auction may reset after 7,200 seconds or after price falls below 75% of its start.",
+        "liquidationDelaySec": 0,
+        "backstop": "Auction proceeds cancel debt through Vat/Vow accounting. At the observation block, Vow queued bad debt for 561,600 seconds and required its configured 50 PHT sump before the live Flop could auction APCX recapitalization; Flop was connected to Vow and authorized to mint and burn APCX.",
+        "shutdownOrBadDebtBehavior": "End was live and ward-cageable. ESM required 10 raw APCX, but its collected Sum and APCX total supply were both zero, so no holder-funded ESM trigger capacity existed at the observation block. Without an authorized cage, residual debt remains in Vat/Vow for the conditional auction path.",
+        "failureDomainKeys": [
+          "chainlink-usdc-usd",
+          "apacx-php-usd-manual-admin",
+          "apacx-ratio-feed-admin",
+          "pht-vow-flop"
+        ],
+        "sources": [
+          {
+            "label": "USDC-A Pip deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0xd53e1f9fd7522a79367d3475401c11e8fbc7b330?tab=contract"
+          },
+          {
+            "label": "USDC-A ratio DataFeed deployed bytecode",
+            "url": "https://eth.blockscout.com/address/0xe798ef84c04d1d2f45510a9a0ee97d4e20eb5d71?tab=contract"
+          },
+          {
+            "label": "APACX owner-set PHP/USD feed",
+            "url": "https://etherscan.io/address/0x6829aaafa90739946c62a13ee4a9c5d99bac7af8#code"
+          },
+          {
+            "label": "USDC-A Clip",
+            "url": "https://eth.blockscout.com/address/0xac4582e6a3338b166081a43a6626039377ced0db?tab=contract"
+          },
+          {
+            "label": "APACX system architecture",
+            "url": "https://docs.apacx.io/technical-references/system-architecture.md"
+          },
+          {
+            "label": "Finalized Ethereum block 25531795",
+            "url": "https://eth.blockscout.com/block/25531795"
+          }
+        ]
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "PHT is natively CDP-minted on Ethereum (DaiJoin sole warded minter; Vat ceiling immutable at 250M PHT with no live ward). Polygon and Tron deployments are the issuer's own LayerZero OFTs (owners verified on-chain) using burn-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "APACX PHT",
+        "url": "https://www.apacx.io/PHT"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbe370ad45d44eb45174c4ec60b88839fef32c077",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
+        "protocol": "APACX native CDP issuance (DaiJoin/Vat)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "PHT on Ethereum is natively CDP-minted: the DaiJoin adapter 0x4bd328FD071b03e157d0a89dE199d9E005D71057 is the sole warded minter on the token (wards=1 verified at 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
+        "destinationChain": "polygon",
+        "contractAddress": "0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
+        "protocol": "APACX issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5 verified on Polygon at 2026-07-20; the issuer's own OFT burns/mints PHT across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "failureDomainKeys": [
+          "layerzero:oft:pht-pht"
+        ],
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      },
+      {
+        "id": "tron:TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+        "destinationChain": "tron",
+        "contractAddress": "TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
+        "protocol": "APACX issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tron OFT owner() = TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4 verified via trongrid triggerconstantcontract at 2026-07-20 (hex fb99a0af49941ec1ca2fc726be1e287f4c70f5ee); the issuer's own OFT burns/mints PHT across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "failureDomainKeys": [
+          "layerzero:oft:pht-pht"
+        ],
+        "sources": [
+          {
+            "label": "APACX PHT",
+            "url": "https://apacx.com/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      }
+    ]
+  }
+}

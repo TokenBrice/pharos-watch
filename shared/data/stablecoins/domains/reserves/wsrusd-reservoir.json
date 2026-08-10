@@ -1,0 +1,78 @@
+{
+  "id": "wsrusd-reservoir",
+  "reserves": [
+    {
+      "name": "Wrapped Savings rUSD shares backed by rUSD",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "rusd-reservoir",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Reservoir Protocol and the underlying rUSD reserve basket",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir wsrUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Blockscout verified wsrUSD Savingcoin source",
+        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+      },
+      {
+        "label": "Reservoir live reserves",
+        "url": "https://app.reservoir.xyz/api/reserves/raw"
+      }
+    ],
+    "rationale": "The verified wsrUSD ERC-4626 wrapper reports rUSD as its underlying asset; asset() on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34 when re-read via public RPC on 2026-07-20, and Reservoir's product documentation re-fetched today confirms wsrUSD is minted with rUSD and redeemable for rUSD at any time up to available PSM liquidity. The direct wsrUSD reserve is therefore one 100% wrapper position linked to tracked asset rusd-reservoir; the underlying rUSD basket is inherited and is not duplicated here. The parent rUSD composition was re-aligned to the 2026-07-20 Reservoir API on this same date (USD1 bucket fell from 8.4% to 2.1%).",
+    "compositionBasis": "Verified wsrUSD ERC-4626 asset() relationship (public RPC read 2026-07-20) and Reservoir reserve documentation",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct dependency is fully identified as rUSD, but the underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts tracked on the rusd-reservoir record.",
+    "knownUnknownExposurePct": 0
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Reservoir wsrUSD Savingcoin ERC-4626 wrapper contract 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 (self-custodied; wraps rUSD held in upstream Reservoir protocol contracts)",
+        "role": "other",
+        "sharePct": 100,
+        "jurisdiction": "Cayman Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "none",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reservoir wsrUSD product documentation",
+        "url": "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd"
+      },
+      {
+        "label": "Reservoir Terms of Service (last revised 2024-08-23)",
+        "url": "https://docs.reservoir.xyz/security-and-compliance/terms-of-service"
+      },
+      {
+        "label": "Blockscout verified wsrUSD Savingcoin source",
+        "url": "https://eth.blockscout.com/address/0xd3fd63209fa2d55b07a0f6db36c2f43900be3094?tab=contract"
+      }
+    ],
+    "uncertainty": "wsrUSD's only direct reserve is rUSD deposited in the non-upgradeable ERC-4626 wrapper contract (asset() = rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, re-verified 2026-07-20), so custody of the economic backing is inherited entirely from rUSD: the upstream Reservoir balance sheet sits in protocol-controlled adapter contracts with no named third-party custodian, trust, SPV, or holder claim documented in the ToS (2024-08-23) or product docs. The wrapper itself does not re-lend its rUSD, but the upstream rUSD reserve model is active re-deployment into lending markets, vaults, and RWA credit, so rehypothecation is marked permitted at the economic level. Redemption is documented as immediate only up to available PSM liquidity. Wrapper parameters (setCap, update) are governed by the 3-of-5 MANAGER Safe 0x4E8a4894275780f571AaD53122e641D9f50Ff04f, while DEFAULT_ADMIN_ROLE remains with EOA 0xb7570e32 and can grant or revoke MANAGER (mint-authority review, 2026-07-14). No bankruptcy-remoteness structure for wsrUSD holders is documented."
+  }
+}

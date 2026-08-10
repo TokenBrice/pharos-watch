@@ -1,0 +1,207 @@
+{
+  "id": "dgld-gold-token-sa",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "DGLD is issued by Gold Token SA. On Ethereum the MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a single issuer EOA that also owns the ProxyAdmin. After retiring the compromised Ethereum-Base bridge, the issuer deployed an independently gold-backed native Base token whose MINTER_ROLE, DEFAULT_ADMIN_ROLE, and ProxyAdmin owner are separately identified.",
+    "mintIncidents": [
+      {
+        "date": "2026-02-23",
+        "status": "resolved",
+        "resolvedAt": "2026-07-15",
+        "summary": "An exploit of the former Ethereum-Base bridge enabled unauthorized unbacked DGLD minting on Base. Gold Token SA retired that bridge, deployed a separately backed native Base token on June 30, and completed the legacy Base balance reset on July 15.",
+        "sources": [
+          {
+            "label": "DGLD post-incident report and July 15 update",
+            "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "label": "Gold Token SA issuance backend",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "failureDomainKeys": [
+          "issuer-backend:dgld-gold-token-sa:gold-token-sa-issuance-backend"
+        ],
+        "sources": [
+          {
+            "label": "DGLD official issuance and redemption information",
+            "url": "https://dgld.ch/"
+          }
+        ],
+        "evidence": "Gold Token SA operates the issuance backend and can direct its chain-local MINTER_ROLE accounts to create DGLD against allocated PAMP gold bars. Neither native deployment has a contract-enforced aggregate supply ceiling, so the issuer backend can authorize unbounded expansion subject only to its off-chain backing policy."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d",
+        "label": "DGLD Ethereum MINTER_ROLE + DEFAULT_ADMIN_ROLE — issuer EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712296,
+        "sources": [
+          {
+            "label": "DGLD Ethereum token",
+            "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8#code"
+          },
+          {
+            "label": "DGLD Ethereum ProxyAdmin",
+            "url": "https://etherscan.io/address/0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25712296, this code-empty address still held both MINTER_ROLE and DEFAULT_ADMIN_ROLE. The proxy retained implementation 0x5ee71b30db71cee806f0d5cbbd57bfe1da3b2875 and EIP-1967 admin 0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629, whose owner() still returned this EOA. No on-chain mint ceiling or execution delay bounds it."
+      },
+      {
+        "chain": "base",
+        "address": "0xe003a81a40803fedb701870c589c0a96d14544a0",
+        "label": "DGLD Base MINTER_ROLE + DEFAULT_ADMIN_ROLE — issuer EOA",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 49713744,
+        "sources": [
+          {
+            "label": "DGLD post-incident report and Base migration update",
+            "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+          },
+          {
+            "label": "DGLD Base contract",
+            "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A#code"
+          }
+        ],
+        "evidence": "At Base block 49713744, this code-empty address still held both MINTER_ROLE and DEFAULT_ADMIN_ROLE on the replacement native DGLD token. The proxy retained implementation 0x966a3c5dadecd6466e13a86691fb045e2890a8be and EIP-1967 admin 0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a, whose owner() still returned this EOA. No on-chain mint ceiling or execution delay bounds it."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d",
+        "label": "DGLD Ethereum ProxyAdmin owner — issuer EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712296,
+        "sources": [
+          {
+            "label": "DGLD Ethereum ProxyAdmin",
+            "url": "https://etherscan.io/address/0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629#code"
+          },
+          {
+            "label": "DGLD Ethereum token",
+            "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25712296, the token EIP-1967 admin slot still resolved to ProxyAdmin 0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629 and owner() still returned this no-code EOA. The owner can replace DGLD mint logic without a timelock."
+      },
+      {
+        "chain": "base",
+        "address": "0xe003a81a40803fedb701870c589c0a96d14544a0",
+        "label": "DGLD Base ProxyAdmin owner — issuer EOA",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 49713744,
+        "sources": [
+          {
+            "label": "DGLD Base ProxyAdmin",
+            "url": "https://basescan.org/address/0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a#code"
+          },
+          {
+            "label": "DGLD Base token",
+            "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A#code"
+          }
+        ],
+        "evidence": "At Base block 49713744, the token EIP-1967 admin slot still resolved to ProxyAdmin 0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a and owner() still returned this no-code EOA. The owner can replace Base DGLD mint logic without a timelock."
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xa9299c296d7830a99414d1e5546f5171fa01e9c8",
+        "0xe908475f8beb7a138b0dc6eb5a05cb27068ffb9a"
+      ],
+      "implementationAddresses": [
+        "0x5ee71b30db71cee806f0d5cbbd57bfe1da3b2875",
+        "0x966a3c5dadecd6466e13a86691fb045e2890a8be"
+      ],
+      "adminAddresses": [
+        "0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629",
+        "0xb1c1bc081e49b8f4bb4e1960c2f7d9cd9dff8b9d",
+        "0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a",
+        "0xe003a81a40803fedb701870c589c0a96d14544a0"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "DGLD Ethereum ProxyAdmin owner — issuer EOA",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712296,
+      "sources": [
+        {
+          "label": "DGLD Ethereum token",
+          "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8#code"
+        },
+        {
+          "label": "DGLD Ethereum ProxyAdmin",
+          "url": "https://etherscan.io/address/0xd8b4395aafd4076ad7fa5b8c0bcd6da79750e629#code"
+        },
+        {
+          "label": "DGLD Base token",
+          "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A#code"
+        },
+        {
+          "label": "DGLD Base ProxyAdmin",
+          "url": "https://basescan.org/address/0x751e6245a88e4e367f3a6bee3cef9d558f95ad0a#code"
+        }
+      ]
+    },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
+    "review": {
+      "evidence": "Fresh reads at Ethereum block 25712296 and Base block 49713744 confirmed the two chain-local issuer EOAs still hold MINTER_ROLE, DEFAULT_ADMIN_ROLE, and their respective ProxyAdmin ownership. Both proxy paths remain immediate and neither implementation enforces an aggregate supply ceiling, so economic cap semantics are unbounded. The February 2026 bridge-mint incident remains resolved through bridge retirement and the replacement Base deployment. On 2026-08-08, Gold Token SA's live bar registry reconciled the displayed Ethereum and Base supplies to named PAMP bar serials with no displayed gap, supporting continuous issuer-operated reconciliation; this is self-reported rather than independent assurance. VQF AML self-regulatory membership is not prudential supervision.",
+      "reviewer": "Codex deployment-control review; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "DGLD Official",
+          "url": "https://dgld.ch/"
+        },
+        {
+          "label": "DGLD live bar registry",
+          "url": "https://explorer.dgld.ch/"
+        },
+        {
+          "label": "DGLD Ethereum contract (DGLDTokenV3)",
+          "url": "https://etherscan.io/address/0xa9299c296d7830a99414d1e5546f5171fa01e9c8"
+        },
+        {
+          "label": "DGLD Base contract",
+          "url": "https://basescan.org/address/0xe908475f8Beb7A138B0dc6eb5A05cb27068ffB9A#code"
+        },
+        {
+          "label": "DGLD post-incident report and July 15 update",
+          "url": "https://dgld.ch/news/post-incident-report-february-2026-exploit"
+        },
+        {
+          "label": "MKS PAMP acquires full ownership of Gold Token SA",
+          "url": "https://www.mkspamp.com/mks-pamp-acquires-full-ownership-gold-token-sa-relaunch-leading-real-world-asset-backed-tokenized"
+        }
+      ]
+    }
+  }
+}

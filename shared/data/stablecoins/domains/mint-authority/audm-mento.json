@@ -1,0 +1,106 @@
+{
+  "id": "audm-mento",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "AUDm is minted via the Mento Broker (0x777A...) which is the sole authorized minter (broker() getter confirmed). The Broker's proxy admin and the AUDm token owner and proxy admin all resolve to the Mento Timelock (0x890DB...) with a 2-day delay.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x7175504c455076f15c04a2f90a8e352281f492f9",
+        "0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+      ],
+      "implementationAddresses": [
+        "0x434563b0604be100f04b7ae485bcafe3c9d8850e",
+        "0x1b78f6acd05e7bcb00f74863bfd8a7c264143e37"
+      ],
+      "adminAddresses": [
+        "0x890db8a597940165901372dd7db61c9f246e2147"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Mento Timelock — AUDm token owner and proxy admin",
+      "observedAt": "2026-07-13",
+      "observedBlock": 72084007,
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "AUDm token on Celo Blockscout",
+          "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+        },
+        {
+          "label": "Mento Broker on Celo Blockscout",
+          "url": "https://celo.blockscout.com/address/0x777a8255ca72412f0d706dc03c9d1987306b4cad"
+        },
+        {
+          "label": "Celo PublicNode RPC",
+          "url": "https://celo-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "celo",
+        "address": "0x777A8255cA72412f0d706dc03C9D1987306B4CaD",
+        "label": "Mento Broker — authorized minter for AUDm",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AUDm token broker() on-chain read",
+            "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+          }
+        ],
+        "evidence": "At Celo block 69287341, broker() on AUDm (0x7175504c455076f15c04a2f90a8e352281f492f9) returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy). The Broker's EIP-1967 proxy admin slot returned 0x890DB8A597940165901372Dd7DB61C9f246e2147 (Mento Timelock)."
+      },
+      {
+        "chain": "celo",
+        "address": "0x890DB8A597940165901372Dd7DB61C9f246e2147",
+        "label": "Mento Timelock — AUDm token owner and proxy admin",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Mento V3 stablecoin docs",
+            "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+          },
+          {
+            "label": "AUDm token on Celo Blockscout",
+            "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+          }
+        ],
+        "evidence": "At Celo block 69287341, owner() on AUDm returned 0x890DB8A597940165901372Dd7DB61C9f246e2147; EIP-1967 proxy admin slot returned the same address. getMinDelay() on the Timelock returned 0x2a300 = 172800 seconds (48 hours)."
+      }
+    ],
+    "economicCapSemantics": "raiseable",
+    "review": {
+      "sources": [
+        {
+          "label": "Mento V3 stablecoin docs",
+          "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+        },
+        {
+          "label": "AUDm token on Celo Blockscout",
+          "url": "https://celo.blockscout.com/address/0x7175504c455076f15c04a2f90a8e352281f492f9"
+        }
+      ],
+      "evidence": "At Celo block 69287341: owner() = Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 (confirmed); EIP-1967 proxy admin slot = same Timelock; getMinDelay() = 172800s (48h); broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD (Mento BrokerProxy, confirmed as sole authorized minter); Broker EIP-1967 proxy admin = same Timelock. Celo Registry confirms Broker = 0x777A... (keccak256('Broker') lookup). All mint-capable surfaces resolved. Economically, Broker issuance is the collateral-exchange path; changing that path or authorizing different mint logic requires the independently enforced 48-hour Mento Timelock, so the encoding-derived unbounded cap is superseded by raiseable semantics. Re-verified at Celo block 72664674 on 2026-07-20: AUDm 0x7175504C455076F15c04A2F90a8e352281f492F9 still returns owner() = Mento Timelock 0x890DB8A597940165901372Dd7DB61C9f246e2147 and broker() = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, and that Timelock still returns getMinDelay() = 172800 seconds. Mento publishes a live reserve dashboard rather than a periodic report, so reconciliation cadence is continuous (the self attestor tier is already recorded separately under proofOfReserves), and no financial regulator supervises Mento.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "reconciliation": "continuous",
+    "supervision": "none"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "wusd-worldwide",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: WUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "WUSD is issuer-minted natively by WSPN on all three tracked networks. Each deployment is an ERC1967 proxy over an AccessControl ERC20 (ERC20F family) whose complete RoleGranted history shows mint rights only with WSPN operator accounts: the same DEFAULT_ADMIN EOA 0x731efdc9 and minter EOA 0x1a41b592 on every chain, plus chain-local mint/burn operator contracts. masterMinter() and LayerZero endpoint() probes revert and no third-party bridge contract holds MINTER_ROLE, so the earlier LayerZero external lock/mint candidate is not supported by on-chain evidence; cross-chain movement is issuer-native burn/mint through WSPN rails.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "WUSD on Ethereum (Etherscan)",
+        "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+      },
+      {
+        "label": "WUSD on Polygon (Polygonscan)",
+        "url": "https://polygonscan.com/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+      },
+      {
+        "label": "WUSD on Viction (Vicscan)",
+        "url": "https://vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+      },
+      {
+        "label": "WSPN Viction deployment release",
+        "url": "https://www.prnewswire.com/in/news-releases/wspn-partners-with-viction-and-ninety-eight-ecosystem-to-boost-wusd-adoption-and-expand-market-reach-302296318.html"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "protocol": "WSPN native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ERC1967Proxy (212-byte, EIP-1967 impl 0x3AC7b6769c5e4a5c17986bD39D9d8b2E9E09227E, verified ERC20F AccessControl token; deployed block 21390703 by 0x4a48240E). Complete RoleGranted history from deployment to block 25570747 on 2026-07-20 with zero RoleRevoked: DEFAULT_ADMIN_ROLE=0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 (EOA), MINTER_ROLE=0x1a41b5922e926cca1eaa8afac55bddce40fdbe61 (EOA), 0x171ac757879d9f5004992159fc9bf3344f82d5c3 (897-byte proxy), 0x80c0a17d45049016a02a16d2b77a9003320fb9e0 (23907-byte operator contract); all three confirmed hasRole=true at block 25570747. UPGRADER_ROLE never granted. masterMinter()/endpoint()/owner() revert - not a Circle-style or OFT token. No third-party bridge holds mint rights; WSPN issuer-mints natively on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "WUSD on Ethereum",
+            "url": "https://etherscan.io/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
+        "protocol": "WSPN native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Same-address ERC1967Proxy (EIP-1967 impl 0xf7c3aceabab5b505effeab0603e11f2ed54020ac; deployed block 65415669). RoleGranted history from deployment: DEFAULT_ADMIN_ROLE=0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 (same WSPN admin EOA as Ethereum), MINTER_ROLE=0x1a41b5922e926cca1eaa8afac55bddce40fdbe61 (same WSPN minter EOA) and 0xff5fd9d00fab52b197a8e20a01c151026b57559b (23907-byte operator contract, granted block 74335451); all confirmed hasRole=true at Polygon block 90538159 on 2026-07-20. endpoint() reverts - not an OFT. No third-party bridge minter; WSPN issuer-mints natively on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "WUSD on Polygon",
+            "url": "https://polygonscan.com/address/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"
+          }
+        ]
+      },
+      {
+        "id": "viction:0xba73e59f11597c1c13b0d9114688efb6a6d430f6",
+        "destinationChain": "viction",
+        "canonicalChain": "viction",
+        "contractAddress": "0xba73e59f11597c1c13b0d9114688efb6a6d430f6",
+        "protocol": "WSPN native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ERC1967-style proxy (225-byte, EIP-1967 impl 0xefceab9de47ab85a3d11fb3de658b2f88dc74e87, 24366-byte AccessControl token; deployed Viction block 91361750). RoleGranted/RoleRevoked history from deployment: DEFAULT_ADMIN moved from deployer 0x702b4b92 to WSPN admin EOA 0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 (revocation confirmed; hasRole checks at Viction block 111276885 on 2026-07-20 return admin=true for 0x731efdc9, false for 0x702b4b92), MINTER_ROLE=0x1a41b5922e926cca1eaa8afac55bddce40fdbe61 (same WSPN minter EOA) and 0x2f5a9cb393ecbacf205c72ec8ed367460959b025 (23907-byte operator contract, granted block 96651834), UPGRADER_ROLE/CONTRACT_ADMIN_ROLE=deployer EOA 0x4a48240E, owner()=0x42cc0bacf8286da37196e4391727d4f3ad478319 (EOA). LayerZero EndpointV2 is not the token owner or minter; no third-party bridge holds mint rights. WSPN issuer-mints natively on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "WUSD on Viction",
+            "url": "https://vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -12,7 +12,7 @@ Applies to `shared/data/stablecoins/**`.
 
 See root AGENTS.md / CLAUDE.md Hard Rules for cross-cutting rules. This file only documents stablecoin-data-specific items.
 
-- Author base stablecoin metadata in `shared/data/stablecoins/coins/*.json`; migrated research-domain fields live in sidecars under `shared/data/stablecoins/domains/<domain>/<id>.json`.
+- Author base stablecoin metadata in `shared/data/stablecoins/coins/*.json`; research-domain fields live in sidecars under `shared/data/stablecoins/domains/<domain>/<id>.json`. The layout migration is finished — no base file carries a domain-owned field, so author domain research in the sidecar from the start (create it if absent).
 - Supported sidecar domains are `reserves` (`reserves`, `reserveReview`, `custodyProfile`), `mint-authority` (`mintAuthority`), `compliance` (`mica`, `genius`), and `risk-review` (`canBeBlacklisted`, `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk`). See `docs/process/stablecoin-research-sidecars.md`.
 - Once a sidecar exists for a coin/domain, keep every field owned by that domain out of the matching base file. Edit future research in the sidecar; do not split coupled fields across both sources.
 - Sidecar files must not live under `shared/data/stablecoins/coins/`. Sidecar `id` values must match the base coin ID, and duplicate fields across a base coin and sidecar are invalid.

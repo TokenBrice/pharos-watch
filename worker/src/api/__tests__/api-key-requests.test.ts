@@ -35,7 +35,6 @@ function validBody(overrides: Record<string, unknown> = {}) {
     organization: "Example Lab",
     projectUrl: "https://example.com",
     useCase: "I am building a stablecoin monitoring dashboard and need periodic read access.",
-    intendedEndpoints: ["/api/stablecoins", "/api/peg-summary"],
     expectedCadence: "hourly",
     expectedVolume: "A few hundred reads per day.",
     acceptedTerms: true,
@@ -210,18 +209,16 @@ describe("api key self-serve request handlers", () => {
     expect(sentEmails).toHaveLength(1);
   });
 
-  it("stores intendedEndpoints as a normalized free-text note", async () => {
-    // The note grants nothing — an issued self-serve key can read every
-    // protected public route regardless of what the requester listed here.
+  it("accepts and ignores the legacy intendedEndpoints note from stale bundles", async () => {
+    // The note had no reader left and was removed 2026-08-10, but the request
+    // schema is `.strict()` and the site is a static export: a browser holding
+    // the old bundle must still submit successfully.
     const response = await handleApiKeyRequest(db, postRequest("/api/api-key-requests", validBody({
       email: "template@example.com",
-      intendedEndpoints: ["  /api/stablecoin/:id  ", "/api/stablecoin/:id", "", "whatever I plan to call"],
+      intendedEndpoints: ["/api/stablecoin/:id", "whatever I plan to call"],
     })), env());
 
     expect(response.status).toBe(202);
-    expect(sqlite.prepare("SELECT intended_endpoints_json FROM api_key_requests").get()).toEqual({
-      intended_endpoints_json: JSON.stringify(["/api/stablecoin/:id", "whatever I plan to call"]),
-    });
   });
 
   it("issues a constrained self-serve key only after token verification", async () => {

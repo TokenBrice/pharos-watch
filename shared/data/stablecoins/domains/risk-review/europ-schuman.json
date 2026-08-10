@@ -1,0 +1,170 @@
+{
+  "id": "europ-schuman",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EUROP resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EUROP is issued natively by Schuman on each reviewed deployment. Ethereum, Polygon, Avalanche, Plasma, XRPL, and the Solana Token-2022 mint all expose chain-local issuer mint authority; no reviewed deployment is a third-party bridge representation.",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-BIND wave6",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "EUROP whitepaper",
+        "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
+      },
+      {
+        "label": "Schuman EUROP smart-contract addresses",
+        "url": "https://schuman.io/smart-contracts/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "protocol": "Schuman native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EUROP: 170-byte EIP-1967 proxy (impl 0xfbdaf9745da69f927bc14bd73860ffdba82cff43), owner() = a 3-of-4 Gnosis Safe (0xe1f9754ff1f714cd3d0e939f368a97f87840cd16; getOwners/getThreshold read 2026-07-20). Schuman issues EUROP natively on each chain; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Schuman EUROP",
+            "url": "https://europ.cc/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "destinationChain": "polygon",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x888883b5f5d21fb10dfeb70e8f9722b9fb0e5e51",
+        "protocol": "Schuman native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EUROP: 170-byte EIP-1967 proxy (impl 0xfbdaf9745da69f927bc14bd73860ffdba82cff43), owner() = a 3-of-4 Gnosis Safe (0x29e6fb2dd01455472da3dd962c16a37de096b8da; getOwners/getThreshold read 2026-07-20). Schuman issues EUROP natively on each chain; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Schuman EUROP",
+            "url": "https://europ.cc/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8835a2f66a7aaccb297cb985831a616b75e2e16c",
+        "protocol": "Schuman native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EUROP: 170-byte EIP-1967 proxy (impl 0x57c2f3a0e197fef89d39c3cd551934cf2beaa7ed), owner() = a 3-of-4 Gnosis Safe (0xe1f9754ff1f714cd3d0e939f368a97f87840cd16; getOwners/getThreshold read 2026-07-20). Schuman issues EUROP natively on each chain; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Schuman EUROP",
+            "url": "https://europ.cc/"
+          }
+        ]
+      },
+      {
+        "id": "xrpl:EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+        "destinationChain": "xrpl",
+        "canonicalChain": "ethereum",
+        "contractAddress": "EUROP.rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK",
+        "protocol": "Schuman native XRPL issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "EUROP on XRPL is an issued currency of the Schuman issuer account rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK: XRPL account_info (validated ledger, read 2026-07-20) shows the master key DISABLED, no RegularKey, and a SignerList with quorum 3 across 6 signers (weights 1,1,1,3,1,1). Issuance is controlled by that signer quorum; not a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "XRPL issuer account rMkEuRii9…",
+            "url": "https://livenet.xrpl.org/accounts/rMkEuRii9w9uBMQDnWV5AA43gvYZR9JxVK"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x98658bd74ef231158cadc21d8aba733a4e947e6a",
+        "destinationChain": "plasma",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x98658bd74ef231158cadc21d8aba733a4e947e6a",
+        "protocol": "Schuman native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native EUROP: 170-byte EIP-1967 proxy (impl 0xa1058c5e9de4710e2854e5668531e54d80cdd51d), owner() = a 3-of-4 Gnosis Safe (0xd8b39a57b8d6c66942f4ebb1776a501e8ef68e4b; getOwners/getThreshold read 2026-07-20). Schuman issues EUROP natively on each chain; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Schuman EUROP",
+            "url": "https://europ.cc/"
+          }
+        ]
+      },
+      {
+        "id": "solana:euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA",
+        "protocol": "Schuman native Solana Token-2022 issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At finalized Solana slot 434569236, this Token-2022 mint parses as EURØP / EUROP with 6 decimals. Its mintAuthority is the initialized 1-of-3 Token-2022 multisig 3t3X4xqXbRDksat5cPjfHoWftvTwpHEj9c7tWMVvNPAh. The mint and authority are chain-local Schuman issuance controls, not a bridge representation; Schuman's official deployment page independently identifies Solana as a supported EUROP network.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-22",
+        "observedBlock": 434569236,
+        "sources": [
+          {
+            "label": "Schuman EUROP smart-contract addresses",
+            "url": "https://schuman.io/smart-contracts/"
+          },
+          {
+            "label": "EUROP Solana mint",
+            "url": "https://explorer.solana.com/address/euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      }
+    ]
+  }
+}

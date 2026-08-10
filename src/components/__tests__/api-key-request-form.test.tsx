@@ -64,7 +64,6 @@ describe("ApiKeyRequestForm", () => {
     fireEvent.change(screen.getByLabelText("Expected Volume"), {
       target: { value: `${200 + suffix.length} reads/day` },
     });
-    fireEvent.click(screen.getByRole("checkbox", { name: "Not sure yet" }));
     fireEvent.click(screen.getByRole("checkbox", { name: /I will use the API for read-only public data/i }));
 
     expect(submit.disabled).toBe(false);

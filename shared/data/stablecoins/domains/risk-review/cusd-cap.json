@@ -1,0 +1,133 @@
+{
+  "id": "cusd-cap",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Cap protocol documentation",
+        "url": "https://docs.cap.app/"
+      },
+      {
+        "label": "Cap Ethereum cUSD deployment",
+        "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc#code"
+      }
+    ],
+    "evidence": "The verified CapToken implementation behind the tracked Ethereum cUSD proxy exposes pauseProtocol() and pauseAsset(), which can halt transfers at the protocol or individual reserve-asset scope. Cap's documentation identifies the tracked cUSD deployment and its governance-controlled vault; the reviewed source therefore establishes direct system-wide transfer-pause capability for cUSD. Reserve and route dependencies add separate upstream exposure.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "cUSD is Ethereum-native (Cap vault) with an additional issuer-native TIP-20 deployment on Tempo; MegaETH is reached through a LayerZero OFT V2 whose only peer is the Ethereum OFT Adapter lockbox, with both ends administered by Cap's 3-of-5 Safe through 1-day timelocks.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero OFT / Stargate",
+        "slug": "layerzero",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard",
+        "bridgeTypes": [
+          "oft",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Cap MegaETH launch",
+        "url": "https://www.cap.app/blog/cap-launches-on-megaeth"
+      },
+      {
+        "label": "LayerZero OFT standard",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/oft-standard"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "protocol": "Cap cUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: cUSD is issued on Ethereum through Cap's collateralized vault (verified mint-authority review 2026-07-14; governance = 3-of-5 Safe 0xb8FC49402dF3ee4f8587268FB89fda4d621a8793 behind a 1-day TimelockController).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Cap docs — contract addresses",
+            "url": "https://docs.cap.app/developers/addresses"
+          },
+          {
+            "label": "cUSD Ethereum token",
+            "url": "https://etherscan.io/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+          }
+        ]
+      },
+      {
+        "id": "megaeth:0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "destinationChain": "megaeth",
+        "contractAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "protocol": "LayerZero OFT V2",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "LayerZero OFT V2 representation of Ethereum-native cUSD: endpoint() reads 0x6F475642a6e85809B1c36Fa62763669b1b48DD5B (eid 30398) with sole peer the Ethereum OFT Adapter lockbox 0xa62571ebdffabc3051a2e5b9e1f57b23d830c8fd (read 2026-07-19). The MegaETH OFT owner is Cap's MegaETH TimelockController 0x0000000035A7744F94e6949431CE20EA77312a55 behind the same 3-of-5 Cap Safe through a 1-day delay.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "megaeth",
+        "controllerAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:megaeth:0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        ],
+        "sources": [
+          {
+            "label": "cUSD MegaETH OFT (endpoint 0x6F475642a6e85809B1c36Fa62763669b1b48DD5B, read 2026-07-20)",
+            "url": "https://megaeth.blockscout.com/address/0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+          },
+          {
+            "label": "Cap docs — contract addresses",
+            "url": "https://docs.cap.app/developers/addresses"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c0000000000000000000000520792dcccccccc",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c0000000000000000000000520792dcccccccc",
+        "protocol": "Cap cUSD (Tempo TIP-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native Tempo deployment: the token sits in Tempo's TIP-20 precompile address space and its ISSUER_ROLE is held by Cap's own issuer proxy 0xbd12e50bfaa25735d074dbfdcf73208b9ccd2e43 (UUPS; owner = Tempo TimelockController 0x0000000035A7744F94e6949431CE20EA77312a55 behind the 3-of-5 Cap Safe, read 2026-07-20). No bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Tempo TIP-20 spec",
+            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
+          },
+          {
+            "label": "cUSD Tempo token",
+            "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
+          }
+        ]
+      }
+    ]
+  }
+}

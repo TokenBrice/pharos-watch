@@ -1,0 +1,143 @@
+{
+  "id": "chfau-allunity",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Website",
+        "url": "https://allunity.com/chfau/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "AllUnity publishes CHFAU as an issuer-native asset on Ethereum, Polygon, Base, and Tempo. The three EVM deployments share AllUnity's deterministic UUPS proxy, implementation, minter, and admin; Tempo is an issuer-announced native TIP-20 deployment rather than an unaffiliated bridge representation.",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "AllUnity CHFAU supported blockchains and contracts",
+        "url": "https://allunity.com/chfau"
+      },
+      {
+        "label": "AllUnity CHFAU Polygon launch",
+        "url": "https://allunity.com/news/allunity-launches-chfau-on-polygon"
+      },
+      {
+        "label": "AllUnity CHFAU Tempo launch",
+        "url": "https://allunity.com/news/allunitys-swiss-franc-stablecoin-chfau-goes-live-on-tempo"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "protocol": "AllUnity native CHFAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Ethereum block 25584014: CHFAU is a 6-decimal UUPS token whose EIP-1967 implementation is 0x5cad3aaaef687009665d15fed23ded57862ee003; the active MINTER_ROLE and DEFAULT_ADMIN_ROLE holders are the reviewed AllUnity EOAs.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-21",
+        "observedBlock": 25584014,
+        "sources": [
+          {
+            "label": "CHFAU on Ethereum",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "protocol": "AllUnity native CHFAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Polygon block 90644625: CHFAU is a 6-decimal UUPS token using the same implementation and active AllUnity EOA minter/admin as Ethereum. AllUnity's July 2026 announcement identifies this as its native Polygon launch.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-21",
+        "observedBlock": 90644625,
+        "sources": [
+          {
+            "label": "CHFAU on Polygon",
+            "url": "https://polygonscan.com/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+          },
+          {
+            "label": "AllUnity CHFAU Polygon launch",
+            "url": "https://allunity.com/news/allunity-launches-chfau-on-polygon"
+          }
+        ]
+      },
+      {
+        "id": "base:0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78",
+        "protocol": "AllUnity native CHFAU",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Base block 48941293: CHFAU is a 6-decimal UUPS token using the same implementation and active AllUnity EOA minter/admin as Ethereum; AllUnity lists this contract as the native Base deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-21",
+        "observedBlock": 48941293,
+        "sources": [
+          {
+            "label": "CHFAU on Base",
+            "url": "https://basescan.org/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+          },
+          {
+            "label": "AllUnity CHFAU supported blockchains and contracts",
+            "url": "https://allunity.com/chfau"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c00000000000000000000042109aef2f8b28e1",
+        "destinationChain": "tempo",
+        "canonicalChain": "tempo",
+        "contractAddress": "0x20c00000000000000000000042109aef2f8b28e1",
+        "protocol": "AllUnity native CHFAU (Tempo TIP-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified at Tempo block 31095212: TIP-20 token 0x20c000...b28e1 reported symbol CHFAU, 6 decimals, and zero supply. AllUnity identifies the address on its CHFAU page and announced the native Tempo mainnet launch; standard EVM role-member enumeration is unavailable for this precompile-backed token.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-21",
+        "observedBlock": 31095212,
+        "sources": [
+          {
+            "label": "CHFAU on Tempo",
+            "url": "https://explore.tempo.xyz/address/0x20c00000000000000000000042109aef2f8B28e1"
+          },
+          {
+            "label": "AllUnity CHFAU Tempo launch",
+            "url": "https://allunity.com/news/allunitys-swiss-franc-stablecoin-chfau-goes-live-on-tempo"
+          }
+        ]
+      }
+    ]
+  }
+}

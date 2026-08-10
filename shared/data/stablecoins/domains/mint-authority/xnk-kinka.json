@@ -1,0 +1,196 @@
+{
+  "id": "xnk-kinka",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "probable",
+    "summary": "XNK uses an owner-controlled legacy mintable ERC-20; minting is not finished. The token owner is Kinka's unverified token-sale contract, whose owner is an OpenZeppelin TimelockController (1-day delay) with a 2-of-3 Gnosis Safe as sole proposer/canceller, an open executor, and DEFAULT_ADMIN_ROLE held by the deployer EOA and the timelock itself. The Cardano deployment is an NFT-gated PlutusV3 minting policy whose authorising NFT holder is not publicly enumerable.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+        "label": "XNK legacy mintable token",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Legacy MintableToken with onlyOwner mint and finishMinting; no supply cap is encoded and mintingFinished() is false.",
+        "sources": [
+          {
+            "label": "Sourcify XNK source",
+            "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+          },
+          {
+            "label": "XNK on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x722a89f1b925fe41883978219c2176aecc7d6699"
+          }
+        ],
+        "evidence": "Re-verified at Ethereum block 25625450: owner() = 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 (token sale contract) and mintingFinished() = false. Source review showed onlyOwner mint and finishMinting; no proxy or code-replacement path exists.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 25625450
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2691FBB371456eaC5C5AA0082a0f53C91249c044",
+        "label": "XNK token sale contract (token owner)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Unverified crowdsale/distribution contract that owns the XNK token and so is the only account able to call token.mint; its function surface includes mint, giveToken, sendTokens, and batchTransfer with configured operational wallets (adminWallet, saleOwnerWallet, unsaleOwnerWallet, ethManagementWallet). paused() returned true.",
+        "sources": [
+          {
+            "label": "XNK sale contract on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x2691FBB371456eaC5C5AA0082a0f53C91249c044"
+          }
+        ],
+        "evidence": "At Ethereum block 25625450: 13,206 bytes of unverified bytecode; function selectors match a token crowdsale (buyTokens, giveToken, sendTokens, mint, finishMinting, pause/unpause, updateLockupList, batchTransfer). owner() = 0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE (timelock); token() = the XNK token; adminWallet = 0xE6A2356896F8a91aC473e2Be31620A235B70d8c4, saleOwnerWallet = 0xb88e8407aaf69382994234e4d64f5933a89541b8, unsaleOwnerWallet = 0x5ec59b6ea0b67b90c732e5efa7f78c441adc0838, ethManagementWallet = wallet() = 0x4777b5ffce57e453e78c0dc580f38997d194665a; paused() = true. Which of these wallets may trigger mint-path functions cannot be source-verified.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 25625450
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE",
+        "label": "Kinka TimelockController (sale contract owner)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 86400,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Timelock source on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE"
+          },
+          {
+            "label": "Sourcify exact match for the timelock",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x50ea796bcf3d178a100b1f0ef44faaef64741bfe"
+          }
+        ],
+        "evidence": "Verified source (Sourcify exact match, verified 2024-08-08): OpenZeppelin TimelockController. At Ethereum block 25625450: getMinDelay() = 86400 seconds; hasRole(PROPOSER_ROLE, 0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6) = true (sole proposer, also sole CANCELLER); hasRole(EXECUTOR_ROLE, 0x0) = true (open executor); hasRole(DEFAULT_ADMIN_ROLE, 0xE6A2356896F8a91aC473e2Be31620A235B70d8c4) = true (deployer EOA) and hasRole(DEFAULT_ADMIN_ROLE, self) = true. Complete RoleGranted/RoleRevoked log scan since deployment at block 20017160 shows no revocations and no additional grants.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 25625450
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6",
+        "label": "Kinka timelock proposer Safe (2-of-3)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.1.1",
+          "owners": [
+            "0xe6a2356896f8a91ac473e2be31620a235b70d8c4",
+            "0xbe4681f8d7b6c91fffd2cea9228a66cb13d2cd68",
+            "0x35e6cbcff03d42a80c45437496537f09cc0389b6"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedBlock": 25625450,
+          "observedAt": "2026-07-27",
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Proposer Safe on Blockscout",
+            "url": "https://eth.blockscout.com/address/0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6"
+          }
+        ],
+        "evidence": "Blockscout identifies a verified GnosisSafeProxy; storage slot 0 holds masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (the canonical Gnosis Safe 1.1.1 singleton, which predates guard support). At Ethereum block 25625450: getOwners() = 3 owners (deployer EOA 0xe6a2...d8c4 plus 0xbe4681f8... and 0x35e6cbcf...); getThreshold() = 2; getModules() = empty; fallback-manager slot holds CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. This Safe is the sole PROPOSER_ROLE and CANCELLER_ROLE holder on the Kinka timelock, so every privileged mint-authority change passes its 2-of-3 quorum plus the 1-day delay.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 25625450
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE6A2356896F8a91aC473e2Be31620A235B70d8c4",
+        "label": "Kinka deployer EOA (timelock DEFAULT_ADMIN, sale adminWallet)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At Ethereum block 25625450: eth_getCode = 0x (EOA). Holds DEFAULT_ADMIN_ROLE on the Kinka timelock (can grant/revoke proposer and canceller roles without delay) and is the sale contract's adminWallet and one of the three proposer-Safe owners.",
+        "observedAt": "2026-07-27",
+        "observedBlock": 25625450
+      },
+      {
+        "chain": "cardano",
+        "address": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac",
+        "label": "XNK Cardano PlutusV3 minting policy (NFT-gated)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Koios policy_asset_info for the XNK policy",
+            "url": "https://api.koios.rest/api/v1/policy_asset_info?_asset_policy=2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac"
+          },
+          {
+            "label": "Kinka",
+            "url": "https://kinka-gold.com/"
+          }
+        ],
+        "evidence": "Per the 2026-07-20 bridge-route review at Cardano slot 13703132: the XNK Cardano asset (fingerprint asset1rvj40wqtucwlw6tzz4gs7080g02pm370z899m7, supply 167.0 XNK) is minted under a PlutusV3 policy whose decompiled script enforces NFT-gated policy checks; the holder of the authorising policy NFT is not enumerable from public indexer reads, so no controller address is asserted. mint_cnt 1, burn_cnt 0.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 13703132
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "unknown",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "XNK legacy mintable token",
+      "observedAt": "2026-07-27",
+      "observedBlock": 25625450,
+      "sources": [
+        {
+          "label": "Sourcify XNK source",
+          "url": "https://sourcify.dev/server/repository/contracts/partial_match/1/0x722a89f1b925fe41883978219c2176aecc7d6699/sources/ERC20Token.sol"
+        },
+        {
+          "label": "XNK on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x722a89f1b925fe41883978219c2176aecc7d6699"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Kinka whitepaper",
+          "url": "https://kinka-gold.com/wp-content/uploads/2024/01/Kinka_white-paper_ver2.pdf"
+        },
+        {
+          "label": "Timelock source on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE"
+        },
+        {
+          "label": "Proposer Safe on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6"
+        },
+        {
+          "label": "XNK sale contract on Blockscout",
+          "url": "https://eth.blockscout.com/address/0x2691FBB371456eaC5C5AA0082a0f53C91249c044"
+        }
+      ],
+      "evidence": "Wave-7 re-review at Ethereum block 25625450 resolved the previously opaque owner chain. The XNK token owner 0x2691FBB371456eaC5C5AA0082a0f53C91249c044 is Kinka's unverified token-sale contract (selector-identified crowdsale: buyTokens/giveToken/sendTokens/mint, paused() = true); its owner 0x50EA796bCf3D178a100B1f0Ef44fAAEF64741bFE is a Sourcify-verified OpenZeppelin TimelockController with getMinDelay() = 86400, sole proposer/canceller Safe 0x8a4b8f479d4f1ee7b9aff581172796e1eab343b6 (verified GnosisSafeProxy, 2-of-3, no modules, no guard), open executor, and DEFAULT_ADMIN_ROLE held by deployer EOA 0xE6A2356896F8a91aC473e2Be31620A235B70d8c4 and the timelock itself; the complete role-event history since block 20017160 contains no revocations. The deployer EOA retains the ability to reconfigure timelock roles outside the delay, and the sale contract's operational-wallet mint permissions are not source-verifiable, so confidence stays at probable. The Cardano deployment is an NFT-gated PlutusV3 policy (slot 13703132) whose authorising NFT holder is not publicly enumerable. All three deployments are immutable with no proxy upgrade path.",
+      "reviewer": "Kimi wave-7 CTRL shard-a5",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable"
+    }
+  }
+}

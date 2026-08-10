@@ -1,0 +1,195 @@
+{
+  "id": "asusdf-astherus",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "inheritedFrom": "usdf-astherus",
+    "summary": "asUSDF shares mint only after the asUSDFEarn UUPS wrapper receives USDF; the token's sole default admin and the wrapper upgrade authority are a six-hour timelock governed by an Astherus 4-of-8 Safe. Underlying USDF issuance remains inherited from usdf-astherus.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xdb57a53c428a9fafcbfeffb6dd80d0f427543695"
+      ],
+      "implementationAddresses": [
+        "0x29f30635431426363d130aa163816ead1101662f"
+      ],
+      "adminAddresses": [
+        "0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 21600,
+      "controlRef": "asUSDF token admin and asUSDFEarn UUPS upgrade timelock",
+      "observedAt": "2026-07-15",
+      "observedBlock": 110184782,
+      "sources": [
+        {
+          "label": "Pinned Astherus asUSDFEarn reference source",
+          "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
+        },
+        {
+          "label": "Sourcify exact-match asUSDFEarn implementation source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x29f30635431426363d130aa163816ead1101662f?fields=sources"
+        },
+        {
+          "label": "BSC control snapshot block 110184782",
+          "url": "https://bscscan.com/block/110184782"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0xdb57a53c428a9fafcbfeffb6dd80d0f427543695",
+        "label": "asUSDFEarn UUPS wrapper share-accounting minter",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The reviewed deposit path transfers USDF into the wrapper and mints calculated asUSDF shares; it has no independent free-mint entry point.",
+        "observedAt": "2026-07-15",
+        "observedBlock": 110184782,
+        "sources": [
+          {
+            "label": "Pinned Astherus asUSDFEarn reference source",
+            "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
+          },
+          {
+            "label": "Sourcify exact-match asUSDFEarn implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x29f30635431426363d130aa163816ead1101662f?fields=sources"
+          }
+        ],
+        "evidence": "At BSC block 110184782, asUSDF has MINTER_AND_BURN_ROLE (0x144dc672...) assigned to this proxy, whose asUSDF() target is 0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb and whose EIP-1967 implementation is 0x29f30635431426363d130aa163816ead1101662f. The exact-match implementation's deposit path transfers USDF, computes shares, and then calls asUSDF.mint; it does not expose an independently privileged mint route."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861",
+        "label": "asUSDF token admin and asUSDFEarn UUPS upgrade timelock",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 21600,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "failureDomainKeys": [
+          "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
+        ],
+        "routeChecks": {
+          "signingModel": "The sole external proposer, executor, and canceller is Safe 0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f, threshold 4 of 8. The timelock also lists itself as proposer and executor but cannot originate an unscheduled operation.",
+          "rateLimits": "getMinDelay() returned 21,600 seconds. MAX_DELAY is 172,800 seconds, an execution-expiry window rather than an additional mandatory delay.",
+          "caps": "No on-chain maximum asUSDF share supply was found; an added minter or a mint-logic upgrade is unbounded rather than a raiseable capped path.",
+          "pausersAdminsUpgraders": "The timelock holds asUSDF DEFAULT_ADMIN_ROLE, which administers MINTER_AND_BURN_ROLE, and the wrapper implementation restricts _authorizeUpgrade to its immutable TIMELOCK_ADDRESS."
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 110184820,
+        "sources": [
+          {
+            "label": "Sourcify exact-match asUSDF token source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb?fields=sources"
+          },
+          {
+            "label": "Sourcify exact-match Astherus timelock source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xe829a87f4dfa41b032d8b6feca6c2213d6ee1861?fields=sources"
+          },
+          {
+            "label": "BSC control snapshot block 110184820",
+            "url": "https://bscscan.com/block/110184820"
+          }
+        ],
+        "evidence": "At blocks 110184782 and 110184820, asUSDF recognized this timelock as DEFAULT_ADMIN_ROLE, the wrapper's immutable TIMELOCK_ADDRESS resolved here, getMinDelay() was 21,600 seconds, and the timelock role inventory was Safe 0xa8c0...1c3f plus self for proposer and executor and that Safe alone for canceller. The default admin can grant a minter or change mint logic through the UUPS upgrade path after the delay."
+      },
+      {
+        "chain": "bsc",
+        "address": "0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f",
+        "label": "Astherus governance Safe (timelock proposer/executor/canceller)",
+        "role": "governor",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 8,
+        "timelockDelaySec": 21600,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x7df67339e14fa1b627eaa4b18509d53a940373e3",
+            "0xe8a17d35ef62944463b54727a8794c56b9283cf7",
+            "0x1b50157cbddc1a10605058c61782be828928b6ee",
+            "0xedcb08f3359ebff9079aeeb1988522710e5b5524",
+            "0x121af8ecbcdae0ebaed236401c3f0d72274ab992",
+            "0x9fde8ab7bf1b72d3c472834186ae5499e2d3682c",
+            "0x9f629c74617bcb41cc050ac7cf7fec36666686c4",
+            "0x5cf079ed2f240646a26d05d26a11a5a2b1c2d09d"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": null,
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+          "observedBlock": 110184782,
+          "observedAt": "2026-07-15",
+          "source": "onchain"
+        },
+        "failureDomainKeys": [
+          "bsc:0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f"
+        ],
+        "capDescription": "The Safe can schedule timelock operations that grant minters or upgrade the wrapper; no independent on-chain mint cap constrains the upgraded path.",
+        "routeChecks": {
+          "signingModel": "At the observed BSC snapshot, the Safe had eight owners with a four-signature threshold and was the only non-self proposer, executor, and canceller of the timelock.",
+          "pausersAdminsUpgraders": "The Safe also holds asUSDF ADMIN_ROLE, which can pause transfers. It controls mint-role and upgrade changes through the timelock's six-hour delay."
+        },
+        "observedAt": "2026-07-15",
+        "observedBlock": 110184782,
+        "sources": [
+          {
+            "label": "BSC Safe account",
+            "url": "https://bscscan.com/address/0xa8c0c6ee62f5ad95730fe23ccf37d1c1ffaa1c3f#readProxyContract"
+          },
+          {
+            "label": "Sourcify verified Safe CompatibilityFallbackHandler source",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4?fields=sources"
+          },
+          {
+            "label": "BSC control snapshot block 110184782",
+            "url": "https://bscscan.com/block/110184782"
+          }
+        ],
+        "evidence": "At BSC block 110184782, getOwners() returned the listed eight owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor."
+      }
+    ],
+    "review": {
+      "evidence": "At BSC block 110184782 (hash 0x6c69322d76d1b36ffd46305ea6f10ed181953df19fc71101762d43bf7f101155), asUSDF recognized timelock 0xe829...1861 as DEFAULT_ADMIN_ROLE, asUSDFEarn 0xdb57...3695 as MINTER_AND_BURN_ROLE, and Safe 0xa8c0...1c3f as ADMIN_ROLE. The wrapper's EIP-1967 implementation was 0x29f306...1662f and its immutable TIMELOCK_ADDRESS was the same timelock. At block 110184820 (hash 0x1cbfdbaa4bf8113a21bd4ca779bbcea56078f280c90f2431062970fa8560bc95), that timelock's only external proposer, executor, and canceller was the 4-of-8 Safe. BscScan's RoleGranted and RoleRevoked history for the token resolves five grants and two revocations, including revocation of the deployer's default-admin and ADMIN roles; it supports the current role inventory without an untracked minter. The wrapper's verified source requires USDF deposits for ordinary share issuance, while the reviewed timelock route can authorize a new minter or change wrapper mint logic after six hours. The parent USDF issuance path remains represented by inheritedFrom.",
+      "reviewer": "Codex Safety Score V9 TERRA-III",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Aster asUSDF FAQ",
+          "url": "https://docs.asterdex.com/usdf-stablecoin/overview/faqs"
+        },
+        {
+          "label": "BSC asUSDF contract",
+          "url": "https://bscscan.com/token/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb"
+        },
+        {
+          "label": "Sourcify exact-match asUSDF token source",
+          "url": "https://sourcify.dev/server/v2/contract/56/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb?fields=sources"
+        },
+        {
+          "label": "Pinned Astherus asUSDFEarn reference source",
+          "url": "https://github.com/astherus-contract/ass-usdf-earn-contract/blob/752903309d775b12d6583c879d1f64db88e051ee/contracts/asUSDFEarn.sol"
+        },
+        {
+          "label": "BSC asUSDF role event history",
+          "url": "https://bscscan.com/address/0x917af46b3c3c6e1bb7286b9f59637fb7c65851fb#events"
+        },
+        {
+          "label": "BSC control snapshot block 110184782",
+          "url": "https://bscscan.com/block/110184782"
+        }
+      ]
+    }
+  }
+}

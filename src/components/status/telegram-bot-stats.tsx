@@ -19,7 +19,7 @@ const HEALTH_PRESENTATION: Record<CommsDeliveryHealth, { label: string; classNam
   {
     healthy: {
       label: "Healthy",
-      className: "text-green-700 dark:text-green-300",
+      className: "text-emerald-700 dark:text-emerald-300",
       icon: CircleCheck,
     },
     degraded: {

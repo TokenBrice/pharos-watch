@@ -1,0 +1,90 @@
+{
+  "id": "usdt-tether",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Coinbase MiCA non-compliant stablecoin restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Gemini non-MiCA-compliant stablecoin restrictions",
+        "url": "https://support.gemini.com/hc/en-us/articles/33437494572443-Non-MiCA-Compliant-Stablecoins"
+      },
+      {
+        "label": "ESMA MiCA register and webpage",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDT is a fiat-referenced dollar stablecoin marketed for payments, transfers, and 1:1 redemption through Tether for eligible customers."
+    },
+    "authorizationStatus": "issuer-announced-intent",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tether International, S.A. de C.V.",
+    "issuerDomicile": "El Salvador",
+    "licensingRegulator": "CNAD",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "warning-or-notice",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://tether.to/en/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Tether CEO Paolo Ardoino publicly committed on July 18 2025 (day the GENIUS Act was signed) that Tether will comply via the GENIUS Act foreign issuer pathway, with three years to meet all requirements including AML and audited reserves. Tether's January 27 2026 USAT press release explicitly states USDT is 'progressing towards GENIUS Act compliance' while USAT (issued by Anchorage Digital Bank, N.A.) serves the U.S. domestic market. No formal foreign-issuer registration has been filed for USDT — the Treasury equivalency-determination process is still in NPRM phase as of June 2026 and no comparability determination for El Salvador/Tether has been issued. foreignExceptionStatus remains unknown (more conservative than registration-pending) because no application framework is finalized and no formal filing exists. Historical CFTC and NYAG actions are tracked as enforcement-warning evidence for Tether/USDT history; they do not establish a current GENIUS authorization decision.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Tether USAT launch press release — USDT progressing towards GENIUS Act compliance",
+        "url": "https://tether.io/news/tether-announces-the-launch-of-usat-the-federally-regulated-dollar-backed-stablecoin-made-in-america/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-01-27",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CoinDesk: Tether CEO says he'll comply with GENIUS to come to U.S.",
+        "url": "https://www.coindesk.com/policy/2025/07/18/tether-ceo-says-he-ll-comply-with-genius-to-come-to-u-s-circle-says-it-s-set-now",
+        "sourceKind": "news",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Tether token terms",
+        "url": "https://tether.to/en/legal/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Tether transparency",
+        "url": "https://tether.to/en/transparency/",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "CFTC order filing and settling charges against Tether (2021)",
+        "url": "https://www.cftc.gov/PressRoom/PressReleases/8450-21",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2021-10-15",
+        "accessedAt": "2026-06-18"
+      },
+      {
+        "label": "NYAG settlement ending Bitfinex/Tether illegal activity in New York (2021)",
+        "url": "https://ag.ny.gov/press-release/2021/attorney-general-james-ends-virtual-currency-trading-platform-bitfinexs-illegal",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2021-02-23",
+        "accessedAt": "2026-06-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

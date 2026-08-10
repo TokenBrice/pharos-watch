@@ -1,0 +1,64 @@
+{
+  "id": "pusd-plume",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "pUSD is a non-interest-bearing USDC wrapper with payment-like use on Plume Chain. The legal issuer is Nest, a Marshall Islands DAO LLC, and the token explicitly restricts U.S. persons from minting. Whether secondary-market access or the payment use case brings it within GENIUS Act scope remains unresolved in proposed rulemaking."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Nest (Marshall Islands DAO LLC)",
+    "issuerDomicile": "Marshall Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.plume.org/plume/tokens/plume-usd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "pUSD is issued by Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892), not Plume directly. Plume manages the underlying BoringVault infrastructure. The token explicitly excludes U.S. persons from minting per Nest/Plume product documentation and RWA.xyz eligibility listing (Non-U.S. Investors only). No GENIUS authorization has been sought. Applicability remains unclear because secondary-market exposure to U.S. persons is possible and the GENIUS Act's foreign-issuer scope is still being defined in NPRMs.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Plume pUSD docs",
+        "url": "https://docs.plume.org/plume/tokens/plume-usd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Plume pUSD website",
+        "url": "https://plume.org/pusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "RWA.xyz pUSD asset page — lists Nest (Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892) as issuer; eligible investors: Non-U.S. Investor",
+        "url": "https://app.rwa.xyz/assets/pUSD",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases",
+        "Plume pUSD docs and product page",
+        "RWA.xyz pUSD asset page (issuer: Nest, Marshall Islands DAO LLC, LEI 254900BB9T1QYAT04892; eligible investors: Non-U.S. only)",
+        "Cryptonews Plume Nest product guide (US persons excluded from vaults)",
+        "Federal Register GENIUS Act NPRMs (OCC, FDIC, FinCEN/OFAC, Treasury)",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for pUSD. Issuer (Nest, Marshall Islands DAO LLC) explicitly restricts U.S. persons and has made no public GENIUS authorization filing.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

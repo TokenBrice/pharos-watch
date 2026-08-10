@@ -1,0 +1,109 @@
+{
+  "id": "ftusd-flying-tulip",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.flyingtulip.com/"
+      },
+      {
+        "label": "Website",
+        "url": "https://flyingtulip.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "The ftUSD mint/redeem token path is documented as oracleless, but the live reserve strategies borrow against collateral in Aave-compatible markets and therefore depend on venue price oracles and liquidation mechanics. The token is not itself a borrower-owned collateral market with an oracle-triggered liquidation branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "Flying Tulip describes an oracleless ftUSD mint/redeem token path rather than a borrower-owned collateral market. Its live lending strategies are a separate reserve layer with venue oracle and liquidation exposure, so this disposition is limited to the token-level branch model.",
+      "sources": [
+        {
+          "label": "Flying Tulip ftUSD product documentation",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip ftUSD product documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "Flying Tulip contract docs list separate ftUSD core and mint/redeem contracts on Ethereum and Sonic, and sale docs note bridging is not necessary when assets are held on the right network. The row is reviewed as native per-chain issuance with no material bridge route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Flying Tulip contract addresses",
+        "url": "https://docs.flyingtulip.com/contract-addresses/"
+      },
+      {
+        "label": "Flying Tulip sale process",
+        "url": "https://docs.flyingtulip.com/guides/sale-process/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+        "protocol": "Flying Tulip issuer-native ftUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native ftUSD issuance on ethereum: owner() of the ftUSD token returns the Flying Tulip 3/5 Safe 0x1118e1c057211306a40a4d7006c040dbfe1370cb and minter() returns the Flying Tulip minter 0x56c5892b0cf41b792217ccdd208f0fa85b178ca9 (same authorities on both chains, verified on-chain 2026-07-20); native per-chain issuance with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ftUSD on ethereum explorer (owner()/minter() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+        "destinationChain": "sonic",
+        "canonicalChain": "sonic",
+        "contractAddress": "0xf7d85ec4e7710f71992752eac2111312e73e9c9c",
+        "protocol": "Flying Tulip issuer-native ftUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native ftUSD issuance on sonic: owner() of the ftUSD token returns the Flying Tulip 3/5 Safe 0x1118e1c057211306a40a4d7006c040dbfe1370cb and minter() returns the Flying Tulip minter 0x56c5892b0cf41b792217ccdd208f0fa85b178ca9 (same authorities on both chains, verified on-chain 2026-07-20); native per-chain issuance with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ftUSD on sonic explorer (owner()/minter() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf7d85ec4e7710f71992752eac2111312e73e9c9c"
+          }
+        ]
+      }
+    ]
+  }
+}

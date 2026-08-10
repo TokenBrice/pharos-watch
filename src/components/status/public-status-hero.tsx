@@ -28,7 +28,7 @@ const HERO_COPY = {
     headline: "Public surface steady.",
     /* Flat card; no accent stripe when healthy. */
     shell: "",
-    accentDot: "bg-green-500",
+    accentDot: "bg-emerald-500",
   },
   degraded: {
     headline: "Public surface under pressure.",

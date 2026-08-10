@@ -1,0 +1,60 @@
+{
+  "id": "stcusd-cap",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Cap contract addresses",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
+      {
+        "label": "Cap stcUSD mechanics",
+        "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+      },
+      {
+        "label": "stcUSD proxy (Etherscan)",
+        "url": "https://etherscan.io/address/0x88887be419578051ff9f4eb6c858a951921d8888#code"
+      },
+      {
+        "label": "StakedCap implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31?tab=contract"
+      },
+      {
+        "label": "StakedCap full verified source (Sourcify)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31"
+      },
+      {
+        "label": "cUSD implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/address/0xa76645e15c267b876999bf7689e0b2c1ee29bfe6?tab=contract"
+      },
+      {
+        "label": "Cap Vault pause controls (cap-contracts)",
+        "url": "https://github.com/cap-labs-dev/cap-contracts/blob/main/contracts/vault/Vault.sol"
+      },
+      {
+        "label": "Cap platform terms",
+        "url": "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use"
+      },
+      {
+        "label": "Cap cUSD reserve transparency",
+        "url": "https://cap.app/vault/reserves/cUSD"
+      },
+      {
+        "label": "Cap contracts repository",
+        "url": "https://github.com/cap-labs-dev/cap-contracts"
+      },
+      {
+        "label": "Archived Cap stcUSD mechanics",
+        "url": "https://web.archive.org/web/20260622023019/https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+      },
+      {
+        "label": "Ethereum PublicNode RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "sourceFreeRationale": "Explicit inherited: the verified stcUSD wrapper imposes no direct holder restriction, and its material freeze exposure routes through its ERC-4626 claim on the named upstream cusd-cap, whose verified Vault exposes governance-controlled protocol- and asset-level pause. The wrapper's bounded UUPS upgrade path (external AccessControl, one-day TimelockController, 3-of-5 governance Safe) can introduce a future holder control but none is deployed.",
+    "evidence": "Reviewed 2026-07-30. At Ethereum block 25570002 (0x1875cd2), EIP-1967 implementation slots still resolved the stcUSD proxy 0x88887be419578051ff9f4eb6c858a951921d8888 to StakedCap 0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and the cUSD proxy 0xcccc62962d17b8914c62d74ffb843d73b2a3cccc to CapToken 0xa76645e15c267b876999bf7689e0b2c1ee29bfe6 (eth_getStorageAt on the EIP-1967 implementation slot via PublicNode). The Sourcify exact-match StakedCap source tree (40 files, re-opened 2026-07-30) contains standard ERC-4626/ERC-20 transfer paths and no pause, blacklist, freeze, seize, or address-lock function. The freeze authority is the named upstream: the official cap-contracts Vault.sol inherited by CapToken exposes governance-gated pauseProtocol() and pauseAsset() with whenNotPaused transfer and vault paths (re-opened 2026-07-30), matching the separately reviewed cusd-cap direct system-wide pause verdict (reviewedAt 2026-07-14). stcUSD's freeze exposure is therefore inherited from cusd-cap through its ERC-4626 asset claim. The wrapper's own bounded UUPS upgrade path (external AccessControl, one-day TimelockController 0xd8236031d8279d82e615af2bfab5fc0127a329ab, 3-of-5 governance Safe, verified at block 25531350) can introduce a future holder control but none is deployed. Cap's terms and reserve dashboard document no additional deployed holder-control mechanism.",
+    "reviewer": "Kimi T26 wave2 access review",
+    "reviewedAt": "2026-07-30"
+  }
+}

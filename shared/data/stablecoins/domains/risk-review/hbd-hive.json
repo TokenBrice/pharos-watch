@@ -1,0 +1,58 @@
+{
+  "id": "hbd-hive",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://developers.hive.io/"
+      },
+      {
+        "label": "Website",
+        "url": "https://hive.io/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "Hive derives the HIVE/HBD conversion price from fresh scheduled-witness submissions, takes their median, and then takes the median over a 3.5-day history window; protocol-wide debt caps can constrain the effective conversion price and HBD issuance.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "HBD is protocol-level debt backed by the value of HIVE and converted under one consensus-wide price-feed and debt-ratio rule set. Holders do not open borrower-specific collateral positions, and Hive exposes no separately liquidatable collateral markets requiring branch rows.",
+      "sources": [
+        {
+          "label": "Hive whitepaper price-feed consensus",
+          "url": "https://gitlab.syncad.com/hive/hive-whitepaper/-/blob/master/whitepaper/3technical.tex"
+        },
+        {
+          "label": "Hive median-feed implementation",
+          "url": "https://gitlab.syncad.com/hive/hive/-/blob/develop/libraries/chain/database.cpp"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hive whitepaper asset definition",
+        "url": "https://gitlab.syncad.com/hive/hive-whitepaper/-/blob/master/whitepaper/2assets.tex"
+      },
+      {
+        "label": "Hive median-feed and debt-cap implementation",
+        "url": "https://gitlab.syncad.com/hive/hive/-/blob/develop/libraries/chain/database.cpp"
+      },
+      {
+        "label": "Hive feed-window and conversion-delay constants",
+        "url": "https://gitlab.syncad.com/hive/hive/-/blob/develop/libraries/protocol/include/hive/protocol/config.hpp"
+      }
+    ]
+  }
+}

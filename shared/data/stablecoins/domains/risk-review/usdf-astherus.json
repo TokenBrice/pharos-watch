@@ -1,0 +1,58 @@
+{
+  "id": "usdf-astherus",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Aster USDF BNB Chain token contract",
+        "url": "https://bscscan.com/address/0x5a110fc00474038f6c02e89c707d638602ea44b5#code"
+      }
+    ],
+    "evidence": "The verified USDF token source exposes an ADMIN_ROLE-gated pause() function. Its paused transfer hook makes the contract-wide transfer path directly restrictable by the administrator, regardless of the separate inferred upstream exposure.",
+    "reviewer": "OpenAI Codex Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "Aster manages USDF backing through custodial USDT and offchain delta-neutral positions, without publishing a user-CDP liquidation oracle or market-specific feed inventory.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "USDF mints and redeems against USDT while Aster manages backing and hedge positions through Ceffu and Binance. Holders do not open permissionless collateralized debt positions with onchain per-collateral liquidation thresholds, auctions, backstops, or shutdown branches, so the V9 CDP branch inventory does not apply.",
+      "sources": [
+        {
+          "label": "Aster USDF FAQ",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/faqs"
+        },
+        {
+          "label": "Aster USDF fund custody and risk management",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+        },
+        {
+          "label": "Aster USDF capital flows",
+          "url": "https://docs.asterdex.com/product/usdf-stablecoin/how-usdf-works"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aster USDF FAQ",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/faqs"
+      },
+      {
+        "label": "Aster USDF fund custody and risk management",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+      },
+      {
+        "label": "Aster USDF peg mechanism",
+        "url": "https://docs.asterdex.com/product/usdf-stablecoin/maintaining-the-peg"
+      }
+    ]
+  }
+}

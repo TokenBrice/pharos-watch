@@ -1,0 +1,82 @@
+{
+  "id": "vbill-vaneck",
+  "reserves": [
+    {
+      "name": "VanEck Treasury Fund shares",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "VanEck Treasury Fund, Ltd.; U.S. Treasury; State Street Bank and Trust Company; Treasury-repo counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day",
+      "maturityDaysMax": 397
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Securitize VanEck VBILL product page",
+        "url": "https://securitize.io/primary-market/vaneck-vbill"
+      },
+      {
+        "label": "Securitize and VanEck VBILL launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+      }
+    ],
+    "rationale": "The issuer disclosure defines VBILL as shares of VanEck Treasury Fund, Ltd. and the fund portfolio as U.S. Treasury obligations and Treasury-collateralized repurchase agreements, with cash held to meet redemptions. It limits securities to maturities of 397 days or less and names State Street Bank and Trust Company as custodian. The reviewed row uses the exact live NAV adapter identity so its fund-share classification and failure-domain evidence join deterministically without inventing category weights.",
+    "compositionBasis": "VBILL product and launch disclosures, aligned to the live VanEck Treasury Fund shares identity",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The reserve asset classes and maximum maturity are disclosed, but current weights across Treasury bills, repos, cash, and any permitted pooled vehicles are not established by the reviewed sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "VanEck Treasury Fund shares",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "The issuer defines the permitted portfolio categories but does not publish a current category-weighted composition in the reviewed product disclosure."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "State Street Bank and Trust Company",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Securitize Fund Services",
+        "role": "other",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Securitize and VanEck VBILL launch disclosure",
+        "url": "https://investors.securitize.io/news/news-details/2025/VanEck-Launches-First-Tokenized-Fund-VBILL-on-Securitize-05-13-2025/default.aspx"
+      },
+      {
+        "label": "Securitize VanEck VBILL product page",
+        "url": "https://securitize.io/primary-market/vaneck-vbill"
+      }
+    ],
+    "uncertainty": "The launch disclosure identifies State Street as custodian and Securitize Fund Services as administrator, but does not establish account segregation, bankruptcy remoteness mechanics, or rehypothecation terms for the BVI fund."
+  }
+}

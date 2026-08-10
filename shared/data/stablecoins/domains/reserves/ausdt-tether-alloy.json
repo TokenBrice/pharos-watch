@@ -1,0 +1,13 @@
+{
+  "id": "ausdt-tether-alloy",
+  "reserves": [
+    {
+      "name": "Tether Gold (XAUT) collateral in Alloy vault",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "xaut-tether",
+      "depType": "collateral",
+      "blacklistable": true
+    }
+  ]
+}

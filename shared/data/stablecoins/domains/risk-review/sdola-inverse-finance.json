@@ -1,0 +1,274 @@
+{
+  "id": "sdola-inverse-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Inverse sDOLA product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Ethereum sDOLA verified source",
+        "url": "https://etherscan.io/address/0xb45ad160634c528Cc3D2926d9807104FA3157305#code"
+      },
+      {
+        "label": "Base sDOLA verified source",
+        "url": "https://base.blockscout.com/address/0xca78ee4544ec5a33af86f1e786efc7d3652bf005?tab=contract"
+      },
+      {
+        "label": "Optimism sDOLA verified source",
+        "url": "https://optimism.blockscout.com/address/0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e?tab=contract"
+      },
+      {
+        "label": "Arbitrum sDOLA verified source",
+        "url": "https://arbitrum.blockscout.com/address/0x7a1e123e41458aabab8068bfed6010d8f9480898?tab=contract"
+      },
+      {
+        "label": "Berachain sDOLA verified source (Routescan API)",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x02eaa69646183c069fc2b64f15923f27b9cf3b03"
+      },
+      {
+        "label": "Inverse dola-savings source (pinned commit)",
+        "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+      },
+      {
+        "label": "Inverse Finance disclaimer",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/disclaimer"
+      },
+      {
+        "label": "Inverse Finance transparency disclosure",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. Verified sources and ABIs for Ethereum, Base, Optimism, Arbitrum, and Berachain expose no local holder blacklist, freeze, pause, seizure, or transfer-stop method. sDOLA is nevertheless a tracked 100% DOLA savings-passthrough variant, and its parent DOLA has a confirmed direct holder-control posture. Variant inheritance therefore resolves sDOLA as Upstream; the prior explicit false override incorrectly suppressed the parent relationship.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "sDOLA is an ERC-4626 savings wrapper around DOLA and has no borrower-owned collateral positions or token-level liquidation engine. Its underlying DOLA exposure inherits the external FiRM oracle risk reviewed on the parent asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Inverse documents sDOLA as a DOLA savings wrapper: users deposit and withdraw DOLA while FiRM revenue accrues through the exchange rate. sDOLA holders do not open FiRM borrower positions, so there are no sDOLA collateral-market or liquidation branches to inventory; the underlying DOLA parent carries the separate FiRM oracle profile.",
+      "sources": [
+        {
+          "label": "Inverse sDOLA product guide",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola"
+        },
+        {
+          "label": "Inverse FiRM product guide",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inverse sDOLA product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/tokens/sdola"
+      },
+      {
+        "label": "Inverse FiRM product guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "sDOLA is native on Ethereum (ERC-4626 wrapper, locked by the CCIP LockReleaseTokenPool on transfer). Base, Optimism, Arbitrum, and Berachain deployments are burn-mint representations minted solely by the Chainlink CCIP BurnMintTokenPool on each chain (mint simulation verified on-chain).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Chainlink CCIP",
+        "slug": "ccip",
+        "url": "https://l2beat.com/interop/protocols/ccip",
+        "bridgeTypes": [
+          "messaging",
+          "burnAndMint",
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Inverse sDOLA docs",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
+      },
+      {
+        "label": "Inverse DOLA cross-chain guide",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide"
+      },
+      {
+        "label": "Chainlink CCIP docs",
+        "url": "https://docs.chain.link/ccip"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+        "protocol": "Inverse native issuance (sDOLA ERC-4626)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "sDOLA is native on Ethereum (immutable ERC-4626 wrapper over DOLA). The Chainlink CCIP LockReleaseTokenPool 0x05eEe76f456C51Be0459EC1c0a78bf177B2c877C (registered in the CCIP TokenAdminRegistry, read on-chain) locks sDOLA for cross-chain transfer.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xca78ee4544ec5a33af86f1e786efc7d3652bf005",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xd84e1B7e1a7A8D49167884855c3985ef4bCa45aB and reverts from other senders on base at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:base:0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab"
+        ]
+      },
+      {
+        "id": "optimism:0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xfc63c9c8ba44ae89c01265453ed4f427c80cbd4e",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x8404024d8f74ad2d20e82c184816b64d4184a018",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8404024d8F74Ad2D20E82c184816B64D4184A018 and reverts from other senders on optimism at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:optimism:0x8404024d8f74ad2d20e82c184816b64d4184a018"
+        ]
+      },
+      {
+        "id": "arbitrum:0x7a1e123e41458aabab8068bfed6010d8f9480898",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x7a1e123e41458aabab8068bfed6010d8f9480898",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0xbbc28DB61DF26B76D5F7D5Eed17eD4D6C278460e and reverts from other senders on arbitrum at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:arbitrum:0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e"
+        ]
+      },
+      {
+        "id": "berachain:0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+        "sourceChain": "ethereum",
+        "destinationChain": "berachain",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x02eaa69646183c069fc2b64f15923f27b9cf3b03",
+        "protocol": "Chainlink CCIP (sDOLA BurnMintTokenPool)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "berachain",
+        "controllerAddress": "0x8bbd036d018657e454f679e7c4726f7a8ece2773",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "eth_call mint() simulation succeeds from the CCIP BurnMintTokenPool 0x8Bbd036d018657E454F679E7C4726F7a8ECE2773 and reverts from other senders on berachain at 2026-07-20; pool registered in the Chainlink CCIP token directory (BurnMintTokenPool 1.5.1). Token owner is Inverse's GovernanceProxy (verified CCIP receiver).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Chainlink CCIP token registry (sDOLA)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet"
+          },
+          {
+            "label": "Inverse Finance Docs",
+            "url": "https://docs.inverse.finance/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:berachain:0x8bbd036d018657e454f679e7c4726f7a8ece2773"
+        ]
+      }
+    ]
+  }
+}

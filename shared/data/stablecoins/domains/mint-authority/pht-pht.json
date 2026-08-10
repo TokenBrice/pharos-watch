@@ -1,0 +1,199 @@
+{
+  "id": "pht-pht",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "manual-review",
+    "summary": "PHT's Ethereum deployment mints through a Maker-style DaiJoin and Vat path. Polygon uses an owner-controlled UUPS LayerZero OFT, while Tron uses an unverified, non-proxy PhtOFT whose owner can set peers and the LayerZero delegate. Fixed-block deployment supplies put Tron at 15.8053% of the summed observed supply on 2026-07-14. The Polygon and Tron control identities are now sourced, but the Tron peer, endpoint, and cross-chain mint semantics and the Ethereum Vat ward set remain unresolved, so the posture stays unbounded-or-compromised.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+      ],
+      "implementationAddresses": [
+        "0x98210a4b34eafd668838108c99ad13a2b4340618"
+      ],
+      "adminAddresses": [
+        "0xc6f1cfa1b5840e5afe56f7b7ef3c52c3bcda06c5"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Polygon PHT OFT owner",
+      "observedAt": "2026-07-14",
+      "observedBlock": 90223288,
+      "sources": [
+        {
+          "label": "Polygon Blockscout - PHT OFT proxy",
+          "url": "https://polygon.blockscout.com/address/0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+        },
+        {
+          "label": "Polygon Blockscout - PHT OFT implementation",
+          "url": "https://polygon.blockscout.com/address/0x98210a4b34eafd668838108c99ad13a2b4340618"
+        },
+        {
+          "label": "Polygon public RPC fixed-block reads",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "APACX PHT vault/CDP mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "PHT mints through the Maker-style Vat CDP engine. At 2026-07-20 the Vat reads Line()=250,000,000 rad (global debt ceiling) and ilk USDT-A line=500,000,000 rad; the ward mapping is not enumerable, so the ability to change those ceilings remains unresolved.",
+        "sources": [
+          {
+            "label": "Etherscan Vat CDP engine",
+            "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
+          }
+        ],
+        "evidence": "At 2026-07-20 (Ethereum): Vat 0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c live=1; Line()=250,000,000 rad; ilks(USDT-A).line=500,000,000 rad, Art=6,939. rely() simulations and wards() reads for the identified deployment-related addresses returned not-authorized/zero, but wards is a non-enumerable mapping, so those probes cannot establish that no other live ward can change the ceilings.",
+        "chain": "ethereum",
+        "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
+      },
+      {
+        "label": "DaiJoin adapter (sole warded minter on PHT ETH)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "DaiJoin.exit() mints PHT permissionlessly when a user withdraws collateral-backed credit from the Vat; supply is bounded by the Vat's per-ilk debt ceilings set by Vat wards.",
+        "sources": [
+          {
+            "label": "Etherscan PHT DaiJoin adapter",
+            "url": "https://etherscan.io/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
+          }
+        ],
+        "evidence": "At Ethereum block 25295271: PHT token (dai.sol fork, AGPL-3.0) wards(DaiJoin 0x4bd328FD071b03e157d0a89dE199d9E005D71057)=1 (warded). All other checked addresses returned 0: deployer 0x813da81, Vat 0xEE0CDe42, vault contracts 0x59A904af/0x881bA6, EOA 0x76dB01fC. DaiJoin.exit() calls dai.mint(usr, wad) permissionlessly based on Vat internal state. Vat (0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c, live=1) is the CDP engine. DaiJoin.dai()=0xBe370Ad (confirmed PHT token).",
+        "chain": "ethereum",
+        "address": "0x4bd328FD071b03e157d0a89dE199d9E005D71057"
+      },
+      {
+        "label": "Vat CDP engine admin (debt ceiling / risk param control)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Etherscan Vat CDP engine",
+            "url": "https://etherscan.io/address/0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
+          }
+        ],
+        "evidence": "At 2026-07-20, rely() on the Vat reverted with 'Vat/not-authorized' from the identified deployment-related addresses and wards() reads returned zero for each. Because wards is a non-enumerable mapping, these probes do not resolve an unknown ward that could change debt ceilings or risk parameters.",
+        "chain": "ethereum",
+        "address": "0xEE0CDe42Bb6841736d809d2Bb63EbF59dB6E336c"
+      },
+      {
+        "label": "Polygon PHT OFT owner",
+        "role": "bridge-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "polygon",
+        "address": "0xc6F1cfA1b5840E5aFe56F7B7eF3c52c3bcDa06C5",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 90223288,
+        "sources": [
+          {
+            "label": "Polygon Blockscout - PHT OFT proxy",
+            "url": "https://polygon.blockscout.com/address/0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+          },
+          {
+            "label": "Polygon Blockscout - PHT OFT implementation",
+            "url": "https://polygon.blockscout.com/address/0x98210a4b34eafd668838108c99ad13a2b4340618"
+          },
+          {
+            "label": "Polygon public RPC fixed-block reads",
+            "url": "https://polygon-bor-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Polygon block 90223288, the PHT proxy's EIP-1967 implementation was 0x98210a4b...0618 and its canonical admin slot was zero. The implementation returned the ERC-1967 UUID and contains upgradeToAndCall, confirming UUPS. owner() returned this EOA, which can administer the OFT and authorize upgrades without a resolved timelock or multisig."
+      },
+      {
+        "label": "Tron PHT OFT owner",
+        "role": "bridge-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "tron",
+        "address": "TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 84456628,
+        "sources": [
+          {
+            "label": "Tronscan API - Tron PHT contract metadata",
+            "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+          },
+          {
+            "label": "TronGrid constant-contract API",
+            "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+          },
+          {
+            "label": "TronGrid latest-block API",
+            "url": "https://api.trongrid.io/wallet/getnowblock"
+          }
+        ],
+        "evidence": "Tronscan identifies TXdN5...mmrs as an unverified, non-proxy PhtOFT and exposes owner-only setPeer and setDelegate selectors. At Tron block 84456628, owner() returned hex 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, the base58 EOA recorded here. Current peer, endpoint, and mint/burn route semantics were not independently resolved, so the owner's exact durable-supply authority remains unknown."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "PHT token (Ethereum) - Blockscout",
+          "url": "https://eth.blockscout.com/address/0xBe370Ad45D44eB45174C4Ec60b88839feF32C077"
+        },
+        {
+          "label": "DaiJoin adapter (Ethereum)",
+          "url": "https://eth.blockscout.com/address/0x4bd328FD071b03e157d0a89dE199d9E005D71057"
+        },
+        {
+          "label": "PHT overview",
+          "url": "https://docs.apacx.io/what-is-pht/pht-overview"
+        },
+        {
+          "label": "PHT mint/redeem guide",
+          "url": "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht"
+        },
+        {
+          "label": "Polygon Blockscout - PHT OFT proxy",
+          "url": "https://polygon.blockscout.com/address/0xe75220cb014dfb2d354bb59be26d7458bb8d0706"
+        },
+        {
+          "label": "Polygon Blockscout - PHT OFT implementation",
+          "url": "https://polygon.blockscout.com/address/0x98210a4b34eafd668838108c99ad13a2b4340618"
+        },
+        {
+          "label": "Polygon public RPC fixed-block reads",
+          "url": "https://polygon-bor-rpc.publicnode.com"
+        },
+        {
+          "label": "Tronscan API - Tron PHT contract metadata",
+          "url": "https://apilist.tronscanapi.com/api/contract?contract=TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs"
+        },
+        {
+          "label": "TronGrid constant-contract API",
+          "url": "https://api.trongrid.io/wallet/triggerconstantcontract"
+        },
+        {
+          "label": "TronGrid latest-block API",
+          "url": "https://api.trongrid.io/wallet/getnowblock"
+        }
+      ],
+      "evidence": "Ethereum block 25531532 totalSupply was 225,011,899.761301444119160709 PHT through the reviewed Maker-style DaiJoin/Vat deployment. Polygon block 90223288 totalSupply was 11,984,287.03 PHT; that deployment is an owner-controlled UUPS LayerZero OFT. Tron block 84456628 totalSupply was 44,489,605.678905 PHT; Tronscan identifies it as an unverified, non-proxy PhtOFT with an EOA owner able to set peers and the endpoint delegate. Across the summed deployment supplies of 281,485,792.470206444119160709 PHT, Tron represented 15.80527574%, not the stale 19.8% in the curation report. This is an observed deployment-supply materiality basis, not a canonical-circulating reconciliation. The Ethereum Vat ward set and the Tron peer/endpoint/mint route remain unresolved. Probes of known deployment-related addresses did not identify a Vat ward, but the non-enumerable wards mapping prevents proving the global and ilk ceilings immutable. The DaiJoin ward on the PHT token is 0x4bd328FD071b03e157d0a89dE199d9E005D71057 (wards=1). The Tron OFT owner is verified as TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4, and the Polygon/Tron PHT deployments are issuer-operated LayerZero OFTs using burn-mint (Polygon endpoint verified as LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c). Re-reviewed 2026-07-27 (Kimi data review): APACX has published no new admin-control inventory since the 2026-07-20 fixed-block reads, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review. Two structural unknowns remain recorded rather than resolved: (1) the current Tron PhtOFT peer, endpoint, receive/mint semantics, and owner-controlled configuration path on the unverified Tron deployment (15.80527574% of the observed summed deployment supply in the reviewed snapshot); (2) the Ethereum Vat ward set, which is a non-enumerable mapping, so the observed global and ilk debt ceilings cannot be proven immutable — economicCapSemantics is therefore recorded as raiseable, the conservative reading between the reviewed numeric ceilings and the unprovable ward history.",
+      "reviewer": "Kimi data review",
+      "reviewedAt": "2026-07-27",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "none"
+  }
+}

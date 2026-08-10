@@ -1,0 +1,20 @@
+{
+  "id": "europ-schuman",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "SALVUS",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — EMT issuers (EMTWP.csv), SALVUS entry dated 22/11/2024",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Schuman EUROP whitepaper",
+        "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
+      }
+    ]
+  }
+}

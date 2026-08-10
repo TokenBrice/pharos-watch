@@ -1,0 +1,10 @@
+{
+  "id": "jpyc-jpyc-v1",
+  "reserves": [
+    {
+      "name": "JPY reserve assets for legacy JPYC v1",
+      "pct": 100,
+      "risk": "low"
+    }
+  ]
+}

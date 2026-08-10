@@ -1,0 +1,116 @@
+{
+  "id": "idrt-rupiah-token",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "IDRT is a non-upgradeable Ownable ERC20 on Ethereum, BSC, and Polygon. On all three chains the token owner() is the same 4-of-6 Safe multisig (same six signers cross-chain). The owner() controls mint and burn. Harmony is excluded from this assessment (chain inactive).",
+    "controls": [
+      {
+        "label": "PT Rupiah Token Indonesia — 4-of-6 Safe (Ethereum)",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "threshold": 4,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0xf18c1ca6d004bee88752c5170488c915fba9a603",
+            "0x41fad55c32c44cc6e2b36de870c70292bb6f935e",
+            "0x031f9a3ccc3fa27331d0c87d622e73bf59a37073",
+            "0xed4e43105417d30ca59f5234a1396e79e3377395",
+            "0x3dd6ea51cd6e78d868f5d3d33deda5c1308f0ba4",
+            "0xf042bfbdd15caf27a592b0159f648721b3c2d659"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x0000000000000000000000000000000000000000",
+          "version": "1.3.0",
+          "observedBlock": 25571083,
+          "source": "onchain"
+        },
+        "evidence": "Re-verified 2026-07-20: at Ethereum block 25571083, IDRT (0x998ffe...) owner() = 0x109046f16d512843138218f061232f2cc7d7c9d7 (171-byte Safe proxy; getThreshold() = 4; getOwners() = 6 EOAs: 0xf18c1ca6..., 0x41fad55c..., 0x031f9a3c..., 0xed4e4310..., 0x3dd6ea51..., 0xf042bfbd...). At BSC block 111014993 owner() = 0x0e8b655e51d8166dad044f45f22e8d4eff652ea4 (171-byte Safe proxy, threshold 4, identical 6-owner set). At Polygon block 90540824 owner() = 0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae (171-byte Safe proxy, threshold 4, identical set). Prior review (Ethereum block 25295025, 2026-07-15) established Safe v1.3.0, no modules, no guard, and non-upgradeable Ownable ERC20 tokens on all three chains; owner() controls mint and burn. Harmony excluded (legacy bridge representation, dormant — see bridgeRouteRisk).",
+        "sources": [
+          {
+            "label": "IDRT Ethereum token",
+            "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
+          },
+          {
+            "label": "IDRT Ethereum owner Safe (probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x109046f16d512843138218f061232f2cc7d7c9d7"
+          },
+          {
+            "label": "IDRT BSC owner Safe (probed 2026-07-20)",
+            "url": "https://bscscan.com/address/0x0e8b655e51d8166dad044f45f22e8d4eff652ea4"
+          },
+          {
+            "label": "IDRT Polygon owner Safe (probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x109046f16d512843138218f061232f2cc7d7c9d7",
+        "failureDomainKeys": [
+          "issuer:pt-rupiah-token-indonesia",
+          "safe:ethereum:0x109046f16d512843138218f061232f2cc7d7c9d7",
+          "safe:bsc:0x0e8b655e51d8166dad044f45f22e8d4eff652ea4",
+          "safe:polygon:0xa1f0fc535ad0ebcae0ef81b2990fcd75465ad7ae"
+        ],
+        "observedAt": "2026-07-20"
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "implementationAddresses": [
+        "0x998ffe1e43facffb941dc337dd0468d52ba5b48a",
+        "0x66207e39bb77e6b99aab56795c7c340c08520d83",
+        "0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-20",
+      "observedBlock": 25571083,
+      "sources": [
+        {
+          "label": "IDRT Ethereum token",
+          "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a#code"
+        },
+        {
+          "label": "IDRT BSC token",
+          "url": "https://bscscan.com/address/0x66207e39bb77e6b99aab56795c7c340c08520d83#code"
+        },
+        {
+          "label": "IDRT Polygon token",
+          "url": "https://polygonscan.com/address/0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b#code"
+        }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer.",
+      "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Rupiah Token website",
+          "url": "https://rupiahtoken.com/"
+        },
+        {
+          "label": "IDRT Ethereum token (Etherscan)",
+          "url": "https://etherscan.io/address/0x998ffe1e43facffb941dc337dd0468d52ba5b48a"
+        },
+        {
+          "label": "Johannes Juara IDRT January 2026 AUP report",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_January_31_2026_bfb907c3fe.pdf?updated_at=2026-02-20T07%3A40%3A45.154Z"
+        },
+        {
+          "label": "Bappebti legality checker",
+          "url": "https://ceklegalitas.bappebti.go.id/"
+        }
+      ]
+    }
+  }
+}

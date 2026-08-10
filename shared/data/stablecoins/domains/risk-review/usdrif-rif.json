@@ -1,0 +1,168 @@
+{
+  "id": "usdrif-rif",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://wiki.rifonchain.com/frequently-asked-questions/web-app-faq"
+      },
+      {
+        "label": "Dapp",
+        "url": "https://dapp.rifonchain.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata or audit notes identify direct seizure, freeze, blacklist, privileged burn, proxy-upgrade, or chain-governance intervention authority despite decentralized governance labeling.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "RIF on Chain uses a replaceable RIF/USD PriceProvider and published Medianizer for one global RIF reserve bucket; no stronger failover tier is documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "USDRIF is minted and redeemed against the single C0 RIF reserve bucket, whose global coverage and system states use one RIF/USD price path. The protocol has no borrower-specific collateral positions or market-specific oracle and liquidation branches; below its final coverage threshold it enters one irreversible system-wide liquidation state.",
+      "sources": [
+        {
+          "label": "RIF on Chain main concepts",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
+        },
+        {
+          "label": "RIF on Chain system states",
+          "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RIF on Chain main concepts",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/main-concepts"
+      },
+      {
+        "label": "RIF on Chain verified contracts",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/smart-contracts/contracts-verification"
+      },
+      {
+        "label": "RIF on Chain system states",
+        "url": "https://docs.moneyonchain.com/rdoc-contract/rif-on-chain-platform/system-states"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USDRIF is native to Rootstock (a RIF/DOC-collateralized CDP stablecoin launched Sep 2023, contract 0x3a15461d..., a plain ERC-20 with no cross-chain code). Its sole cross-chain supply path is a LayerZero OFT route: a dedicated OFT Adapter (lockbox) on Rootstock (0xb2ee5502...) locks native USDRIF and a burn/mint OFT representation (the verified \"MyOFT\" contract 0x8eef5ed..., Endpoint V2) is minted on Arbitrum. On-chain checks confirm the lockbox (adapter token()=native USDRIF, approvalRequired=true) holds ~61,268 USDRIF locked, matching the Arbitrum OFT supply 1:1, and the OFT is peered only to Rootstock (EID 30333). Because the durable route is a third-party LayerZero OFT Adapter/lockbox control surface, it is classified external-lock-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "explorer",
+        "name": "LayerZero OFT (Arbitrum MyOFT contract)",
+        "slug": "layerzero",
+        "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft"
+        ],
+        "note": "Verified Arbitrum contract named MyOFT, inherits LayerZero OFT standard, uses ILayerZeroEndpointV2 with lzSend/lzReceive. Mint/burn OFT representation on the destination chain."
+      },
+      {
+        "source": "issuer",
+        "name": "Rootstock LayerZero/Stargate OFT Adapter integration",
+        "slug": "rootstock-layerzero",
+        "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter-lockbox"
+        ],
+        "note": "Rootstock joined LayerZero (Mar 2025); native Rootstock assets go multichain via the OFT (Adapter/Lockbox) standard with Stargate as the first dApp. Home chain locks, destination mints."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Arbiscan: USDRIF Arbitrum token (verified MyOFT LayerZero OFT contract)",
+        "url": "https://arbiscan.io/token/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+      },
+      {
+        "label": "Rootstock blog: rBTC and RIF go multichain - LayerZero integrates with Rootstock (OFT standard)",
+        "url": "https://rootstock.io/blog/rbtc-and-rif-go-multichain-layerzero-integrates-with-rootstock/"
+      },
+      {
+        "label": "Rootstock blog: Introducing USDRIF (native RIF-collateralized CDP, Sep 2023)",
+        "url": "https://rootstock.io/blog/new-stablecoin-protocol-launched-on-rootstock-introducing-usdrif/"
+      },
+      {
+        "label": "Stargate docs: OFT internal routes (LayerZero OFT/Adapter lock-mint mechanism)",
+        "url": "https://docs.stargate.finance/primitives/routes/oft"
+      }
+    ],
+    "routes": [
+      {
+        "id": "rootstock:0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+        "destinationChain": "rootstock",
+        "canonicalChain": "rootstock",
+        "contractAddress": "0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37",
+        "protocol": "RIF On Chain native CDP issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: native USDRIF token on Rootstock whose governor() resolves to the MoC Governor 0x3b8853df65afbd94853e6d77ee0ab5590f41bb08; USDRIF is minted natively against overcollateralized RIF/DOC via the RIF On Chain protocol. No bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDRIF token on Rootstock explorer",
+            "url": "https://explorer.rootstock.io/address/0x3a15461d8ae0f0fb5fa2629e9da7d66a794a6e37"
+          },
+          {
+            "label": "RIF On Chain documentation",
+            "url": "https://rifonchain.com/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "sourceChain": "rootstock",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "rootstock",
+        "contractAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "protocol": "LayerZero OFT (via Rootstock OFT adapter lockbox)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: this USDRIF deployment is a LayerZero OFT (endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c, owner/delegate 0xb2395eaaeb03fb1f46647c423378b24f2e906305) minted against native USDRIF locked in the Rootstock OFT adapter 0xb2ee5502... (adapter token() = native USDRIF, approvalRequired = true, ~61k USDRIF locked matching OFT supply 1:1, peered only to Rootstock EID 30333). Mint authority is the OFT contract itself on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x8eef5ed361c6823156d936209e23a8e0349e5c61",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+        ],
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDRIF token on Arbiscan",
+            "url": "https://arbiscan.io/address/0x8eef5ed361c6823156d936209e23a8e0349e5c61"
+          },
+          {
+            "label": "RIF On Chain documentation",
+            "url": "https://rifonchain.com/"
+          }
+        ]
+      }
+    ]
+  }
+}

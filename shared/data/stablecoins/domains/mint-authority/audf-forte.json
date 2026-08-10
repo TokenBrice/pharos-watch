@@ -1,0 +1,145 @@
+{
+  "id": "audf-forte",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "AUDF uses a 2/5 Admin Safe that holds DEFAULT_ADMIN_ROLE and MINT_ROLE on Ethereum, Polygon, Base, and Avalanche; on Redbelly the Safe holds DEFAULT_ADMIN_ROLE and MINT_ROLE is currently unassigned (granting runs through the Safe). The Ethereum MINT_ROLE also has a second holder: a StablecoinMintBurnOFTAdapter contract owned by the same Safe. ProxyAdmin across chains is owned by the Admin Safe.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+      ],
+      "implementationAddresses": [
+        "0xc9357d8fb84dd3041612dc5b2a2cd914d9405572"
+      ],
+      "adminAddresses": [
+        "0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9",
+        "0x6929Fd915b0755EfDC255eA841B68a263A362C5A"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "AUDF Admin Safe (DEFAULT_ADMIN + MINT_ROLE, multichain)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "AUDF Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+        },
+        {
+          "label": "AUDF admin Safe API",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x6929Fd915b0755EfDC255eA841B68a263A362C5A",
+        "label": "AUDF Admin Safe (DEFAULT_ADMIN + MINT_ROLE, multichain)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "threshold": 2,
+        "signerCount": 5,
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x291aB44f97d76a65CD3fDC171C415543716296dE",
+            "0x4870de5A77E39d433050a02d393edeBFb039E5ae",
+            "0xB1BC0548A2A9afa1F3eB7B76c1cE6f51dc23D351",
+            "0x5280a66b32426FECaae87694F84cC46edfeC65D7",
+            "0xa39c07e5c15a065ceA1E51b50278fF57094D11e8"
+          ],
+          "threshold": 2,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "source": "onchain",
+          "observedBlock": 25573497,
+          "observedAt": "2026-07-20"
+        },
+        "sources": [
+          {
+            "label": "AUDF Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+          },
+          {
+            "label": "AUDF admin Safe API",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x6929Fd915b0755EfDC255eA841B68a263A362C5A/"
+          }
+        ],
+        "evidence": "At Ethereum block 25573497, Safe reads returned version 1.3.0, the listed five owners, threshold 2, and no enabled modules; prior reviewed Safe state records a zero guard. Confirmed DEFAULT_ADMIN_ROLE and MINT_ROLE on ETH via RoleGranted logs; same Safe confirmed on Polygon and Base via role logs; on Avalanche confirmed via hasRole(DEFAULT_ADMIN_ROLE) returning true and hasRole(MINT_ROLE) returning true at latest block. ProxyAdmin on ETH (0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9) is owned by this Safe; the same ProxyAdmin is confirmed on Avalanche via the proxy-admin EIP-1967 slot."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91",
+        "label": "AUDF Ethereum OFT adapter MINT_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "AUDF Sourcify implementation",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+          },
+          {
+            "label": "Blockscout AUDF OFT adapter",
+            "url": "https://eth.blockscout.com/address/0xD1Ccc777949Bd8c25A0C73BA0D20303C36EE6A91"
+          }
+        ],
+        "evidence": "Identified as StablecoinMintBurnOFTAdapter (LayerZero OFT cross-chain bridge adapter). owner() returned 0x6929Fd915b0755EfDC255eA841B68a263A362C5A — the Admin Safe. Upgrade and operational authority is therefore under the same 2/5 Safe."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfd5d8237da011a140949eb23517fbbb9edf142ce",
+        "label": "AUDF Polygon/Base EOA MINT_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "AUDF Polygon RoleGranted logs",
+            "url": "https://polygon.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=99999999&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+          }
+        ],
+        "evidence": "RoleGranted logs on Polygon and Base both show this EOA holding MINT_ROLE (role hash 0x22435ed...) alongside the Admin Safe. eth_getCode returned no bytecode (EOA). This appears to be Forte's operational minting key."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Forte AUDF",
+          "url": "https://www.forteaud.com/"
+        },
+        {
+          "label": "Forte AUDF whitepaper",
+          "url": "https://www.forteaud.com/s/Forte-AUDF-Whitepaper-140324.pdf"
+        },
+        {
+          "label": "AUDF Sourcify implementation",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xc9357d8fb84dd3041612dc5b2a2cd914d9405572?fields=sources,abi,metadata"
+        },
+        {
+          "label": "AUDF RoleGranted logs (ETH)",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b&fromBlock=0&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AUDF on Redbelly explorer (roles verified 2026-07-20)",
+          "url": "https://explorer.redbelly.network/address/0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b"
+        }
+      ],
+      "evidence": "2/5 Admin Safe confirmed as DEFAULT_ADMIN + MINT_ROLE holder on ETH, Polygon, Base, and Avax. ProxyAdmin owned by the same Safe on ETH and Avax. OFT adapter (ETH MINT_ROLE) owned by Safe. Operational EOA minter 0xfd5d8237 confirmed on Polygon and Base; same EOA absent from Avax (Safe-only on Avax). Redbelly re-verified 2026-07-20 at block 3075429 via governors.mainnet.redbelly.network (now publicly reachable): the token reports the same uniform implementation 0xc9357d8fb84dd3041612dc5b2a2cd914d9405572 and proxy admin 0x2dcafce3b4fc7aba1b822637b12d6156fc85edd9; hasRole confirms the Admin Safe 0x6929Fd915b0755EfDC255eA841B68a263A362C5A holds DEFAULT_ADMIN_ROLE on Redbelly while MINT_ROLE is held by neither the Safe, the operational EOA, nor the OFT adapter. Direct Safe/EOA mint paths and the Safe-controlled upgrade path have no independent quantitative cap, so the economic cap is unbounded. Forte publishes monthly independent audit evidence; the record identifies ASIC/AFSL conduct licensing but no named prudential issuer supervisor, so supervision remains attestation-only.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    }
+  }
+}

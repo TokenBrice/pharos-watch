@@ -1,0 +1,114 @@
+{
+  "id": "euri-banking-circle",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "EURI is issuer-minted/redeemed by Banking Circle; Ethereum and BSC both have the same EOA owner and same proxy-admin contract whose owner is also a confirmed EOA.",
+    "controls": [
+      {
+        "label": "Banking Circle issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Eurite about page",
+            "url": "https://www.eurite.com/about-us/"
+          },
+          {
+            "label": "EURI whitepaper",
+            "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+          }
+        ],
+        "evidence": "Banking Circle materials identify EURI as an issuer-managed MiCA EMT. On-chain addressable surfaces (owner EOA + proxy-admin EOA) confirmed; issuer-backend control corroborated by MiCA credit-institution licensing."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D",
+        "label": "EURI token owner (Ethereum and BSC)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURI token",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ],
+        "evidence": "owner() returned 0xfCA77c0891578E371ee9Ff34d6f653d8ec3d9e9D on both Ethereum (block 25294735) and BSC (block 103620570); eth_getCode = 0x on both chains (EOA confirmed)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC",
+        "label": "EURI EIP-1967 proxy admin (Ethereum and BSC)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Ethereum EURI token",
+            "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+          }
+        ],
+        "evidence": "EIP-1967 proxy admin slot returned 0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC on both Ethereum (block 25294735) and BSC (block 103620570). proxy-admin.owner() returned EOA 0x315ef9e4fECf88B7cFc860d7E995Ff72aD7c7A21 on both chains; eth_getCode = 0x (EOA confirmed)."
+      }
+    ],
+    "reconciliation": "unknown",
+    "review": {
+      "sources": [
+        {
+          "label": "Eurite about page",
+          "url": "https://www.eurite.com/about-us/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        },
+        {
+          "label": "Ethereum EURI token",
+          "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        },
+        {
+          "label": "Banking Circle 2024 audited financial statements",
+          "url": "https://www.eurite.com/wp-content/uploads/2025/07/Banking-Circle-S.A_Annual-Accounts_31.12.2024_Final_Signed-by-all-1.pdf"
+        },
+        {
+          "label": "CSSF entity notice naming Banking Circle",
+          "url": "https://www.cssf.lu/en/2025/01/warning-concerning-the-fraudulent-activities-carried-out-by-circle-group-s-a/"
+        }
+      ],
+      "evidence": "At Ethereum block 25294735 and BSC block 103620570: token owner = EOA 0xfCA77c... (no bytecode on both chains); EIP-1967 proxy admin = 0xE0c6d43e... (same address on both chains), proxy-admin.owner() = EOA 0x315ef9e4... (no bytecode on both chains). All on-chain addressable mint surfaces confirmed across both deployments. Issuer-backend control corroborated by MiCA credit-institution license. Eurite states that Ernst & Young performs periodic attestations, but the reviewed site exposes no dated token reserve examination; its only linked June item is a smart-contract audit. The latest published EY bank financial audit is for December 31, 2024 and does not reconcile EURI supply to reserves, so cadence and latest qualifying report date remain unavailable and reconciliation is unknown. The CSSF source matches Banking Circle S.A. as both a bank and e-money-token issuer, establishing prudential supervision of the issuer despite the assurance gap.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
+      "reviewedAt": "2026-07-15"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0xE0c6d43e59eF5C56339214e1dDC9f869805d82eC"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "EURI EIP-1967 proxy admin (Ethereum and BSC)",
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Ethereum EURI token",
+          "url": "https://etherscan.io/address/0x9d1a7a3191102e9f900faa10540837ba84dcbae7"
+        },
+        {
+          "label": "Eurite about page",
+          "url": "https://www.eurite.com/about-us/"
+        },
+        {
+          "label": "EURI whitepaper",
+          "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-Whitepaper.pdf"
+        }
+      ]
+    }
+  }
+}

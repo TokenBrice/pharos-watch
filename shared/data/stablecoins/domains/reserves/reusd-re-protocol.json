@@ -1,0 +1,144 @@
+{
+  "id": "reusd-re-protocol",
+  "reserves": [
+    {
+      "name": "Off-chain insurance / reinsurance capital",
+      "pct": 81.5,
+      "risk": "medium",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Re Protocol partner reinsurers and Regulation 114 trust counterparties",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "sUSDe (delta-neutral ETH basis)",
+      "pct": 15,
+      "risk": "high",
+      "coinId": "susde-ethena",
+      "depType": "collateral",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena Labs and hedge counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "USDC reserves",
+      "pct": 2.5,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle Internet Financial",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "reUSD / sUSDe LP position",
+      "pct": 0.7,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Re Protocol and Ethena liquidity contracts",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDT reserves",
+      "pct": 0.2,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether Holdings",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDe (delta-neutral ETH basis)",
+      "pct": 0.1,
+      "risk": "high",
+      "coinId": "usde-ethena",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "Ethena Labs and hedge counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Re Protocol live metrics",
+        "url": "https://app.re.xyz/metrics"
+      },
+      {
+        "label": "Re Protocol transparency",
+        "url": "https://app.re.xyz/transparency"
+      },
+      {
+        "label": "Re Protocol About reUSD",
+        "url": "https://docs.re.xyz/products/about-reusd.md"
+      },
+      {
+        "label": "Re Protocol reUSD and reUSDe comparison",
+        "url": "https://docs.re.xyz/products/comparing-reusd-reusde.md"
+      }
+    ],
+    "rationale": "Live Re Metrics as of 2026-08-08 still reports off-chain insurance/reinsurance capital as a single aggregate ($179.6M across the protocol; per-token weights are not published). The six slice names and approximate weights from the live re-metrics adapter are retained, but the off-chain basket is now dispositioned as an untracked exogenous private-credit envelope rather than basket-needs-split because the issuer does not publish a further constituent split.",
+    "compositionBasis": "Re Metrics embedded portfolio snapshot normalized by the live re-metrics adapter. Refreshed 2026-08-09: offchain capital 179,595,196.93 against on-chain rows sUSDe 33,119,662.82, USDC 5,518,045.93, reUSD/sUSDe LP 1,432,132.66, USDT 322,214.02, USDe 229,992.50 and sUSDS 2.01 (total 40,622,049.94), giving an 81.55% off-chain share.",
+    "compositionAsOf": "2026-08-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The live source measures off-chain insurance and reinsurance capital in aggregate but does not enumerate trust assets, partner reinsurers, banking counterparties, or internal weights.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Off-chain insurance / reinsurance capital",
+        "pct": 81.5,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The live source measures off-chain capital in aggregate but does not publish a current split by trust asset, reinsurer, bank, or surplus note; it is therefore treated as an exogenous private-credit envelope rather than a splittable stablecoin basket."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "reUSD / sUSDe LP position",
+        "pct": 0.7,
+        "disposition": "not-applicable",
+        "rationale": "The LP is a protocol liquidity position rather than a separate tracked stablecoin reserve claim."
+      }
+    ]
+  }
+}

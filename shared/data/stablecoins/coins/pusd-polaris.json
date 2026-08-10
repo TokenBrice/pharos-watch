@@ -22,24 +22,6 @@
       "url": "https://x.com/polarisfinance_"
     }
   ],
-  "canBeBlacklisted": false,
-  "blacklistabilityReview": {
-    "reviewedStatus": false,
-    "sources": [
-      {
-        "label": "pUSD blog",
-        "url": "https://polarisfinance.io/blog/pusd-no-counterparty/"
-      },
-      {
-        "label": "Polaris flows",
-        "url": "https://polarisfinance.io/blog/polaris-flows/"
-      }
-    ],
-    "evidence": "Reviewed No: pUSD is pre-launch/testnet-only, and Polaris describes a CDP/Stability Pool design using pETH collateral and protocol flows rather than an issuer-managed token with a holder freeze/blacklist surface.",
-    "reviewer": "Codex stablecoin audit",
-    "reviewedAt": "2026-05-13",
-    "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pUSD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
-  },
   "governanceQuality": "single-entity",
   "status": "pre-launch",
   "announcedDate": "2026-01",

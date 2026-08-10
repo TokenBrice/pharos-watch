@@ -1,0 +1,174 @@
+{
+  "id": "eusd-electronic-usd",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Reserve Protocol documentation",
+        "url": "https://docs.reserve.org/"
+      },
+      {
+        "label": "eUSD RToken on Etherscan",
+        "url": "https://etherscan.io/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+      },
+      {
+        "label": "eUSD Central Auth on Etherscan",
+        "url": "https://etherscan.io/address/0xe1ec57c8ee970280f237863910b606059e9641c9"
+      },
+      {
+        "label": "eUSD governance Safe on Etherscan",
+        "url": "https://etherscan.io/address/0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064"
+      },
+      {
+        "label": "eUSD RTokenP1 verified implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833cf9ad19208372763a00aa1565dd40b3c"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-30 against the verified RTokenP1 implementation, Reserve documentation, and live Ethereum state. The deployed RToken transfer path rejects transfer-to-self but has no holder blacklist, freeze, seizure, or transfer-pause function, and the reserve basket's inherited USDC/USDT freeze exposure is unchanged. At Ethereum block 25,652,077, however, the Central Auth 0xe1ec57c8ee970280f237863910b606059e9641c9 still reported exactly one DEFAULT_ADMIN_ROLE member, the 3-of-5 Gnosis Safe 0xe8259842e71f4E44F2F68D6bfbC15EDA56E63064 (getThreshold() = 3 over the same five owners, no timelock), and the eUSD proxy 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f still resolved to the upgradeable RTokenP1 implementation 0x258ce833cf9ad19208372763a00aa1565dd40b3c. That Safe can grant itself OWNER and replace the token implementation with no delay, so holder-control functionality can be introduced instantly. The Yes result is therefore an established upgrade-control capability, not a claim that a blacklist is presently deployed.",
+    "reviewer": "Kimi safety-v9 W2 T54 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "EUSD is a Reserve Protocol RToken whose collateral plugins (Aave V3 USDC, Compound V3 USDC/USDT) use Chainlink price feeds for default detection: a defaultThreshold/delayUntilDefault state machine moves collateral SOUND -> IFFY -> DISABLED and triggers mechanistic RSR-staker seizure. Pricing uses standard single-source Chainlink feeds per asset with oracleError bounds and basket warmup; no redundant cross-provider failover is documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "EUSD is issued and redeemed 1:1 against a shared RToken basket. Reserve Protocol responds to collateral default by switching the basket, rebalancing through auctions, and using staked RSR as overcollateralization; users do not open borrower-specific debt positions with liquidatable collateral branches.",
+      "sources": [
+        {
+          "label": "Reserve Protocol overview",
+          "url": "https://github.com/reserve-protocol/protocol"
+        },
+        {
+          "label": "Reserve Protocol collateral plugin documentation",
+          "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/collateral.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve Protocol collateral plugin docs",
+        "url": "https://github.com/reserve-protocol/protocol/blob/master/docs/collateral.md"
+      },
+      {
+        "label": "Reserve Protocol documentation",
+        "url": "https://docs.reserve.org/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "eUSD is Ethereum-native (Reserve RToken); its Base and Arbitrum deployments are canonical-rollup-bridge lock-mint representations (Base L2StandardBridge and the Arbitrum Nitro token bridge, controller contracts read on-chain 2026-07-19/20).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Reserve eUSD launch article",
+        "url": "https://blog.reserve.org/introducing-the-electronic-dollar-eusd-cb9d8f50aae"
+      },
+      {
+        "label": "Sentz eUSD article",
+        "url": "https://www.sentz.com/blog/electronic-dollars-eusd-a-data-protecting-stablecoin"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f",
+        "protocol": "Reserve Protocol eUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: eUSD is an Ethereum RToken with permissionless basket mint (mint-authority review 2026-06-11).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "eUSD RToken",
+            "url": "https://etherscan.io/address/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f"
+          },
+          {
+            "label": "Reserve Protocol docs",
+            "url": "https://reserve.org/protocol/"
+          }
+        ]
+      },
+      {
+        "id": "base:0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+        "destinationChain": "base",
+        "contractAddress": "0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4",
+        "protocol": "Base canonical bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical Base bridge representation: the Base token's bridge() returns the Base L2StandardBridge predeploy 0x4200000000000000000000000000000000000010 (read 2026-07-20); L1 eUSD is escrowed in the corresponding L1StandardBridge on Ethereum. DefiLlama classifies the deployment bridgedFromETH.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x4200000000000000000000000000000000000010",
+        "failureDomainKeys": [
+          "protocol:base-canonical-bridge",
+          "contract:base:0x4200000000000000000000000000000000000010"
+        ],
+        "sources": [
+          {
+            "label": "eUSD Base token (bridge() = 0x4200...0010, read 2026-07-20)",
+            "url": "https://basescan.org/address/0xcfa3ef56d303ae4faaba0592388f19d7c3399fb4"
+          },
+          {
+            "label": "Base bridge docs",
+            "url": "https://docs.base.org/docs/base-chain/network-information/base-contracts"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x12275dcb9048680c4be40942ea4d92c74c63b844",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x12275dcb9048680c4be40942ea4d92c74c63b844",
+        "protocol": "Arbitrum canonical token bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "canonical-rollup-bridge",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical Arbitrum Nitro token-bridge representation: the L2 token exposes the IArbToken surface with l1Address() = L1 eUSD and l2Gateway() = the Arbitrum L2GatewayRouter 0x09e9222E96E7B4AE2a407B98d48e330053351EEe (read 2026-07-19); the L1 escrow is the canonical L1ERC20Gateway 0xa3A7B6F88361F48403514059F1F16C8E78d60EeC per the L1 GatewayRouter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x09e9222E96E7B4AE2a407B98d48e330053351EEe",
+        "failureDomainKeys": [
+          "protocol:arbitrum-canonical-token-bridge",
+          "contract:arbitrum:0x09e9222e96e7b4ae2a407b98d48e330053351eee"
+        ],
+        "sources": [
+          {
+            "label": "eUSD Arbitrum token (Arbitrum IArbToken surface, read 2026-07-19)",
+            "url": "https://arbiscan.io/address/0x12275dcb9048680c4be40942ea4d92c74c63b844"
+          },
+          {
+            "label": "Arbitrum token bridge docs",
+            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "id": "lisusd-lista",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "LISUSD uses a Maker-style wards() auth pattern with role values (1 = minter, 2 = manager). Confirmed minter wards: the 24h admin timelock and the HayJoin CDP exit adapter (the operational minter). A 3/6 manager Safe (wards = 2) can only set the supply cap. The timelock is the hardcoded DEFAULT_ADMIN gating rely/deny and owns the ProxyAdmin for both the token and HayJoin.",
+    "mintIncidents": [
+      {
+        "date": "2022-12-02",
+        "status": "resolved",
+        "summary": "After the Ankr aBNBc infinite-mint exploit crashed the collateral's market price, an attacker borrowed about 16.4M HAY (now lisUSD) against near-worthless aBNBc because Helio's oracle still priced it at the Chainlink BNB feed, leaving roughly 19M HAY of bad debt through the issuance route.",
+        "sources": [
+          {
+            "label": "CoinDesk — Helio attacker nets $15M after Ankr exploit",
+            "url": "https://www.coindesk.com/tech/2022/12/02/how-attackers-made-15m-from-staking-platform-helio-after-ankr-exploit"
+          },
+          {
+            "label": "rekt.news — Ankr & Helio",
+            "url": "https://rekt.news/ankr-helio-rekt"
+          },
+          {
+            "label": "Helio post-mortem — aBNBc exploit impact",
+            "url": "https://medium.com/@Helio-HAY/helio-protocols-impact-in-the-abnbc-exploit-6954e0199096"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "chain": "bsc",
+        "address": "0x4c798f81de7736620cd8e6510158b1fe758e22f7",
+        "label": "HayJoin CDP exit adapter (operational LISUSD minter ward, wards = 1)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "capDescription": "LISUSD uses wards() Maker-style auth; mint() reverts with 'LisUSD/not-authorized-minter' unless caller is a ward with role 1. HayJoin mints only when users exit the CDP system, bounded by the supply cap (settable by the wards=2 manager Safe).",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "HayJoin implementation source (Sourcify)",
+            "url": "https://sourcify.dev/server/v2/contract/56/0xe8a0c55c6af970c84717e08fb9421196077a5f2c?fields=metadata"
+          }
+        ],
+        "evidence": "At BSC block 103638487: wards(0x4c798f81…) = 1 on the LISUSD token (minter role). The contract is an EIP-1967 proxy whose implementation 0xe8a0c5… is Sourcify-verified as HayJoin (contracts/join.sol), the Maker-style join adapter that calls hay.mint() on CDP exit. Its proxy admin is the same ProxyAdmin 0x1fa3e471… owned by the 24h timelock. Recent mint check: the only Transfer-from-zero events in the last 500K blocks (~4 days, scanned in 10K-block chunks via bsc.drpc.org) entered via the CDP Interaction entry point (0x2078a1…, itself not a ward), consistent with HayJoin being the sole operational minter."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x8d388136d578dCD791D081c6042284CED6d9B0c6",
+        "label": "LISUSD manager Safe (wards = 2, supply-cap setter only)",
+        "role": "cap-admin",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "present",
+        "safe": {
+          "owners": [
+            "0x3fc791a56f99da498dfddac14e4081737d9f4d07",
+            "0xab80a862ff1c4cc2eb694a79c6c6c2fe07a71f32",
+            "0x38a750e77038f35578e19c680c67a694241633e2",
+            "0x0cd8aef58e65c201835506291305f9529e7d1a12",
+            "0x7b1184b1e0b58c16586bfdf4e410e7b72b8c7592",
+            "0x2009337fd3f640768f07cdf1c28aa7f94ab396ff"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x59828a98b4ba4e69a12718bbdd831f10a2770ef6",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0-L2",
+          "observedBlock": 103638487,
+          "source": "onchain"
+        },
+        "evidence": "At BSC block 103638487: wards(0x8d3881…) = 2 (MANAGER role — per Sourcify LisUSD source, role 2 can only setSupplyCap and updateDomainSeparator, not mint). getOwners() returned 6 owners, getThreshold() = 3, getModulesPaginated empty (no modules), guard slot = 0x59828a98… (transaction guard present), masterCopy = 0x3e5c6364… (GnosisSafeL2 1.3.0)."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253",
+        "label": "LISUSD admin timelock (24h delay, ward confirmed)",
+        "role": "minter-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At BSC block 103622030: eth_getCode = CONTRACT (len=14880). getMinDelay() = 86400 (24h). wards(this_address) on LISUSD = 1 (confirmed ward). Sourcify source labels DEFAULT_ADMIN as TimeLock and onlyAdmin gates rely()/deny() calls. Proxy admin (0x1fa3e471...) owner() = this timelock address."
+      },
+      {
+        "chain": "bsc",
+        "address": "0x1fa3e4718168077975ff4039304cc2e19ae58c4c",
+        "label": "LISUSD EIP-1967 proxy admin (owned by timelock)",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "modulesOrGuardsStatus": "not-applicable",
+        "evidence": "At BSC block 103622030: EIP-1967 admin slot on LISUSD proxy = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. eth_getCode = CONTRACT (len=3764). owner() = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253 (timelock). Can upgrade LISUSD implementation."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sourcify LisUSD source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
+        }
+      ],
+      "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The wards ward set was resolved by direct wards() probes: the LisUSD source defines NO Rely/Deny events (the prior 'event scan' blocker is impossible by construction) and wards can only be changed by the hardcoded DEFAULT_ADMIN (the 24h timelock) via rely/deny. Confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter; impl Sourcify-verified, proxy admin = same timelock-owned ProxyAdmin), manager Safe 0x8d3881… = 2 (3/6, setSupplyCap only, guard present). All other Lista ecosystem contracts probed (Interaction, PSMs, VaultManager, VenusAdapter, EarnPool, vault joins, AuctionProxy) returned wards = 0. A 500K-block recent mint scan showed mints flowing only through the CDP Interaction → HayJoin path. Mint reverts 'LisUSD/not-authorized-minter' for non-wards; timelock getMinDelay() = 86400s (24h).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "adminAddresses": [
+        "0x1fa3e4718168077975ff4039304cc2e19ae58c4c"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "LISUSD EIP-1967 proxy admin (owned by timelock)",
+      "observedAt": "2026-06-11",
+      "observedBlock": 103622030,
+      "sources": [
+        {
+          "label": "Sourcify LisUSD source",
+          "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
+        }
+      ]
+    }
+  }
+}

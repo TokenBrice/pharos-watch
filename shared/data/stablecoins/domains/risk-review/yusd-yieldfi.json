@@ -1,0 +1,366 @@
+{
+  "id": "yusd-yieldfi",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://yield.fi/"
+      },
+      {
+        "label": "YToken exact-match implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5bf44d32260aee6b807c490e92ef0481d15ab493?fields=sources,compilation"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-22: the exact YToken implementation rejects blacklisted senders and recipients in _update, and its manager can call burnYToken(from, shares) without an allowance. These are direct holder restriction and seizure controls; true replaces the prior possible posture.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "YieldFi token terms specify Chainlink or equivalent pricing for on-chain assets and a reasonable execution-based fallback during market disruption; yUSD has no borrower-owned collateral or liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 data research",
+      "rationale": "YieldFi defines yUSD as a market-neutral series whose NAV is based on Series Assets and whose collateral and liquidation policies are not applicable. Tokenholders redeem against the series and do not open borrower positions, so there are no yUSD collateral-market or liquidation branches to inventory.",
+      "sources": [
+        {
+          "label": "YieldFi yUSD token terms",
+          "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 data research",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "YieldFi yUSD token terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd.md"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "liquidity-or-intent-route",
+    "summary": "YUSD is deployed on many chains and L2BEAT points its route signal at Across. Across is an intent/liquidity framework with non-minting route execution, so Pharos scores this as a liquidity-or-intent route rather than a canonical bridge or issuer-native path. 2026-07-20 cohort dc-1 pass: Ethereum row confirmed native YToken; other-chain rows confirmed YieldFi yUSD LayerZero OFT representations with uniform deployment/admin reads.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "slug": "across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "Non-minting"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "YieldFi YUSD terms",
+        "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+      },
+      {
+        "label": "L2BEAT Across",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+        "protocol": "YieldFi yUSD (Ethereum native YToken)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'YieldFi yUSD', symbol yUSD, 18 decimals; EIP-1967 implementation 0x5bf44d32260aee6b807c490e92ef0481d15ab493 is the YieldFi YToken (Sourcify full match) — native issuance on Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "YieldFi yUSD token terms",
+            "url": "https://docs.yield.fi/legal-documents/token-terms/yusd"
+          },
+          {
+            "label": "yUSD on Etherscan",
+            "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including arbitrum; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:arbitrum:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "base",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including base; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "base",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:base:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "optimism",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including optimism; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "optimism",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:optimism:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "sonic",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including sonic; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "sonic",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:sonic:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "plume",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including plume; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plume",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:plume:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "katana",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including katana; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "katana",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:katana:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "bsc",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including bsc; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:bsc:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including avalanche; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:avalanche:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "destinationChain": "plasma",
+        "contractAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "protocol": "YieldFi yUSD (LayerZero OFT)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Controller verified on-chain 2026-07-20: token reads name 'YieldFi yUSD', symbol yUSD, 18 decimals on every listed chain including plasma; uniform deployment address with uniform EIP-1967 admin 0x10301bdbbe307e5832a0c0fef2d4693e51d5f788. The OFT token contract itself executes mint on verified LayerZero messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "controllerChain": "plasma",
+        "controllerAddress": "0x4772d2e014f9fc3a820c444e3313968e9a5c8121",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft",
+          "contract:plasma:0x4772d2e014f9fc3a820c444e3313968e9a5c8121"
+        ],
+        "sources": [
+          {
+            "label": "YieldFi documentation",
+            "url": "https://docs.yield.fi/"
+          }
+        ]
+      }
+    ]
+  }
+}

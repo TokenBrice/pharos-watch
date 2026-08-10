@@ -1,0 +1,16 @@
+{
+  "id": "tgld-tenbin",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tenbin contracts — deployments.json (restricter_role)",
+        "url": "https://github.com/tenbinlabs/tenbin-contracts/blob/master/deployments.json"
+      }
+    ],
+    "evidence": "Tenbin's mainnet deployment assigns a restricter_role (held by the admin multisig 0xE6Eb534f33A635e8d867414Af32F766D221F30d1) that flags accounts in the AssetToken restricted-accounts registry and blocks their transfers — a centralized freeze surface.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-05-27"
+  }
+}

@@ -17,7 +17,7 @@ export function getApiKeyStatus(key: ApiKeyStatusInput, nowSeconds: number): Api
 
 export function apiKeyStatusBadgeClassName(status: ApiKeyStatus): string {
   if (status === "active") {
-    return "bg-green-500/15 text-green-700 dark:text-green-400";
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400";
   }
   if (status === "expired") {
     return "bg-red-500/15 text-red-700 dark:text-red-400";

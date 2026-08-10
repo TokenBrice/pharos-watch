@@ -8,6 +8,10 @@ import { describe, expect, it } from "vitest";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import wrappedMSource from "@shared/data/stablecoins/coins/wm-m0.json";
 import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
+import wrappedMRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
+import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
+import wrappedMMintAuthority from "@shared/data/stablecoins/domains/mint-authority/wm-m0.json";
+import xautMintAuthority from "@shared/data/stablecoins/domains/mint-authority/xaut-tether.json";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
   V9_CANDIDATE_POLICY_V1,
@@ -121,7 +125,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     );
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
-        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+        ["wm-m0", ({
+            ...wrappedMSource,
+            bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
+            mintAuthority: wrappedMMintAuthority.mintAuthority,
+          } as unknown as V9ExtensionRegistryMeta)],
       ]),
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);
@@ -220,7 +228,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       metaById: new Map([
         [
           "xaut-tether",
-          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+          ({
+            ...xautMetaSource,
+            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
+            mintAuthority: xautMintAuthority.mintAuthority,
+          } as unknown as V9ExtensionRegistryMeta),
         ],
       ]),
     });
@@ -408,7 +420,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       metaById: new Map([
         [
           "xaut-tether",
-          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+          ({
+            ...xautMetaSource,
+            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
+            mintAuthority: xautMintAuthority.mintAuthority,
+          } as unknown as V9ExtensionRegistryMeta),
         ],
       ]),
     });
@@ -525,7 +541,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       metaById: new Map([
         [
           "xaut-tether",
-          xautMetaSource as unknown as V9ExtensionRegistryMeta,
+          ({
+            ...xautMetaSource,
+            bridgeRouteRisk: xautRiskReview.bridgeRouteRisk,
+            mintAuthority: xautMintAuthority.mintAuthority,
+          } as unknown as V9ExtensionRegistryMeta),
         ],
       ]),
     });
@@ -578,7 +598,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     });
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
       metaById: new Map([
-        ["wm-m0", wrappedMSource as unknown as V9ExtensionRegistryMeta],
+        ["wm-m0", ({
+            ...wrappedMSource,
+            bridgeRouteRisk: wrappedMRiskReview.bridgeRouteRisk,
+            mintAuthority: wrappedMMintAuthority.mintAuthority,
+          } as unknown as V9ExtensionRegistryMeta)],
       ]),
     });
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);

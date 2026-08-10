@@ -94,25 +94,9 @@ export function ApiKeyRequestCard({
 
       <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">
         <summary className="pharos-focus-ring flex min-h-11 cursor-pointer items-center rounded-md text-sm font-medium text-foreground">
-          Use case and endpoints
+          Use case
         </summary>
-        <div className="mt-3 space-y-3">
-          <p className="text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
-          <div className="flex min-w-0 flex-wrap gap-2">
-            {request.intendedEndpoints.length > 0 ? (
-              request.intendedEndpoints.map((endpoint) => (
-                <span
-                  key={endpoint}
-                  className="max-w-full break-all whitespace-normal rounded-md border border-border/60 bg-background px-2 py-1 font-mono tabular-nums text-xs text-muted-foreground"
-                >
-                  {endpoint}
-                </span>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">No endpoint list provided</span>
-            )}
-          </div>
-        </div>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{request.useCase}</p>
       </details>
 
       <details className="rounded-md border border-border/60 bg-background/40 px-3 py-2">

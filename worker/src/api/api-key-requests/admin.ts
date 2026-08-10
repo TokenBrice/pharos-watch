@@ -14,7 +14,6 @@ import type {
   ApiKeyRequestAdminRow,
   ApiKeyRequestDb,
 } from "./types";
-import { parseJsonStringArray } from "./serialization";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 export async function parseAdminMutationBody(request: Request): Promise<{ reason: string | null } | Response> {
@@ -75,7 +74,6 @@ export function mapAdminRow(row: ApiKeyRequestAdminRow): ApiKeySelfServeRequestA
     organization: row.organization,
     projectUrl: row.project_url,
     useCase: row.use_case,
-    intendedEndpoints: parseJsonStringArray(row.intended_endpoints_json),
     expectedCadence: row.expected_cadence,
     expectedVolume: row.expected_volume,
     acceptedTerms: row.accepted_terms === 1,

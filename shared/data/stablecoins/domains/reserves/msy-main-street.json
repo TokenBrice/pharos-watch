@@ -1,0 +1,12 @@
+{
+  "id": "msy-main-street",
+  "reserves": [
+    {
+      "name": "msUSD options strategy vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "msusd-main-street",
+      "depType": "wrapper"
+    }
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "id": "vndc-jade-labs",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "VNDC is issued by Jade Labs (Singapore) and operated through the ONUS/VNDC Hub platforms; minting and redemption run through an issuer-controlled, admin-gated token with no third-party audit and no permissionless mint route.",
+    "controls": [
+      {
+        "label": "Jade Labs / VNDC issuer admin (owner-controlled issue/redeem)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "bsc",
+        "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "BSC owner() returned this EOA at block 103627465; eth_getCode returned 0x (EOA confirmed). Issuer admin can authorize owner-controlled supply operations.",
+        "sources": [
+          {
+            "label": "BscScan VNDC token",
+            "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+          }
+        ]
+      },
+      {
+        "label": "Jade Labs / VNDC issuer admin — Polygon",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "chain": "polygon",
+        "address": "0x557D55E71204CE7DfDc5C839446Dd34F1b299354",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "present",
+        "evidence": "Polygon owner() returned the same EOA (0x557D55E71204CE7DfDc5C839446Dd34F1b299354) at block 88323540; eth_getCode returned 0x (EOA confirmed). Same issuer-admin EOA controls both BSC and Polygon deployments.",
+        "sources": [
+          {
+            "label": "PolygonScan VNDC token",
+            "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "BSC block 103627465 and Polygon block 88323540: owner() on both deployments returns the same EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354; eth_getCode returned 0x on both chains confirming EOA. Polygon blocker resolved — same address as BSC. All mint-capable surfaces confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "BscScan VNDC token",
+          "url": "https://bscscan.com/token/0xa276dc434a366c62ef010585b3885d0c85154389"
+        },
+        {
+          "label": "PolygonScan VNDC token",
+          "url": "https://polygonscan.com/token/0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa"
+        }
+      ]
+    }
+  }
+}

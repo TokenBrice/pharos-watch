@@ -1,0 +1,43 @@
+{
+  "id": "jpym-mento",
+  "reserves": [
+    {
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "cusd-celo",
+      "assetClass": "stablecoin",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "counterparty",
+        "market"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex Safety Score V9 curation",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento V3 stable token documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken"
+      },
+      {
+        "label": "Mento V3 risk overview",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/security/risk-overview"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      }
+    ],
+    "rationale": "JPYm's live reserve exposure is USDm (Mento Dollar), linked to tracked cUSD-celo. Mento documentation describes USDm as reserve-backed, and the live reserve row is a single 100% USDm CDP collateral exposure; no additional dependency slice is inferred.",
+    "compositionBasis": "Mento USDm stable-token documentation and current reserve dashboard",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The USDm dependency identity is known, but the underlying Mento Reserve basket is an upstream asset's reserve composition and is not duplicated as JPYm collateral.",
+    "knownUnknownExposurePct": 0
+  }
+}

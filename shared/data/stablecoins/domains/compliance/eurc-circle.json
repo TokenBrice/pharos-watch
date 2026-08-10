@@ -1,0 +1,93 @@
+{
+  "id": "eurc-circle",
+  "mica": {
+    "status": "authorized",
+    "tokenType": "EMT",
+    "authorizationType": "emi",
+    "competentAuthority": "ACPR",
+    "authorizedEntity": "Circle Internet Financial Europe SAS",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — Issuers of EMTs (EMTWP.csv, updated 4 Jun 2026)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Circle press release: first global stablecoin issuer to comply with MiCA (1 Jul 2024)",
+        "url": "https://www.circle.com/pressroom/circle-is-first-global-stablecoin-issuer-to-comply-with-mica-eus-landmark-crypto-law"
+      },
+      {
+        "label": "Circle EURC MiCA white paper (ACPR-filed)",
+        "url": "https://www.circle.com/fr/legal/mica-eurc-whitepaper"
+      },
+      {
+        "label": "De Gaulle Fleurance: Circle obtains ACPR EMI license #17788",
+        "url": "https://www.degaullefleurance.com/en/actualites/conseille-par-de-gaulle-fleurance-circle-obtient-un-agrement-detablissement-de-monnaie-electronique-eme-aupres-de-lacpr/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EURC is a euro-referenced Circle stablecoin issued as a MiCA e-money token by Circle Internet Financial Europe SAS with 1:1 euro redemption and monthly reserve attestations."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Circle Internet Financial Europe SAS",
+    "issuerDomicile": "France",
+    "licensingRegulator": "ACPR / MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.circle.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-04-30",
+    "notes": "EURC is payment-stablecoin-like, but its issuer is Circle Europe under MiCA/ACPR rather than Circle Internet Financial, LLC. No U.S. GENIUS PPSI approval, OCC foreign-issuer registration, or Treasury comparability determination was found for EURC/Circle Europe.",
+    "references": [
+      {
+        "label": "Circle EURC page",
+        "url": "https://www.circle.com/eurc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "Circle EURC terms",
+        "url": "https://www.circle.com/legal/eurc-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "Circle MiCA redemption policy",
+        "url": "https://www.circle.com/legal/mica-redemption-policy",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS NPRM",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-13"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS NPRM and reporting-form notices",
+        "Federal Register OCC foreign payment stablecoin issuer registration proposal",
+        "Circle EURC, Circle EEA/MiCA, redemption, transparency, and GENIUS Act pages",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was located for EURC or Circle Europe.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

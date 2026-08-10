@@ -1,0 +1,12 @@
+{
+  "id": "apyusd-apyx",
+  "reserves": [
+    {
+      "name": "apxUSD yield vault shares",
+      "pct": 100,
+      "risk": "high",
+      "coinId": "apxusd-apyx",
+      "depType": "wrapper"
+    }
+  ]
+}

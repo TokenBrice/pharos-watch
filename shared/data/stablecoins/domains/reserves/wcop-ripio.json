@@ -1,0 +1,72 @@
+{
+  "id": "wcop-ripio",
+  "reserves": [
+    {
+      "name": "Colombian-peso cash deposited in a Colombian bank account",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Colombian financial institution",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex T37 reserve replay",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wCOP - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ],
+    "rationale": "The March 31, 2026 certification reconciles 104,898,654 outstanding wCOP across six chains and COP107,966,549.02 of collateral to a Colombian bank statement, then certifies that all outstanding tokens are backed by Colombian pesos at a financial institution in Colombia. The engagement is expressly a certification, not an audit or review, and the bank and account terms are not disclosed. Write-time re-open 2026-08-08: Ripio's current wFIAT page still reports the same wCOP circulation and Colombian bank-account collateral, while the certification remains the latest dated assurance artifact; no newer composition or named custodian was published.",
+    "compositionBasis": "Independent public accountant certification of the wCOP collateral as of March 31, 2026",
+    "compositionAsOf": "2026-03-31",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No reserve asset class is unclassified; the Colombian financial institution, account type, and withdrawal liquidity are undisclosed.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Colombian-peso cash deposited in a Colombian bank account",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Colombian-peso bank cash is external reserve backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed Colombian financial institution",
+        "role": "bank",
+        "jurisdiction": "Colombia"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Codex T37 reserve replay",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Independent public accountant certification for wCOP - March 2026",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+      }
+    ],
+    "uncertainty": "The certification verifies the aggregate balance against a Colombian bank statement but does not name the institution, establish segregation or bankruptcy remoteness, disclose rehypothecation terms, or describe withdrawal liquidity.",
+    "knownUnknownExposurePct": 100
+  }
+}

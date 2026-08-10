@@ -1,0 +1,84 @@
+{
+  "id": "gldt-gold-dao",
+  "reserves": [
+    {
+      "name": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+      "pct": 100,
+      "risk": "low",
+      "assetClass": "commodity-allocated",
+      "issuerOrObligor": "Gold DAO GLD NFT swap canister over Bity Tokenisation SA gold certificates for physical bars held at Loomis Schweiz AG, Kloten",
+      "riskFactors": [
+        "custody",
+        "market",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (lockstep coherent refresh: report and composition review updated together from the same artefact)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Gold DAO audit reports (KPMG SA Neuchatel)",
+        "url": "https://docs.gold-dao.org/other/audit-reports"
+      },
+      {
+        "label": "Gold DAO documentation",
+        "url": "https://docs.gold-dao.org/"
+      }
+    ],
+    "rationale": "Pinned to the newest verifiable artefact: KPMG SA Neuchatel Swiss AS 920 report of factual findings, procedures on site 21 September 2025, signed 2 October 2025 (PDF read this pass; expressly 'we do not express any assurance'): 790 Loomis GLD gold certificates representing 7.9kg of 1kg bars at Loomis Schweiz AG, supplier invoices covering 7.8992kg, 100 of 790 serials physically re-verified. The report reconciles gold to GLD NFT certificates of Bity Tokenisation SA, not to GLDT token supply. The live gldt.org page still shows current gold figures (reviewed 2026-07-30) but is not an attested artefact; the series is ~10.5 months stale.",
+    "compositionBasis": "KPMG SA report of factual findings as of 21 September 2025",
+    "compositionAsOf": "2025-09-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The backing class is identified as locked GLD NFTs representing physical gold, but bar inventory beyond the 2025-09-30 KPMG factual-findings count, serial-level allocation, and per-bar custody shares are not disclosed in the reviewed sources.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Locked GLD NFTs representing physical gold bars in Swiss vaults",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Physical gold represented by GLD NFTs is external backing rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Loomis Schweiz AG, Kloten — Swiss vault operator holding the gold bars underlying GLD NFTs (named in the 2025-09 KPMG factual-findings report)",
+        "role": "custodian",
+        "jurisdiction": "Switzerland"
+      },
+      {
+        "name": "Gold DAO GLD NFT swap canister (Internet Computer)",
+        "role": "other"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-30",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice); Kimi T44 wave-2 refresh",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Gold DAO GLDT",
+        "url": "https://gldt.org/"
+      },
+      {
+        "label": "Gold DAO",
+        "url": "https://www.gold-dao.org/"
+      },
+      {
+        "label": "Gold DAO KPMG vault audit reports",
+        "url": "https://docs.gold-dao.org/other/audit-reports"
+      }
+    ],
+    "uncertainty": "GLD NFTs map to specific physical gold bars with serial-level certificates, and the 2025-09 KPMG factual-findings report names Loomis Schweiz AG, Kloten as the vault operator holding 7.9 kg of gold for 790 certificates issued by Bity Tokenisation SA, supporting bar-level segregation; KPMG frames the reports as agreed-upon procedures rather than an assurance audit, and no report after 2025-09-30 is published as of 2026-07-30. The reviewed sources do not establish insolvency treatment or rehypothecation terms."
+  }
+}

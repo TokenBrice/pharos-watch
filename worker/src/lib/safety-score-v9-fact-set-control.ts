@@ -271,7 +271,7 @@ function normalizeAccessStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,
   componentKey: string,
-  structurallyReviewed = false,
+  structuralDisposition?: NonNullable<V9AccessReviewV2["freeze"]["structuralDisposition"]>,
 ): V9FactStatusV2 {
   const bindingKey = `access:${componentKey}`;
   const evidenceIds =
@@ -302,7 +302,10 @@ function normalizeAccessStatus(
   // the gap carries the measured classification (same diagnostic treatment)
   // instead of missing-access-review. Stale and missing states still report
   // missing data regardless of the disposition.
-  const structural = structurallyReviewed && original.observationState === "bounded-unknown";
+  // Owner ruling 2026-08-10 extends the same treatment to
+  // `inherited-untracked-upstream`, where the reviewer measured inherited
+  // exposure but the upstream is not a tracked asset, so none may be named.
+  const structural = structuralDisposition !== undefined && original.observationState === "bounded-unknown";
   const gapId = addGap(
     context,
     createV9FactGapV3({
@@ -314,7 +317,9 @@ function normalizeAccessStatus(
       responsibility: structural ? "measured-adverse" : reviewedGapResponsibility(original.observationState),
       path: { kind: "local-component", componentKey: `access:${componentKey}` },
       message: structural
-        ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`
+        ? structuralDisposition === "inherited-untracked-upstream"
+          ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from an upstream that is not a tracked asset.`
+          : `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`
         : `The ${componentKey} access/censorship review is not a current known fact.`,
       evidenceRefIds,
     }),
@@ -357,17 +362,12 @@ export function buildAccessReview(context: AssetBuildContext): V9AccessReviewV2 
     };
   }
   const normalized = structuredClone(review);
-  const structurallyReviewed = normalized.freeze.structuralDisposition != null;
+  const freezeDisposition = normalized.freeze.structuralDisposition;
   normalized.transfer.status = normalizeAccessStatus(context, normalized.transfer.status, "transfer");
-  normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze", structurallyReviewed);
+  normalized.freeze.status = normalizeAccessStatus(context, normalized.freeze.status, "freeze", freezeDisposition);
   normalized.freeze.reviews = normalized.freeze.reviews.map((freezeReview) => ({
     ...freezeReview,
-    status: normalizeAccessStatus(
-      context,
-      freezeReview.status,
-      `freeze:${freezeReview.reviewKey}`,
-      structurallyReviewed,
-    ),
+    status: normalizeAccessStatus(context, freezeReview.status, `freeze:${freezeReview.reviewKey}`, freezeDisposition),
   }));
   return normalized;
 }

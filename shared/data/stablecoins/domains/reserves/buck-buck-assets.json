@@ -1,0 +1,16 @@
+{
+  "id": "buck-buck-assets",
+  "reserves": [
+    {
+      "name": "Strategy Inc. perpetual preferred stock (STRC)",
+      "pct": 77,
+      "risk": "medium"
+    },
+    {
+      "name": "USDC liquidity reserve",
+      "pct": 23,
+      "risk": "low",
+      "coinId": "usdc-circle"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "id": "jusd-jusd-stable-token",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "manual-review",
+    "summary": "JUSD BSC is a BridgeMintableToken proxy; minting requires a 'classified authority' role — the ProxyAdmin is owned by ChainportCongress (0xb6b4c7ac, named 'ChainportCongress'). JUSD Polygon is Ownable with EOA owner 0x7be44b5d (confirmed). BSC bridge authority role holder is not enumerable on-chain without the Chainport contract ABI.",
+    "controls": [
+      {
+        "label": "JUSD Polygon — issuer EOA owner",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "evidence": "At Polygon block 88341894: JUSD proxy at 0x0ba8a6ce (no proxy admin slot — not upgradeable proxy). owner() returns 0x7be44b5d470d1cdea8703b6c5156267d4b22a42f. eth_getCode(0x7be44b5d) = 0x (confirmed EOA). Reverts on mint call with 'Ownable: caller is not the owner'."
+      },
+      {
+        "label": "JUSD BSC — Chainport bridge authority (ProxyAdmin: ChainportCongress)",
+        "role": "minter-admin",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "none",
+        "canRaiseCap": true,
+        "evidence": "At BSC block 103800563: JUSD BSC proxy at 0xbf3950db is a TransparentUpgradeableProxy with impl 0x877d233c (BridgeMintableToken — confirmed via revert message 'BridgeMintableToken: Function can be called only by a classified authority.'). ProxyAdmin = 0xe317bf1c; ProxyAdmin.owner() = 0xb6b4c7ac240b1f176c5589d064733066a83884a1 (contract named 'ChainportCongress'). The Chainport bridge authority holding the mint role on BSC is not enumerable without the Chainport contract ABI."
+      }
+    ],
+    "review": {
+      "evidence": "At BSC block 103800563 and Polygon block 88341894: JUSD Polygon owner confirmed as EOA 0x7be44b5d (bytecode=0x). JUSD BSC is a BridgeMintableToken with minting gated by 'classified authority' — the ProxyAdmin is controlled by ChainportCongress (contract 0xb6b4c7ac). JUSD's architecture links it to the Chainport bridge protocol; the specific bridge minter role address is not publicly enumerable on-chain without the Chainport contract interface. Reserve backing remains unverified.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "JUSD BSC proxy on BscScan",
+          "url": "https://bscscan.com/address/0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2"
+        },
+        {
+          "label": "JUSD Polygon proxy on PolygonScan",
+          "url": "https://polygonscan.com/address/0x0ba8a6ce46d369d779299dedade864318097b703"
+        },
+        {
+          "label": "JUSD whitepaper",
+          "url": "https://jusd.app/whitepaper.pdf"
+        }
+      ],
+      "unresolvedQuestions": [
+        "Enumerate the live Chainport bridge authority address holding the classified-authority mint role on BSC (requires Chainport contract ABI or event log scan on ChainportCongress)."
+      ]
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "id": "spusd-soulpeg",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "spUSD is a role-gated BSC wrapper: the SoulPeg wrapper contract (0x0e8fb2e…) holds MINTER_ROLE and BURNER_ROLE on-chain; DEFAULT_ADMIN_ROLE is held by EOA 0xf683ab3…. MAX_SUPPLY is an immutable constant at 1B tokens.",
+    "controls": [
+      {
+        "label": "SoulPeg spUSD wrapper contract (MINTER_ROLE / BURNER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "chain": "bsc",
+        "address": "0x0e8fb2e774b827711e0f86069931c1321113238e",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "MAX_SUPPLY is a Solidity constant (uint256 public constant MAX_SUPPLY = 0x033b2e3c9fd0803ce8000000 ≈ 1B tokens); cannot be changed without redeployment.",
+        "sources": [
+          {
+            "label": "SPUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(MINTER_ROLE, 0x0e8fb2e774b827711e0f86069931c1321113238e) returned true; hasRole(BURNER_ROLE, same) returned true. Wrapper is a contract (4417-byte code). BscScan contract source confirms mint() checks total supply < MAX_SUPPLY; MAX_SUPPLY is a Solidity constant, not a mutable variable — no setMaxSupply function exists."
+      },
+      {
+        "label": "SoulPeg DEFAULT_ADMIN_ROLE (EOA)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "chain": "bsc",
+        "address": "0xf683ab3ac7dcb195a8df52d7f5fd796e81a75075",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "SPUSD contract (BscScan)",
+            "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
+          }
+        ],
+        "evidence": "At BSC block 103632643, hasRole(DEFAULT_ADMIN_ROLE, 0xf683ab3ac7dcb195a8df52d7f5fd796e81a75075) returned true; wrapper owner() returned the same address. eth_getCode on 0xf683… returned empty bytecode (EOA). Also confirmed that wrapper owner() returned 0xf683… independently."
+      },
+      {
+        "label": "SoulPeg operator (sUSDC issuance + Venus routing)",
+        "role": "custodian",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": false,
+        "evidence": "SoulPeg docs describe an operator that mints sUSDC 1:1 against deposited USDC, routes USDC into Venus lending, and runs a peg market-making bot; mint of the wrapped spUSD is gated behind this operator-controlled flow."
+      }
+    ],
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 109836313,
+      "sources": [
+        {
+          "label": "SoulPeg spUSD token source",
+          "url": "https://bscscan.com/address/0x40ff3dea2eec93a7b71879874dc4407918da77a6#code"
+        },
+        {
+          "label": "SoulPeg wrapper source",
+          "url": "https://bscscan.com/address/0x0e8fb2e774b827711e0f86069931c1321113238e#code"
+        },
+        {
+          "label": "BSC PublicNode RPC",
+          "url": "https://bsc-rpc.publicnode.com"
+        }
+      ]
+    },
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
+      "reviewedAt": "2026-07-16",
+      "sources": [
+        {
+          "label": "SoulPeg docs",
+          "url": "https://docs.soulpeg.io/docs/introducing/what-is-soulpeg"
+        },
+        {
+          "label": "SPUSD contract (BscScan)",
+          "url": "https://bscscan.com/token/0x40ff3dea2eec93a7b71879874dc4407918da77a6"
+        },
+        {
+          "label": "SoulPeg audit-status FAQ (no formal audit)",
+          "url": "https://docs.soulpeg.io/docs/faq/audit-status"
+        }
+      ]
+    }
+  }
+}

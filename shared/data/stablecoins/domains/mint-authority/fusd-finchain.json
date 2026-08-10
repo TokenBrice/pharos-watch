@@ -1,0 +1,311 @@
+{
+  "id": "fusd-finchain",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "FUSD is an uncapped issuer token on Ethereum, Avalanche, Sonic, and Monad. FinChain's gateway can mint directly (including an admin-only arbitrary mint path), while Chainlink CCIP pools mint only through validated inbound routes and per-chain rate limits. One EOA controls every token DEFAULT_ADMIN role, the gateway admin, the configurable pools, and the shared ProxyAdmin owner, so it can grant minters or replace mint logic immediately.",
+    "controls": [
+      {
+        "label": "FinChain issuer-operated mint authority",
+        "role": "direct-minter",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "sources": [
+          {
+            "label": "FinChain FUSD docs",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+          },
+          {
+            "label": "FinChain deployments",
+            "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+          }
+        ],
+        "evidence": "FinChain documents eligible-customer issuance and redemption through its centralized operating stack. The backend controls an uncapped gateway/admin path and the token role administrator across all four chains, so it can originate additional issuance rather than merely consume a fixed allowance."
+      },
+      {
+        "chain": "multichain",
+        "address": "0xc61f22aa3a6469f4f90994421f4570459217c215",
+        "label": "FinChain token, gateway, pool, and ProxyAdmin owner EOA",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Ethereum FUSD verified proxy and implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          },
+          {
+            "label": "Ethereum observation block 25712369",
+            "url": "https://eth.blockscout.com/block/25712369"
+          }
+        ],
+        "evidence": "At Ethereum block 25712369, Avalanche 92345390, Sonic 77265782, and Monad 94291746 this codeless address is the sole token DEFAULT_ADMIN_ROLE holder and owns the shared ProxyAdmin. It also holds DEFAULT_ADMIN_ROLE on the FinChain gateway and controls the active issuer-owned CCIP pools. It can grant token MINTER_ROLE, invoke the gateway's arbitrary direct mint, reconfigure route limits, or upgrade every proxy without a timelock."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x561bc4f174e04d057c9ce7ae763bc18be7fa3107",
+        "label": "FUSD FinChain mint proxy (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Blockscout-verified FUSDGateway implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4b49852fd3e4ed18ec2cc1e76a3fe2f9a31c9ed"
+          }
+        ],
+        "evidence": "This same-address gateway is a live token MINTER_ROLE holder on all four chains. Verified FUSDGateway logic requires KYC plus FUSDLP transfer for public instantMint, but also exposes an arbitrary amount mint to its DEFAULT_ADMIN and mintWithMessageId to an internal MINTER_ROLE; it therefore has direct uncapped token mint ability. Its own logic does not administer the token role or cap."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x2f36c915af812ff06742468f206030fcad4c4242",
+        "label": "FUSD TokenBridgeSender (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Blockscout-verified TokenBridgeSender implementation",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdce4393ea8de3bbe54c4700e40d710f501448b04"
+          }
+        ],
+        "evidence": "The same-address proxy remains a token MINTER_ROLE holder on all four chains, but its current verified TokenBridgeSender implementation only transfers/burns already supplied bridge tokens through supported custom or CCIP destinations and contains no call to FUSD.mint. It cannot exercise the nominal mint role without a proxy upgrade, which is captured by the shared ProxyAdmin control."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x425da70e6fde7d5e7f9bd11898fc6c65bfda96c5",
+        "label": "FUSD CCIP BurnMintTokenPool-1 (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "This verified FUSDBurnMintTokenPool can mint only through Chainlink CCIP releaseOrMint after TokenPool validates the router, remote pool/token, RMN state, allowlist, and inbound rate limiter. Its owner can reconfigure route rate limits; supportedChains was empty at the pinned block, so it is presently an authorized but inactive mint route."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x91febcfb698cc2e653f7e053205a347957f325d1",
+        "label": "FUSD CCIP BurnMintTokenPool-2 (MINTER_ROLE)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Ethereum FinChain FUSD token",
+            "url": "https://etherscan.io/address/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+          }
+        ],
+        "evidence": "This verified FUSDBurnMintTokenPool mints only after Chainlink CCIP releaseOrMint validates the router, configured remote pool/token, RMN state, allowlist, and inbound rate limiter. It served three configured selectors at the pinned block, and owner 0xc61f22aa3a6469f4f90994421f4570459217c215 can raise route limits."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xa2b31f91fd83efa022bb79934c6c3d24d044b0f1",
+        "label": "FUSD Avalanche CCIP BurnMintTokenPool (Chainlink-owned)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 92345390,
+        "sources": [
+          {
+            "label": "Avalanche public RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Live Avalanche MINTER_ROLE holder. Its owner is contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7 and its runtime family matches the reviewed Chainlink FUSDBurnMintTokenPool route, which mints only through validated inbound CCIP messages and configurable rate limits."
+      },
+      {
+        "chain": "avalanche",
+        "address": "0xc73a36ec9950530256c051b3740412a067f64589",
+        "label": "FUSD Avalanche CCIP BurnMintTokenPool (FinChain-owned)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 92345390,
+        "sources": [
+          {
+            "label": "Avalanche public RPC",
+            "url": "https://avalanche-c-chain-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "Live Avalanche MINTER_ROLE holder owned by FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. The pool mints only through validated inbound CCIP messages and rate limits that its owner can raise."
+      },
+      {
+        "chain": "sonic",
+        "address": "0xb074559749d57991708f403673c577d6967d2c2f",
+        "label": "FUSD Sonic CCIP BurnMintTokenPool (Chainlink-owned)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 77265782,
+        "sources": [
+          {
+            "label": "Sonic public RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "Live Sonic MINTER_ROLE holder. Its owner is contract 0x914d7fec6aac8cd542e72bca78b30650d45643d7 and its runtime family matches the reviewed CCIP pool, restricting mint to authenticated inbound routes and configurable rate limits."
+      },
+      {
+        "chain": "sonic",
+        "address": "0xff5d2c5b907ed4c88cee5b0cf1d280e4df3176fd",
+        "label": "FUSD Sonic CCIP BurnMintTokenPool (FinChain-owned)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 77265782,
+        "sources": [
+          {
+            "label": "Sonic public RPC",
+            "url": "https://rpc.soniclabs.com"
+          }
+        ],
+        "evidence": "Live Sonic MINTER_ROLE holder owned by FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. Mint is restricted to authenticated inbound CCIP routes and configurable rate limits."
+      },
+      {
+        "chain": "monad",
+        "address": "0xb496894fd559d7c923477246e384e7463c69060e",
+        "label": "FUSD Monad CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 94291746,
+        "sources": [
+          {
+            "label": "Official Monad mainnet RPC",
+            "url": "https://rpc.monad.xyz"
+          }
+        ],
+        "evidence": "The official Monad RPC confirms this contract is the third live token MINTER_ROLE holder alongside the shared gateway and TokenBridgeSender. It is owned by FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215 and follows the FUSD CCIP BurnMintTokenPool route model, so mint is inbound-route and rate-limit constrained while its owner can raise limits."
+      },
+      {
+        "chain": "multichain",
+        "address": "0x29a48097055d6779e6832355680b7c7bf0d43c53",
+        "label": "FUSD shared ProxyAdmin contract",
+        "role": "proxy-admin",
+        "authorityType": "contract",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25712369,
+        "sources": [
+          {
+            "label": "Blockscout-verified OpenZeppelin ProxyAdmin",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x29a48097055d6779e6832355680b7c7bf0d43c53"
+          }
+        ],
+        "evidence": "This is an OpenZeppelin ProxyAdmin contract, not an EOA. At the pinned blocks it occupies the EIP-1967 admin slot for the token, gateway, and TokenBridgeSender on all four chains, and owner() is the codeless FinChain EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. It can replace mint-critical logic immediately."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "FinChain FUSD docs",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction"
+        },
+        {
+          "label": "FinChain deployments",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token"
+        },
+        {
+          "label": "FinChain FUSD reserve dashboard",
+          "url": "https://fusd.finchain.global/#reserves"
+        },
+        {
+          "label": "FinChain FUSD reserves documentation",
+          "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/fusd-reserves"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated entities",
+          "url": "https://www.bma.bm/regulated-entities"
+        }
+      ],
+      "evidence": "Fresh role enumeration at Ethereum block 25712369, Avalanche 92345390, Sonic 77265782, and Monad 94291746 resolves every live MINTER_ROLE holder and the shared control plane. Each token proxy uses implementation 0x27d2f80fdb8102044897d006c921645c8da92de0 and ProxyAdmin 0x29a48097055d6779e6832355680b7c7bf0d43c53, owned without delay by sole DEFAULT_ADMIN EOA 0xc61f22aa3a6469f4f90994421f4570459217c215. The gateway's verified admin-only mint makes the economic cap unbounded; CCIP pools remain authenticated-route/rate-limit constrained. The previously described TokenBridgeSender mint power was corrected: its current verified implementation never calls FUSD.mint. FinChain's live reserve dashboard is the continuous issuer reconciliation source; no independent dated attestation was found. The BMA register and DAB regime identify FinChain Bermuda Limited as a supervised digital-asset issuer, supporting prudential supervision.",
+      "reviewer": "OpenAI Codex C09 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable",
+      "unresolvedQuestions": []
+    },
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c",
+        "0x561bc4f174e04d057c9ce7ae763bc18be7fa3107",
+        "0x2f36c915af812ff06742468f206030fcad4c4242"
+      ],
+      "implementationAddresses": [
+        "0x27d2f80fdb8102044897d006c921645c8da92de0",
+        "0xf4b49852fd3e4ed18ec2cc1e76a3fe2f9a31c9ed",
+        "0xdce4393ea8de3bbe54c4700e40d710f501448b04"
+      ],
+      "adminAddresses": [
+        "0x29a48097055d6779e6832355680b7c7bf0d43c53"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FUSD shared ProxyAdmin contract",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25712369,
+      "sources": [
+        {
+          "label": "Ethereum FUSD verified proxy and implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9f6714c302ffe3c3bafaf2ccb44201ff64f6371c"
+        },
+        {
+          "label": "Ethereum RPC used for proxy slots and owner reads at block 25712369",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Official Monad mainnet RPC used at block 94291746",
+          "url": "https://rpc.monad.xyz"
+        }
+      ]
+    }
+  }
+}

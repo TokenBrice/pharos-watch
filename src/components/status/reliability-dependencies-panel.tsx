@@ -7,7 +7,7 @@ function stateClass(state: string): string {
   if (state === "stale" || state === "open" || state === "error") return "bg-red-500/15 text-red-700 dark:text-red-300";
   if (state === "degraded" || state === "half-open") return "bg-amber-500/15 text-amber-800 dark:text-amber-300";
   if (state === "healthy" || state === "closed" || state === "ok")
-    return "bg-green-500/15 text-green-700 dark:text-green-300";
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
   return "bg-muted text-muted-foreground";
 }
 

@@ -1,0 +1,124 @@
+{
+  "id": "honey-berachain",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "HONEY is minted only by the Berachain HoneyFactory against whitelisted collateral vaults. Both the HONEY token and HoneyFactory are UUPS proxies, and the same 3/5 Berachain Safe holds DEFAULT_ADMIN_ROLE for immediate upgrades and HoneyFactory parameter administration.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce",
+        "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401"
+      ],
+      "implementationAddresses": [
+        "0x96b1a552a97da5503343d0f9ff2766c616e62905",
+        "0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+      ],
+      "adminAddresses": [
+        "0xd13948f99525fb271809f45c268d72a3c00a568d"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Berachain HoneyFactory admin (3/5 Safe)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 23484618,
+      "sources": [
+        {
+          "label": "Berachain HONEY documentation",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        },
+        {
+          "label": "HONEY implementation verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x96b1a552a97da5503343d0f9ff2766c616e62905"
+        },
+        {
+          "label": "HoneyFactory implementation verified source",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0x6331f0a4e0220a14be27bd31af091f0a1ac036a1"
+        },
+        {
+          "label": "Berachain PublicNode RPC",
+          "url": "https://berachain-rpc.publicnode.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "berachain",
+        "address": "0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401",
+        "label": "HoneyFactory mint hub",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "HONEY mints only when whitelisted stablecoin collateral is deposited through the HoneyFactory into per-asset vaults; Basket Mode restricts mint/redeem when a collateral asset depegs.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 23484618,
+        "evidence": "At Berachain block 23484618, HoneyFactory's implementation slot resolved to 0x6331f0a4e0220a14be27bd31af091f0a1ac036a1 while its proxy-admin and beacon slots were zero. Verified VaultAdmin source authorizes UUPS upgrades through DEFAULT_ADMIN_ROLE, which the reviewed Safe still held.",
+        "sources": [
+          {
+            "label": "Berachain HONEY docs",
+            "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+          },
+          {
+            "label": "HoneyFactory verified source (Routescan)",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401"
+          }
+        ]
+      },
+      {
+        "chain": "berachain",
+        "address": "0xd13948f99525fB271809F45c268d72A3C00a568d",
+        "label": "Berachain HoneyFactory admin (3/5 Safe)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x19ee99a1b5ee3ae4158d67521d8eca84d16242fb",
+            "0x549c2bc70e2f605eedccec7d40b9092d1c81cd68",
+            "0x1b941a8b6d1d3ba8c2356305e42a735038417348",
+            "0x25e5eaa73494c96c5833187f8a2d811cb044975d",
+            "0xcedff75ca62a7adee1ef5f9058afd0247d61d814"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 23484618,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 23484618,
+        "evidence": "At Berachain block 23484618, getOwners() returned the same five owners, getThreshold() returned 3, getModulesPaginated() returned no modules, VERSION() returned 1.3.0, the guard slot was zero, and the fallback-handler slot remained 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. hasRole(DEFAULT_ADMIN_ROLE, Safe) returned true on both the HONEY token and HoneyFactory.",
+        "sources": [
+          {
+            "label": "HoneyFactory on Berachain explorer",
+            "url": "https://berascan.com/address/0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Berachain block 23484618, HONEY and HoneyFactory were UUPS proxies with implementations 0x96b1a552... and 0x6331f0a4..., zero proxy-admin and beacon slots, and implementations returning the standard proxiable UUID. Verified HONEY source permits mint/burn only from factory() 0xa4afef88... and authorizes upgrades through DEFAULT_ADMIN_ROLE. The same unchanged 3/5 Safe held that role on both proxies with no enabled modules or guard.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Berachain HONEY docs",
+          "url": "https://docs.berachain.com/learn/pol/tokens/honey"
+        },
+        {
+          "label": "HoneyFactory verified source (Routescan)",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/80094/etherscan/api?module=contract&action=getsourcecode&address=0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "id": "aed-rakbank",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+    "evidence": "AED-RAKBANK resolves to Yes because it is a centralized, bank-issued fiat-referenced payment token under CBUAE oversight, and no manual override narrows that status.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-06-13"
+  }
+}

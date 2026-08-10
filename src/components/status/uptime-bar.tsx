@@ -17,7 +17,7 @@ interface DaySegment {
 }
 
 const STATUS_COLORS: Record<DaySegment["status"], string> = {
-  healthy: "bg-green-500",
+  healthy: "bg-emerald-500",
   degraded: "bg-amber-500",
   stale: "bg-red-500",
   unknown: "bg-slate-300 dark:bg-slate-600",

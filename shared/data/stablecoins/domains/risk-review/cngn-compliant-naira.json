@@ -1,0 +1,183 @@
+{
+  "id": "cngn-compliant-naira",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.cngn.co/integrations/contract-addresses"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.cngn.co/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "cNGN is issued natively by the Africa Stablecoin Consortium on each of its five chains; no bridge protocol holds mint rights on any deployment. 2026-07-20 dc-8 pass re-verified every chain on-chain: all four EVM tokens are owned by Gnosis Safe 2/2 multisigs of the same consortium signer pair (Polygon owner 0xce6720dd... enumerated for the first time), and the Solana Token-2022 mint is gated by the issuer's issuance program with a 2/2 SPL multisig on freeze/delegate. The earlier Across note described an optional third-party liquidity path, not the issuance route.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "cNGN issuer-native multichain issuance",
+        "url": "https://docs.cngn.co/integrations/contract-addresses",
+        "bridgeTypes": [
+          "issuer-native"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "cNGN contract addresses",
+        "url": "https://docs.cngn.co/integrations/contract-addresses"
+      },
+      {
+        "label": "cNGN transparency",
+        "url": "https://cngn.co/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab",
+        "protocol": "cNGN issuer-native multichain deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (ethereum block 25571110): owner() on 0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab = 0x57da45ee907f9d58d781c6ed5abf730eb6673d80, a Gnosis Safe proxy (171-byte bytecode) with getThreshold() = 2 and getOwners() = {0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f, 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a} — the same consortium signer pair as every other cNGN EVM deployment. Issuer-native cNGN minted directly on ethereum by the Africa Stablecoin Consortium; no third-party bridge minter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25571110,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/integrations/contract-addresses"
+          },
+          {
+            "label": "cNGN on ethereum explorer (owner/Safe probed 2026-07-20)",
+            "url": "https://etherscan.io/address/0x17cdb2a01e7a34cbb3dd4b83260b05d0274c8dab"
+          }
+        ]
+      },
+      {
+        "id": "base:0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0x46c85152bfe9f96829aa94755d9f915f9b10ef5f",
+        "protocol": "cNGN issuer-native multichain deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (base block 48863611): owner() on 0x46c85152bfe9f96829aa94755d9f915f9b10ef5f = 0xc3ebca72b6e3c06833ba81c824de685eb2eff21e, a Gnosis Safe proxy (171-byte bytecode) with getThreshold() = 2 and getOwners() = {0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f, 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a} — the same consortium signer pair as every other cNGN EVM deployment. Issuer-native cNGN minted directly on base by the Africa Stablecoin Consortium; no third-party bridge minter. The token is an EIP-1967 proxy (implementation 0x941360b66ccb94012e85225639476b43999c6cf3) whose ProxyAdmin 0x639e6756f129b3bb67961488e10dad3a3380af83 is owned by EOA 0xdd3446ce5aa397fd957460ba03e4538caeeff22e (0-byte code, re-verified 2026-07-20) — an upgrade path, not a bridge minter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 48863611,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/integrations/contract-addresses"
+          },
+          {
+            "label": "cNGN on base explorer (owner/Safe probed 2026-07-20)",
+            "url": "https://basescan.org/address/0x46c85152bfe9f96829aa94755d9f915f9b10ef5f"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xa8aea66b361a8d53e8865c62d142167af28af058",
+        "destinationChain": "bsc",
+        "canonicalChain": "bsc",
+        "contractAddress": "0xa8aea66b361a8d53e8865c62d142167af28af058",
+        "protocol": "cNGN issuer-native multichain deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (bsc block 111015741): owner() on 0xa8aea66b361a8d53e8865c62d142167af28af058 = 0x555ad4b8aacdb16afd2ed4d334f51614222a9f0b, a Gnosis Safe proxy (171-byte bytecode) with getThreshold() = 2 and getOwners() = {0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f, 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a} — the same consortium signer pair as every other cNGN EVM deployment. Issuer-native cNGN minted directly on bsc by the Africa Stablecoin Consortium; no third-party bridge minter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 111015741,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/integrations/contract-addresses"
+          },
+          {
+            "label": "cNGN on bsc explorer (owner/Safe probed 2026-07-20)",
+            "url": "https://bscscan.com/address/0xa8aea66b361a8d53e8865c62d142167af28af058"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x52828daa48c1a9a06f37500882b42daf0be04c3b",
+        "protocol": "cNGN issuer-native multichain deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (polygon block 90541049): owner() on 0x52828daa48c1a9a06f37500882b42daf0be04c3b = 0xce6720dd9076aa67053abb27ecbd613a5867d1ba, a Gnosis Safe proxy (171-byte bytecode) with getThreshold() = 2 and getOwners() = {0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f, 0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a} — the same consortium signer pair as every other cNGN EVM deployment. Issuer-native cNGN minted directly on polygon by the Africa Stablecoin Consortium; no third-party bridge minter. This Polygon owner Safe (0xce6720dd...) was enumerated for the first time in this pass.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "observedBlock": 90541049,
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/integrations/contract-addresses"
+          },
+          {
+            "label": "cNGN on polygon explorer (owner/Safe probed 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x52828daa48c1a9a06f37500882b42daf0be04c3b"
+          }
+        ]
+      },
+      {
+        "id": "solana:3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
+        "destinationChain": "solana",
+        "canonicalChain": "solana",
+        "contractAddress": "3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8",
+        "protocol": "cNGN issuer-native multichain deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (Solana slot ~434019689, getAccountInfo jsonParsed): cNGN is a Token-2022 mint (program TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, 6 decimals). mintAuthority = GWM5GkUtdL2vNYbJLKG8wgydQUWtWn24KSsDBB2CdfAM, a 137-byte config account owned by the cNGN issuance program 9GrUiE6YkLTTt7koEQfeyqNgEpoSyvkBmPjfrZd3AS28 (minting is program-gated via that PDA; the config names operational authority EOA 88ifu36RXwpEUtz4qRWhm4eVz2jGtR7W1iuBuotum5DN). freezeAuthority and permanentDelegate = 5FtrPVACw11cGGEMGGiUbXRiaVS7SEd9Q9wpBAajWmfL, an SPL 2-of-2 multisig (signers 8D5AMNdRzemN9neywV8wtgB9nagrChdP1gvHCRiUjrpH, 3eTux7LTD3HiGy7q2Es5hQiJsZo8ybGQgsBfN8zV8GqQ). Issuer-native Solana deployment; no third-party bridge minter.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "cNGN contract addresses",
+            "url": "https://docs.cngn.co/integrations/contract-addresses"
+          },
+          {
+            "label": "cNGN Solana mint (probed 2026-07-20)",
+            "url": "https://solscan.io/token/3jiqwBQVRC5zRwHyqvnkQurebJ5RNxg3F5fXMwaxgkv8"
+          }
+        ]
+      }
+    ]
+  }
+}

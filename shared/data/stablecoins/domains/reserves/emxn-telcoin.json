@@ -1,0 +1,88 @@
+{
+  "id": "emxn-telcoin",
+  "reserves": [
+    {
+      "name": "Mexican peso fiat reserves for Telcoin Digital Cash",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "Telcoin LLC and undisclosed regulated financial institutions holding the eXYZ Segregated Accounts",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi T17 backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Terms of Use (effective 2026-06-30), section XXIX eXYZ Terms",
+        "url": "https://www.telco.in/en/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "rationale": "Telcoin's Terms of Use effective 2026-06-30, section XXIX, state that eMXN is an eXYZ token issued by Telcoin LLC, backed by an equivalent or greater value of Mexican-peso currency or currency equivalents held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account; the separate bank.telco.in terms confirm eUSD under Telcoin Digital Asset Bank is a distinct product, so the eMXN obligor is Telcoin LLC. The reviewed primary sources do not publish an eMXN-specific reserve report, asset-class split, named reserve institution, or reserve-liquidity disclosure, so the 100% aggregate envelope is retained without fabricated subcategories.",
+    "compositionBasis": "Telcoin Terms of Use section XXIX eXYZ reserve disclosure for the eMXN reserve envelope",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The full 100% reserve envelope lacks eMXN-specific category weights, named institutions, and an external assurance report. Telcoin states that monthly attestations will be published, but none was located in the reviewed sources as of 2026-08-08.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Mexican peso fiat reserves for Telcoin Digital Cash",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer's Terms of Use describe the segregated eXYZ reserve structure but do not publish eMXN-specific composition or assurance evidence."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Telcoin LLC (eXYZ issuer)",
+        "role": "other",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed regulated financial institutions holding eXYZ Segregated Accounts",
+        "role": "bank"
+      },
+      {
+        "name": "Telcoin eMXN Polygon contract",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi T17 backing review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Telcoin Terms of Use (effective 2026-06-30), section XXIX eXYZ Terms",
+        "url": "https://www.telco.in/en/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Cash",
+        "url": "https://www.telco.in/en/digital-cash"
+      }
+    ],
+    "uncertainty": "The Terms of Use effective 2026-06-30 state that eXYZ reserves are held in segregated accounts at regulated financial institutions, apart from Telcoin's corporate operating account and for the benefit of users, but the reviewed sources name no reserve institution or custodian, disclose no bankruptcy-remoteness determination, rehypothecation terms, or custodian-replacement provisions, and provide no independent confirmation of the segregation. The custody profile therefore remains intentionally unknown until an eMXN-specific assurance report is published."
+  }
+}

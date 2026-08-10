@@ -1,0 +1,49 @@
+{
+  "id": "chfm-mento",
+  "reserves": [
+    {
+      "name": "USDm (Mento Dollar) CDP collateral",
+      "pct": 100,
+      "risk": "low",
+      "coinId": "cusd-celo",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "Codex Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento analytics CHFm backing configuration",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts#L88-L101"
+      },
+      {
+        "label": "Mento Reserve dashboard",
+        "url": "https://reserve.mento.org/"
+      },
+      {
+        "label": "Mento Reserve API",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento CHFm on Celo documentation",
+        "url": "https://docs.mento.org/mento-v3/other/getting-mento-stables/on-celo"
+      }
+    ],
+    "rationale": "Mento's pinned analytics configuration names CHFm as a CDP backed by USDm, and the live reserve endpoint's CHFm trove records USDm as collateral. The static category is exactly one tracked USDm exposure; USDm's underlying basket remains owned by cusd-celo and is not duplicated here.",
+    "compositionBasis": "Mento CHFm CDP collateral configuration and live reserve dashboard",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "CHFm's sole direct collateral category is USDm; USDm's own reserve composition is reviewed separately on cusd-celo.",
+    "knownUnknownExposurePct": 0
+  }
+}

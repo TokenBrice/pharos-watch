@@ -1,0 +1,10 @@
+{
+  "id": "euroe-membrane",
+  "reserves": [
+    {
+      "name": "Euro fiat reserves and euro-denominated assets",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

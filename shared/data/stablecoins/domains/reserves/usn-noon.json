@@ -1,0 +1,164 @@
+{
+  "id": "usn-noon",
+  "reserves": [
+    {
+      "name": "Private Credit (Fasanara FTAC)",
+      "pct": 71.18,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Fasanara Capital and FTAC borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "DeFi Lending",
+      "pct": 10.24,
+      "risk": "medium",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Undisclosed DeFi protocols and borrowers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Other / unmapped Accountable buckets",
+      "pct": 5.36,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed Noon reserve counterparties (includes residual Funding Rate (BTC) dust)",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "market",
+        "basis",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "CLOs (JAAA)",
+      "pct": 5.23,
+      "risk": "high",
+      "coinId": "jaaa-janus-henderson-anemoy",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Janus Henderson Anemoy AAA CLO Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "US Treasury Bills",
+      "pct": 7.99,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "one-day"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok phase-1 reserve research 2026-07-28",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Noon Accountable dashboard API",
+        "url": "https://cache.accountable.capital/dashboard/noon"
+      },
+      {
+        "label": "Noon radical transparency of reserves & returns",
+        "url": "https://docs.noon.capital/built-for-safety/3.-radical-transparency-of-reserves-and-returns"
+      },
+      {
+        "label": "Noon liquidity documentation",
+        "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28 of Accountable noon API (ts 2026-07-27T23:22:49.655Z): total_reserves $34,400,179.52 with deployment Private Credit (Fasanara FTAC) $24,486,151.98 (71.18%), DeFi Lending $3,521,782.05 (10.24%), CLOs (JAAA) $1,798,755.12 (5.23%), US Treasury Bills $2,748,703.09 (7.99%), Other $1,844,786.32 + Funding Rate (BTC) $0.96 merged into Other at 5.36%. Slices sum to 100%. Prior transparency URL /security/transparency 404s; replacement built-for-safety radical-transparency page still documents Accountable live PoS. Borrower-level FTAC/DeFi/Other detail remains undisclosed.",
+    "compositionBasis": "Accountable deployment-category snapshot captured at 2026-07-27T23:22:49.655Z (API ts 1785194569655)",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "FTAC borrower-level exposure, DeFi protocol positions, and the unmapped Other bucket remain unresolved.",
+    "knownUnknownExposurePct": 86.78,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Private Credit (Fasanara FTAC)",
+        "pct": 71.18,
+        "disposition": "insufficient-evidence",
+        "rationale": "Category weight known; borrower identities/terms/seniority/custody not published."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "DeFi Lending",
+        "pct": 10.24,
+        "disposition": "basket-needs-split",
+        "rationale": "Category weight known; protocol/market/position weights not published."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Other / unmapped Accountable buckets",
+        "pct": 5.36,
+        "disposition": "insufficient-evidence",
+        "rationale": "Residual Accountable Other without constituent identity."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Undisclosed institutional custodians and exchanges (balances ingested by Accountable inside the Noon perimeter)",
+        "role": "custodian"
+      },
+      {
+        "name": "Accountable (third-party proof-of-solvency attestation)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "permitted",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-1 (lead usde-ethena)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Noon transparency documentation",
+        "url": "https://docs.noon.capital/security/transparency"
+      },
+      {
+        "label": "Noon Accountable dashboard API",
+        "url": "https://cache.accountable.capital/dashboard/noon"
+      }
+    ],
+    "uncertainty": "Noon states that Accountable's verification engine ingests data directly from Noon's asset custodians and exchanges within the Noon perimeter, but does not name those custodians or exchanges. Account segregation, insolvency treatment, provider shares, and rehypothecation terms are not publicly documented; deployment of reserves into yield strategies is part of Noon's disclosed design rather than custodian rehypothecation."
+  }
+}

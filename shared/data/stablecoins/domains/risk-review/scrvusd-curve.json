@@ -1,0 +1,57 @@
+{
+  "id": "scrvusd-curve",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "scrvUSD Ethereum contract",
+        "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367"
+      },
+      {
+        "label": "Curve crvUSD source repository",
+        "url": "https://github.com/curvefi/curve-stablecoin"
+      },
+      {
+        "label": "scrvUSD exact-match YearnV3Vault clone",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xd8063123bba3b480569244ae66bfe72b6c84b00d"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-22: scrvUSD is an immutable ERC-4626 wrapper whose asset() is crvUSD. The exact-match wrapper has no owner or direct holder-freeze function. The parent crvUSD control and reserve path remains the relevant upstream failure domain, so inherited exposure is retained with the parent identity recorded by mintAuthority.inheritedFrom.",
+    "reviewer": "GPT SOL-CORP-C wave6",
+    "reviewedAt": "2026-07-22"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "scrvUSD is a passive Yearn V3 vault that accepts crvUSD and runs no strategies, borrower-owned debt positions, or local liquidation engine. Its required crvUSD parent retains the separately tracked unresolved LLAMMA branch inventory.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "Curve's repository describes scrvUSD as an unmodified Yearn V3 vault accepting crvUSD, with deposited funds left in the vault and no strategies. Minting and redemption are share accounting rather than borrower debt creation, so scrvUSD has no local collateral-oracle or liquidation branches. The variantOf relationship keeps the unresolved crvUSD parent branch review visible rather than treating it as cleared.",
+      "sources": [
+        {
+          "label": "Savings crvUSD repository",
+          "url": "https://github.com/curvefi/scrvusd"
+        },
+        {
+          "label": "Curve crvUSD risk documentation",
+          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Curve crvUSD risk docs",
+        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+      },
+      {
+        "label": "Savings crvUSD repository",
+        "url": "https://github.com/curvefi/scrvusd"
+      }
+    ]
+  }
+}

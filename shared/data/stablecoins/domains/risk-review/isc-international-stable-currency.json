@@ -1,0 +1,60 @@
+{
+  "id": "isc-international-stable-currency",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "ISC docs",
+        "url": "https://wp.isc.money/"
+      },
+      {
+        "label": "Orb token metadata",
+        "url": "https://orbmarkets.io/token/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD/metadata"
+      },
+      {
+        "label": "Solana freeze account docs",
+        "url": "https://solana.com/docs/tokens/basics/freeze-account"
+      }
+    ],
+    "evidence": "ISC's Solana mint has a non-null freeze authority, and Solana token accounts can be frozen when a mint retains freeze authority. That is direct holder-account freeze capability.",
+    "reviewer": "Codex FreezeWatch audit",
+    "reviewedAt": "2026-05-25"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "ISC docs",
+        "url": "https://wp.isc.money/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "solana:J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+        "destinationChain": "solana",
+        "contractAddress": "J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+        "protocol": "ISC native Solana issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ISC is native on Solana: mint and freeze authority are the reviewed 2-of-3 SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ (mint-authority profile).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "ISC docs",
+            "url": "https://wp.isc.money/"
+          }
+        ]
+      }
+    ]
+  }
+}

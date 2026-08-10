@@ -1,0 +1,77 @@
+{
+  "id": "hyusd-hylo",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Hylo on-chain addresses",
+        "url": "https://docs.hylo.so/security/onchain-addresses.md"
+      },
+      {
+        "label": "Solana mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Solana SPL Token authority source (pinned)",
+        "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs#L423-L512"
+      },
+      {
+        "label": "Hylo stablecoin documentation",
+        "url": "https://docs.hylo.so/product-guide/stablecoin.md"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 437980139. The sole tracked HYUSD mint remains owned by the legacy SPL Token program with freezeAuthority = null; pinned Token Program source requires the current freeze authority to freeze an account and does not permit a disabled authority to be restored. Hylo identifies no separate issuer transfer-control layer. Current reviewed pool composition nevertheless includes 5.319864% Circle USDC plus cbBTC exposure. Circle can freeze that reserve asset and impair backing or conversions, but cannot freeze HYUSD token accounts. Direct holder freeze is therefore false, with the USDC position recorded separately as upstream risk.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "The observable V1 program uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. Hylo's address directory does not publish a complete deployed V2 program/pool inventory, so the production oracle graph is unresolved.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "owner-triage",
+      "rationale": "Both the observable V1 pool and the documented V2 per-asset pools issue protocol-level synthetic claims rather than borrower-specific collateralized debt positions. The V2 design isolates collateral ratios by pool, but users still do not maintain individually liquidatable borrower branches. Production activation of the documented V2 pools remains unresolved.",
+      "sources": [
+        {
+          "label": "Hylo hyUSD and xSOL design",
+          "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+        },
+        {
+          "label": "Hylo V2 multi-asset architecture",
+          "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+        },
+        {
+          "label": "Hylo risk management",
+          "url": "https://docs.hylo.so/protocol-overview/risk-management"
+        },
+        {
+          "label": "Hylo equations",
+          "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "owner-triage",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Hylo V1 hyUSD and xSOL design",
+        "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+      },
+      {
+        "label": "Hylo V2 multi-asset architecture",
+        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
+      },
+      {
+        "label": "Hylo on-chain address directory",
+        "url": "https://docs.hylo.so/security/onchain-addresses"
+      },
+      {
+        "label": "Hylo equations",
+        "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
+      }
+    ]
+  }
+}

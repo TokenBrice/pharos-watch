@@ -1,0 +1,66 @@
+{
+  "id": "stkgho-umbrella-aave",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Sourcify exact-match Umbrella StakeToken implementation (pause + whenNotPaused _update)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x75e8ac0c063b6966e2a9954adedf39bde9370197?fields=sources,compilation"
+      },
+      {
+        "label": "Ethereum PublicNode RPC observation block 25648452",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "stkGHO proxy on Etherscan",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033#readContract"
+      },
+      {
+        "label": "Aave Umbrella documentation",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "Aave GHO underlying token",
+        "url": "https://etherscan.io/token/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-07-30. Sole catalogued deployment is the Ethereum upgradeable proxy 0x4f82…5033. At Ethereum block 25648452: EIP-1967 implementation 0x75e8…0197, admin ProxyAdmin 0xde9f…6a9a whose owner is Aave Governance V3 Level-1 Executor 0x5300…192A; asset()=GHO 0x40d1…c2f; paused()=false; owner() on the stake token = 0xd400…a8. Sourcify exact-match StakeToken.sol inherits PausableUpgradeable, exposes onlyOwner pause()/unpause(), and gates _update (and therefore transfer/transferFrom) with whenNotPaused — so the owner can block all holder share transfers while paused. No isBlacklisted/blacklist/freeze/burn(account) selectors on the implementation. Freeze reach is therefore direct (global pause) under Aave governance-controlled ownership, not inherited-only; GHO remains an additional upstream exposure. Transfer categorical posture matches restrictable via the same pause surface; material-scope publication of the transfer overlay still requires chainCirculatingById for this asset.",
+    "reviewer": "Grok T55 access review",
+    "reviewedAt": "2026-07-30"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "stkGHO is a slashable Aave Umbrella safety-module receipt and has no borrower-owned collateral positions or token-level liquidation oracle. Its underlying GHO exposure inherits the external Aave reserve-oracle and bad-debt risks reviewed on the parent asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Aave documents Umbrella as an automated safety module that stakes assets and burns or slashes the staked receipt to cover protocol deficits. stkGHO depositors do not open GHO borrower positions, so there are no stkGHO collateral-market or liquidation branches to inventory; the underlying GHO parent carries the separate Aave oracle profile.",
+      "sources": [
+        {
+          "label": "Aave Umbrella help",
+          "url": "https://aave.com/help/umbrella/umbrella"
+        },
+        {
+          "label": "Aave Umbrella development proposal",
+          "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aave Umbrella help",
+        "url": "https://aave.com/help/umbrella/umbrella"
+      },
+      {
+        "label": "Aave Umbrella development proposal",
+        "url": "https://governance.aave.com/t/bgd-aave-safety-module-umbrella/18366"
+      }
+    ]
+  }
+}

@@ -1,0 +1,246 @@
+{
+  "id": "fdusd-first-digital",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: FDUSD resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "First Digital identifies the Ethereum, BSC, Arbitrum, Sui, TON, and Solana contracts as native FDUSD deployments. Each deployment has an independently verified issuer-controlled mint authority rather than a third-party bridge lockbox; the shared FD121 issuer domain is the common route failure mode.",
+    "reviewedAt": "2026-07-13",
+    "reviewer": "Codex fixed-cutoff route audit",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "First Digital native issuance",
+        "url": "https://www.firstdigitallabs.com/fdusd",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "First Digital FDUSD deployment directory",
+        "url": "https://www.firstdigitallabs.com/fdusd"
+      },
+      {
+        "label": "First Digital native FDUSD on Arbitrum",
+        "url": "https://www.firstdigitallabs.com/news-and-insights/native-fdusd-now-live-on-arbitrum"
+      },
+      {
+        "label": "First Digital native FDUSD on TON",
+        "url": "https://www.firstdigitallabs.com/news-and-insights/first-digital-usd-stablecoin-is-natively-live-on-ton"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "fdusd:evm:shared-4-of-6-safe-signer-set"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526129,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Ethereum FDUSD contract",
+            "url": "https://etherscan.io/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#readProxyContract"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "destinationChain": "bsc",
+        "contractAddress": "0xc5f0f7b66764f6ec8c8dff7ba683102295e16409",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "fdusd:evm:shared-4-of-6-safe-signer-set",
+          "eoa:bsc:0x15a07da3f5247109baa9506fa6f85c246ce13fc0"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 109812367,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "BSC FDUSD contract",
+            "url": "https://bscscan.com/address/0xc5f0f7b66764f6ec8c8dff7ba683102295e16409#code"
+          },
+          {
+            "label": "BSC SafeMint module",
+            "url": "https://bscscan.com/address/0x75C08fffa8C4A5977d48D2a10eBFE04F9a7a50D0#code"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x93c9932e4afa59201f0b5e63f7d816516f1669fe",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "fdusd:evm:shared-4-of-6-safe-signer-set"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 483535601,
+        "sources": [
+          {
+            "label": "First Digital native FDUSD on Arbitrum",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/native-fdusd-now-live-on-arbitrum"
+          },
+          {
+            "label": "Arbitrum FDUSD contract",
+            "url": "https://arbiscan.io/address/0x93c9932e4afa59201f0b5e63f7d816516f1669fe#code"
+          }
+        ]
+      },
+      {
+        "id": "sui:0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
+        "destinationChain": "sui",
+        "contractAddress": "0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a::fdusd::FDUSD",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "sui",
+        "controllerAddress": "0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:sui:0x045dadba87e5ad53f12075a1f0fa94bd94550a3bcf2abbe316e2d3b16ceb9440"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 298226093,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Sui FDUSD package",
+            "url": "https://suiscan.xyz/mainnet/object/0xf16e6b723f242ec745dfd7634ad072c42d5c1d9ac9d62a39c381303eaa57693a"
+          },
+          {
+            "label": "Sui FDUSD TreasuryCap",
+            "url": "https://suiscan.xyz/mainnet/object/0xc4b759d57eb50224888dac4a9233ec8824c6175e9bf7656f8ebdae88ad094bc8"
+          }
+        ]
+      },
+      {
+        "id": "ton:EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
+        "destinationChain": "ton",
+        "contractAddress": "EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "ton",
+        "controllerAddress": "EQDgLAD13SZpaYOyyof0pP6VuHo87SyAArtn6YYh29br7Srw",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:ton:0:e02c00f5dd26696983b2ca87f4a4fe95b87a3ced2c8002bb67e98621dbd6ebed"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 79471628,
+        "sources": [
+          {
+            "label": "First Digital native FDUSD on TON",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/first-digital-usd-stablecoin-is-natively-live-on-ton"
+          },
+          {
+            "label": "First Digital FDUSD on TON guide",
+            "url": "https://www.firstdigitallabs.com/news-and-insights/fdusd-on-ton-a-quick-start-guide"
+          },
+          {
+            "label": "TON FDUSD Jetton master",
+            "url": "https://tonviewer.com/EQD0Evpk4timFOHmy4Sv3l_KEUXlM-dN1_KhroTCfB2wkO89"
+          }
+        ]
+      },
+      {
+        "id": "solana:9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
+        "destinationChain": "solana",
+        "contractAddress": "9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u",
+        "protocol": "First Digital native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "solana",
+        "controllerAddress": "9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf",
+        "failureDomainKeys": [
+          "issuer:fd121-bvi-limited",
+          "multisig:solana:9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+        ],
+        "observedAt": "2026-07-13",
+        "observedBlock": 432714278,
+        "sources": [
+          {
+            "label": "First Digital FDUSD deployment directory",
+            "url": "https://www.firstdigitallabs.com/fdusd"
+          },
+          {
+            "label": "Solscan FDUSD token",
+            "url": "https://solscan.io/token/9zNQRsGLjNKwCUU5Gq5LR8beUCPzQMVMqKAi3SSZh54u"
+          },
+          {
+            "label": "Solscan FDUSD mint multisig",
+            "url": "https://solscan.io/account/9eXtLy4zFu2kKdWDJBfAKD7TvwtTA1zrZHHJXnCkUpGf"
+          }
+        ]
+      }
+    ]
+  }
+}

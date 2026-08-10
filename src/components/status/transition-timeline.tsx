@@ -65,7 +65,7 @@ function publicImpactPill(publicImpact: IncidentPublicImpact) {
     <StatusPill
       className={cn(
         publicImpact === "impacting" && "bg-red-500/15 text-red-700 dark:text-red-300",
-        publicImpact === "not-impacting" && "bg-green-500/12 text-green-700 dark:text-green-300",
+        publicImpact === "not-impacting" && "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
         publicImpact === "unknown" && "bg-muted text-muted-foreground",
       )}
     >

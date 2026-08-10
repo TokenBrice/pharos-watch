@@ -1,0 +1,77 @@
+{
+  "id": "busd0-usual",
+  "canBeBlacklisted": "possible",
+  "blacklistabilityReview": {
+    "reviewedStatus": "possible",
+    "sources": [
+      {
+        "label": "Usual bUSD0 fact sheet",
+        "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0"
+      },
+      {
+        "label": "Usual USD0 token technical documentation",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/usd0"
+      }
+    ],
+    "evidence": "Usual's official bUSD0 materials identify the token as a bond wrapper over USD0, while the USD0 technical documentation describes issuer or DAO-controlled minting and blacklist checks on the underlying token. A separate deployment-wide holder-freeze inventory for bUSD0 was not established, so the explicit Possible status is retained.",
+    "reviewer": "SONG Safety Score V9 access review",
+    "reviewedAt": "2026-07-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "bUSD0 inherits USD0's multichain route surface. Usual documents USD0 and USUAL deployments across Ethereum, Arbitrum, Base, and BNB Chain with Chainlink CCIP and LayerZero supporting unified liquidity, so the bridge route is scored as an external validated-network dependency.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP / LayerZero for Usual",
+        "url": "https://docs.usual.money/",
+        "note": "Usual's documentation names CCIP and LayerZero as cross-chain infrastructure for USD0 and USUAL."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Usual docs",
+        "url": "https://docs.usual.money/"
+      },
+      {
+        "label": "bUSD0 docs",
+        "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x35d8949372d46b7a3d5a56006ae77b215fc69bc0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "arbitrum:0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

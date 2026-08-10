@@ -1,0 +1,97 @@
+{
+  "id": "gbpsafo-spiko",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "manual-review",
+    "summary": "GBPSAFO is the GBP share class of Spiko's AMF-authorized UCITS fund; tokens are minted to KYC'd investor addresses by Spiko's in-house 'daily-operator' relayer and burned by a dedicated redemption contract, under a multisig super-admin that can upgrade contracts and manage permissions.",
+    "upgradeability": {
+      "model": "uups",
+      "canChangeMintLogic": true,
+      "controlRef": "Spiko super-admin multisig",
+      "observedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Spiko daily-operator relayer (minter)",
+        "role": "backend-signer",
+        "authorityType": "issuer-backend",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "issuer-backend:gbpsafo-spiko:spiko-daily-operator-relayer"
+        ],
+        "evidence": "Verified on-chain 2026-07-20: the Ethereum PermissionManager requires group mask {0,2} for mint on GBPSAFO; group 2 holds six operator contracts and group 5 (other Spiko tokens) the relayer EOA 0x71a1a4165ae953cb80fcd102c28fc5d03beafa24; these are Spiko-operated daily-operator identities.",
+        "sources": [
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ]
+      },
+      {
+        "label": "Spiko super-admin multisig",
+        "role": "proxy-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "unknown",
+        "failureDomainKeys": [
+          "safe:ethereum:0x4eaa52b6280593a8820c45ce38f974290ae52cea"
+        ],
+        "evidence": "Verified on-chain 2026-07-20: this Safe is the sole member of group 0 (ADMIN) in the Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum (getGroups bitmask = group 0; GroupAdded event history); it administers all permission groups including the mint group.",
+        "sources": [
+          {
+            "label": "Spiko smart contracts",
+            "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+          }
+        ],
+        "chain": "ethereum",
+        "address": "0x4eaa52b6280593a8820c45ce38f974290ae52cea",
+        "threshold": 3,
+        "signerCount": 7,
+        "safe": {
+          "threshold": 3,
+          "owners": [
+            "0x75e0092e7d2c8d854fcf5334f95554852d62746a",
+            "0xe9106c617d7180bf6badcfa5edc664b726c5dcbb",
+            "0x6c00be5d1013a5bca938ef6aa8f1e5e706ff384d",
+            "0x4d1d9c5b5d9ca448194313d799de374f362bd460",
+            "0xda47bd72438f11bef7cc54f18cd02426dd86a5a2",
+            "0xe67d2cbeae3090be017c66e7a6943961619a5d35",
+            "0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949"
+          ],
+          "observedBlock": 25571110,
+          "observedAt": "2026-07-20",
+          "source": "onchain"
+        }
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "evidence": "Resolved 2026-07-20 against the Sourcify-verified PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 on Ethereum: getRequirements(token, mint) = group mask {0,2}; group 0 (ADMIN) is held solely by Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea (3-of-7), and six group-2 operator contracts have canCall(token, mint) = true. The ADMIN Safe can change permission assignments and UUPS mint-critical logic, so no independent on-chain economic ceiling is evidenced. GBPSAFO is an AMF-authorized UCITS sub-fund; its product record identifies recurring PwC assurance, so supply-to-fund reconciliation is recorded as periodic and supervision as prudential rather than inferred from the contract path.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Spiko smart contracts",
+          "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+        },
+        {
+          "label": "Spiko Pound",
+          "url": "https://www.spiko.io/spiko-pound"
+        }
+      ],
+      "sourceFreeRationale": "Spiko uses a custom RBAC permission-group system not compatible with standard AccessControl interfaces. On-chain reads (owner(), getRoleMemberCount(), getOwners()) all revert or return nothing useful on the token proxies. The Ethereum proxy (0xc273986a...) delegates to a combined Token+TimelockController-like implementation (0x60fcb851..., named 'Token' on Blockscout) which exposes Timelock selectors but not standard enumerable role getters. The Polygon external proxy admin (0x251747f0...) is an unverified contract that does not respond to standard Safe or multisig ABI."
+    }
+  }
+}

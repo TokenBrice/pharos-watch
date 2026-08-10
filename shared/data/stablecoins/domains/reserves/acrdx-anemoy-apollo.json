@@ -1,0 +1,133 @@
+{
+  "id": "acrdx-anemoy-apollo",
+  "reserves": [
+    {
+      "name": "Apollo Diversified Credit-I Fund shares",
+      "pct": 97.11,
+      "risk": "high",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Apollo Diversified Credit Fund, advised by Apollo Global Management",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "market",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "over-seven-days"
+    },
+    {
+      "name": "Cash",
+      "pct": 2.73,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "Anemoy fund cash accounts; counterparties not disclosed",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unspecified cryptocurrency balance",
+      "pct": 0.16,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Asset identity not disclosed by Chronicle",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Grok wave8 phase1 reserve re-verify; Kimi R05 bounded-unknown acceptance",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Chronicle live ACRDX Proof of Asset",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/anemoy-tokenized-apollo-acrdx"
+      },
+      {
+        "label": "Ethereum Blockscout ACRDX Chronicle VAO consumer (UPoked/Poked)",
+        "url": "https://eth.blockscout.com/address/0x9a3bF392f86acd1b1EC07d026B326302eAED7488?tab=logs"
+      },
+      {
+        "label": "Anemoy ACRDX launch",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Centrifuge ACRDX launch disclosure",
+        "url": "https://centrifuge.io/blog/acrdx-launch-on-centrifuge"
+      },
+      {
+        "label": "Chronicle ACRDX verification methodology",
+        "url": "https://chroniclelabs.org/blog/chronicle-s-proof-of-asset-unlocks-apollo-s-acrdx-curated-by-steakhouse"
+      }
+    ],
+    "rationale": "Write-time re-open of Chronicle's live Apollo ACRDX Proof of Asset dashboard on 2026-08-08 confirms the same three category buckets reported on 2026-07-28: Apollo Diversified Credit-I Fund shares, cash, and an unidentified cryptocurrency balance. Two-decimal weights remain 97.11%, 2.73%, and 0.16% (sum 100). The 0.16% cryptocurrency slice is verified by Chronicle only at the aggregate level; the underlying token is not identified. Because the exposure is small (well below 1% of gross holdings) and no further granular disclosure is available, it is accepted as a bounded known-unknown rather than blocking the entire reserve review. Cash counterparties and the gross-holdings-to-NAV residual also remain undisclosed.",
+    "compositionBasis": "Chronicle-verified gross feeder-fund holdings, reconciled to ACRDX NAV and on-chain Chronicle VAO Poked value; the 2026-08-08 re-open confirmed the same weights reported by the 2026-07-27 attestation",
+    "compositionAsOf": "2026-07-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Chronicle labels USD 70,838.76, or 0.16% of gross holdings, only as cryptocurrency; it does not identify the token. Cash counterparties, the look-through obligor schedule inside the Apollo fund share, and the ~USD 39,473 gross-holdings-to-NAV difference are also unexplained, while the feeder-level asset categories and weights are reported.",
+    "knownUnknownExposurePct": 0.16,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Apollo Diversified Credit-I Fund shares",
+        "pct": 97.11,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The backing asset is an identified Apollo fund share rather than a Pharos-tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Cash",
+        "pct": 2.73,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Cash is an exogenous reserve asset; the current feeder-fund weight is independently verified even though bank counterparties are not disclosed."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Unspecified cryptocurrency balance",
+        "pct": 0.16,
+        "disposition": "basket-needs-split",
+        "rationale": "Chronicle verifies the aggregate cryptocurrency value but does not identify the constituent token. The exposure is bounded at 0.16% of gross holdings, so the reserve review proceeds with an explicit basket-needs-split disposition rather than blocking on this slice."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "The Bank of New York Mellon Trust Company, N.A. (underlying Apollo fund custodian)",
+        "role": "custodian"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-NR-A wave6",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Apollo Diversified Credit Fund N-CSR",
+        "url": "https://www.sec.gov/Archives/edgar/data/1676197/000139834426004660/fp0097839-1_ncsr.htm"
+      },
+      {
+        "label": "Anemoy ACRDX launch disclosure",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "BVI FSC Anemoy Capital SPC registry",
+        "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+      }
+    ],
+    "uncertainty": "The underlying Apollo fund filing names BNY Mellon Trust as custodian, but the feeder-level custodian, provider shares, segregation terms, and rehypothecation policy are not public. The BVI segregated-portfolio structure supports structural bankruptcy separation without proving custody-level segregation.",
+    "knownUnknownExposurePct": 100
+  }
+}

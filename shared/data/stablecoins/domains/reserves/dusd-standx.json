@@ -1,0 +1,97 @@
+{
+  "id": "dusd-standx",
+  "reserves": [
+    {
+      "name": "Market-neutral spot collateral, perpetual hedges, and stability reserve",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "hedged-crypto",
+      "issuerOrObligor": "StandX protocol, custodians, and undisclosed centralized-exchange counterparties",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "StandX DUSD architecture",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      },
+      {
+        "label": "StandX DUSD minting",
+        "url": "https://docs.standx.com/docs/dusd-solutions/minting-dusd"
+      },
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD redemption",
+        "url": "https://docs.standx.com/docs/dusd-solutions/redeeming-dusd"
+      },
+      {
+        "label": "StandX product FAQ",
+        "url": "https://docs.standx.com/docs/dusd-overview/product-faq"
+      },
+      {
+        "label": "DefiLlama StandX DUSD stablecoin profile",
+        "url": "https://stablecoins.llama.fi/stablecoin/252"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: StandX architecture, minting, risks/hedging, redemption, and product-FAQ pages still describe DUSD as market-neutral / delta-neutral — USDT/USDC mint inputs converted into spot crypto (examples include ETH, SOL, BTC) with matching short perpetual hedges plus a stability/RSV reserve fund for negative funding — without any dated balance sheet, component weights, venue inventory, or Stability Reserve Fund size. Product FAQ points users to the website for a 'reserve ratio' but the public dashboard and overview pages return no itemized composition, PoR, or attestation. Independently, DefiLlama classifies StandX DUSD as pegMechanism crypto-backed with mint/redeem via USDT/USDC and publishes circulating supply only (no reserve breakdown). No public API on api.standx.com, perps.standx.com, or ice.standx.com exposes reserve composition. Therefore the prior fabricated 50/45/5 split remains rejected; the narrowest source-supported row is the 100% aggregate market-neutral envelope with knownUnknownExposurePct 100.",
+    "compositionBasis": "StandX architecture, minting, hedging, redemption, and product-FAQ documentation re-opened 2026-07-28; component weights remain undisclosed; DefiLlama corroborates crypto-backed peg without a reserve breakdown",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current reserve weights, exact spot constituents, exchange counterparties, custodian shares, and the Stability Reserve Fund composition are not disclosed in the reviewed primary sources or independent catalogs.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Market-neutral spot collateral, perpetual hedges, and stability reserve",
+        "pct": 100,
+        "disposition": "basket-needs-split",
+        "rationale": "Primary docs and independent DefiLlama catalog document the delta-neutral reserve mechanism but do not publish current component weights or venue allocations, so the aggregate cannot be split or linked without fabrication."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Ceffu and centralized exchange custody partners",
+        "role": "custodian"
+      },
+      {
+        "name": "StandX multi-signature custody arrangements",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "StandX risks and hedging system",
+        "url": "https://docs.standx.com/docs/dusd-solutions/risks-hedging-system"
+      },
+      {
+        "label": "StandX DUSD architecture",
+        "url": "https://docs.standx.com/docs/dusd-solutions"
+      }
+    ],
+    "uncertainty": "StandX documents multi-signature custody solutions, exchange-diversified hedging, and custodial insurance coverage, and issuer materials reference Ceffu custody, but the reviewed sources do not publish provider shares, account segregation, insolvency treatment, or rehypothecation terms.",
+    "knownUnknownExposurePct": 100
+  }
+}

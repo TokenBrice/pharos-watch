@@ -1,0 +1,144 @@
+{
+  "id": "frxusd-frax",
+  "reserves": [
+    {
+      "name": "WTGXX (WisdomTree Government Money Market)",
+      "pct": 54.2,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USTB (Superstate tokenized T-bills)",
+      "pct": 28.9,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Invesco Short Duration U.S. Government Securities Fund",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "BUIDL (BlackRock tokenized T-bills)",
+      "pct": 13.5,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "USDB (Bridge)",
+      "pct": 1.7,
+      "risk": "low",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Bridge Building Inc.",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "Unmapped Frax balance-sheet assets",
+      "pct": 1.7,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Frax balance-sheet unmapped token (EREBOR_USD)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Pharos reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax frxUSD balance-sheet API",
+        "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+      },
+      {
+        "label": "Frax transparency",
+        "url": "https://frax.com/transparency"
+      },
+      {
+        "label": "WisdomTree WTGXX fund page",
+        "url": "https://www.wisdomtree.com/investments/etfs/digital-funds/wtgxx"
+      },
+      {
+        "label": "Superstate USTB fund page",
+        "url": "https://superstate.com/ustb"
+      },
+      {
+        "label": "Securitize BUIDL overview",
+        "url": "https://securitize.io/blackrock/buidl"
+      },
+      {
+        "label": "Bridge USDB overview",
+        "url": "https://www.bridge.xyz/news/usdb"
+      }
+    ],
+    "rationale": "Re-verified against the live Frax frxUSD balance-sheet API on 2026-08-08. This review mirrors the live frax-balance-sheet adapter's exact normalized names and one-decimal weights and classifies every displayed slice, including the 1.7% EREBOR_USD unmapped token held as an exogenous unknown-asset slice rather than a tracked stablecoin dependency.",
+    "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by the live frax-balance-sheet adapter",
+    "compositionAsOf": "2026-08-08",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unclassified reserve exposure remains in the official balance sheet or the live adapter output; the EREBOR_USD slice is explicitly named and classified as an unmapped exogenous asset.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "WTGXX (WisdomTree Government Money Market)",
+        "pct": 54.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "wtgxx-wisdomtree is a quarantined no-supply record (permitted runtime sources report no positive circulating supply or market cap) that can never carry a live score, so this slice is scored on its own fund-share asset class rather than linked as a dependency edge.",
+        "candidateCoinIds": [
+          "wtgxx-wisdomtree"
+        ]
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "USDB (Bridge)",
+        "pct": 1.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USDB is identified by the official balance sheet but remains outside the active scoring set, so it is not promoted into the active dependency graph."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Unmapped Frax balance-sheet assets",
+        "pct": 1.7,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "EREBOR_USD is not listed in the live adapter's token display table and is not a tracked stablecoin dependency; it is classified as an unmapped exogenous reserve asset."
+      }
+    ]
+  }
+}

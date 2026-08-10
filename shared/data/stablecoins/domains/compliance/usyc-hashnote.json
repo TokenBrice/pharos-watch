@@ -1,0 +1,46 @@
+{
+  "id": "usyc-hashnote",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "USYC represents shares of the Hashnote International Short Duration Fund Ltd., a Cayman Islands mutual fund administered by Circle International Bermuda Limited. It is a yield-bearing tokenized fund share with NAV exposure rather than a fixed-value payment stablecoin, so it is treated as an excluded security for GENIUS tracking.",
+      "references": [
+        {
+          "label": "Circle USYC",
+          "url": "https://www.circle.com/usyc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-18"
+        },
+        {
+          "label": "USYC Docs — Introduction",
+          "url": "https://usyc.docs.hashnote.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Circle International Bermuda Limited (token administrator, BMA-licensed); Hashnote International Short Duration Fund Ltd. (Cayman Islands mutual fund)",
+    "issuerDomicile": "Bermuda / Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "USYC is a tokenized fund share in the Hashnote International Short Duration Fund Ltd. (Cayman Islands registered mutual fund), not a payment stablecoin. The GENIUS Act payment-stablecoin framework does not apply: USYC is yield-bearing via NAV appreciation, not fixed-value, and represents a securities interest. Circle acquired Hashnote in January 2025; the token administrator is Circle International Bermuda Limited, regulated by the Bermuda Monetary Authority (BMA) under its DABA License.",
+    "references": [
+      {
+        "label": "Circle USYC",
+        "url": "https://www.circle.com/usyc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "USYC Docs — Introduction",
+        "url": "https://usyc.docs.hashnote.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

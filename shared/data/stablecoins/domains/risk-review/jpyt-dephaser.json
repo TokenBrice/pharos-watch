@@ -1,0 +1,143 @@
+{
+  "id": "jpyt-dephaser",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Sourcify Optimism contract source",
+        "url": "https://repo.sourcify.dev/contracts/partial_match/10/0xc47da4cb96ce65a96844a01bfae509f9d5454534/sources/src/DephaserJPY.sol"
+      },
+      {
+        "label": "Docs",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt"
+      },
+      {
+        "label": "DephaserJPY verified source on Optimism",
+        "url": "https://optimism.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "DephaserJPY verified source on Base",
+        "url": "https://base.blockscout.com/address/0xc47da4cb96ce65a96844a01bfae509f9d5454534?tab=contract"
+      },
+      {
+        "label": "Optimism fixed-block RPC",
+        "url": "https://mainnet.optimism.io"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at Optimism block 155309915 and Base block 49714630. Both tracked DephaserJPY deployments retained direct runtime code with zero EIP-1967 implementation and admin slots. Their verified ABI/source exposes standard ERC-20 transfer paths, role-gated mint, and allowance-gated burnFrom, but no pause, blacklist, freeze, allowlist, seizure, transfer hook, or privileged arbitrary-holder burn. The earlier PAUSER_ROLE wording was stale: the current verified ABI has no PAUSER_ROLE or pause function. Direct JPYT blacklistability is false. Locked USDC/USDT can be frozen upstream and impair backing or redemption, but those issuers cannot restrict JPYT holder balances.",
+    "reviewer": "OpenAI Codex C11 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "DePhaser mints JPYT using Chainlink USD/JPY exchange-rate data for USDT/USDC deposits, with no fallback or failure handling documented.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "JPYT is issued through fully collateralized USDT or USDC deposits and redeemed by burning JPYT for the deposited asset. The documented flow has no borrower-specific undercollateralized position or liquidation branch to enumerate.",
+      "sources": [
+        {
+          "label": "DePhaser money flow",
+          "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+        },
+        {
+          "label": "DePhaser terms of service",
+          "url": "https://docs.dephaser.com/policy/terms-of-service"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "DePhaser money flow",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md"
+      },
+      {
+        "label": "DePhaser overview",
+        "url": "https://docs.dephaser.com/concept/what-is-dephaser.md"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "JPYT is minted natively on each OP Stack chain by DePhaser's per-chain DepositManager contracts (sole MINTER_ROLE holders) against stablecoin deposits routed into Aave; the reviewed mint profile supersedes the earlier canonical-bridge guess.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "OP Mainnet Canonical",
+        "slug": "op-mainnet",
+        "url": "https://l2beat.com/interop/protocols/op-mainnet",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "DePhaser docs",
+        "url": "https://docs.dephaser.com/"
+      },
+      {
+        "label": "L2BEAT OP Mainnet",
+        "url": "https://l2beat.com/interop/protocols/op-mainnet"
+      }
+    ],
+    "routes": [
+      {
+        "id": "optimism:0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "destinationChain": "optimism",
+        "canonicalChain": "optimism",
+        "contractAddress": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "protocol": "DePhaser issuer-native JPYT (DepositManager mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JPYT issuance on optimism: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x77c1e40f5e7bb19c34d81f986fb13fe655f23cd9 (verified on-chain 2026-07-20), which mints JPYT against USDT deposits routed into Aave; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYT on optimism explorer (MINTER_ROLE probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ]
+      },
+      {
+        "id": "base:0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xc47da4cb96ce65a96844a01bfae509f9d5454534",
+        "protocol": "DePhaser issuer-native JPYT (DepositManager mint)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native JPYT issuance on base: MINTER_ROLE (sole member) is held by the DePhaser DepositManager 0x0eab9d66adb8527cd7c0e7e7c1782580431ec276 (verified on-chain 2026-07-20), which mints JPYT against USDC deposits routed into Aave; no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "JPYT on base explorer (MINTER_ROLE probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xc47da4cb96ce65a96844a01bfae509f9d5454534"
+          }
+        ]
+      }
+    ]
+  }
+}

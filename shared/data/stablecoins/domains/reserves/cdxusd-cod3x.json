@@ -1,0 +1,73 @@
+{
+  "id": "cdxusd-cod3x",
+  "reserves": [
+    {
+      "name": "Facilitator-managed crypto and stablecoin collateral",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Cod3x Facilitators (including Cod3x Lend) strategy collateral",
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "smart-contract",
+        "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Cod3x tech stack overview",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      },
+      {
+        "label": "Cod3x",
+        "url": "https://www.cod3x.org/"
+      }
+    ],
+    "rationale": "Cod3x documents cdxUSD as minted and burned by protocol-approved Facilitators (with Cod3x Lend as the primary issuance Facilitator) under strategy limits, and states the design is intended to keep every cdxUSD sufficiently backed. No current primary source publishes the facilitator collateral inventory, strategy positions, or coverage ratio, so the single aggregate envelope is retained with explicit v9 classification rather than invented constituent weights.",
+    "compositionBasis": "Cod3x Facilitator design documentation; no current reserve inventory published",
+    "compositionAsOf": "2026-07-20",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The facilitator-held collateral assets, strategy positions, obligors, and current coverage ratio behind cdxUSD are not disclosed by a current primary source.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Facilitator-managed crypto and stablecoin collateral",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Cod3x's Facilitator design is documented, but no reviewed source identifies the current collateral assets or reconciles them to cdxUSD supply."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Cod3x protocol and Facilitator strategy contracts",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-6 (lead usx-solstice)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Cod3x tech stack overview",
+        "url": "https://www.cod3x.org/unveiling-the-cod3x-tech-stack/"
+      }
+    ],
+    "uncertainty": "cdxUSD collateral is managed by Facilitator strategies under protocol limits rather than held by a named custodian. The reviewed sources do not establish account segregation, insolvency treatment, rehypothecation terms, or provider-level allocation.",
+    "knownUnknownExposurePct": 100
+  }
+}

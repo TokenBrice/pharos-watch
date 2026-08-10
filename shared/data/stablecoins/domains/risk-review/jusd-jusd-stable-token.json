@@ -1,0 +1,80 @@
+{
+  "id": "jusd-jusd-stable-token",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://jusd.app/whitepaper.pdf"
+      },
+      {
+        "label": "Website",
+        "url": "https://jusd.app/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "JUSD is native on Polygon, while the BSC deployment is a Chainport-bridged BridgeMintableToken with minting gated by classified authority / Chainport-controlled admin infrastructure. Because durable BSC supply depends on a third-party bridge mint route, Pharos scores the route as external lock/mint exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "JUSD website",
+        "url": "https://jusd.app/"
+      },
+      {
+        "label": "JUSD whitepaper",
+        "url": "https://jusd.app/whitepaper.pdf"
+      }
+    ],
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Chainport",
+        "slug": "chainport",
+        "url": "https://www.chainport.io/",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2",
+        "destinationChain": "bsc",
+        "contractAddress": "0xbf3950db0522a7f5caa107d4cbbbd84de9e047e2",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      },
+      {
+        "id": "polygon:0x0ba8a6ce46d369d779299dedade864318097b703",
+        "destinationChain": "polygon",
+        "contractAddress": "0x0ba8a6ce46d369d779299dedade864318097b703",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Profile-level evidence does not identify this deployment's route semantics or scope.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-06-13"
+      }
+    ]
+  }
+}

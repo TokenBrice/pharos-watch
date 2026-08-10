@@ -1,0 +1,172 @@
+{
+  "id": "syzusd-yuzu",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Yuzu syzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "syzUSD Plasma implementation",
+        "url": "https://plasmascan.to/address/0xa3982582016375a0b25cb7d572379d3d49e5e9c8#code"
+      },
+      {
+        "label": "syzUSD Monad deployment",
+        "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+      },
+      {
+        "label": "Pinned official StakedYuzuUSD source (commit 49676c4)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/49676c494d850337af96aaf48db7f4cb53ee8af4/src/StakedYuzuUSD.sol"
+      },
+      {
+        "label": "Plasma public RPC used for fixed-block reads",
+        "url": "https://rpc.plasma.to"
+      },
+      {
+        "label": "Monad public RPC used for fixed-block reads",
+        "url": "https://rpc.monad.xyz"
+      }
+    ],
+    "sourceFreeRationale": "The wrapper implementations establish no direct holder freeze, while upstream yzUSD and reserve-asset access exposure remains inherited.",
+    "evidence": "Re-verified 2026-08-09 on both deployments. At Plasma block 29369955 the syzUSD proxy 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6 resolves EIP-1967 implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8 and admin 0x7392751a860a51694231c7a0b4a9c853f8169cf0, asset() returns yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, paused() is false, and freeze-family probes such as isBlacklisted(address) revert; that ProxyAdmin's owner() is Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d with getThreshold() 4 and no timelock. At Monad block 94595184 the proxy 0x484be0540ad49f351eaa04eeb35df0f937d4e73f resolves implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53 and admin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331, whose owner() is TimelockController 0xd32ab76a165f1a716986ba8c58344e3df4397f5e with getMinDelay() 43200 seconds. The issuer's pinned source documents pause() as scoped to mint and redeem, adds no transfer hook, and blocks rescueTokens on the vault asset while supply is nonzero, so no live holder-selective freeze exists locally; the live proxy admins mean one could be added by upgrade. Backing is the single 100% reserve slice yzusd-yuzu, whose own verdict is possible over issuer-freezable reserve assets, so the named upstream exposure is retained and the verdict stays inherited rather than being collapsed into a token-local possible.",
+    "reviewer": "GPT SOL-NR-A wave6; re-verified by Kimi ACCESS-FREEZE AF03 and Claude FV-B access/freeze verification",
+    "reviewedAt": "2026-08-09"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "syzUSD is Yuzu's staking wrapper over yzUSD; its share price accrues strategy yield and the wrapper does not expose a separate borrower collateral market or token-level liquidation oracle.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex data review",
+      "rationale": "Yuzu documents syzUSD as a technical staking wrapper: users convert yzUSD into syzUSD shares and can unstake back to yzUSD. The reviewed wrapper has no borrower-owned debt positions or separate collateral/liquidation branches; underlying yzUSD mechanics remain a parent-asset dependency.",
+      "sources": [
+        {
+          "label": "Yuzu syzUSD documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+        },
+        {
+          "label": "Yuzu yzUSD documentation",
+          "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Yuzu syzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/staked-yzusd-syzusd"
+      },
+      {
+        "label": "Yuzu yzUSD documentation",
+        "url": "https://yuzu-money.gitbook.io/yuzu-money/yuzu-alpha/yuzu-stablecoin-yzusd"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "syzUSD moves cross-chain between Plasma and Monad via a LayerZero OVault. Yuzu's own audited contracts (ovault/ProtoOVaultComposer and PSMOVaultComposer) inherit LayerZero's VaultComposerSync and wire an asset+share OFT mesh, with the share token (syzUSD) explicitly required to be an OFTAdapter lockbox (approvalRequired()==true) on the hub chain (most likely Plasma) and a standard OFT on spokes. Because the durable supply path for shares runs through a third-party (LayerZero) OFTAdapter lockbox control surface, this is an external lock/mint route rather than opaque. (Named DVN set and a live LayerZeroScan trace were not pinned, and the on-chain hub identity was not confirmed at the explorer/deploy-config level, but the lockbox/adapter requirement is code-enforced in the issuer's audited composer.)",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Pharos bridge-route re-verification; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "LayerZero OVault (VaultComposerSync) — Yuzu ouroboros-contracts",
+        "slug": "layerzero",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "oft-adapter-lockbox",
+          "ovault"
+        ],
+        "note": "ProtoOVaultComposer inherits @layerzerolabs/ovault-evm VaultComposerSync; PSMOVaultComposer enforces share OFT must be an OFTAdapter (approvalRequired()==true => lockbox model). Asset+share OFT mesh per LayerZero OVault standard."
+      },
+      {
+        "source": "docs",
+        "name": "Dedaub audit — Yuzu V2 LayerZero oVault integration",
+        "slug": "layerzero-ovault",
+        "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/",
+        "bridgeTypes": [
+          "external-lock-mint",
+          "ovault"
+        ],
+        "note": "Audit states cross-chain operations via LayerZero added; reviewers focused on the LayerZero oVault integration."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Yuzu ouroboros-contracts — PSMOVaultComposer.sol (share OFT must be adapter / lockbox)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/PSMOVaultComposer.sol"
+      },
+      {
+        "label": "Yuzu ouroboros-contracts — ProtoOVaultComposer.sol (inherits LayerZero VaultComposerSync)",
+        "url": "https://github.com/Telos-Consilium/ouroboros-contracts/blob/main/src/ovault/ProtoOVaultComposer.sol"
+      },
+      {
+        "label": "Dedaub audit of Yuzu Money V2 (LayerZero oVault integration, Feb 9 2026)",
+        "url": "https://dedaub.com/audits/yuzu-money/yuzuusd-psm-february-09-2026/"
+      },
+      {
+        "label": "LayerZero OVault standard (share OFTAdapter lockbox on hub, OFT on spokes)",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
+      }
+    ],
+    "routes": [
+      {
+        "id": "plasma:0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "destinationChain": "plasma",
+        "contractAddress": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "protocol": "Yuzu syzUSD ERC-4626 vault (native wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xa3982582016375a0b25cb7d572379d3d49e5e9c8, ProxyAdmin 0x7392751a860a51694231c7a0b4a9c853f8169cf0 whose owner is the 4/5 Safe 0xa2a9700407934e913c840556b3d29f19cf6f203d) minting shares natively against yzUSD deposits (asset() = 0x6695c0f8706c5ace3bdf8995073179cca47926dc). The vault owner() EOA 0xceaff57fbcd0e8f095c5c1125dd09b93fc5bbf82 is operational-only. Native wrapper issuance; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syzUSD vault on Plasmascan",
+            "url": "https://plasmascan.to/address/0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+          },
+          {
+            "label": "Yuzu documentation",
+            "url": "https://docs.yuzu.money/"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "destinationChain": "monad",
+        "contractAddress": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "protocol": "Yuzu syzUSD ERC-4626 vault (native wrapper)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "On-chain 2026-07-20: transparent-proxy ERC-4626 'Staked Yuzu USD' vault (implementation 0xe536b80e7f859e72ad095d769da1da45b7312d53, ProxyAdmin 0x7040b88de8a8e63b9dffe2250f8062dcc1ca7331 whose owner is 0xd32ab76a165f1a716986ba8c58344e3df4397f5e) minting shares natively against yzUSD deposits; vault owner() EOA 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (no code) is operational-only. Native wrapper issuance; no bridge control carries the claim.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "syzUSD vault on Monadexplorer",
+            "url": "https://monadexplorer.com/address/0x484be0540ad49f351eaa04eeb35df0f937d4e73f"
+          },
+          {
+            "label": "Yuzu documentation",
+            "url": "https://docs.yuzu.money/"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "id": "susde-ethena",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "sUSDe is Ethena's savings wrapper over USDe. Ethereum wrapper shares are minted against deposited USDe and the many bridged/wrapped deployments inherit base USDe's signed-order issuer mint path.",
+    "inheritedFrom": "usde-ethena",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+        "label": "Ethereum sUSDe staking wrapper",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711751,
+        "capDescription": "Wrapper/share accounting over deposited USDe; does not mint base USDe.",
+        "sources": [
+          {
+            "label": "Ethena staking docs",
+            "url": "https://docs.ethena.fi/solution-design/staking-usde"
+          },
+          {
+            "label": "Ethena key addresses",
+            "url": "https://docs.ethena.fi/solution-design/key-addresses"
+          },
+          {
+            "label": "sUSDe Ethereum verified contract",
+            "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+          },
+          {
+            "label": "Ethereum dRPC observation endpoint",
+            "url": "https://eth.drpc.org"
+          }
+        ],
+        "evidence": "At Ethereum block 25711751, asset() returned USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3 and both EIP-1967 implementation and admin slots were zero, confirming a direct non-proxy deployment. owner() returned Ethena's 86,400-second timelock 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94. Wrapper shares mint only against deposited USDe; no privileged path can create unbacked wrapper shares."
+      }
+    ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "controlRef": "Ethereum sUSDe staking wrapper",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711751,
+      "sources": [
+        {
+          "label": "Ethena staking docs",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "Ethena key addresses",
+          "url": "https://docs.ethena.fi/solution-design/key-addresses"
+        },
+        {
+          "label": "sUSDe Ethereum verified contract",
+          "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+        },
+        {
+          "label": "Ethereum dRPC observation endpoint",
+          "url": "https://eth.drpc.org"
+        }
+      ]
+    },
+    "review": {
+      "sources": [
+        {
+          "label": "Ethena mint and redeem docs",
+          "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena staking docs",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde"
+        },
+        {
+          "label": "sUSDe Ethereum verified contract",
+          "url": "https://eth.blockscout.com/address/0x9d39a5de30e57443bff2a8307a4256c8797a3497?tab=contract"
+        },
+        {
+          "label": "Ethereum dRPC observation endpoint",
+          "url": "https://eth.drpc.org"
+        }
+      ],
+      "evidence": "At Ethereum block 25711751, the sUSDe contract's asset() was USDe, both EIP-1967 implementation and admin slots were zero, and owner() returned Ethena's 86,400-second timelock. The direct non-proxy wrapper has no privileged unbacked-share mint: local shares are created only against deposited USDe, so local issuance is bounded while durable USDe authority remains inherited from usde-ethena. No local reserve reconciliation or named prudential supervisor applies to the wrapper.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

@@ -6,7 +6,7 @@ import { Table2 } from "lucide-react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { useStressSignalDetail } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
-import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
+import { THREAT_BAND_LABELS, THREAT_BAND_STYLES } from "@shared/lib/classification";
 import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart-colors";
 
 /* Figma coin template: the DEWS history chart renders in the frost/teal
@@ -201,7 +201,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
 
   const { score, band, signals } = data.current;
   const typedBand = band as ThreatBand;
-  const bandColor = THREAT_BAND_COLORS[typedBand] ?? "";
+  const bandColor = THREAT_BAND_STYLES[typedBand]?.cls ?? "";
   const availableCount = Object.values(signals).filter((s) => s.available).length;
   const amplifiers = getDewsAmplifiers(data.current);
   const sortedSignals = Object.entries(SIGNAL_META)

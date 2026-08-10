@@ -1,0 +1,51 @@
+{
+  "id": "tbill-openeden",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "TBILL is a tokenized fund interest (NAV-appreciating share of Treasury Bills Institutional Liquidity Limited, a BVI Registered Professional Fund). The GENIUS Act expressly excludes securities under the Securities Act of 1933 and Investment Company Act of 1940 from the definition of payment stablecoin. A BVI professional fund interest is a securities-law construct, not a fixed-value payment instrument, and TBILL's NAV-based pricing, yield-bearing structure, and KYC-gated institutional-only access are all inconsistent with a payment stablecoin.",
+      "references": [
+        {
+          "label": "OpenEden TBILL introduction — BVI Registered Professional Fund structure",
+          "url": "https://docs.openeden.com/tbill/introduction",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-06-07"
+        },
+        {
+          "label": "GENIUS Act S.1582 — payment stablecoin definition excludes securities",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Treasury Bills Institutional Liquidity Limited (OpenEden)",
+    "issuerDomicile": "British Virgin Islands",
+    "licensingRegulator": "BVI FSC — Registered Professional Fund",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "TBILL is a tokenized Treasury fund interest issued by Treasury Bills Institutional Liquidity Limited, a BVI-regulated professional fund managed by BNY Investment Management and custodied by BNY. It is explicitly excluded from the GENIUS payment stablecoin definition as a fund/securities construct. NAV-based pricing, yield-bearing structure, and institutional-only KYC access are all inconsistent with a payment stablecoin. No GENIUS authorization posture applies.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "OpenEden TBILL introduction",
+        "url": "https://docs.openeden.com/tbill/introduction",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-07"
+  }
+}

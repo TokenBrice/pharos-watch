@@ -1,0 +1,150 @@
+{
+  "id": "gtusdcp-gauntlet",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "gtUSDCp has three direct immutable Morpho vault deployments; shares mint only against each chain's USDC deposits. Ethereum and Base parameter owners are 4-of-7 Gauntlet Safes, while Arbitrum uses the same seven signers at a 3-of-7 threshold.",
+    "inheritedFrom": "usdc-circle",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Ethereum Gauntlet USDC Prime VaultV2",
+          "url": "https://eth.blockscout.com/address/0x8c106eedad96553e64287a5a6839c3cc78afa3d0"
+        },
+        {
+          "label": "Base Gauntlet USDC Prime MetaMorpho",
+          "url": "https://base.blockscout.com/address/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+        },
+        {
+          "label": "Arbitrum Gauntlet USDC Prime MetaMorpho",
+          "url": "https://arbitrum.blockscout.com/address/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+        },
+        {
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curate/"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+        "label": "Gauntlet USDC Prime MetaMorpho V2 vault Ethereum (immutable, deposit-only mint)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25527215,
+        "capDescription": "Vault shares minted only against deposited USDC. No EIP-1967 proxy slots — vault is immutable. Owner (0xc684c6587712e5e7bdf9fd64415f23bd2b05faec) is the Gauntlet Safe 4/7 managing parameters only.",
+        "sources": [
+          {
+            "label": "Morpho vault page",
+            "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+          },
+          {
+            "label": "Morpho curation docs",
+            "url": "https://docs.morpho.org/curate/"
+          }
+        ],
+        "evidence": "At Ethereum block 25527215, the verified VaultV2 deployment had zero EIP-1967 implementation, admin, and beacon slots. asset() returned Ethereum USDC and owner() returned Safe 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec, configured 4-of-7 with no modules or guard. The owner manages vault parameters but cannot replace the deployed bytecode."
+      },
+      {
+        "chain": "base",
+        "address": "0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61",
+        "label": "Gauntlet USDC Prime MetaMorpho vault Base (immutable, deposit-only mint)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Vault shares mint only against deposited Base USDC. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 4-of-7 Gauntlet Safe that manages parameters but cannot replace the immutable vault bytecode.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 48599296,
+        "sources": [
+          {
+            "label": "Base Gauntlet USDC Prime MetaMorpho",
+            "url": "https://base.blockscout.com/address/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+          }
+        ],
+        "evidence": "At Base block 48599296, the verified MetaMorpho deployment had zero EIP-1967 implementation, admin, and beacon slots. asset() returned native Base USDC and owner() returned Safe 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0, configured 4-of-7 with no modules or guard."
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+        "label": "Gauntlet USDC Prime MetaMorpho vault Arbitrum (immutable, deposit-only mint)",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Vault shares mint only against deposited Arbitrum USDC. Owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 is a 3-of-7 Gauntlet Safe that manages parameters but cannot replace the immutable vault bytecode.",
+        "observedAt": "2026-07-13",
+        "observedBlock": 483587934,
+        "sources": [
+          {
+            "label": "Arbitrum Gauntlet USDC Prime MetaMorpho",
+            "url": "https://arbitrum.blockscout.com/address/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+          }
+        ],
+        "evidence": "At Arbitrum block 483587934, the verified MetaMorphoV1_1 deployment had zero EIP-1967 implementation, admin, and beacon slots. asset() returned native Arbitrum USDC and owner() returned Safe 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0, configured 3-of-7 with no modules or guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xe982615d461dd5cd06575bbea87624fda4e3de17",
+        "label": "Inherited Ethereum USDC MasterMinter",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Reviewed USDC metadata source",
+            "url": "https://github.com/circlefin/stablecoin-evm"
+          }
+        ],
+        "evidence": "Inherited from reviewed usdc-circle parent."
+      }
+    ],
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Morpho vault page",
+          "url": "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime"
+        },
+        {
+          "label": "Morpho curation docs",
+          "url": "https://docs.morpho.org/curate/"
+        },
+        {
+          "label": "Base Gauntlet USDC Prime MetaMorpho",
+          "url": "https://base.blockscout.com/address/0xee8f4ec5672f09119b96ab6fb59c27e1b7e44b61"
+        },
+        {
+          "label": "Arbitrum Gauntlet USDC Prime MetaMorpho",
+          "url": "https://arbitrum.blockscout.com/address/0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed"
+        },
+        {
+          "label": "Circle USDC transparency",
+          "url": "https://www.circle.com/transparency"
+        },
+        {
+          "label": "Deloitte USDC examination - May 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20May%2026.pdf"
+        },
+        {
+          "label": "NYDFS regulated virtual currency businesses",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        }
+      ],
+      "evidence": "The full three-chain inventory was checked independently: Ethereum at block 25527215, Base at block 48599296, and Arbitrum at block 483587934. Every verified direct vault had zero EIP-1967 implementation, admin, and beacon slots and returned the chain-local native USDC as asset(). Ethereum owner 0xc684c6587712e5e7bdf9fd64415f23bd2b05faec and Base owner 0x5a4e19842e09000a582c20a4f524c26fb48dd4d0 were 4-of-7 Safes; the same Arbitrum owner address was 3-of-7. All three had no modules or guard. Owners can curate vault parameters but cannot replace vault bytecode or mint base USDC. Economic-control evidence reviewed 2026-07-15: each immutable MetaMorpho deployment can mint shares only against deposited native USDC; the inherited base issuer publishes monthly Deloitte reserve examinations. The latest USDC report covers May 2026, and the NYDFS list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
+      "reviewer": "Codex Safety Score V9 registry pass",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

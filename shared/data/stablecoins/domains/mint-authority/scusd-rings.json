@@ -1,0 +1,408 @@
+{
+  "id": "scusd-rings",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "scUSD is a Veda BoringVault receipt token on Ethereum and Sonic. Each immutable vault authorizes the same-address LayerZeroTeller, while a chain-specific 4/6 Veda/Paladin Safe controls role grants through a one-day TimelockController and RolesAuthority.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526164,
+      "sources": [
+        {
+          "label": "Veda BoringVault source",
+          "url": "https://github.com/Veda-Labs/boring-vault/blob/f5ab09de989adb5d682312c7f205d928b67d57f2/src/base/BoringVault.sol"
+        },
+        {
+          "label": "scUSD Ethereum BoringVault verified source",
+          "url": "https://etherscan.io/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+        },
+        {
+          "label": "scUSD Sonic BoringVault verified source",
+          "url": "https://sonicscan.org/address/0xd3dce716f3ef535c5ff8d041c1a41c3bd89b97ae#code"
+        },
+        {
+          "label": "scUSD Ethereum LayerZeroTeller verified source",
+          "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+        },
+        {
+          "label": "scUSD Sonic LayerZeroTeller verified source",
+          "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xB77d74f032CfE55190325474E061052685CEccc0",
+        "label": "Ethereum Veda/Paladin governance Safe (4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x3AE790AF0C4d5A248B3509cD4a1dC052E89d2e66",
+            "0x8fb0b2cF20B7178C11F01592936dd063Fe244C9a",
+            "0xa0c28511CaA67eC91a9B76287e2Db47939A66d36",
+            "0x4d5eb3827bde5183a627eB996AF75Ef56Bb9ab9a",
+            "0xf35dEE924F483Bc234F09cbfbc8B4488fD06be20",
+            "0x3dF8cc3923b55a92d992d9A3F119d3923f960986"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526164,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526164,
+        "sources": [
+          {
+            "label": "Ethereum governance Safe",
+            "url": "https://etherscan.io/address/0xb77d74f032cfe55190325474e061052685ceccc0"
+          },
+          {
+            "label": "Ethereum scUSD TimelockController",
+            "url": "https://etherscan.io/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Ethereum scUSD RolesAuthority",
+            "url": "https://etherscan.io/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          }
+        ],
+        "evidence": "At Ethereum block 25526164, the 4/6 Safe was the TimelockController proposer; the one-day Timelock owned the RolesAuthority that administers BoringVault capabilities. Safe reads returned six owners, no enabled modules, and zero guard and module guard."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x358CFACf00d0b4634849821Bb3D1965b472c776a",
+        "label": "Ethereum scUSD LayerZeroTeller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526164,
+        "sources": [
+          {
+            "label": "Ethereum scUSD LayerZeroTeller",
+            "url": "https://etherscan.io/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          },
+          {
+            "label": "Veda Teller architecture",
+            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+          }
+        ],
+        "evidence": "At Ethereum block 25526164, current RolesAuthority capability reads identified this LayerZeroTeller as the sole external contract authorized to enter the BoringVault and mint scUSD shares against supported deposits and the configured exchange rate."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x948dd9351D3721489Fe7A4530C55849cF0b4735D",
+        "label": "Sonic Veda/Paladin governance Safe (4/6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 4,
+        "signerCount": 6,
+        "timelockDelaySec": 86400,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x3AE790AF0C4d5A248B3509cD4a1dC052E89d2e66",
+            "0x8fb0b2cF20B7178C11F01592936dd063Fe244C9a",
+            "0xa0c28511CaA67eC91a9B76287e2Db47939A66d36",
+            "0x4d5eb3827bde5183a627eB996AF75Ef56Bb9ab9a",
+            "0xf35dEE924F483Bc234F09cbfbc8B4488fD06be20",
+            "0x3dF8cc3923b55a92d992d9A3F119d3923f960986"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedAt": "2026-07-13",
+          "observedBlock": 75897805,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 75897805,
+        "sources": [
+          {
+            "label": "Sonic governance Safe",
+            "url": "https://sonicscan.org/address/0x948dd9351d3721489fe7a4530c55849cf0b4735d"
+          },
+          {
+            "label": "Sonic scUSD TimelockController",
+            "url": "https://sonicscan.org/address/0xfb6ec7ccbd77a42922a35d22a94fdf7fd54ee4bc"
+          },
+          {
+            "label": "Sonic scUSD RolesAuthority",
+            "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+          }
+        ],
+        "evidence": "At Sonic block 75897805, the 4/6 Safe was the TimelockController proposer; the one-day Timelock owned the RolesAuthority that administers BoringVault capabilities. Safe reads returned the same six owners as Ethereum, no enabled modules, and zero guard and module guard."
+      },
+      {
+        "chain": "sonic",
+        "address": "0x358CFACf00d0b4634849821Bb3D1965b472c776a",
+        "label": "Sonic scUSD LayerZeroTeller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 75897805,
+        "sources": [
+          {
+            "label": "Sonic scUSD LayerZeroTeller",
+            "url": "https://sonicscan.org/address/0x358cfacf00d0b4634849821bb3d1965b472c776a#code"
+          },
+          {
+            "label": "Veda Teller architecture",
+            "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+          }
+        ],
+        "evidence": "At Sonic block 75897805, current RolesAuthority capability reads identified this LayerZeroTeller as the sole external contract authorized to enter the BoringVault and mint scUSD shares against supported deposits and the configured exchange rate."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x8D3e2ede20B3Bbe781C88Bdaf472E1e265f38Db8",
+        "label": "Ethereum scUSD Accountant rate updater Safe A (2/4)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
+        "routeChecks": {
+          "rateLimits": "At block 25526164: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
+        },
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 2,
+          "owners": [
+            "0x5477474445Bc3a3c2211c7cd68448748139a2e2a",
+            "0x82976786c93EC2e539fc03056D9A65b08e9A6D9f",
+            "0xE8B2f46341FFd20b3618004522889eebEDE7FBc7",
+            "0xb7B4d4B426DAB7A1693C1f7BBA192890e525EC2D"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526164,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526164,
+        "sources": [
+          {
+            "label": "Rate updater Safe",
+            "url": "https://etherscan.io/address/0x8d3e2ede20b3bbe781c88bdaf472e1e265f38db8"
+          },
+          {
+            "label": "Role-11 grant",
+            "url": "https://etherscan.io/tx/0xe23b127395818c3ddcf48c2bcaaaf2eee65d62f197f879ae3df97c0e9c8d2dbb"
+          },
+          {
+            "label": "scUSD Accountant",
+            "url": "https://etherscan.io/address/0xa76e0f54918e39a63904b51f688513043242a0be#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25526164, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, four owners, no modules, zero guard/module guard, and the standard fallback handler."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x7Ad69d482b56062b6e76D6e645FC5bFCB97C93b5",
+        "label": "Ethereum scUSD Accountant rate updater Safe B (2/3)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
+        "routeChecks": {
+          "rateLimits": "At block 25526164: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
+        },
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 2,
+          "owners": [
+            "0x82976786c93EC2e539fc03056D9A65b08e9A6D9f",
+            "0xE8B2f46341FFd20b3618004522889eebEDE7FBc7",
+            "0x022c5f6Dc690De06dd656948B24E81c05AC731f8"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x41675C099F32341bf84BFc5382aF534df5C7461a",
+          "observedAt": "2026-07-13",
+          "observedBlock": 25526164,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526164,
+        "sources": [
+          {
+            "label": "Rate updater Safe",
+            "url": "https://etherscan.io/address/0x7ad69d482b56062b6e76d6e645fc5bfcb97c93b5"
+          },
+          {
+            "label": "Role-11 grant",
+            "url": "https://etherscan.io/tx/0x9dad38f42649da644b32768de99d97655cf2ec89fac2f8c7abdf9e1f8bd13bd3"
+          },
+          {
+            "label": "scUSD Accountant",
+            "url": "https://etherscan.io/address/0xa76e0f54918e39a63904b51f688513043242a0be#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25526164, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, three owners, no modules, zero guard/module guard, and the standard fallback handler."
+      },
+      {
+        "chain": "sonic",
+        "address": "0xB26AEb430b5Bf6Be55763b42095E82DB9a1838B8",
+        "label": "Sonic scUSD Accountant rate updater Safe A (2/4)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
+        "routeChecks": {
+          "rateLimits": "At block 75897805: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
+        },
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 2,
+          "owners": [
+            "0x5477474445Bc3a3c2211c7cd68448748139a2e2a",
+            "0x82976786c93EC2e539fc03056D9A65b08e9A6D9f",
+            "0xE8B2f46341FFd20b3618004522889eebEDE7FBc7",
+            "0xb7B4d4B426DAB7A1693C1f7BBA192890e525EC2D"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedAt": "2026-07-13",
+          "observedBlock": 75897805,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 75897805,
+        "sources": [
+          {
+            "label": "Rate updater Safe",
+            "url": "https://sonicscan.org/address/0xb26aeb430b5bf6be55763b42095e82db9a1838b8"
+          },
+          {
+            "label": "Role-11 grant",
+            "url": "https://sonicscan.org/tx/0x1ef80f918acbd171f1a278b2baa68dc067228464342d8052eddf33b553610cf8"
+          },
+          {
+            "label": "scUSD Accountant",
+            "url": "https://sonicscan.org/address/0xa76e0f54918e39a63904b51f688513043242a0be#code"
+          }
+        ],
+        "evidence": "At Sonic block 75897805, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, four owners, no modules, zero guard/module guard, and the standard fallback handler."
+      },
+      {
+        "chain": "sonic",
+        "address": "0xE89CeE9837e6Fce3b1Ebd8E1C779b76fd6E20136",
+        "label": "Sonic scUSD Accountant rate updater Safe B (2/4)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 2,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "capDescription": "Can update the Accountant exchange rate within the configured 0.5% per-update bounds and six-hour minimum interval; this is not a hard mint cap.",
+        "routeChecks": {
+          "rateLimits": "At block 75897805: exchangeRate=1000000, allowed lower=9950, upper=10050, minimumUpdateDelayInSeconds=21600, isPaused=false."
+        },
+        "safe": {
+          "version": "1.4.1",
+          "threshold": 2,
+          "owners": [
+            "0x5477474445Bc3a3c2211c7cd68448748139a2e2a",
+            "0x82976786c93EC2e539fc03056D9A65b08e9A6D9f",
+            "0xb7B4d4B426DAB7A1693C1f7BBA192890e525EC2D",
+            "0x022c5f6Dc690De06dd656948B24E81c05AC731f8"
+          ],
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "moduleGuard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "masterCopy": "0x29fcB43b46531BcA003ddC8FCB67FFE91900C762",
+          "observedAt": "2026-07-13",
+          "observedBlock": 75897805,
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 75897805,
+        "sources": [
+          {
+            "label": "Rate updater Safe",
+            "url": "https://sonicscan.org/address/0xe89cee9837e6fce3b1ebd8e1c779b76fd6e20136"
+          },
+          {
+            "label": "Role-11 grant",
+            "url": "https://sonicscan.org/tx/0xd693cb41d6474efd6ac9fd5a02a31336604775db7c504289360965a3e3d5fa43"
+          },
+          {
+            "label": "scUSD Accountant",
+            "url": "https://sonicscan.org/address/0xa76e0f54918e39a63904b51f688513043242a0be#code"
+          }
+        ],
+        "evidence": "At Sonic block 75897805, RolesAuthority.canCall(this Safe, Accountant 0xA76E0F..., updateExchangeRate selector 0x3458113d)=true. Safe reads returned version 1.4.1, threshold 2, four owners, no modules, zero guard/module guard, and the standard fallback handler."
+      }
+    ],
+    "supervision": "none",
+    "reconciliation": "not-applicable",
+    "review": {
+      "sources": [
+        {
+          "label": "Veda Teller architecture",
+          "url": "https://docs.veda.tech/architecture-and-flow-of-funds/teller"
+        },
+        {
+          "label": "Ethereum scUSD RolesAuthority",
+          "url": "https://etherscan.io/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+        },
+        {
+          "label": "Sonic scUSD RolesAuthority",
+          "url": "https://sonicscan.org/address/0x7d5f6108e23c0cb2cfd744e5c46f1aaffc30a348"
+        },
+        {
+          "label": "Trevee docs: collateral vault (Ethereum) - 1:1 minting into Veda BoringVault, on-chain-only strategy whitelist",
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/veda-vaults/collateral-vault-ethereum.md"
+        },
+        {
+          "label": "Trevee docs: treasury backing addresses disclosed on Ethereum and Sonic",
+          "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address"
+        }
+      ],
+      "evidence": "At Ethereum block 25526164 and Sonic block 75897805, current RolesAuthority capabilities and complete role histories resolved the sole direct BoringVault enter caller, both chain-specific governance Safes, and all four Accountant role-11 rate updater Safes. Safe thresholds, owners, modules, guards, fallback handlers, and master copies were read onchain. The deployed BoringVault and LayerZeroTeller contracts are immutable non-proxy deployments. Reconciliation review (2026-08-08): deposited stablecoins are locked 1:1 in an Ethereum Veda BoringVault and deployed only into on-chain lending and staking protocols, with the strategy whitelist explicitly limited to audited protocols above $100M TVL and backing addresses disclosed across three Ethereum and three Sonic vaults. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. The only third-party work is smart-contract auditing (Spearbit, 0xMacro, OpenZeppelin), and no regulator appears anywhere in the stack.",
+      "reviewer": "Codex mint-authority review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

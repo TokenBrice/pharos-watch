@@ -1,0 +1,27 @@
+{
+  "id": "onyc-onre",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: ONYC resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "ONYC source materials describe a Solana tokenized reinsurance product, and the registry has only a Solana deployment. The row was reviewed as single-chain/native with no material bridge route.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "ONYC docs",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+      },
+      {
+        "label": "ONYC transparency",
+        "url": "https://app.onre.finance/earn/transparency"
+      }
+    ]
+  }
+}

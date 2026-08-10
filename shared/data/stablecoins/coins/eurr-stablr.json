@@ -38,35 +38,6 @@
     "regulator": "MFSA",
     "license": "EMI (MiCA)"
   },
-  "mica": {
-    "status": "authorized",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
-    "competentAuthority": "MFSA",
-    "authorizedEntity": "StablR Ltd",
-    "references": [
-      {
-        "label": "ESMA MiCA register (issuers of EMTs)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
-      },
-      {
-        "label": "StablR secures EMI license for MiCAR-compliant EURR",
-        "url": "https://www.stablr.com/insights/stablr-secures-emi-license"
-      },
-      {
-        "label": "StablR EURR whitepaper",
-        "url": "https://www.stablr.com/whitepaper/StablR_EMI_Whitepaper_EURR_V3.2.pdf"
-      },
-      {
-        "label": "CoinDesk: StablR freezes USDR and EURR after attacker mints $13.5M in unbacked tokens (2026-05-26) — MiCA 1:1 backing breach acknowledged; MFSA notification filed under MiCA and DORA; minting/redemption suspended",
-        "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
-      },
-      {
-        "label": "EFRI urges MFSA to review StablR EMI licence — formal reassessment request citing AML and ownership concerns (2025-07)",
-        "url": "https://efri.io/efri-urges-mfsa-to-review-stablrs-emi-license/"
-      }
-    ]
-  },
   "contracts": [
     {
       "chain": "ethereum",
@@ -79,146 +50,8 @@
       "decimals": 6
     }
   ],
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: EURR resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
-  "mintAuthority": {
-    "mintPath": "issuer-direct-mint",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "verified",
-    "summary": "EURR issuance is controlled through StablR signer/admin infrastructure with a 1-of-3 owner safe. StablR can mint or pause supply subject to its EMI reserve and redemption obligations.",
-    "mintIncidents": [
-      {
-        "date": "2026-05-24",
-        "status": "active",
-        "summary": "A compromised StablR mint/governance key let the attacker mint 4.5M unbacked EURR as part of a coordinated USDR/EURR attack, leaving both tokens undercollateralized and forcing mint/redeem suspension.",
-        "sources": [
-          {
-            "label": "StablR official incident notice",
-            "url": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations"
-          },
-          {
-            "label": "CoinDesk - StablR unbacked-token mint",
-            "url": "https://www.coindesk.com/markets/2026/05/26/stablr-freezes-usdr-and-eurr-after-attacker-mints-usd13-5-million-in-unbacked-tokens"
-          },
-          {
-            "label": "Webacy - StablR exploit monitoring",
-            "url": "https://www.webacy.com/blog/alerting-on-the-stablr-exploit-before-the-peg-broke-heres-what-our-systems-saw"
-          }
-        ]
-      }
-    ],
-    "controls": [
-      {
-        "chain": "ethereum",
-        "address": "0x05Aa2D11B1148a3732ab68451a491FD544a0FbBD",
-        "label": "EURR Ethereum owner mint authority",
-        "role": "direct-minter",
-        "authorityType": "multisig",
-        "directMintAbility": "direct",
-        "threshold": 1,
-        "signerCount": 3,
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "StablR EURR docs",
-            "url": "https://docs.stablr.com/docs/what-is-eurr"
-          },
-          {
-            "label": "StablR smart-contract docs",
-            "url": "https://docs.stablr.com/docs/smart-contract"
-          }
-        ],
-        "evidence": "Contract owner is the StablR 1-of-3 safe at 0xbC0bD4dDe5BFc9C490C025caCaDA7b14e529F0D0, with owners 0xC42DAE8545022ba73Ec22c4634C42226B64BcE4B, 0xD30d1C5f02D37AA6161E3aBF14eF96EBb6327040, and 0x324F403916ab80a56B3A61D7d71553262ef56759."
-      },
-      {
-        "chain": "ethereum",
-        "address": "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0",
-        "label": "EURR EIP-1967 proxy admin",
-        "role": "proxy-admin",
-        "authorityType": "multisig",
-        "directMintAbility": "upgrade-only",
-        "threshold": 1,
-        "signerCount": 1,
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "Ethereum EURR token",
-            "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
-          }
-        ],
-        "evidence": "EIP-1967 admin slot returned this address at Ethereum block 25166592. required() returned 1 and getOwners() returned 1 owner."
-      },
-      {
-        "label": "EURR Solana mint/freeze authority",
-        "role": "direct-minter",
-        "authorityType": "issuer-backend",
-        "directMintAbility": "direct",
-        "canRaiseCap": "unknown",
-        "modulesOrGuardsStatus": "not-applicable",
-        "sources": [
-          {
-            "label": "StablR EURR docs",
-            "url": "https://docs.stablr.com/docs/what-is-eurr"
-          }
-        ],
-        "evidence": "Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ: mintAuthority = aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij (system-program owned, non-executable wallet); freezeAuthority = AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV (system-program owned, non-executable wallet). Both are issuer-operated keypair accounts; supply = 0 at time of check."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "StablR smart-contract docs",
-          "url": "https://docs.stablr.com/docs/smart-contract"
-        },
-        {
-          "label": "StablR EURR docs",
-          "url": "https://docs.stablr.com/docs/what-is-eurr"
-        }
-      ],
-      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
-    },
-    "upgradeability": {
-      "model": "transparent-proxy",
-      "adminAddresses": [
-        "0xA0609c2F05A386D835ae3C01CDA296a5F63878a0"
-      ],
-      "canChangeMintLogic": true,
-      "controlRef": "EURR EIP-1967 proxy admin",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25166592,
-      "sources": [
-        {
-          "label": "Ethereum EURR token",
-          "url": "https://etherscan.io/address/0x50753cfaf86c094925bf976f218d043f8791e408"
-        },
-        {
-          "label": "StablR smart-contract docs",
-          "url": "https://docs.stablr.com/docs/smart-contract"
-        },
-        {
-          "label": "StablR EURR docs",
-          "url": "https://docs.stablr.com/docs/what-is-eurr"
-        }
-      ]
-    }
-  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
-  "reserves": [
-    {
-      "name": "Fiat reserves (euro cash at regulated financial institutions)",
-      "pct": 100,
-      "risk": "very-low"
-    }
-  ],
   "liveReservesConfig": {
     "adapter": "single-asset",
     "version": 1,
@@ -248,28 +81,6 @@
       "message": "StablR disclosed a May 24, 2026 cybersecurity incident affecting EURR and USDR. Minting and redemption were suspended, 4.5M unbacked EURR were minted, and StablR stated USDR/EURR were not fully backed at the 1:1 ratio required under MiCAR while recovery work continued."
     }
   ],
-  "bridgeRouteRisk": {
-    "tier": "issuer-native-burn-mint",
-    "summary": "EURR is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
-    "reviewedAt": "2026-06-13",
-    "reviewer": "Codex bridge route review",
-    "confidence": "probable",
-    "protocols": [
-      {
-        "source": "issuer",
-        "name": "EURR issuer-operated multichain issuance",
-        "bridgeTypes": [
-          "issuer-native-mint-redeem"
-        ]
-      }
-    ],
-    "sources": [
-      {
-        "label": "StablR stablecoins",
-        "url": "https://www.stablr.com/"
-      }
-    ]
-  },
   "status": "frozen",
   "windDownAnnouncedAt": "2026-05-24",
   "windDownSourceUrl": "https://www.stablr.com/insights/stablr-discloses-cybersecurity-incident-affecting-usdr-and-eurr-token-operations",

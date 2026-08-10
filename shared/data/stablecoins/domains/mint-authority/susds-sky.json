@@ -1,0 +1,130 @@
+{
+  "id": "susds-sky",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "sUSDS is Sky's ERC-4626 savings wrapper over USDS. Vault share minting is backed by deposited USDS and inherits reviewed USDS_JOIN plus Sky governance authority for base supply.",
+    "inheritedFrom": "usds-sky",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "0x5875eee11cf8398102fdad704c9e96607675467a",
+        "0xb5b2dc7fd34c249f4be7fb1fcea07950784229e0",
+        "0xddb46999f8891663a8f2828d25298f70416d7610"
+      ],
+      "implementationAddresses": [
+        "0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0",
+        "0x5aee6b37d6e31860804575aee3e2f368a0a428e7"
+      ],
+      "adminAddresses": [
+        "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "0x36b072ed8afe665e3aa6daba79decbec63752b22",
+        "0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255",
+        "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+        "0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+        "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+        "0x13f7f24ca959359a4d710d32c715d4bce273c793"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 172800,
+      "controlRef": "Inherited Sky Pause Proxy governance executor",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "Sky sUSDS implementation source",
+          "url": "https://github.com/sky-ecosystem/usds/blob/d65551dbc11cfe1afcc4718ab790663b99d766af/src/Usds.sol"
+        },
+        {
+          "label": "Ethereum sUSDS proxy",
+          "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+        },
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "label": "Sky Savings USDS vault",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "unknown",
+        "capDescription": "ERC-4626 share accounting over deposited USDS; does not mint base USDS.",
+        "sources": [
+          {
+            "label": "Sky sUSDS docs",
+            "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+          },
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.skyeco.com/"
+          }
+        ],
+        "evidence": "Local metadata marks sUSDS as `variantOf: usds-sky` and `variantKind: savings-passthrough`. At Ethereum block 25295174, EIP-1967 admin slot = 0x0 (no external proxy admin; UUPS pattern) and impl slot = 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 (implementation confirmed). wards(MakerDAO PauseProxy 0xBE8E3e...) = 1: Sky governance is the upgrade authority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB",
+        "label": "Inherited USDS_JOIN token adapter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Inherited USDS_JOIN minting is bounded by the reviewed USDS adapter/accounting path; sUSDS share minting itself does not create base USDS.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          }
+        ],
+        "evidence": "Inherited from reviewed `usds-sky` mintAuthority."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "label": "Inherited Sky Pause Proxy governance executor",
+        "role": "governor",
+        "authorityType": "dao-governor",
+        "directMintAbility": "can-authorize",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Sky governance executes through the Pause Proxy after the current 2-day Pause delay and can change system modules, parameters, and USDS authorizations.",
+        "sources": [
+          {
+            "label": "Sky Chainlog",
+            "url": "https://chainlog.sky.money/api/mainnet/active.json"
+          },
+          {
+            "label": "Sky docs",
+            "url": "https://docs.sky.money/"
+          }
+        ],
+        "evidence": "Inherited from reviewed usds-sky mintAuthority: the Sky Pause Proxy is the governance executor authorized to raise the USDS_JOIN debt ceiling that bounds the inherited USDS mint path underlying sUSDS shares."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Sky Chainlog",
+          "url": "https://chainlog.sky.money/api/mainnet/active.json"
+        },
+        {
+          "label": "Sky sUSDS docs",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+        }
+      ],
+      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
+      "reviewedAt": "2026-07-20"
+    }
+  }
+}

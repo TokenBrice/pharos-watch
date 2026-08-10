@@ -12,16 +12,13 @@ import { Label } from "@/components/ui/label";
 import type { useApiKeyRequestFormState } from "@/hooks/use-api-key-request-form-state";
 import {
   API_KEY_REQUEST_CADENCE_OPTIONS,
-  API_KEY_REQUEST_ENDPOINT_OPTIONS,
   API_KEY_REQUEST_EXPIRY_DAYS,
   EMAIL_MAX_LENGTH,
   EXPECTED_VOLUME_MAX_LENGTH,
   NAME_MAX_LENGTH,
   ORGANIZATION_MAX_LENGTH,
   PROJECT_URL_MAX_LENGTH,
-  endpointId,
 } from "@/lib/api-key-request-form-view-model";
-import { cn } from "@/lib/utils";
 
 type ApiKeyRequestFormModel = ReturnType<typeof useApiKeyRequestFormState>;
 
@@ -47,7 +44,6 @@ export function ApiKeyRequestFields({ model }: { model: ApiKeyRequestFormModel }
     requestError,
     requesterName,
     requestStatus,
-    selectedEndpoints,
     setAcceptedTerms,
     setEmail,
     setExpectedCadence,
@@ -57,7 +53,6 @@ export function ApiKeyRequestFields({ model }: { model: ApiKeyRequestFormModel }
     setRequesterName,
     setUseCase,
     setWebsite,
-    toggleEndpoint,
     trimmedUseCaseLength,
     useCase,
     website,
@@ -185,38 +180,6 @@ export function ApiKeyRequestFields({ model }: { model: ApiKeyRequestFormModel }
           </p>
         </div>
       </div>
-
-      <fieldset className="mt-4 space-y-3">
-        <legend className="text-sm font-medium text-foreground">Intended Endpoints</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {API_KEY_REQUEST_ENDPOINT_OPTIONS.map((option) => {
-            const id = endpointId(option.path);
-            const checked = selectedEndpoints.includes(option.path);
-            return (
-              <label
-                key={option.path}
-                htmlFor={id}
-                className={cn(
-                  "flex min-h-11 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors",
-                  checked
-                    ? "border-transparent bg-foreground text-background"
-                    : "border-border/60 bg-background/45 text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <input
-                  id={id}
-                  type="checkbox"
-                  className="size-4 accent-foreground"
-                  checked={checked}
-                  onChange={() => toggleEndpoint(option.path)}
-                  disabled={requestStatus === "submitting"}
-                />
-                <span>{option.label}</span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
 
       <div className="hidden" aria-hidden="true">
         <Label htmlFor="api-website">Website</Label>

@@ -1,0 +1,141 @@
+{
+  "id": "nbasis-nest",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "oracleless-or-internal",
+    "summary": "nBASIS is a Nest NAV vault receipt token whose value is determined by the vault's strategy accounting and redemption value, not by borrower-specific collateral liquidation oracles.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex ORCL curation batch 18",
+      "rationale": "Nest documents nBASIS as a vault token representing a share of a basis-trade strategy. Users deposit supported stablecoins to mint shares and redeem shares for the vault's redemption asset; the reviewed product and integration material does not describe borrower debt positions, collateral-ratio checks, or liquidatable collateral markets.",
+      "sources": [
+        {
+          "label": "Nest available vaults",
+          "url": "https://docs.nest.credit/about/available-vaults/"
+        },
+        {
+          "label": "Nest nBASIS integration guide",
+          "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex ORCL curation batch 18",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest available vaults",
+        "url": "https://docs.nest.credit/about/available-vaults/"
+      },
+      {
+        "label": "Nest nBASIS integration guide",
+        "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Nest publishes nBASIS through Nest product documentation with Ethereum, Plume, and Plasma deployments. No external bridge protocol evidence was resolved, so the reviewed route is issuer/protocol-native multichain issuance.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest website",
+        "url": "https://www.nest.credit/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "unresolved route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: nBASIS token 0x11113ff3a60c2450f4b22515cb760417259ee94b (symbol nBASIS) owner() = VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (contract name verified via Blockscout on Ethereum); minting runs through the Nest Basis Vault Teller with the Nest vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6) per the verified mint-authority review. Issuer-native Nest deployment on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "NBASIS on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "plume",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "unresolved route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plume at block 82174969: nBASIS token 0x11113ff3a60c2450f4b22515cb760417259ee94b (symbol nBASIS) owner() = VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (contract name verified via Blockscout on Ethereum); minting runs through the Nest Basis Vault Teller with the Nest vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6) per the verified mint-authority review. Issuer-native Nest deployment on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 82174969,
+        "sources": [
+          {
+            "label": "NBASIS on plume explorer (verified 2026-07-20)",
+            "url": "https://explorer.plume.org/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          }
+        ]
+      },
+      {
+        "id": "plasma:0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "destinationChain": "plasma",
+        "contractAddress": "0x11113ff3a60c2450f4b22515cb760417259ee94b",
+        "protocol": "unresolved route",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on plasma at block 27574744: nBASIS token 0x11113ff3a60c2450f4b22515cb760417259ee94b (symbol nBASIS) owner() = VfiTimelock 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062 (contract name verified via Blockscout on Ethereum); minting runs through the Nest Basis Vault Teller with the Nest vault owner Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6) per the verified mint-authority review. Issuer-native Nest deployment on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 27574744,
+        "sources": [
+          {
+            "label": "NBASIS on plasma explorer (verified 2026-07-20)",
+            "url": "https://plasma-explorer.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+          }
+        ]
+      }
+    ]
+  }
+}

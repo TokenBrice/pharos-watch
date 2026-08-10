@@ -8,7 +8,7 @@ import {
   type DewsSignalKey,
 } from "@shared/lib/dews-config";
 import {
-  THREAT_BAND_TEXT_COLORS,
+  THREAT_BAND_STYLES,
   type ThreatBand,
 } from "@shared/lib/classification";
 import {
@@ -62,7 +62,7 @@ function DewsThreatBandCards({ compact = false }: { compact?: boolean }) {
         const label = compact && band === "WARNING" ? "WARN" : band;
         return (
           <div key={band} className="rounded-lg border p-2 text-center">
-            <p className={`${THREAT_BAND_TEXT_COLORS[band]} font-medium text-xs`}>{label}</p>
+            <p className={`${THREAT_BAND_STYLES[band].textCls} font-medium text-xs`}>{label}</p>
             <p className="text-xs text-muted-foreground">{lower}&ndash;{upper}</p>
           </div>
         );
@@ -282,7 +282,7 @@ function DewsTechnicalDetails() {
             const lower = getThreatBandLowerBound(index);
             return (
               <li key={band}>
-                <span className={`${THREAT_BAND_TEXT_COLORS[band]} font-medium`}>
+                <span className={`${THREAT_BAND_STYLES[band].textCls} font-medium`}>
                   {band} ({lower}&ndash;{upper})
                 </span>{" "}
                 &mdash; {DEWS_THREAT_BAND_DESCRIPTIONS[band]}

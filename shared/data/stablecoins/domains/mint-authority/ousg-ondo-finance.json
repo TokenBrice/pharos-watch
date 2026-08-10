@@ -1,0 +1,166 @@
+{
+  "id": "ousg-ondo-finance",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "OUSG minting runs through the OUSG_InstantManager (MINTER_ROLE holder) and is governed by a 4-of-7 Ondo Safe (DEFAULT_ADMIN and MINTER_ROLE on the token). The InstantManager's own admin is a separate 3-of-5 Ondo Safe.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92"
+      ],
+      "implementationAddresses": [
+        "0x1ceb44b6e515abf009e0ccb6ddafd723886cf3ff"
+      ],
+      "adminAddresses": [
+        "0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5",
+        "0xAEd4caF2E535D964165B4392342F71bac77e8367"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Ondo 4-of-7 Safe (OUSG token DEFAULT_ADMIN and MINTER_ROLE[1])",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25579746,
+      "sources": [
+        {
+          "label": "Ondo smart contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "OUSG token proxy",
+          "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readProxyContract"
+        },
+        {
+          "label": "OUSG ProxyAdmin",
+          "url": "https://etherscan.io/address/0xba80aa44cc25e85cc30359150dfb1c7d041cf6d5#readContract"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a",
+        "label": "OUSG_InstantManager",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Ondo smart contract addresses",
+            "url": "https://docs.ondo.finance/addresses"
+          },
+          {
+            "label": "Ondo OUSG product page",
+            "url": "https://ondo.finance/ousg"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, getRoleMember(MINTER_ROLE, 0) on OUSG token returned 0x93358db73B6cd4b98D89c8F5f230E81a95c2643a (the InstantManager). Ondo docs confirm this contract handles instant buy/redeem."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xAEd4caF2E535D964165B4392342F71bac77e8367",
+        "label": "Ondo 4-of-7 Safe (OUSG token DEFAULT_ADMIN and MINTER_ROLE[1])",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 4,
+        "signerCount": 7,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D",
+            "0x189D409b807aC1949Fe82c143270992FE9457607",
+            "0xECE6bC29F718085a30b7bC14162B0fad4737e5d0",
+            "0x60F030d621a4Ab27DfF024a8e43eB36e2D95FB02",
+            "0xaA1E4eef723ceaDd137B3AD39ea540dA4B092f8e",
+            "0x020679fF2Bc53758bEbAD1bBe0ab0CF7c1beD241",
+            "0x6A95a204aD4a6842b2f0aE3BBb59f35E85594f46"
+          ],
+          "threshold": 4,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295096,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Ondo OUSG token getRoleMember at Ethereum block 25295096",
+            "url": "https://etherscan.io/address/0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, getRoleMember(MINTER_ROLE, 1) returned 0xAEd4caF2E535D964165B4392342F71bac77e8367 and DEFAULT_ADMIN getRoleMember(0) also returned this address. Safe API confirmed 4-of-7, version 1.3.0, modules [], guard zero."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF",
+        "label": "Ondo 3-of-5 Safe (OUSG_InstantManager admin)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 5,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x6264422fD4c54292d71F6d3BE7CbF8900573172B",
+            "0x60F030d621a4Ab27DfF024a8e43eB36e2D95FB02",
+            "0x40482b9538A418cB62B92F14cC13D20092b3DbB4",
+            "0x81961c315e38bAdC02C014A13Dd1d4b3dab81d15",
+            "0x74a4C329AA5a6BFa16bD32BAf37209f4C632173D"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
+          "version": "1.4.1",
+          "observedBlock": 25295096,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Ondo OUSG_InstantManager at Ethereum block 25295096",
+            "url": "https://etherscan.io/address/0x93358db73B6cd4b98D89c8F5f230E81a95c2643a#readContract"
+          }
+        ],
+        "evidence": "At Ethereum block 25295096, DEFAULT_ADMIN getRoleMember(0) on OUSG_InstantManager returned 0x5AE21c99FC5f1584D8Cb09a298CFFd92B5d178eF. Safe API confirmed 3-of-5, version 1.4.1, modules [], guard zero."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Ondo OUSG product page",
+          "url": "https://ondo.finance/ousg"
+        },
+        {
+          "label": "Ondo smart contract addresses",
+          "url": "https://docs.ondo.finance/addresses"
+        },
+        {
+          "label": "Ondo OUSG trust and transparency",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/trust-and-transparency"
+        },
+        {
+          "label": "Ondo OUSG overview",
+          "url": "https://docs.ondo.finance/qualified-access-products/ousg/overview"
+        },
+        {
+          "label": "SEC OUSG fund offering filing",
+          "url": "https://www.sec.gov/Archives/edgar/data/1974395/000149315225024964/form497ad.htm"
+        }
+      ],
+      "evidence": "At Ethereum block 25295096: OUSG token MINTER_ROLE has 2 holders: InstantManager (0x93358db7) and a 4-of-7 Ondo Safe (0xAEd4caF2). Safe API confirmed both Safes with threshold/owners/modules/guard. All mint-capable surfaces verified. Economic-control evidence reviewed 2026-07-15: NAV Consulting has direct read-only access, independently calculates OUSG NAV, and publishes full fund financial data daily with up to a three-day lag. The current offering document states that the OUSG fund is not registered under the Investment Company Act; adviser registration does not qualify as product prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

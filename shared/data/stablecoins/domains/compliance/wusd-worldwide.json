@@ -1,0 +1,67 @@
+{
+  "id": "wusd-worldwide",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "WSPN Fintech Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://developer.wspn.io/5768563m0",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "WSPN is a BVI-domiciled entity with a stated FinCEN MSB registration and pending BVI VASP application. WUSD terms restrict U.S. persons. The GENIUS Act foreign-exception comparability framework remains in proposed-rulemaking (Treasury FR 2026-06489; comment deadline June 2, 2026) — no foreign registration can yet be granted. No PPSI approval or US authorization of any kind found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "FinCEN/OFAC AML NPRM for PPSIs",
+        "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
+        "sourceKind": "federal-register"
+      },
+      {
+        "label": "WSPN WUSD",
+        "url": "https://www.wspn.io/wusd",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "WSPN reserve disclosure",
+        "url": "https://developer.wspn.io/5768563m0",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "WSPN terms of service",
+        "url": "https://www.wspn.io/pdf/WSPN_Terms_of_Service.pdf",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "FinCEN/OFAC AML NPRM (FR 2026-06963) — no PPSI approvals issued",
+        "Treasury state-regime comparability NPRM (FR 2026-06489) — foreign exception framework not yet final",
+        "FinCEN MSB registrant search (msb.fincen.gov)",
+        "WSPN issuer disclosures, reserve documentation, and terms of service",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "WSPN issuer, reserve, redemption, and terms materials were reviewed; no token-specific public U.S. GENIUS approval, official application, or registered/comparable foreign-issuer exception source was located for WUSD. The foreign-exception comparability framework remains in proposed rulemaking.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "id": "srusd-reservoir",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "none-resolved-mint",
+    "confidence": "verified",
+    "summary": "srUSD (Savingcoin, non-upgradeable) is minted only by Savings Module 0x5475... (MINTER role confirmed). DEFAULT_ADMIN = EOA 0xb7570e32... No proxy/upgrade path. Base rUSD mint authority inherited from Reservoir PSM/Credit Enforcer controls.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "srUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31"
+        }
+      ]
+    },
+    "inheritedFrom": "rusd-reservoir",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x738d1115b90efa71ae468f1287fc864775e23a31",
+        "label": "srUSD Savingcoin token (non-upgradeable, AccessControl)",
+        "role": "wrapper",
+        "authorityType": "eoa",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          },
+          {
+            "label": "srUSD Ethereum contract",
+            "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31"
+          }
+        ],
+        "evidence": "At Ethereum block 25295219: Blockscout confirms Savingcoin contract (not a proxy, no EIP-1967 slots). Creation block 20564153 RoleGranted: DEFAULT_ADMIN initially to deployer 0x6ed13690... then transferred to EOA 0xb7570e32ded63b25163369d5eb4d8e89e70e5602 (block 20564168). Current: hasRole(DEFAULT_ADMIN, 0xb7570e32) = true; hasRole(DEFAULT_ADMIN, deployer) = false. eth_getCode(0xb7570e32) = 0x (EOA)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x5475611dffb8ef4d697ae39df9395513b6e947d7",
+        "label": "Reservoir Savings Module (MINTER on srUSD)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "unknown",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "RoleGranted event at block 20564156 granted role 0x77d856470f7c160c0ed7528eb012b172cfb4efe46afb11f608d3b87e41043bef to 0x5475611dffb8ef4d697ae39df9395513b6e947d7 (Savings Module). Current: hasRole(0x77d856..., SavingsModule) = true at block 25295219. Savings Module mints srUSD only against rUSD deposits — does not create base rUSD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x04716DB62C085D9e08050fcF6F7D775A03d07720",
+        "label": "Inherited Reservoir Credit Enforcer",
+        "role": "cap-admin",
+        "authorityType": "contract",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "unknown",
+        "sources": [
+          {
+            "label": "Reservoir contract addresses",
+            "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+          }
+        ],
+        "evidence": "srUSD inherits base rUSD mint-path risk from Reservoir rUSD controls, including the Credit Enforcer listed in official docs. Tracked separately on parent rusd-reservoir."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Reservoir contract addresses",
+          "url": "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses"
+        },
+        {
+          "label": "srUSD Ethereum contract",
+          "url": "https://etherscan.io/address/0x738d1115b90efa71ae468f1287fc864775e23a31"
+        }
+      ],
+      "evidence": "At Ethereum block 25295219: srUSD is a non-upgradeable Savingcoin token. The only mint-capable surface is the Savings Module 0x5475... (MINTER role confirmed via hasRole). DEFAULT_ADMIN = EOA 0xb7570e32... All wrapper mint surfaces fully confirmed.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

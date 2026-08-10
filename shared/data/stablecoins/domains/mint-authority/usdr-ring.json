@@ -1,0 +1,109 @@
+{
+  "id": "usdr-ring",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "Ring USD (USDR) is a Fei-fork ERC20Burnable whose MINTER_ROLE holders can mint to any address uncapped; roles are managed by Ring Protocol's Core access-control contract (0xb2799…). At block 25295203: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs); no revocations recorded.",
+    "controls": [
+      {
+        "label": "USDR Minter role (Core-gated) — 3 EOA minters",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "chain": "ethereum",
+        "address": "0x9336d0c82299da0ab178271792954adfd6f10fd7",
+        "capDescription": "Uncapped mint to any address for any MINTER_ROLE holder. Current EOA minters: 0x9336d0c…, 0x4f0aa59…, 0xf079c35…",
+        "evidence": "At Ethereum block 25295203, getRoleMember(MINTER_ROLE, 0/1/3) on Core (0xb2799ed) returned 0x9336d0c…, 0x4f0aa59…, 0xf079c35…; eth_getCode on all three returned 0x (EOA confirmed).",
+        "sources": [
+          {
+            "label": "USDR token (Blockscout)",
+            "url": "https://eth.blockscout.com/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+          },
+          {
+            "label": "Ring Protocol Core (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+          }
+        ]
+      },
+      {
+        "label": "RingLaunchpad contract minter",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "chain": "ethereum",
+        "address": "0x8814a2aa2384d65672c7dc0650454e56f62fba8b",
+        "capDescription": "Contract holds MINTER_ROLE; minting constrained by launchpad logic.",
+        "evidence": "At block 25295203, getRoleMember(MINTER_ROLE, 2) on Core returned 0x8814a2a…; Blockscout shows ContractName: RingLaunchpad.",
+        "sources": [
+          {
+            "label": "RingLaunchpad (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0x8814a2aa2384d65672c7dc0650454e56f62fba8b"
+          }
+        ]
+      },
+      {
+        "label": "Ring Protocol Core / GOVERN_ROLE (minter-admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "ethereum",
+        "address": "0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4",
+        "capDescription": "GOVERN_ROLE holders can grant/revoke MINTER_ROLE at will. Current GOVERN_ROLE: Core itself (0xb2799…) + 2 EOAs (0xff790875…, 0x9336d0c…). No revocations recorded.",
+        "evidence": "At block 25295203, getRoleMemberCount(GOVERN_ROLE) on Core = 3; getRoleMember returned 0xb2799…, 0xff790875…, 0x9336d0c…; eth_getCode on 0xff790875… returned 0x (EOA). Core source confirmed as Fei-fork Permissions/AccessControl on Blockscout.",
+        "sources": [
+          {
+            "label": "Ring Protocol Core (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+          }
+        ]
+      }
+    ],
+    "review": {
+      "evidence": "At Ethereum block 25295203: USDR token (AssetToken / CoreRef) verified on Blockscout. Core contract (0xb2799ed) enumerated via getRoleMember: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs). No RoleRevoked events recorded. Token has no proxy (EIP-1967 slots zero). Minting is uncapped for any MINTER_ROLE holder; GOVERN_ROLE can add new minters freely.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "USDR token (Blockscout)",
+          "url": "https://eth.blockscout.com/token/0x4ea40dcee961675683e0a2e1721bd49cb9bca913"
+        },
+        {
+          "label": "Ring Protocol Core (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+        },
+        {
+          "label": "Ring stablecoin docs",
+          "url": "https://docs.ring.exchange/protocol-core/ring-stablecoin"
+        }
+      ]
+    },
+    "upgradeability": {
+      "model": "custom",
+      "adminAddresses": [
+        "0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Ring Protocol Core / GOVERN_ROLE (minter-admin)",
+      "observedAt": "2026-07-14",
+      "observedBlock": 25530907,
+      "sources": [
+        {
+          "label": "USDR AssetToken verified source (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0x4ea40dcee961675683e0a2e1721bd49cb9bca913?tab=contract"
+        },
+        {
+          "label": "Ring Protocol Core / Permissions (Blockscout)",
+          "url": "https://eth.blockscout.com/address/0xb2799ed78490ea642d2ecb23cb2ce9b8acc087d4?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    }
+  }
+}

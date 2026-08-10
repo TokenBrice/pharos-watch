@@ -1,0 +1,106 @@
+{
+  "id": "brlv-crown",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://crown-2b36dce9.mintlify.app/whitepaper"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.crown-brlv.com/en/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: centralized governance metadata indicates issuer or admin control; registry links were reviewed for direct freeze, blacklist, pause, burn, or upgrade authority.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "canonical-rollup-bridge",
+    "summary": "BRLV has a Base canonical deployment and an Ethereum bridged variant in the existing on-chain review. The route is limited to Base/Ethereum and maps to the Base canonical bridge family, so it is scored as canonical-rollup-bridge.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Base Canonical",
+        "slug": "base",
+        "url": "https://l2beat.com/interop/protocols/base",
+        "bridgeTypes": [
+          "lockAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Crown BRLV docs",
+        "url": "https://docs.crown-brlv.com/whitepaper"
+      },
+      {
+        "label": "L2BEAT Base Canonical",
+        "url": "https://l2beat.com/interop/protocols/base"
+      }
+    ],
+    "routes": [
+      {
+        "id": "base:0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+        "destinationChain": "base",
+        "contractAddress": "0xd2047ebdb205ee6862b69ae9fb3501652cc97d36",
+        "protocol": "Crown issuer-native BRLV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on base at block 48862878: BRLV token 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 48862878,
+        "sources": [
+          {
+            "label": "BRLV on base explorer (verified 2026-07-20)",
+            "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36"
+          },
+          {
+            "label": "Crown BRLV",
+            "url": "https://www.crown.finance/"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xd7ca0e2c36d647446b782d1b72308e598373e2f5",
+        "protocol": "Crown issuer-native BRLV",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on ethereum at block 25570988: BRLV token 0xd7ca0e2c36d647446b782d1b72308e598373e2f5 (symbol BRLV, EIP-1967 proxy). The verified mint-authority review confirms BRLV is Crown-issued with MINTER_ROLE held by Crown's gasless relay EOA and gateway contracts on this chain. Issuer-minted natively; no third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25570988,
+        "sources": [
+          {
+            "label": "BRLV on ethereum explorer (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0xd7ca0e2c36d647446b782d1b72308e598373e2f5"
+          },
+          {
+            "label": "Crown BRLV",
+            "url": "https://www.crown.finance/"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -11,7 +11,7 @@ DDR is **not investment advice and not a credit rating.** A "Recovery Unlikely" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.1`
+- **Current methodology version:** `v4.2`
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts` (re-exported from `shared/lib/methodology-versions/depeg-resolver.ts`, with changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`)
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
@@ -144,7 +144,7 @@ Stage 1 is a **mechanistic rubric whose thresholds are calibrated by backtest, n
 
 Terminal-outcome labels are small, editorial, and not event-linked: roughly 88 curated dead stablecoins (month-level `deathDate`, editorial narrative only), a handful of frozen tracked coins (day-level freeze dates), and two shadow assets (UST and IRON) with backfilled events. Against that sit hundreds of cleanly-timed recovered events. You **cannot** fit a supervised terminal classifier on ~90 mostly month-precision labels that do not join to a clean feature vector at the depeg moment. You **can** encode the domain priors as a transparent rubric and calibrate/backtest it against those deaths plus the recovery corpus.
 
-The rubric thresholds (what counts as an "abnormal" supply expansion, the liquidity-collapse cutoffs, the grade mappings) are tuned against the label corpus, then validated. DDRR reviewed outcomes are used as calibration evidence for bounded rubric changes, not as fitted ML weights: `v3.03` added recent mint-authority incidents to K1 and gated static very-high reserve concentration after USDXL false-terminal rows; `v4.1` adds issuer-scoped K6, mechanism-gated K2 for CDP/synthetic archetypes, grade-based R5, mint-burn-backed K1, and V9 exit inputs into K5/R2. We publish a backtest summary as a methodology fact, not a per-event probability, and we state the small sample size plainly.
+The rubric thresholds (what counts as an "abnormal" supply expansion, the liquidity-collapse cutoffs, the grade mappings) are tuned against the label corpus, then validated. DDRR reviewed outcomes are used as calibration evidence for bounded rubric changes, not as fitted ML weights: `v3.03` added recent mint-authority incidents to K1 and gated static very-high reserve concentration after USDXL false-terminal rows; `v4.2` adds issuer-scoped K6, mechanism-gated K2 for CDP/synthetic archetypes, grade-based R5, mint-burn-backed K1, and V9 exit inputs into K5/R2. We publish a backtest summary as a methodology fact, not a per-event probability, and we state the small sample size plainly.
 
 ## Stage 2 — Expected Duration (conditional on recoverable)
 

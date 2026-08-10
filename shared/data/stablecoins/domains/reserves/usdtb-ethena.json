@@ -1,0 +1,95 @@
+{
+  "id": "usdtb-ethena",
+  "reserves": [
+    {
+      "name": "BlackRock BUIDL (U.S. T-Bills, cash, repos)",
+      "pct": 98.8,
+      "risk": "low",
+      "coinId": "buidl-blackrock",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund (BVI)",
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "Assets in motion (settlement float)",
+      "pct": 1.2,
+      "risk": "low",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed USD settlement counterparties",
+      "riskFactors": [
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "PoR verification sweep 2026-08 (live-adapter alignment: curated rows carry the usdtb-transparency adapter's slice identities - BUIDL and assets-in-motion - so V9 can classify live rows; the Deloitte June 30 examination remains the assurance artefact on proofOfReserves.latestReport)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDtb current backing and supply",
+        "url": "https://usdtb.money/api/backing"
+      },
+      {
+        "label": "USDtb Reserve Report - June 2026 (Deloitte via Anchorage)",
+        "url": "https://learn.anchorage.com/06.30.26_USDtb-Stablecoin-Attestation-Report.pdf"
+      },
+      {
+        "label": "USDtb transparency dashboard",
+        "url": "https://usdtb.money/transparency"
+      }
+    ],
+    "rationale": "Curated rows mirror the live usdtb-transparency adapter's slice identities (BUIDL held at the published Anchorage custody address, plus the USD assets-in-motion settlement float the endpoint reports). The Deloitte June 30, 2026 examination (read directly this pass: $777.2M reserves vs $775.1M redeemable USDtb - $766.9M BUIDL at fair value, $10.2M FDIC-insured demand deposits) is recorded on the proofOfReserves latestReport and corroborates the ~98.7% BUIDL concentration; the float's banking counterparty and settlement timing remain undisclosed. compositionAsOf is intentionally absent: the live endpoint is a rolling basis, not the examined balance-sheet date.",
+    "compositionBasis": "USDtb backing-and-supply endpoint (live-adapter classification scaffold)",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The assets-in-motion USD settlement float has no disclosed banking counterparty or settlement timing.",
+    "knownUnknownExposurePct": 1.2,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 1,
+        "reserveName": "Assets in motion (settlement float)",
+        "pct": 1.2,
+        "disposition": "insufficient-evidence",
+        "rationale": "The issuer reports this amount as USD assets in motion but does not identify its banking counterparty or settlement timeline."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Anchorage Digital Bank, N.A.",
+        "role": "custodian",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Undisclosed FDIC-insured major commercial banks",
+        "role": "bank",
+        "jurisdiction": "United States"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "prohibited",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "OpenAI Codex backing review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDtb Reserve Report - May 2026",
+        "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+      },
+      {
+        "label": "USDtb reserve attestations",
+        "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+      }
+    ],
+    "uncertainty": "Anchorage reports that BUIDL is self-custodied in segregated wallets and cash is held in segregated fiduciary trust accounts at major commercial banks. The banks are not identified, current provider allocations can change, and the legal treatment has not been independently adjudicated."
+  }
+}

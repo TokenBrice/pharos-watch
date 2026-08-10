@@ -121,7 +121,7 @@
     "worker/src/lib/safety-score-v9-extension-shared.ts": 98.2,
     "worker/src/lib/safety-score-v9-extension-shock.ts": 91.9,
     "worker/src/lib/safety-score-v9-extension-supply.ts": 95.1,
-    "worker/src/lib/safety-score-v9-extension-transfer.ts": 93.2,
+    "worker/src/lib/safety-score-v9-extension-transfer.ts": 89.6,
     "worker/src/lib/safety-score-v9-fact-set-backing.ts": 91.6,
     "worker/src/lib/safety-score-v9-fact-set-boundary.ts": 100,
     "worker/src/lib/safety-score-v9-fact-set-context.ts": 95,

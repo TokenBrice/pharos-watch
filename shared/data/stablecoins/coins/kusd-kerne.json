@@ -48,80 +48,6 @@
   "jurisdiction": {
     "country": "British Virgin Islands"
   },
-  "mintAuthority": {
-    "mintPath": "user-collateralized-governed",
-    "authorityPosture": "concentrated-admin",
-    "confidence": "manual-review",
-    "summary": "Anyone can mint kUSD permissionlessly by depositing USDC 1:1 into the on-chain Peg Stability Module (10 bps fee, 10,000,000 USDC cap); the PSM holds the kUSD MINTER_ROLE. A 2-of-3 Gnosis Safe is DEFAULT_ADMIN and can grant or revoke that minter role and change PSM parameters, so durable supply authority is concentrated in that multisig.",
-    "controls": [
-      {
-        "chain": "base",
-        "address": "0xabde1138aa1ce88d1df06422c0c3b05d70569803",
-        "label": "Kerne live KUSDPSM (kUSD MINTER_ROLE)",
-        "role": "direct-minter",
-        "authorityType": "contract",
-        "directMintAbility": "cap-limited",
-        "canRaiseCap": false,
-        "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "USDC to kUSD mint runs through the PSM at 1:1 with a 10 bps fee and a 10,000,000 USDC cap; the PSM holds the kUSD MINTER_ROLE.",
-        "sources": [
-          {
-            "label": "Live KUSDPSM on BaseScan",
-            "url": "https://basescan.org/address/0xabde1138aa1ce88d1df06422c0c3b05d70569803"
-          },
-          {
-            "label": "Base PublicNode RPC",
-            "url": "https://base-rpc.publicnode.com"
-          }
-        ],
-        "evidence": "At Base block 49003308, kUSD hasRole(MINTER_ROLE, 0xaBDE1138) returned true while the same read returned false for 0x07eBb486 and 0xFf3025ec. The live PSM returned mintingEnabled=true, paused=false, supportedStables(USDC)=true, swapFees(USDC)=10, and stableCaps(USDC)=10000000000000 (10,000,000 USDC).",
-        "observedAt": "2026-07-23",
-        "observedBlock": 49003308
-      },
-      {
-        "chain": "base",
-        "address": "0x52d3e450ba6c299b1b07298f1e87dd74732d4877",
-        "label": "Kerne admin Gnosis Safe (2-of-3)",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 2,
-        "signerCount": 3,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "unknown",
-        "safe": {
-          "threshold": 2,
-          "source": "manual"
-        },
-        "sources": [
-          {
-            "label": "Kerne admin Safe on BaseScan",
-            "url": "https://basescan.org/address/0x52d3e450ba6c299b1b07298f1e87dd74732d4877"
-          }
-        ],
-        "evidence": "Per Kerne deployment records the DEFAULT_ADMIN_ROLE across governance-relevant contracts is a 2-of-3 Gnosis Safe (0x52d3E450), which can grant or revoke the PSM minter role and adjust PSM parameters. Owner set, modules, and guard were not independently re-read on-chain in this submission."
-      }
-    ],
-    "review": {
-      "sources": [
-        {
-          "label": "Kerne live stats API",
-          "url": "https://kerne.fi/api/stats"
-        },
-        {
-          "label": "Kerne security overview",
-          "url": "https://kerne.fi/security"
-        }
-      ],
-      "evidence": "Pharos independently read the live contracts at Base block 49003308: 0xaBDE1138 held kUSD MINTER_ROLE with minting enabled, while 0x07eBb486 and 0xFf3025ec did not hold the role and retained their USDC redemption reserves. The 2-of-3 Gnosis Safe 0x52d3E450 remains described as DEFAULT_ADMIN with authority to grant or revoke the minter role and change PSM parameters; its owner set, modules, and guard were not re-read in this review.",
-      "reviewer": "Pharos on-chain review",
-      "reviewedAt": "2026-07-23",
-      "unresolvedQuestions": [
-        "Confirm the Safe owner set, modules, and guard on-chain at a fixed Base block.",
-        "Confirm whether the live KUSDPSM cap can be raised only after a timelock."
-      ]
-    }
-  },
   "contracts": [
     {
       "chain": "base",
@@ -129,25 +55,9 @@
       "decimals": 18
     }
   ],
-  "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "kUSD is backed 1:1 by USDC held in the on-chain Peg Stability Module, so its redemption value inherits Circle USDC freeze and seizure exposure through the reserve asset. The kUSD token's own admin freeze surface was not independently re-read on-chain in this submission.",
-    "evidence": "Per the live /api/stats endpoint kUSD reserves are 100% USDC in the PSM, so freeze exposure is inherited from the USDC reserve asset; kUSD's own token freeze surface is unreviewed in this submission.",
-    "reviewer": "Kerne Protocol submitter; Pharos pre-launch intake",
-    "reviewedAt": "2026-07-03"
-  },
   "collateralQuality": "rwa",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "reserves": [
-    {
-      "name": "USDC held 1:1 in the on-chain Peg Stability Module",
-      "pct": 100,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral"
-    }
-  ],
   "notices": [
     {
       "type": "info",

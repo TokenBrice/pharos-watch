@@ -1,0 +1,97 @@
+{
+  "id": "inalpha-nest",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Website",
+        "url": "https://www.nest.credit/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "Nest issues the inALPHA BoringVault natively on Ethereum and Plume at the same address under the same Nest 3-of-6 Safe (owner() read 2026-07-20); cross-chain share movement runs through Nest's own LayerZero OFT contracts (issuer-operated burn/mint, hub-and-spoke accounting). No third-party bridge carries the representation.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest docs",
+        "url": "https://docs.nest.credit/"
+      },
+      {
+        "label": "Nest website",
+        "url": "https://www.nest.credit/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "protocol": "Nest inALPHA vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the same Nest BoringVault is deployed on ethereum with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (on-chain read 2026-07-20); shares mint only through Nest's own Teller contract. No third-party bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "inALPHA Ethereum vault",
+            "url": "https://etherscan.io/address/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
+          },
+          {
+            "label": "Nest cross-chain architecture docs",
+            "url": "https://docs.nest.credit/about/cross-chain/"
+          },
+          {
+            "label": "nest-protocol repository (inALPHA deployment config)",
+            "url": "https://github.com/plumenetwork/nest-protocol"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "destinationChain": "plume",
+        "contractAddress": "0x64ab176c545bb85eca75d53c3ffcb361deafb855",
+        "protocol": "Nest inALPHA vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: the same Nest BoringVault is deployed on Plume with owner() = the Nest 3-of-6 Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (on-chain read 2026-07-20). Cross-chain share movement between Plume and Ethereum runs through Nest's own LayerZero OFT contracts (NestVaultOFT/NestShareOFT hub-and-spoke per the nest-protocol repository and Nest cross-chain docs) — an issuer-operated burn/mint, not a third-party bridge; the share token itself is not the LayerZero OApp.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "inALPHA Plume vault",
+            "url": "https://explorer.plume.org/address/0x64ab176c545bb85eca75d53c3ffcb361deafb855"
+          },
+          {
+            "label": "Nest cross-chain architecture docs",
+            "url": "https://docs.nest.credit/about/cross-chain/"
+          },
+          {
+            "label": "nest-protocol repository (inALPHA deployment config)",
+            "url": "https://github.com/plumenetwork/nest-protocol"
+          }
+        ]
+      }
+    ]
+  }
+}

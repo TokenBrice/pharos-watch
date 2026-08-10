@@ -117,7 +117,7 @@ export function EndpointHealthGrid({
                         {probe ? (
                           <>
                             {isOk && (
-                              <Badge className="bg-green-500/15 text-xs text-green-700 dark:text-green-400">
+                              <Badge className="bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-400">
                                 {statusLabel}
                               </Badge>
                             )}

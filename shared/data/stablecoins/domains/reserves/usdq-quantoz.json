@@ -1,0 +1,56 @@
+{
+  "id": "usdq-quantoz",
+  "reserves": [
+    {
+      "name": "Government bonds (Netherlands, Germany, and US)",
+      "pct": 70,
+      "risk": "very-low",
+      "assetClass": "government-security",
+      "issuerOrObligor": "Sovereign issuers of the Netherlands, Germany, and United States",
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Cash deposits at Tier 1 European banks",
+      "pct": 30,
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Undisclosed Tier 1 European banking partners",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-08",
+    "reviewer": "Kimi Code R08 reserve research",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Quantoz transparency",
+        "url": "https://www.quantoz.com/transparency"
+      },
+      {
+        "label": "Quantoz USDQ whitepaper v1.4",
+        "url": "https://cdn.prod.website-files.com/681a44e26c4471fa4634aa06/69f8a95a68591924cd02b363_USDQ-WP-1.4%20(30-04-2026).pdf"
+      },
+      {
+        "label": "DNB public register - Quantoz Payments B.V.",
+        "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
+      }
+    ],
+    "rationale": "Quantoz's Reserve Status Overview dated June 30, 2026 (the latest published snapshot as of 2026-08-08) reports USDQ at 30% allocated cash and 70% government bonds, with a 101.23% reserve ratio. The USDQ whitepaper confirms that at least 30% is held in separate bank accounts and the remainder in secure, low-risk, highly liquid instruments; the dashboard identifies the bond issuers as the Netherlands, Germany, and United States. The snapshot is 39 days old as of the review date, so it sits outside the 31-day V9 admission window.",
+    "compositionBasis": "Quantoz Reserve Status Overview updated June 30, 2026",
+    "compositionAsOf": "2026-06-30",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The two disclosed categories cover the full reserve allocation, but Quantoz does not identify individual banking partners, bond security identifiers, country weights, or a maximum maturity. Liquidity horizon therefore remains unknown for the government-bond bucket.",
+    "knownUnknownExposurePct": 0
+  }
+}

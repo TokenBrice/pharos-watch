@@ -1,0 +1,292 @@
+{
+  "id": "wmxn-ripio",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Ripio wMXN product documentation",
+        "url": "https://www.ripio.com/en/cryptocurrencies/wmxn"
+      },
+      {
+        "label": "Ripio wFIAT deployment and transparency page",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
+        "label": "Ripio Mexico wallet terms",
+        "url": "https://terms.ripio.com/mx/wallet"
+      },
+      {
+        "label": "Ethereum WMXN proxy and verified implementation",
+        "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34#code"
+      },
+      {
+        "label": "Base WMXN implementation source",
+        "url": "https://base.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Worldchain WMXN implementation verified source",
+        "url": "https://worldscan.org/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+      },
+      {
+        "label": "BSC WMXN implementation source",
+        "url": "https://bscscan.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7#code"
+      },
+      {
+        "label": "Polygon WMXN compliance implementation source",
+        "url": "https://polygon.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Gnosis WMXN compliance implementation source",
+        "url": "https://gnosis.blockscout.com/address/0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7"
+      },
+      {
+        "label": "Ripio official GitHub organization",
+        "url": "https://github.com/ripio"
+      },
+      {
+        "label": "wMXN March 2026 collateral certification",
+        "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+      },
+      {
+        "label": "Ethereum fixed-block RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base fixed-block RPC",
+        "url": "https://mainnet.base.org"
+      },
+      {
+        "label": "Worldchain fixed-block RPC",
+        "url": "https://worldchain-mainnet.g.alchemy.com/public"
+      },
+      {
+        "label": "BNB Chain fixed-block RPC",
+        "url": "https://bsc-dataseed.binance.org"
+      },
+      {
+        "label": "Polygon fixed-block RPC",
+        "url": "https://polygon-bor-rpc.publicnode.com"
+      },
+      {
+        "label": "Gnosis fixed-block RPC",
+        "url": "https://gnosis-rpc.publicnode.com"
+      },
+      {
+        "label": "Archive.org availability check",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fwww.ripio.com%2Fen%2Fwfiat&timestamp=20260715"
+      }
+    ],
+    "evidence": "At fixed 2026-07-15 blocks Ethereum 25534997, Base 48646186, Worldchain 32373046, BSC 110049753, Polygon 90251163, and Gnosis 47208124, every tracked WMXN proxy resolved to 0x425abec6165c83d30fcf81ec66635c6c7ee2bbf7 and returned paused() = false. On each route, 0x466c02e2cc67b81a696af5afdb61605c41fe247b held both PAUSER_ROLE and UPGRADER_ROLE. Ethereum, Base, and Worldchain run the verified pausable LatamStable variant, so that EOA can halt all ERC-20 updates; BSC, Polygon, and Gnosis run the verified compliance variant, which additionally exposes blockUser, unblockUser, and setEnforceBlocklist and rejects a blocked sender or receiver in _update when enforcement is enabled. This is an asset-wide direct freeze conclusion from all six tracked routes, but address-specific blocklisting is only asserted for BSC, Polygon, and Gnosis. The V9 transfer review is resolved by the direct pause/blocklist mechanisms, not a permissioning-adapter inference. Ripio's public GitHub organization did not expose a wFIAT/LatamStable Solidity repository, and Archive.org returned no snapshot for the reviewed English wFIAT page; deployed explorer source and fixed RPC evidence remain sufficient. The issuer's March 2026 collateral certification was reviewed as transparency evidence, not as access-control proof.",
+    "reviewer": "Codex Wave 8 access review",
+    "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "WMXN is natively issuer-minted by Ripio on all six tracked chains (same contract address everywhere; MINTER_ROLE held by the issuer EOA 0x466c02e2 plus Ripio's rate-limited minter contracts). Cross-chain transfers use Ripio's own verified burn-mint bridge (0x465e6423 depositForBridge/burnFrom -> fulfillBridgeMint -> LimitedMinterBridge 0x46167cb0 mintTo, 100,000 WMXN/day cap per chain, BRIDGE_OPERATOR EOAs 0x5ca3f8ee/0xbc924f70, admins issuer EOA + 4/7 Safe 0x2b839174), re-verified on-chain 2026-07-20. No third-party or externally validated bridge holds mint rights on any tracked deployment.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Ripio wFIAT bridge (LimitedMinterBridge + BridgeOperator)",
+        "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "LimitedMinterBridge verified source",
+        "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+      },
+      {
+        "label": "Ripio bridge operator contract verified source",
+        "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 25570752): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2, LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 (fixed-destination on-ramp minter) and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads). Cross-chain movement uses Ripio's own verified bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (depositForBridge burns via burnFrom; fulfillBridgeMint, gated by BRIDGE_OPERATOR_ROLE held by Ripio ops EOAs 0x5ca3f8ee and 0xbc924f70, calls LimitedMinterBridge.mintTo). LimitedMinterBridge has WMXN registered with a 100,000/day mint cap, is unpaused, and is administered by EOA 0x466c02e2 plus the Ripio 4/7 Safe 0x2b839174 (getThreshold/getOwners re-verified). No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN ethereum token (role reads, 2026-07-20)",
+            "url": "https://etherscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      },
+      {
+        "id": "base:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "base",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 48861447): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2 and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads; LimitedMinter on-ramp not deployed on Base, eth_getCode = 0x). Cross-chain movement uses Ripio's own bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (deployed, 6924-byte code; burn-mint via LimitedMinterBridge.mintTo). LimitedMinterBridge: WMXN registered, 100,000/day cap, unpaused; admins EOA 0x466c02e2 + Ripio 4/7 Safe 0x2b839174. No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN base token (role reads, 2026-07-20)",
+            "url": "https://basescan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      },
+      {
+        "id": "worldchain:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 32588301): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2 and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads; LimitedMinter on-ramp not deployed on World Chain, eth_getCode = 0x). Cross-chain movement uses Ripio's own bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (deployed, 6924-byte code; BRIDGE_OPERATOR_ROLE members 0x5ca3f8ee + 0xbc924f70 enumerated; burn-mint via LimitedMinterBridge.mintTo). LimitedMinterBridge: WMXN registered, 100,000/day cap, unpaused; admins EOA 0x466c02e2 + Ripio 4/7 Safe 0x2b839174. No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN worldchain token (role reads, 2026-07-20)",
+            "url": "https://worldscan.org/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "bsc",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 111006124): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2, LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads). Cross-chain movement uses Ripio's own bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (deployed, 6924-byte code; burn-mint via LimitedMinterBridge.mintTo). LimitedMinterBridge: WMXN registered, 100,000/day cap, unpaused; admins EOA 0x466c02e2 + Ripio 4/7 Safe 0x2b839174. No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN bsc token (role reads, 2026-07-20)",
+            "url": "https://bscscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "polygon",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 90538163): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2, LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads). Cross-chain movement uses Ripio's own bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (deployed, 6924-byte code; burn-mint via LimitedMinterBridge.mintTo). LimitedMinterBridge: WMXN registered, 100,000/day cap, unpaused; admins EOA 0x466c02e2 + Ripio 4/7 Safe 0x2b839174. No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN polygon token (role reads, 2026-07-20)",
+            "url": "https://polygonscan.com/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      },
+      {
+        "id": "gnosis:0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x337e7456b420bd3481e7fa61fa9850343d610d34",
+        "protocol": "Ripio native wMXN (wFIAT issuer burn-mint bridge)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20 (block 47292099): native issuer-minted WMXN; MINTER_ROLE held by issuer EOA 0x466c02e2, LimitedMinter 0xD168CFbBE260D48cd119497a9a2eE8482080C5E7 and LimitedMinterBridge 0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6 (hasRole reads). Cross-chain movement uses Ripio's own bridge contract 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 (deployed, 6924-byte code; burn-mint via LimitedMinterBridge.mintTo). LimitedMinterBridge: WMXN registered, 100,000/day cap, unpaused; admins EOA 0x466c02e2 + Ripio 4/7 Safe 0x2b839174. No third-party bridge holds mint rights.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "wMXN gnosis token (role reads, 2026-07-20)",
+            "url": "https://gnosisscan.io/address/0x337e7456b420bd3481e7fa61fa9850343d610d34"
+          },
+          {
+            "label": "LimitedMinterBridge (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x46167cB034feC6ceC46CaeD4f61281f5Aa0Eb0e6#code"
+          },
+          {
+            "label": "Ripio bridge operator contract (verified source, etherscan)",
+            "url": "https://etherscan.io/address/0x465e642387d3d73a57cdc1368ffa53a800ba5d47#code"
+          }
+        ]
+      }
+    ]
+  }
+}

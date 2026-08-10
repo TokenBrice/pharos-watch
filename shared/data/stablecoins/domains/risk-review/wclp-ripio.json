@@ -1,0 +1,224 @@
+{
+  "id": "wclp-ripio",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Sourcify exact-match LatamStable implementation (Base, chain 8453)",
+        "url": "https://sourcify.dev/server/v2/contract/8453/0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba?fields=sources,compilation"
+      },
+      {
+        "label": "WCLP Ethereum proxy",
+        "url": "https://etherscan.io/address/0x61d450a098b6a7f69fc4b98ce68198fe59768651#code"
+      },
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Ethereum public RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Base public RPC fixed-block reads",
+        "url": "https://base-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "Re-verified 2026-07-30. The Sourcify exact-match LatamStable implementation 0x8898786f1e1e9ed77def940a2ecb7cf07af8d6ba (source re-opened 2026-07-30) inherits ERC20PausableUpgradeable with _update gated whenNotPaused, so a live PAUSER_ROLE can halt every holder transfer globally; it exposes no per-address blacklist, freeze, or seize mapping. All six deployments share this implementation: the Ethereum and Base proxy EIP-1967 implementation slots re-read at Ethereum block 25656501 and Base block 49328608 both resolve to it, and the 2026-07-20 deployment-scoped transfer review verified code-hash identity on worldchain, bsc, polygon, and gnosis. Role history from RoleGranted/RoleRevoked logs on Ethereum: deployer 0x5ca3f8eeba12d83408fc097c2dad79212456f20f held all roles from initialization (block 23891029) and was fully revoked at block 24995207, when DEFAULT_ADMIN, PAUSER, MINTER, and UPGRADER all moved to Ripio EOA 0x466c02e2cc67b81a696af5afdb61605c41fe247b. Fixed-block reads confirm hasRole(PAUSER_ROLE, that EOA) = true and paused() = false at Ethereum block 25656501 and Base block 49328608; UPGRADER_ROLE (UUPS, no timelock) is held by the same EOA, with the 4-of-7 Safe 0x2b839174fe62466067c22e2a4c8054071f9d8d68 as second DEFAULT_ADMIN. Reach is a token-level global pause controlled by a single EOA, not a per-address blacklist, and transfers are currently open; true reflects that live pause capability (same verdict basis as the dusd-dtrinity 2026-07-30 review). No wrapper or bridge inheritance applies - issuance is issuer-native burn-mint on every chain.",
+    "reviewer": "Kimi T24 unknown-reduction wave-2 research",
+    "reviewedAt": "2026-07-30"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "WCLP is issuer-minted on all six deployments by Ripio's own minter-router contracts (cross-chain router 0x46167cB0... holds MINTER_ROLE on every chain, verified on-chain), with the 4-of-7 Ripio Safe as DEFAULT_ADMIN. No third-party bridge carries the claim; cross-chain movement is issuer-operated burn-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Across",
+        "url": "https://l2beat.com/interop/protocols/across",
+        "bridgeTypes": [
+          "intent",
+          "liquidity"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Ripio local stablecoins",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      },
+      {
+        "label": "Across on L2BEAT",
+        "url": "https://l2beat.com/interop/protocols/across"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "ethereum",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on ethereum at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:ethereum:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      },
+      {
+        "id": "base:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "base",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "base",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on base at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:base:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      },
+      {
+        "id": "worldchain:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "worldchain",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "worldchain",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on worldchain at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:worldchain:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      },
+      {
+        "id": "bsc:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "bsc",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "bsc",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on bsc at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:bsc:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      },
+      {
+        "id": "polygon:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "polygon",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "polygon",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on polygon at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:polygon:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      },
+      {
+        "id": "gnosis:0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "destinationChain": "gnosis",
+        "contractAddress": "0x61d450a098b6a7f69fc4b98ce68198fe59768651",
+        "protocol": "Ripio cross-chain minter-router",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "burn-mint",
+        "scope": "canonical",
+        "controllerChain": "gnosis",
+        "controllerAddress": "0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "hasRole(MINTER_ROLE, 0x46167cB0...) = true and hasRole(DEFAULT_ADMIN_ROLE, 0x2b839174...) = true verified on gnosis at 2026-07-20; Ripio's own minter-router contracts mint/burn WCLP natively on each deployment (issuer-operated burn-mint, no third-party bridge).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Ripio WCLP token",
+            "url": "https://wclp.ripio.com/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:ripio-minter-router",
+          "contract:gnosis:0x46167cb034fec6cec46caed4f61281f5aa0eb0e6"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "usdpt-western-union",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "Anchorage Digital Bank issues USDPT on Solana. The Token-2022 mint retains an externally owned mint/permanent-delegate authority plus separate metadata, pause, and freeze authorities, so durable supply remains under issuer-controlled keys.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-13",
+      "observedBlock": 432540329,
+      "sources": [
+        {
+          "label": "Western Union official USDPT contract disclosure",
+          "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+        },
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "solana",
+        "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "label": "USDPT Token-2022 mint and permanent-delegate authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 432540329,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Western Union official USDPT contract disclosure",
+            "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432540329, the official Token-2022 mint reports this system-owned address as both mintAuthority and permanentDelegate; the account is non-executable with zero data, the Solana equivalent of an externally controlled wallet."
+      },
+      {
+        "chain": "solana",
+        "address": "fEnXbNWPAkmhVK1nL1H2sQVdkF3y4eh8CuqnCsnDXqx",
+        "label": "USDPT pause authority",
+        "role": "other",
+        "authorityType": "eoa",
+        "directMintAbility": "parameter-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedBlock": 432540329,
+        "failureDomainKeys": [
+          "issuer:anchorage-digital-bank"
+        ],
+        "sources": [
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432540329, the Token-2022 pausable extension reports this system-owned, non-executable address as pause authority."
+      }
+    ],
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Western Union USDPT launch",
+          "url": "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2026/Western-Union-Launches-USDPT-on-Solana-Advancing-Regulated-Digital-Infrastructure-for-Global-Payments/default.aspx"
+        },
+        {
+          "label": "Western Union official USDPT contract disclosure",
+          "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+        },
+        {
+          "label": "Solana RPC",
+          "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Anchorage Digital USDPT monthly reserve attestations",
+          "url": "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital"
+        },
+        {
+          "label": "OCC active national trust banks at 30 April 2026",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
+        }
+      ],
+      "evidence": "Western Union identifies Anchorage Digital Bank as issuer and publishes the official mint. At finalized slot 432540329, Solana RPC confirms Token-2022 mint authority, permanent delegate, pause authority, freeze authority, and metadata authorities remain live system-owned wallet addresses. Anchorage publishes monthly Big Four AICPA reserve examinations for USDPT, including the May 2026 report. The OCC's 30 April 2026 active-trust-bank list records Anchorage Digital Bank, N.A. under national charter 25243, establishing prudential supervision of the issuing bank.",
+      "reviewer": "Pharos P7 control review; SOL-V mint-tier review",
+      "reviewedAt": "2026-07-15",
+      "disposition": "scoreable"
+    }
+  }
+}

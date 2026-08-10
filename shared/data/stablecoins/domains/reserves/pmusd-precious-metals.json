@@ -1,0 +1,84 @@
+{
+  "id": "pmusd-precious-metals",
+  "reserves": [
+    {
+      "name": "TokenBlender reserve backed solely by ION.au",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "RAAC TokenBlender and I-ON Digital (ION.au issuer)",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "custody",
+        "counterparty",
+        "liquidity",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-21",
+    "reviewer": "OpenAI Codex V9 curation pass",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RAAC pmUSD collateral disclosure",
+        "url": "https://pmusd.raac.io/collateral"
+      },
+      {
+        "label": "Chainlink ION proof of reserve feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
+      },
+      {
+        "label": "Blockscout verified TokenBlender implementation",
+        "url": "https://eth.blockscout.com/address/0xd38d289dc319311015e6526f56c15da078e41aae?tab=contract"
+      }
+    ],
+    "rationale": "RAAC identifies ION.au as pmUSD's collateral, and the deployed contracts make the direct reserve path enumerable. At Ethereum block 25579916, the pmUSD Treasury (0x51c4348af0c6066a2fd31bd968bc0c039fe27342) returned TokenBlender 0x7a7f847fb60b0000e24cce07298dc73df8b8e56a as baseToken(). TokenBlender getSupportedTokenCount() returned 1, getSupportedTokens() returned only ION.au 0xd051c326c9aef673428e6f01eb65d2c52de95d30, and getTokenReserveBalance(ION.au) returned 26,531.98 ION.au. The direct reserve composition is therefore a single 100% ION.au-backed TokenBlender position; legal enforceability and extraction risk of the underlying in-situ gold remain risk factors rather than unidentified composition.",
+    "compositionBasis": "Ethereum TokenBlender supported-token enumeration and RAAC's ION.au collateral disclosure",
+    "compositionAsOf": "2026-07-21",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The direct reserve asset is fully identified as ION.au; the legal enforceability, valuation, extraction costs, and recovery liquidity of ION.au's underlying in-situ gold claims remain unresolved.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "TokenBlender reserve backed solely by ION.au",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ION.au is an external gold-backed security rather than a tracked stablecoin dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "RAAC RWf(x) TokenBlender and Treasury contracts (Ethereum)",
+        "role": "other"
+      },
+      {
+        "name": "I-ON Digital (ION.au issuer and in-situ gold claim obligor)",
+        "role": "other"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-4 (lead usdf-falcon)",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "RAAC pmUSD documentation",
+        "url": "https://docs.raac.io/"
+      },
+      {
+        "label": "Chainlink ION proof of reserve feed",
+        "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
+      }
+    ],
+    "uncertainty": "pmUSD collateral is the TokenBlender base token held in RAAC's on-chain RWf(x) Treasury, minted against ION.au in-situ gold claims. The reviewed sources do not establish how ION.au gold claims are custodied or perfected, whether claim assets are segregated from I-ON Digital's estate, or any reuse terms; the Chainlink ION proof-of-reserve feed attests existence, not legal custody terms."
+  }
+}

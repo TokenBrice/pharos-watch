@@ -1,0 +1,72 @@
+{
+  "id": "usdk-kast",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDK is KAST's branded USD-pegged payment token for consumer payments and savings, built on M0 programmable stablecoin infrastructure on Solana."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "KAST Tech (Reg No. 16223, Anjouan, Comoros)",
+    "issuerDomicile": "Union of Comoros",
+    "licensingRegulator": "Anjouan Offshore Finance Authority",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "KAST Tech is incorporated in Anjouan, Comoros (Reg No. 16223) and explicitly states it is not a bank; licensed services are provided by third-party partners (BitGo, Fireblocks, Tazapay). In September 2025, KAST's founder stated an aspiration to 'upgrade USDK to be issued in the US by an issuer that meets the Genius standard' and referenced ongoing discussions with major issuers — but this remains an informal forward-looking intent, not a formal application. As of 2026-06-18, no PPSI approval or foreign-issuer exception has been filed or granted for USDK under the GENIUS Act. The GENIUS Act rulemaking remains in proposed-rules phase with no final rules issued and no issuer having received a PPSI approval.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "KAST USDK announcement blog post",
+        "url": "https://www.kast.xyz/blog/kast-strengthens-its-banking-alternative-platform-with-its-own-stablecoins",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 Solana launch with KAST press release",
+        "url": "https://www.m0.org/press-releases/m-0-launches-on-solana-bringing-the-first-programmable-stablecoin-infrastructure-to-one-of-cryptos-fastest-growing-ecosystem",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "M0 dashboard (protocol reserve attestation)",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "KAST Terms and Conditions (legal entity confirmation)",
+        "url": "https://www.kast.xyz/legal/terms-and-conditions-of-service",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (Bulletin 2026-3, Feb 2026)",
+        "FDIC GENIUS Act NPRMs (Dec 2025, Apr 2026)",
+        "KAST and M0 issuer disclosures and blog posts",
+        "KAST Terms and Conditions (legal entity: KAST Tech, Reg No. 16223, Anjouan, Comoros)",
+        "Bitget News (Sep 2025): KAST founder stated aspiration to align USDK with GENIUS standard via US issuer partner — no formal application found",
+        "CoinDesk KAST $80M Series A coverage (Mar 2026) — no GENIUS application mentioned",
+        "Web searches for KAST USDK OCC FDIC PPSI application — no results found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception under the GENIUS Act has been publicly filed or granted for USDK or its issuer KAST Tech. The KAST founder's September 2025 statement of intent to partner with a US-compliant issuer has not translated into any publicly visible application or structural change as of June 2026. No US federal or state regulator has published any filing, acknowledgment, or action regarding KAST or USDK.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

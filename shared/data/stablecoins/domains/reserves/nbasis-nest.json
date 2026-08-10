@@ -1,0 +1,88 @@
+{
+  "id": "nbasis-nest",
+  "reserves": [
+    {
+      "name": "Superstate USCC cash-and-carry fund",
+      "pct": 87.3,
+      "risk": "low",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate USCC fund and CME futures counterparties",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Superstate USTB Treasury Fund",
+      "pct": 12.6,
+      "risk": "low",
+      "coinId": "ustb-superstate",
+      "depType": "collateral",
+      "assetClass": "fund-share",
+      "issuerOrObligor": "Superstate USTB Treasury Fund",
+      "riskFactors": [
+        "credit",
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "pUSD liquid balance",
+      "pct": 0.1,
+      "risk": "high",
+      "coinId": "pusd-plume",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Plume PUSD and Nest Basis Vault",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Safety Score V9 Agent 09",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest Basis Vault positions API",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions"
+      },
+      {
+        "label": "Nest Basis Vault price-update API",
+        "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
+      }
+    ],
+    "rationale": "At the source timestamp 2026-07-25T01:12:19Z, the official positions API reported $24,903,681.70 of USCC, $3,612,091.67 of USTB, $29,936.29 of pUSD, and $12,518.32 of other positive liquid stablecoin balances. The production adapter rounds the resulting $28,558,227.98 active portfolio to USCC 87.3%, USTB 12.6%, and pUSD 0.1%; the values reconcile to the official $28,558,228.41 NAV at 99.9999985%. No pending transaction is present in the current API payload.",
+    "compositionBasis": "Active Nest Basis Vault API position values emitted by the production nest-vault-positions adapter and reconciled to official NAV",
+    "compositionAsOf": "2026-07-25",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every material active API position is identified. USCC remains an identified exogenous fund share rather than a tracked stablecoin dependency; positive liquid balances below the adapter's one-decimal display threshold round out of the published slice list.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Superstate USCC cash-and-carry fund",
+        "pct": 87.3,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USCC is an identified Superstate cash-and-carry fund share with no active tracked stablecoin record."
+      }
+    ]
+  }
+}

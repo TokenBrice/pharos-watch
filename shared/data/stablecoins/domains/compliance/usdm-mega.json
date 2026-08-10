@@ -1,0 +1,68 @@
+{
+  "id": "usdm-mega",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MegaUSD (BVI) Ltd",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://megausd.money/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Issuer is MegaUSD (BVI) Ltd, incorporated in the British Virgin Islands (confirmed via Terms of Service and Mint User Agreement at app.megausd.money). U.S. users are explicitly excluded from USDm Mint services. The coin's marketing references USDtb's 'line of sight to GENIUS Act compliance' via Anchorage Digital Bank, but this applies to USDtb (the underlying asset), not to MegaUSD (BVI) Ltd itself. No US bank charter, money-transmission license, PPSI application, or foreign-exception filing was found. GENIUS Act rulemaking remains at proposed-rules stage; no PPSI approvals exist anywhere as of 2026-06-18.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "MegaUSD website",
+        "url": "https://megausd.money/",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "MegaUSD Terms of Service (confirms MegaUSD (BVI) Ltd, BVI governing law, US user exclusion)",
+        "url": "https://app.megausd.money/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "MegaUSD Mint User Agreement (confirms BVI incorporation, no US regulatory authorization)",
+        "url": "https://app.megausd.money/mint-agreement",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "MegaETH docs",
+        "url": "https://docs.megaeth.com",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html (OCC GENIUS Act proposed rule — no MegaUSD/MegaUSD (BVI) Ltd listing)",
+        "https://app.megausd.money/terms (Terms of Service — BVI issuer, US users excluded, no US license)",
+        "https://app.megausd.money/mint-agreement (Mint User Agreement — BVI incorporation confirmed, no US regulatory authorization)",
+        "https://megausd.money/ (issuer site — references USDtb GENIUS compliance claim, not MegaUSD issuer)",
+        "Web search: MegaUSD GENIUS Act authorization — no public application or approval found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "MegaUSD (BVI) Ltd is incorporated in the British Virgin Islands; US users are explicitly excluded from Mint services. No US PPSI application, state qualification, OCC conditional approval, or foreign-exception filing was found for MegaUSD or its BVI issuer entity. The USDtb 'GENIUS line of sight' claim belongs to Anchorage Digital Bank (USDtb issuer), not to MegaUSD (BVI) Ltd.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

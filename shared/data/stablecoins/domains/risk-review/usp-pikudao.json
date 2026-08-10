@@ -1,0 +1,62 @@
+{
+  "id": "usp-pikudao",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.piku.co/piku"
+      },
+      {
+        "label": "Website",
+        "url": "https://piku.co/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "USP's Funding Manager reads Piku's Oracle Module at 0x433471901bA1A8BDE764E8421790C7D9bAB33552. Its verified implementation exposes authorized functions to set issuance and redemption prices, and Piku describes it as a manual price feed. A live Chainlink-compatible adapter at 0xb52eb13139905eb11c472100a1e86cb1961b8ef3 returned the same price at the reviewed block, but Piku does not disclose an independent source, cadence, or enforced failover; a separate documented adapter address reverted on standard reads.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-15",
+      "reviewer": "TERRA-ULTRA oracle review",
+      "rationale": "USP is an issuer-operated, KYC-gated NAV product with a centralized issuance and redemption workflow, not a permissionless CDP with borrower collateral and liquidation branches.",
+      "sources": [
+        {
+          "label": "Piku USP workflow contracts",
+          "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+        },
+        {
+          "label": "Piku terms of use",
+          "url": "https://docs.piku.co/piku/terms-of-use"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-15",
+    "reviewer": "TERRA-ULTRA oracle review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Piku USP price documentation",
+        "url": "https://docs.piku.co/piku/piku-finance/vaults/usp-yield-optimized-stablecoin/minting-and-redemption/how-to-get-usp-price.md"
+      },
+      {
+        "label": "Piku USP workflow contracts",
+        "url": "https://docs.piku.co/piku/piku-platform/token-and-workflow-contracts/usp.md"
+      },
+      {
+        "label": "Piku Oracle Module implementation",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x62c49b6138D9926FCf86Bb15B66193FCc9004470?fields=abi,metadata"
+      },
+      {
+        "label": "Ethereum PublicNode JSON-RPC",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ]
+  }
+}

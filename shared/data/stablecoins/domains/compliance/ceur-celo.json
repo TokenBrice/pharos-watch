@@ -1,0 +1,17 @@
+{
+  "id": "ceur-celo",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "ART",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Mento website — no MiCA/EMI regulatory posture disclosed",
+        "url": "https://www.mento.org/"
+      }
+    ]
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "meusd-mezo",
+  "reserves": [
+    {
+      "name": "BTC collateral in Mezo ActivePool",
+      "pct": 100,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network, Mezo collateral system, and supported BTC bridge issuers",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mezo MUSD development guide",
+        "url": "https://mezo.org/docs/developers/musd/"
+      },
+      {
+        "label": "Mezo MUSD liquidation and redemption mechanics",
+        "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
+      }
+    ],
+    "rationale": "The exact current fixed input reports one live row, BTC collateral in Mezo ActivePool, at 100%, and that row is the entire observed reserve envelope. Mezo documents the ActivePool as the BTC collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid out on redemption, or moves through the StabilityPool and DefaultPool on liquidation. The structured classification covers that observed aggregate BTC slice and retains native, wrapped, bridge, custody, and contract risks without inventing a variant allocation. The scope is restated as full-composition over the observed envelope so the reviewed classification overlays the live row; whether every separate MUSD mint-authority path is backed by the ActivePool remains a mint-authority question, not a reserve-composition one.",
+    "compositionBasis": "Mezo ActivePool live-reserve capture and MUSD collateral documentation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No unresolved part of the recorded ActivePool slice remains; native-versus-wrapped BTC source-path weights are not published and are retained as aggregate risk factors. Separate non-CDP MUSD issuance paths are outside this reserve-composition review.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC collateral in Mezo ActivePool",
+        "pct": 100,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The observed BTC collateral is an external cryptoasset exposure rather than a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

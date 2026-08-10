@@ -1,0 +1,124 @@
+{
+  "id": "btcusd-btcfi",
+  "reserves": [
+    {
+      "name": "BTC",
+      "pct": 56.6,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Bitcoin network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "BTCB",
+      "pct": 42.2,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Binance BTCB",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "CBBTC",
+      "pct": 1.1,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Coinbase cbBTC",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "name": "WBTC",
+      "pct": 0.1,
+      "risk": "medium",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Wrapped Bitcoin custodians and merchant network",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "seven-days"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-08-09",
+    "reviewer": "Kimi ACCESS-FREEZE AF06 (verified FV-A)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "BTCFi current market API",
+        "url": "https://www.btcfi.one/api/getBtcfiMarket?isTestnet=false"
+      },
+      {
+        "label": "BTCFi supported-handler API",
+        "url": "https://www.btcfi.one/api/getAvailableBtcfiHandlers?isTestnet=false"
+      },
+      {
+        "label": "BTCFi BtcUSD mint documentation",
+        "url": "https://docs.bifrostnetwork.com/eng.btcfi.one/dashboard/3.-mint-btcusd"
+      },
+      {
+        "label": "BTCB BNB Chain contract",
+        "url": "https://bscscan.com/token/0x7130d2a12b9bcBFAe4f2634d864A1Ee1Ce3Ead9c"
+      }
+    ],
+    "rationale": "The configured BTCFi producer reports the current collateral mix by supported handler. Native BTC is direct crypto collateral, while BTCB, cbBTC, and WBTC retain their wrapper issuer, custody, counterparty, and smart-contract failure domains.",
+    "compositionBasis": "BTCFi current collateral balances by supported handler, refreshed 2026-08-09 from the BTCFi market API (deposit_value BTC 3,870,695.66 / BTCB 2,881,579.40 / cbBTC 74,635.15 / WBTC 4,702.87 of the $6,831,613.08 covered by the supported-handler registry) and normalized over the handlers the producer can see",
+    "compositionAsOf": "2026-08-09",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The four handlers above are the full set the BTCFi supported-handler API publishes (ids 0-4, of which id 2 is the BtcUSD borrow side), and their wrapper custody and redemption risks remain explicit structured risk factors. On 2026-08-09 the BTCFi market API additionally returned a handler id 5 holding 133,780,914.2 units worth $847,661.29 (about 11% of true collateral, priced at 0.00633619 and identified on-chain as a JPYC collateral handler on Bifrost) that the supported-handler registry does not list, so the producer cannot see it and it is not represented in the composition above. The structured pct stays 0 because the schema ties unresolved dispositions to visible reserve slices; re-raise it when the producer registers handler 5 and the slice exists.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "BTC",
+        "pct": 56.6,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Native BTC collateral is not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "BTCB",
+        "pct": 42.2,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "BTCB is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "CBBTC",
+        "pct": 1.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "cbBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 3,
+        "reserveName": "WBTC",
+        "pct": 0.1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "WBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

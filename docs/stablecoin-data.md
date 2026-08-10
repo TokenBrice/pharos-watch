@@ -36,7 +36,7 @@ The client, compliance, and legacy redirect projections are also generated from 
 - Keep IDs canonical and stable: lowercase `ticker-issuer` format, aligned with `shared/lib/stablecoin-id-registry.ts`.
 - Add or update exactly one base file under `shared/data/stablecoins/coins/*.json`, then update `canonical-order.json`.
 - The base file name and the JSON `id` must match exactly; `foo-issuer.json` must contain `"id": "foo-issuer"`.
-- For fields already migrated to a sidecar, edit the sidecar instead of duplicating the field in the base coin. Follow [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md); the domain directories are the current ownership inventory.
+- Domain-owned research fields always live in a sidecar, never in the base coin. Follow [Stablecoin Research Sidecars](./process/stablecoin-research-sidecars.md); the domain directories are the current ownership inventory.
 - Sidecars are strict and must use the same `id` as the base coin. A field may exist in the base coin or in a sidecar, not both; duplicate fields fail catalog loading.
 - Run `npm run bootstrap:generated` after per-coin or sidecar edits to refresh the full, client, compliance, and legacy redirect projections.
 - Preserve existing supply policy. Primary supply comes from DefiLlama through the existing fallback path; do not add manual, on-chain, CMC, or DEX supply overrides.

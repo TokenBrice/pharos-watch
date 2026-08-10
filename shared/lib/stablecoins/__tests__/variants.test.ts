@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import initiaIusdAsset from "../../../data/stablecoins/coins/iusd-initia.json";
+import initiaIusdReserves from "../../../data/stablecoins/domains/reserves/iusd-initia.json";
 import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
 import { resolveBlacklistStatuses, type BlacklistStatus } from "../../report-card-blacklist-matchers";
@@ -90,7 +91,12 @@ describe("stablecoin variants", () => {
 
   it("models Initia iUSD as a pure serial wrapper of AUSD", () => {
     // Parse the source file so schema-defaulted flags (navToken) are present.
-    const iusd = StablecoinMetaSourceAssetSchema.parse(initiaIusdAsset);
+    // `reserves` is owned by the reserves sidecar since the D8 migration, so the
+    // composed asset is base + sidecar, the same shape the catalog generator builds.
+    const iusd = StablecoinMetaSourceAssetSchema.parse({
+      ...initiaIusdAsset,
+      reserves: initiaIusdReserves.reserves,
+    });
 
     expect(iusd).toMatchObject({
       variantOf: "ausd-agora",

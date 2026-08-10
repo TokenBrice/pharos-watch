@@ -1,0 +1,159 @@
+{
+  "id": "susdd-tron-dao-reserve",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Archived USDD sUSDD mechanism",
+        "url": "https://web.archive.org/web/20260305072343/https://docs.usdd.io/susdd-mechanism"
+      },
+      {
+        "label": "USDD official contract inventory",
+        "url": "https://docs.usdd.io/introduction/collateral-asset-contract-addresses"
+      },
+      {
+        "label": "Ethereum sUSDD verified SavingsUsdd source",
+        "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930#code"
+      },
+      {
+        "label": "BNB Chain sUSDD verified SavingsUsdd source",
+        "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d#code"
+      },
+      {
+        "label": "USDD terms of use",
+        "url": "https://docs.usdd.io/lrgals/terms-of-use"
+      },
+      {
+        "label": "USDD transparency dashboard",
+        "url": "https://usdd.io/data"
+      },
+      {
+        "label": "Archived USDD sUSDD mechanism availability record",
+        "url": "https://archive.org/wayback/available?url=https%3A%2F%2Fdocs.usdd.io%2Fsusdd-mechanism&timestamp=20260715"
+      },
+      {
+        "label": "Ethereum public RPC control reads",
+        "url": "https://ethereum.publicnode.com"
+      },
+      {
+        "label": "BNB Chain public RPC control reads",
+        "url": "https://bsc-dataseed.binance.org"
+      }
+    ],
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115 and BNB Chain block 114787010. The official inventory identifies Ethereum 0xc5d6a7b61d18afa11435a889557b068bb9f29930 and BNB Chain 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d as sUSDD; both remained identical-size direct deployments with zero EIP-1967 implementation slots. Their verified SavingsUsdd source exposes ordinary ERC-20 transfers and allowance-gated ERC-4626 withdrawals, with no owner, role administration, pause, blacklist, denylist, seizure, or arbitrary-holder burn. The valid inherited finding is from tracked parent usdd-tron-dao-reserve; PSM, reserve, redemption, and collateral impairment do not create a direct wrapper holder-freeze power.",
+    "reviewer": "OpenAI Codex C02 control review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "medianized-with-delay",
+    "summary": "sUSDD is an ERC-4626 savings wrapper over USDD and has no borrower-owned collateral positions or local liquidation engine. Its required USDD parent carries the separately reviewed governed CDP oracle, auction, deficit, and shutdown branch.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "USDD documents sUSDD as an ERC-4626 tokenized vault minted when users deposit USDD and redeemable back to USDD through its exchange rate. The savings wrapper does not originate borrower debt or operate collateral-ratio-triggered liquidations. The variantOf relationship preserves the complete USDD parent branch review.",
+      "sources": [
+        {
+          "label": "USDD sUSDD mechanism",
+          "url": "https://docs.usdd.io/susdd-mechanism"
+        },
+        {
+          "label": "USDD oracle architecture",
+          "url": "https://docs.usdd.io/developers/oracle"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "USDD sUSDD mechanism",
+        "url": "https://docs.usdd.io/susdd-mechanism"
+      },
+      {
+        "label": "USDD parent oracle architecture",
+        "url": "https://docs.usdd.io/developers/oracle"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "sUSDD is the immutable SavingsUsdd wrapper deployed natively on Ethereum and BNB Chain over natively-issued USDD on each chain (per-chain bytecode diff 2026-07-20; USDD's BNB Chain deployment is native per the official deployment registry). No bridge route carries the claim.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "sUSDD issuer-operated multichain issuance",
+        "bridgeTypes": [
+          "issuer-native-mint-redeem"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDD docs",
+        "url": "https://docs.usdd.io"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc5d6a7b61d18afa11435a889557b068bb9f29930",
+        "protocol": "USDD Savings (SavingsUsdd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical home deployment: sUSDD on Ethereum is the immutable SavingsUsdd wrapper (no proxy, no owner(); bytecode read 2026-07-20) minting sUSDD against USDD deposits.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "sUSDD Ethereum wrapper",
+            "url": "https://etherscan.io/address/0xc5d6a7b61d18afa11435a889557b068bb9f29930"
+          },
+          {
+            "label": "USDD website",
+            "url": "https://usdd.io/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d",
+        "protocol": "USDD Savings (SavingsUsdd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native deployment: the BSC sUSDD is the same immutable SavingsUsdd ERC-4626 wrapper (11,085-byte contract, name 'Savings Usdd'; bytecode differs from the Ethereum wrapper only in the embedded per-chain protocol addresses, diffed 2026-07-20) wrapping natively-issued BNB Chain USDD 0x45E51bc23D592EB2DBA86da3985299f7895d66Ba — USDD announced native deployment on BNB Chain (Oct 2025) with the full CDP stack, so no bridge mints this deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDD docs — deployment addresses (native BNB Chain stack)",
+            "url": "https://docs.usdd.io/developers/deployment-addresses"
+          },
+          {
+            "label": "USDD docs — sUSDD mechanism",
+            "url": "https://docs.usdd.io/system-architecture/susdd-mechanism"
+          },
+          {
+            "label": "sUSDD BSC wrapper",
+            "url": "https://bscscan.com/address/0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d"
+          }
+        ]
+      }
+    ]
+  }
+}

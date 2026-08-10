@@ -1,0 +1,110 @@
+{
+  "id": "sfrxusd-frax",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "bounded-admin",
+    "confidence": "verified",
+    "summary": "sfrxUSD is a savings wrapper over frxUSD; wrapper minting is share accounting while base frxUSD mint authority is inherited from the Frax custodian and Comptroller Safe path.",
+    "inheritedFrom": "frxusd-frax",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xCf62F905562626CfcDD2261162a51fd02Fc9c5b6",
+        "label": "sfrxUSD wrapper token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "sfrxUSD represents savings/share accounting over deposited frxUSD and does not mint base frxUSD.",
+        "sources": [
+          {
+            "label": "Frax frxUSD docs",
+            "url": "https://docs.frax.com/frxusd"
+          }
+        ],
+        "evidence": "sfrxUSD is documented as the savings wrapper over frxUSD; base stablecoin mint authority is inherited from frxUSD."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27",
+        "label": "Inherited Frax Comptroller Safe",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "threshold": 3,
+        "signerCount": 5,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x6933BCC3e96f1C4d2cb73Cb391d854b18Ab7A4F2",
+            "0xcbc616D595D38483e6AdC45C7E426f44bF230928",
+            "0x17e06ce6914E3969f7BD37D8b2a563890cA1c96e",
+            "0xc8dE9f45601DA8C76158b8CAF3E56E8A037F2228",
+            "0x6e74053a3798e0fC9a9775F7995316b27f21c4D2"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+          "version": "1.3.0",
+          "observedBlock": 25295194,
+          "source": "safe-api"
+        },
+        "sources": [
+          {
+            "label": "Safe transaction service",
+            "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+          }
+        ],
+        "evidence": "At Ethereum block 25295194, Safe API returned 3/5 threshold, 5 owners, modules=[], guard=0x0, version 1.3.0. sfrxUSD inherits base frxUSD mint authority from frxUSD, whose token and custodian owner path resolves to this 3/5 Safe."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "Frax frxUSD docs",
+          "url": "https://docs.frax.com/frxusd"
+        },
+        {
+          "label": "FraxNet custodian addresses",
+          "url": "https://docs.frax.com/fraxnet/addresses/fraxnet-custodians"
+        },
+        {
+          "label": "Safe API - Frax Comptroller Safe",
+          "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
+        }
+      ],
+      "evidence": "sfrxUSD wrapper/share accounting is separate from base frxUSD minting, which is inherited from frxUSD custodian and Comptroller Safe controls. Safe API confirmed 3/5 threshold, 5 owners, no modules or guard at block 25295194. Re-verified at Ethereum block 25575167 on 2026-07-20: sfrxUSD 0xcf62f905562626CfcDD2261162a51fd02Fc9c5b6 returns asset() = frxUSD 0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29 and its EIP-1967 implementation slot resolves to 0xaad4a1d92053a62ce7a787641d8b4e5883e96700, so the savings wrapper is a proxy over share-accounting logic rather than an issuance surface. Economic-control adjudication: sfrxUSD shares are minted only against frxUSD actually deposited into the vault and the wrapper exposes no privileged net-claim mint entry point, so its own cap is economically bounded; the unbounded issuer discretion sits on the frxUSD custodian and Comptroller Safe path, where it is scored. As an on-chain ERC-4626-style wrapper there is no separate supply-versus-reserve attestation cadence for sfrxUSD, and no financial regulator supervises Frax. Upgrade path resolved at Ethereum block 25575184 on 2026-07-20: the sfrxUSD EIP-1967 admin slot resolves to ProxyAdmin 0xea0a6ec8114a0af6cf74ca0036ab31d892df13cb (2647 bytes of code), whose owner() is 0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27 — the same Frax Comptroller Safe already recorded as a control on this profile — so the wrapper's share-accounting logic is replaceable by that Safe.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
+      "reviewedAt": "2026-07-20",
+      "disposition": "scoreable"
+    },
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
+      ],
+      "implementationAddresses": [
+        "0xaad4a1d92053a62ce7a787641d8b4e5883e96700"
+      ],
+      "adminAddresses": [
+        "0xea0a6ec8114a0af6cf74ca0036ab31d892df13cb",
+        "0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "Inherited Frax Comptroller Safe",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25575184,
+      "sources": [
+        {
+          "label": "sfrxUSD on Etherscan",
+          "url": "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
+        }
+      ]
+    }
+  }
+}

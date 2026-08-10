@@ -1,0 +1,51 @@
+{
+  "id": "wemix-dollar-wemix",
+  "mintAuthority": {
+    "mintPath": "permissioned-minter",
+    "authorityPosture": "concentrated-admin",
+    "confidence": "verified",
+    "summary": "WEMIX$ on WEMIX chain (0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1) is an onlyOwner mint contract; owner() resolves to EOA 0x7a907b9df3f4843522b905758c2f542c9c028e4d (WEMIX foundation custody), confirmed on-chain at block 114958903.",
+    "controls": [
+      {
+        "chain": "wemix",
+        "address": "0x7a907b9df3f4843522b905758c2f542c9c028e4d",
+        "label": "WEMIX$ token owner (EOA — WEMIX foundation)",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "WEMIX$ stabilizer docs",
+            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+          },
+          {
+            "label": "WEMIX chain RPC",
+            "url": "https://api.wemix.com"
+          }
+        ],
+        "evidence": "At WEMIX chain block 114958903, owner() on contract 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1 (name()=WEMIX$) returned 0x7a907b9df3f4843522b905758c2f542c9c028e4d. eth_getCode at that address returned 0x (no bytecode) confirming an EOA. EIP-1967 proxy admin slot is empty (not a proxy). No masterMinter or MINTER_ROLE found."
+      }
+    ],
+    "review": {
+      "sources": [
+        {
+          "label": "WEMIX$ stabilizer docs",
+          "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+        },
+        {
+          "label": "WEMIX chain RPC (api.wemix.com)",
+          "url": "https://api.wemix.com"
+        },
+        {
+          "label": "CoinGecko WEMIX$ platforms",
+          "url": "https://api.coingecko.com/api/v3/coins/wemix-dollar"
+        }
+      ],
+      "evidence": "At WEMIX block 114958903: contract 0x8e81fcc2 confirmed name=WEMIX$; owner()=0x7a907b9d (EOA, no bytecode); not a proxy. CoinGecko confirmed wemix-network contract address 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1. Mint is controlled solely by the owner EOA (WEMIX foundation custody).",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11"
+    }
+  }
+}

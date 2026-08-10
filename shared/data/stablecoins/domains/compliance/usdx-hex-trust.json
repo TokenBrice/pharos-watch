@@ -1,0 +1,61 @@
+{
+  "id": "usdx-hex-trust",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDX is described as a 1:1 USD-referencing token backed by Treasuries and cash equivalents with approved-party redemption."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Hex Trust Digital Assets",
+    "issuerDomicile": "Hong Kong",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.htdigitalassets.com/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDX has reserve and redemption disclosures, but no public GENIUS approval or foreign-issuer exception source was found. The htdigitalassets.com homepage references regular attestation reports but no dedicated disclosure URL is publicly linked. No GENIUS Act pathway intent announced by Hex Trust as of 2026-06-18.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Hex Trust Digital Assets USDX",
+        "url": "https://www.htdigitalassets.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Hex Trust website",
+        "url": "https://www.hextrust.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act rulemaking bulletin and public releases (OCC Bulletin 2026-3)",
+        "Hex Trust Digital Assets and Hex Trust public disclosures (htdigitalassets.com, hextrust.com)",
+        "Web search for Hex Trust USDX GENIUS Act authorization, foreign issuer exception, or US regulatory pathway announcements (June 2026)",
+        "FDIC, FinCEN/OFAC, Treasury GENIUS Act NPRMs — no Hex Trust / USDX filing or application found",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, registered or comparable foreign-issuer exception, or issuer-announced intent was located for USDX or Hex Trust Digital Assets across OCC bulletins, Federal Register, issuer websites, and web search as of 2026-06-18. GENIUS rulemaking remains at NPRM stage; no approvals exist for any issuer.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

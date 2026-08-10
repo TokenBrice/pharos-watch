@@ -25,13 +25,6 @@
     "country": "Brazil",
     "regulator": "Banco Central do Brasil (Consulta Publica 111 pending)"
   },
-  "blacklistabilityReview": {
-    "reviewedStatus": true,
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: BRL-ITAU resolves to Yes because existing metadata classifies the asset as centralized and a Brazilian regulated bank issuer would retain freeze/reissue authority.",
-    "reviewer": "Codex inferred-status backfill",
-    "reviewedAt": "2026-05-12"
-  },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",

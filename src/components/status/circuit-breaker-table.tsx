@@ -27,7 +27,7 @@ export function CircuitBreakerTable({ circuits }: CircuitBreakerTableProps) {
       <TableCell className="py-2 font-mono text-xs">{name}</TableCell>
       <TableCell className="py-2">
         {circuit.state === "closed" && (
-          <Badge className="bg-green-500/15 text-xs text-green-700 dark:text-green-400">closed</Badge>
+          <Badge className="bg-emerald-500/15 text-xs text-emerald-700 dark:text-emerald-400">closed</Badge>
         )}
         {circuit.state === "half-open" && (
           <Badge className="bg-amber-500/15 text-xs text-amber-700 dark:text-amber-400">half-open</Badge>

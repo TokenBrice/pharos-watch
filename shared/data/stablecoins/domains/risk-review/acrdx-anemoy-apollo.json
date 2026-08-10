@@ -1,0 +1,239 @@
+{
+  "id": "acrdx-anemoy-apollo",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Anemoy",
+        "url": "https://www.anemoy.io/"
+      },
+      {
+        "label": "Centrifuge docs",
+        "url": "https://docs.centrifuge.io/"
+      }
+    ],
+    "evidence": "ACRDX is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "ACRDX uses Centrifuge V3's native burn-and-mint share bridge over external messaging. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the reviewed inventory covers Ethereum, Base, Plume, Monad, Optimism, and Solana.",
+    "reviewedAt": "2026-07-29",
+    "reviewer": "GPT SOL-NR-A wave6; Codex V9 runtime supply audit; Claude V9 bridge-deployment materiality wave3",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Wormhole",
+        "slug": "wormhole",
+        "url": "https://wormhole.com/",
+        "bridgeTypes": [
+          "messagePassing"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Anemoy ACRDX launch",
+        "url": "https://www.anemoy.io/news/acrdx-launched"
+      },
+      {
+        "label": "Wormhole",
+        "url": "https://wormhole.com/"
+      },
+      {
+        "label": "Centrifuge protocol deployments",
+        "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+      },
+      {
+        "label": "Centrifuge share-token bridge guide",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "protocol": "Centrifuge hub issuance (Anemoy)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native ACRDX share token on Ethereum (7,501-byte code): the Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab holds wards() = 1 on the token (read 2026-07-20) and mints under the Ethereum hub (Root ward 0x7ed48c31f2fdc40d37407cbabf0870b2b688368f, ProtocolGuardian Safe).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Etherscan ACRDX token",
+            "url": "https://etherscan.io/token/0x9477724bb54ad5417de8baff29e59df3fb4da74f"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "sourceChain": "ethereum",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on plume is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the plume token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "plume",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:plume:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
+      },
+      {
+        "id": "monad:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on monad is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the monad token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "monad",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:monad:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on base is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code on every chain): wards() = 1 on the base token (read 2026-07-20). The Spoke mints under Centrifuge hub cross-chain messaging from Ethereum.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "controllerChain": "base",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:base:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "Anemoy",
+            "url": "https://anemoy.com/"
+          }
+        ]
+      },
+      {
+        "id": "optimism:0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "sourceChain": "ethereum",
+        "destinationChain": "optimism",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245",
+        "protocol": "Centrifuge V3 spoke messaging",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "ACRDX on optimism is minted by the same Centrifuge Spoke contract 0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab (17,675-byte code): wards() = 1 on the optimism token and eth_getCode confirms the Spoke is deployed there (read 2026-07-29 at block 154876232 on mainnet.optimism.io and optimism.drpc.org). The Optimism token shares the Monad ShareToken address 0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245 and returned name 'Anemoy Tokenized Apollo Diversified Credit Fund Token', symbol ACRDX, 18 decimals, totalSupply 97,931.995174 shares. Root ward = 0 on optimism, matching the Monad Spoke-only ward layout where Root is not deployed per spoke chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-29",
+        "observedBlock": 154876232,
+        "controllerChain": "optimism",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:optimism:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ],
+        "sources": [
+          {
+            "label": "ACRDX optimism ShareToken",
+            "url": "https://optimistic.etherscan.io/token/0x2fabf1c784b8583d63c00c5c9c0377d8cf1a3245"
+          },
+          {
+            "label": "Centrifuge Spoke architecture",
+            "url": "https://docs.centrifuge.io/developer/protocol/architecture/spoke/"
+          }
+        ]
+      },
+      {
+        "id": "solana:ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G",
+        "protocol": "Centrifuge V3 native share bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Centrifuge's official deployment registry identifies this exact ACRDX Solana mint. Finalized RPC at slot 434941163 returned Token-2022 ownership, symbol ACDRX, 6 decimals, zero current supply, and the pinned direct mint/freeze/permanent-delegate authority. Centrifuge V3 burns source-chain shares before hub-authorized destination minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-24",
+        "observedBlock": 434941163,
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
+        ],
+        "sources": [
+          {
+            "label": "Centrifuge protocol deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge share-token bridge guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "ACRDX on Solscan",
+            "url": "https://solscan.io/token/ACDR3LGFrMuDZSDRyJjncFCzo5c8xkQxhWx4im4Vmq8G"
+          }
+        ]
+      }
+    ]
+  }
+}

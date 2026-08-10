@@ -1,0 +1,156 @@
+{
+  "id": "usdtb-ethena",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDTB resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "USDtb is native on Ethereum and Solana (per Anchorage's attestation). Arbitrum and Base deployments are the issuer's own LayerZero OFT (endpoint verified on-chain; owner is a 5-of-10 Ethena Safe) using burn-mint.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "oft",
+          "lockAndMint",
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDtb docs",
+        "url": "https://docs.usdtb.money/"
+      },
+      {
+        "label": "L2BEAT LayerZero",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xc139190f447e929f090edeb554d95abb8b18ac1c",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+        "protocol": "Ethena/Anchorage native issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDtb is native on Ethereum (Anchorage attestation identifies Ethereum and Solana as native deployments; MINTER_BURNER_ROLE mint reviewed in the mint-authority profile).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDtb docs",
+            "url": "https://docs.usdtb.money/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0xc708b6887db46005da033501f8aebee72d191a5d",
+        "destinationChain": "arbitrum",
+        "contractAddress": "0xc708b6887db46005da033501f8aebee72d191a5d",
+        "protocol": "Ethena issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec (getThreshold/getOwners verified on Arbitrum at 2026-07-20); the issuer's own OFT burns/mints USDtb across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDtb docs",
+            "url": "https://docs.usdtb.money/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
+      },
+      {
+        "id": "base:0xc708b6887db46005da033501f8aebee72d191a5d",
+        "destinationChain": "base",
+        "contractAddress": "0xc708b6887db46005da033501f8aebee72d191a5d",
+        "protocol": "Ethena issuer-deployed LayerZero OFT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "endpoint() = LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c and owner() = 5-of-10 Safe 0xe897d8620d5eba2c8ecaaf0ada191a23230ab8ec (getThreshold/getOwners verified on Base at 2026-07-20); the issuer's own OFT burns/mints USDtb across deployments.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDtb docs",
+            "url": "https://docs.usdtb.money/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ],
+        "failureDomainKeys": [
+          "layerzero:oft:usdtb-ethena"
+        ],
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum"
+      },
+      {
+        "id": "solana:8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T",
+        "destinationChain": "solana",
+        "contractAddress": "8yXrtJ54jZtE84xEBzTESKuegjcAkAuDrdAhRd8i8n3T",
+        "protocol": "Ethena/Anchorage native Solana issuance",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "USDtb is native on Solana (Token-2022 mint and permanent-delegate authority resolved in the mint-authority review).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "USDtb docs",
+            "url": "https://docs.usdtb.money/"
+          },
+          {
+            "label": "LayerZero docs",
+            "url": "https://docs.layerzero.network/"
+          }
+        ]
+      }
+    ]
+  }
+}

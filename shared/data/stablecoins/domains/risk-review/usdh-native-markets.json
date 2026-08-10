@@ -1,0 +1,42 @@
+{
+  "id": "usdh-native-markets",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: USDH resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "USDH has HyperEVM and Hyperliquid deployments. Hyperliquid bridge documentation and L2BEAT describe the bridge as validator-signed, with more than two-thirds staking power required for deposits or withdrawals, so Pharos scores this as external validated-network exposure.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "l2beat",
+        "name": "Hyperliquid",
+        "slug": "hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid",
+        "bridgeTypes": [
+          "validatorBridge"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "USDH docs",
+        "url": "https://docs.usdh.com"
+      },
+      {
+        "label": "Hyperliquid bridge docs",
+        "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/hypercore/bridge"
+      },
+      {
+        "label": "L2BEAT Hyperliquid",
+        "url": "https://l2beat.com/interop/protocols/hyperliquid"
+      }
+    ]
+  }
+}

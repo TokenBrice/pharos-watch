@@ -1,0 +1,33 @@
+{
+  "id": "pc0000031-tradable",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Tradable",
+        "url": "https://www.tradable.xyz/"
+      }
+    ],
+    "evidence": "PC0000031 is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "PC0000031 is tracked only on ZKsync in Pharos. The reviewed Tradable product docs and deal page do not document a separate cross-chain route for this tokenized asset row.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Tradable product docs",
+        "url": "https://doc.tradable.xyz/product-docs"
+      },
+      {
+        "label": "Tradable deal page",
+        "url": "https://app.tradable.xyz/investor/deals/861cce9e-08ae-45a0-aca8-9fa229a0189d"
+      }
+    ]
+  }
+}

@@ -79,7 +79,7 @@ function getBand(
   }
   return {
     label: "on time",
-    className: "bg-green-500/15 text-green-700 dark:text-green-400",
+    className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   };
 }
 

@@ -1,0 +1,95 @@
+{
+  "id": "eusd-telcoin",
+  "reserves": [
+    {
+      "name": "U.S. dollar deposits, U.S. Treasury or federal agency obligations, and other NFIA-permitted assets",
+      "pct": 100,
+      "risk": "very-low",
+      "assetClass": "other",
+      "issuerOrObligor": "United States government and undisclosed FDIC-insured reserve banks",
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Telcoin eUSD bank page",
+        "url": "https://bank.telco.in/eUSD"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28: the customer agreement §15.1 still defines eUSD Reserves as (i) U.S. dollars at FDIC-insured institutions, (ii) highly liquid U.S. Treasury securities or federal agency obligations, and (iii) other NFIA-permitted assets in an amount equal to or greater than outstanding eUSD, held in segregated accounts. The live eUSD bank page independently states eUSD is fully backed by highly liquid U.S. dollar cash and cash-equivalent reserves under Nebraska Department of Banking and Finance oversight. No current category weights, institution names, balances, or independent composition attestation. Aggregate 100% multi-class envelope retained with insufficient-evidence / knownUnknownExposurePct 100.",
+    "compositionBasis": "Telcoin Digital Asset Bank customer agreement and eUSD issuer disclosures",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The legally permitted reserve categories are identified, but the full 100% envelope lacks current category weights, named reserve institutions, balances, and independent assurance evidence.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "U.S. dollar deposits, U.S. Treasury or federal agency obligations, and other NFIA-permitted assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "The customer agreement defines the permitted reserve envelope but the issuer does not publish current eUSD-specific weights or independent assurance evidence."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Telcoin Digital Asset Bank",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "One or more undisclosed FDIC-insured reserve banks",
+        "role": "bank",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Telcoin eUSD token contracts",
+        "role": "other",
+        "jurisdiction": "Onchain protocol"
+      }
+    ],
+    "segregation": "segregated",
+    "bankruptcyRemoteness": "contractual-only",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-21",
+    "reviewer": "Kimi P2 reserve cohort rc-3 (lead usdd-tron-dao-reserve); OpenAI Codex NR-recovery review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Telcoin Digital Asset Bank",
+        "url": "https://bank.telco.in/"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank terms",
+        "url": "https://bank.telco.in/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Asset Bank customer agreement",
+        "url": "https://bank.telco.in/customer-agreement"
+      }
+    ],
+    "uncertainty": "The customer agreement requires segregated reserve accounts at one or more FDIC-insured banks, separate from Telcoin Digital Asset Bank's operating funds and unavailable for its general debts; it gives eUSD holders priority redemption claims subject to applicable law. It does not name the banks, establish statutory bankruptcy remoteness, disclose provider shares, or address reserve-asset reuse."
+  }
+}

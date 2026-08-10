@@ -1,0 +1,131 @@
+{
+  "id": "nbasis-nest",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, and Plasma.",
+    "upgradeability": {
+      "model": "immutable",
+      "canChangeMintLogic": false,
+      "observedAt": "2026-07-21",
+      "observedBlock": 25580348,
+      "sources": [
+        {
+          "label": "Ethereum nBASIS BoringVault source and ABI",
+          "url": "https://eth.blockscout.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b?tab=contract"
+        },
+        {
+          "label": "Plume nBASIS contract at block 82434036",
+          "url": "https://explorer.plume.org/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        },
+        {
+          "label": "Plasma nBASIS contract at block 27687550",
+          "url": "https://plasma-explorer.com/address/0x11113ff3a60c2450f4b22515cb760417259ee94b"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "Nest Basis Vault Teller (issuance/redemption)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Nest smart contracts (Teller/Manager addresses)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023, owner() on 0xAD60d43a33cA26e40eAcc5BBc60f1C7136FFB89b returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (3-of-6 Safe). Contract has bytecode (confirmed contract)."
+      },
+      {
+        "label": "Nest Basis Vault Manager (strategy/admin)",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x17767f384cead5182cAaf9056635bAc14aFC24a1",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "Nest smart contracts (Teller/Manager addresses)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023, owner() on 0x17767f384cead5182cAaf9056635bAc14aFC24a1 returned 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (same 3-of-6 Safe as Teller owner)."
+      },
+      {
+        "label": "Nest vault owner Safe (3-of-6)",
+        "role": "minter-admin",
+        "authorityType": "safe",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
+        "canRaiseCap": "unknown",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f",
+            "0x98be74d3d5604904d0686eef9b4267f681f9520a",
+            "0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6",
+            "0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572",
+            "0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a",
+            "0x6d303f4e0e3406c397855551a006c8b33d4f3240"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
+          "version": "1.3.0",
+          "observedBlock": 25295023,
+          "source": "onchain"
+        },
+        "sources": [
+          {
+            "label": "Nest smart contracts (Teller/Manager addresses)",
+            "url": "https://docs.nest.credit/developers/smart-contracts"
+          }
+        ],
+        "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet)."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "none",
+    "review": {
+      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
+      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation",
+      "reviewedAt": "2026-07-21",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Nest smart contracts (Teller/Manager addresses)",
+          "url": "https://docs.nest.credit/developers/smart-contracts"
+        },
+        {
+          "label": "How Nest vaults work (BoringVault/Teller/Manager roles)",
+          "url": "https://nest.credit/blog/how-nest-vaults-work"
+        },
+        {
+          "label": "Nest vault NAV methodology",
+          "url": "https://docs.nest.credit/about/vaults/"
+        },
+        {
+          "label": "Nest nBASIS integration",
+          "url": "https://docs.nest.credit/developers/integration-guides/nbasis/"
+        },
+        {
+          "label": "Nest terms identifying Nest DAO LLC",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+        }
+      ]
+    }
+  }
+}

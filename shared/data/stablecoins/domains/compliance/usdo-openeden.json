@@ -1,0 +1,53 @@
+{
+  "id": "usdo-openeden",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USDO is a rebasing yield-bearing stablecoin: it distributes yield as additional tokens to holders daily. The GENIUS Act defines payment stablecoin to exclude instruments that pay interest or yield (Sec. 4(a)(11)) and prohibits PPSI issuers from paying any yield. USDOs core design is therefore incompatible with the payment stablecoin definition. Additionally, OpenEden explicitly geo-blocks US persons and states the token may not be offered or sold in the US, removing it further from GENIUS Act scope."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "OpenEden Digital (OED)",
+    "issuerDomicile": "Bermuda",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDO is a rebasing yield-bearing stablecoin pegged to $1 and issued by OpenEden Digital under a Bermuda DABA license. Its yield-distributing rebase mechanism structurally excludes it from the GENIUS Act payment stablecoin definition (which bans yield payments). US persons are explicitly geo-blocked. No GENIUS Act authorization, application, or foreign-exception registration found. foreignExceptionStatus is not-applicable because the instrument is a non-payment-token.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "GENIUS Act Sec. 4(a)(11) yield prohibition WilmerHale analysis",
+        "url": "https://www.wilmerhale.com/en/insights/client-alerts/20250718-what-the-genius-act-means-for-payment-stablecoin-issuers-banks-and-custodians",
+        "sourceKind": "news",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "OpenEden USDO launch US person exclusion",
+        "url": "https://openeden.com/news/openeden-launches-usdo-new-regulated-stablecoin/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-13"
+      },
+      {
+        "label": "OpenEden USDO FAQ",
+        "url": "https://docs.openeden.com/usdo/faq",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "OpenEden USDO reserves",
+        "url": "https://docs.openeden.com/usdo/introduction/usdo-reserves",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-13"
+  }
+}

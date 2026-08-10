@@ -1,0 +1,126 @@
+{
+  "id": "nwisdom-nest",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.nest.credit/"
+      }
+    ],
+    "evidence": "Nest retains issuer / admin authority over vault shares with permissioned issuance and freeze surfaces beyond reserve-only exposure.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "nWISDOM is a Nest BoringVault share whose ERC20 (identical CREATE2 address 0x29bf...0240 on Plume and Ethereum) contains no LayerZero code itself. Cross-chain movement runs through Plume's SkyLink on LayerZero's OVault standard, orchestrated by the Plume-side NestVaultComposer (LayerZero OVaultComposer, 0x312a0219...). Plume is the canonical accounting/settlement hub. Per LayerZero's OVault Share mesh design, vault shares move via a ShareOFTAdapter (lockbox) on the hub chain plus standard ShareOFT mint/burn on spokes, with deposits/redemptions routed through the hub ERC-4626 vault (ABA pattern). This is an external LayerZero OFT-Adapter/lockbox route with a third-party control surface (composer + OFT peers), not a pure validated-network burn/mint, so it maps to external-lock-mint. The specific adapter contract and the named DVN set were not enumerated, hence probable rather than verified. 2026-07-20 cohort dc-1 pass: Plume and Ethereum rows both confirmed issuer-native Nest deployments (uniform address + uniform owner reads).",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
+    "confidence": "probable",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "LayerZero OFT (Nest OVault / SkyLink)",
+        "slug": "layerzero",
+        "url": "https://docs.nest.credit/about/cross-chain",
+        "bridgeTypes": [
+          "burn-mint-oft",
+          "external-validated-network"
+        ],
+        "note": "Nest cross-chain doc: vault share movement via LayerZero OFT burn/mint messaging; Plume is the canonical accounting hub, Ethereum/Solana are spokes. No lock/mint adapter."
+      },
+      {
+        "source": "docs",
+        "name": "NestVaultComposer (LayerZero OVault Composer)",
+        "slug": "layerzero-ovault",
+        "url": "https://docs.nest.credit/developers/smart-contracts",
+        "bridgeTypes": [
+          "ovault-composer"
+        ],
+        "note": "Composer on Plume at 0x312a0219E8af66C4e8849a3fEF4047415c3b4974; Solana OFT store listed - LayerZero OVault/OFT terminology confirming the route."
+      },
+      {
+        "source": "explorer",
+        "name": "nWISDOM BoringVault share token",
+        "slug": "boringvault",
+        "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "bridgeTypes": [
+          "erc20-share"
+        ],
+        "note": "Ethereum token is a plain BoringVault ERC20 (enter()/exit(), authority access control, no LayerZero code in-token); identical CREATE2 address on Plume signals omnichain token standard with OFT logic in composer/peer layer."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Nest docs - Cross-Chain Architecture (LayerZero OFT burn/mint, Plume hub)",
+        "url": "https://docs.nest.credit/about/cross-chain"
+      },
+      {
+        "label": "Nest docs - Smart Contracts (NestVaultComposer on Plume, Solana OFT store)",
+        "url": "https://docs.nest.credit/developers/smart-contracts"
+      },
+      {
+        "label": "Nest blog - How Nest vaults work (BoringVault + SkyLink/LayerZero cross-chain)",
+        "url": "https://nest.credit/blog/how-nest-vaults-work"
+      },
+      {
+        "label": "Plume blog - SkyLink x LayerZero (RWA yield streaming over LayerZero)",
+        "url": "https://plume.org/blog/skylink"
+      },
+      {
+        "label": "LayerZero - OVault standard (share OFT mesh: OFT burn/mint via Composer)",
+        "url": "https://docs.layerzero.network/v2/concepts/applications/ovault-standard"
+      },
+      {
+        "label": "Etherscan - nWISDOM share token (BoringVault ERC20)",
+        "url": "https://etherscan.io/address/0x29bf22381a5811dec89dc7b46a5ce57ad02c0240"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "protocol": "Nest nWISDOM (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on ethereum; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest",
+            "url": "https://nest.credit/"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "destinationChain": "plume",
+        "contractAddress": "0x29bf22381a5811dec89dc7b46a5ce57ad02c0240",
+        "protocol": "Nest nWISDOM (issuer-native multichain deployment)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on-chain 2026-07-20: name 'Nest WisdomTree Vault', symbol nWISDOM, 6 decimals on plume; uniform address with uniform owner() 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a on both Plume and Ethereum — issuer-native Nest deployment.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Nest",
+            "url": "https://nest.credit/"
+          }
+        ]
+      }
+    ]
+  }
+}

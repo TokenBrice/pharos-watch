@@ -1,6 +1,6 @@
 "use client";
 
-import { THREAT_BAND_COLORS, THREAT_BAND_LABELS } from "@shared/lib/classification";
+import { THREAT_BAND_LABELS, THREAT_BAND_STYLES } from "@shared/lib/classification";
 import { THREAT_BAND_HEX } from "@/lib/chart-colors";
 import { clampScore } from "@shared/lib/math";
 import type { ThreatBand } from "@shared/lib/classification";
@@ -151,7 +151,7 @@ export function DEWSBadge({
   if (band === "CALM") return null;
 
   const arrow = prevScore !== undefined && score > prevScore ? " \u25B2" : "";
-  const colorClasses = THREAT_BAND_COLORS[band] ?? "";
+  const colorClasses = THREAT_BAND_STYLES[band]?.cls ?? "";
 
   let tooltip = `DEWS: ${score}/100`;
   if (signals) {

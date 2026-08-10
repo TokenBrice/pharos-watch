@@ -1,0 +1,100 @@
+{
+  "id": "fxd-fathom",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "summary": "FXD is minted from collateralized debt positions on XDC; the StablecoinAdapter proxy (0xe3b248) holds MINTER_ROLE on the FXD token. Both the FXD token proxy and the StablecoinAdapter proxy are managed by a single ProxyAdmin (0xb82ad475) whose owner is EOA 0x594d425a. DEFAULT_ADMIN_ROLE has been renounced. The EOA can unilaterally upgrade the FXD token and StablecoinAdapter logic, making this concentrated-admin.",
+    "controls": [
+      {
+        "label": "StablecoinAdapter (MINTER_ROLE holder, proxy 0xe3b248)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "chain": "xdc",
+        "address": "0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e",
+        "capDescription": "Mint bounded by per-position overcollateralization against XDC and collateral-pool assets, with liquidations and a StableSwap Module supporting the peg.",
+        "canRaiseCap": true,
+        "evidence": "At XDC block 103659775: hasRole(MINTER_ROLE, 0xe3b248) on FXD token proxy returned true. RoleGranted log at block 0x3908e89 confirmed MINTER_ROLE granted to 0xe3b248 by EOA 0x594d425a. No RoleRevoked events found. 0xe3b248 is a transparent proxy (EIP-1967 admin = ProxyAdmin 0xb82ad475; impl = 0x5fe6d7b4c22e3fbf010438e6d8f5144c083d2efb, i.e., StablecoinAdapter).",
+        "sources": [
+          {
+            "label": "XDC explorer: FXD token",
+            "url": "https://xdcscan.com/address/0x49d3f7543335cf38fa10889ccff10207e22110b5"
+          }
+        ]
+      },
+      {
+        "label": "FXD ProxyAdmin EOA owner (0x594d425a — upgrade authority)",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "chain": "xdc",
+        "address": "0x594d425a6c9249f66a00c841a7a2a921b63a0a4c",
+        "evidence": "At XDC block 103659775: ProxyAdmin 0xb82ad475 owner() = 0x594d425a; eth_getCode on 0x594d425a returned empty (EOA). Same EOA appears in RoleGranted logs as the granter of MINTER_ROLE and DEFAULT_ADMIN_ROLE at token initialization (block 0x3908d35). DEFAULT_ADMIN_ROLE holder count = 0 (renounced). However, the EOA-owned ProxyAdmin controls upgrades to both FXD token and StablecoinAdapter, giving unrestricted unilateral upgrade power over the mint path.",
+        "sources": [
+          {
+            "label": "XDC explorer: FXD ProxyAdmin",
+            "url": "https://xdcscan.com/address/0xb82ad475fc113671840d510b60cbae5630a07f3b"
+          }
+        ]
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+        "0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e"
+      ],
+      "implementationAddresses": [
+        "0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a",
+        "0x5fe6d7b4c22e3fbf010438e6d8f5144c083d2efb"
+      ],
+      "adminAddresses": [
+        "0xb82ad475fc113671840d510b60cbae5630a07f3b"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "FXD ProxyAdmin EOA owner (0x594d425a — upgrade authority)",
+      "observedAt": "2026-07-13",
+      "observedBlock": 104894883,
+      "sources": [
+        {
+          "label": "XDC explorer: FXD token proxy",
+          "url": "https://xdcscan.com/address/0x49d3f7543335cf38fa10889ccff10207e22110b5"
+        },
+        {
+          "label": "XDC explorer: StablecoinAdapter proxy",
+          "url": "https://xdcscan.com/address/0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e"
+        },
+        {
+          "label": "XDC explorer: shared ProxyAdmin",
+          "url": "https://xdcscan.com/address/0xb82ad475fc113671840d510b60cbae5630a07f3b"
+        },
+        {
+          "label": "XDC Network RPC",
+          "url": "https://rpc.xinfin.network"
+        }
+      ]
+    },
+    "review": {
+      "evidence": "At XDC block 103659775: FXD token 0x49d3f754 is a transparent proxy with ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b (confirmed contract). ProxyAdmin owner() = EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c (eth_getCode = empty). FXD token impl = 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. MINTER_ROLE (0x9f2df0fe...) hasRole confirmed true for StablecoinAdapter proxy 0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e; RoleGranted log confirmed at block 0x3908e89. No RoleRevoked for MINTER_ROLE. DEFAULT_ADMIN_ROLE getRoleMemberCount = 0 (renounced). ProxyAdmin also controls StablecoinAdapter proxy (EIP-1967 admin = same 0xb82ad475). The EOA upgrade authority over both contracts constitutes concentrated-admin; posture updated from partially-bounded-admin.",
+      "reviewer": "Claude Phase 0c continuation",
+      "reviewedAt": "2026-06-11",
+      "sources": [
+        {
+          "label": "Fathom docs",
+          "url": "https://docs.fathom.fi/"
+        },
+        {
+          "label": "XDC explorer: FXD token",
+          "url": "https://xdcscan.com/address/0x49d3f7543335cf38fa10889ccff10207e22110b5"
+        },
+        {
+          "label": "Fathom stablecoin source",
+          "url": "https://github.com/Into-the-Fathom/fathom-stablecoin-smart-contracts/blob/master/contracts/main/stablecoin-core/FathomStablecoin.sol"
+        }
+      ]
+    }
+  }
+}

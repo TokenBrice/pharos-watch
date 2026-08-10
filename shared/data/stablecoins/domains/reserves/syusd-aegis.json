@@ -1,0 +1,32 @@
+{
+  "id": "syusd-aegis",
+  "reserves": [
+    {
+      "name": "YUSD staking vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "yusd-aegis",
+      "depType": "wrapper"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-14",
+    "reviewer": "SONG Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Aegis sYUSD documentation",
+        "url": "https://docs.aegis.im/tokens/syusd-yield-bearing-token"
+      },
+      {
+        "label": "Aegis proof of reserve",
+        "url": "https://aegis.accountable.capital/"
+      }
+    ],
+    "rationale": "Aegis documents sYUSD as an ERC-4626-style staking receipt backed by YUSD, with a seven-day cooldown. The named YUSD wrapper relationship is complete; reward accrual changes the exchange rate rather than the backing asset identity.",
+    "compositionBasis": "Aegis sYUSD staking and proof-of-reserve disclosure",
+    "scope": "dependency-relationships",
+    "knownUnknownExposure": "The linked YUSD backing is disclosed; dynamic reward accrual is not modeled as a separate reserve slice.",
+    "knownUnknownExposurePct": 0
+  }
+}

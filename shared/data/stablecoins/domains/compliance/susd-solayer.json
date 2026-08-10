@@ -1,0 +1,69 @@
+{
+  "id": "susd-solayer",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "sUSD is explicitly designed as a yield-bearing stablecoin that passes T-bill interest to holders via Solana Token-2022 interest extension. The GENIUS Act Section 4(a)(11) prohibits permitted payment stablecoin issuers from paying any form of interest or yield to holders solely in connection with holding the stablecoin. Whether sUSD qualifies as a 'payment stablecoin' subject to this prohibition (and therefore potentially non-compliant as currently structured) or falls outside the payment-stablecoin definition as a yield-bearing investment instrument remains unresolved pending final GENIUS Act implementing regulations. No official guidance has classified yield-bearing RWA-backed stablecoins. Applicability is genuinely unclear."
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Solayer Labs, Inc.",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Solayer Labs, Inc. is a US-incorporated company headquartered in San Francisco (CA corp, doc #6557004). sUSD is a yield-bearing stablecoin backed by US Treasury bills via a partnership with OpenEden (Moody's-rated RWA platform). The yield is passed to holders through Solana Token-2022 interest extension mechanics — a design that sits in regulatory tension with the GENIUS Act's yield prohibition on payment stablecoin issuers. No GENIUS authorization, application, or registration found. No enforcement action found. The applicability question (payment stablecoin vs. excluded yield instrument) will only be resolved once final GENIUS implementing regulations are issued.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "OCC GENIUS Act NPRM (Federal Register)",
+        "url": "https://www.federalregister.gov/documents/2026/03/02/2026-04089/implementing-the-guiding-and-establishing-national-innovation-for-us-stablecoins-act-for-the",
+        "sourceKind": "federal-register"
+      },
+      {
+        "label": "Solayer sUSD FAQ",
+        "url": "https://docs.solayer.org/susd/protocol-info/faqs.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Solayer sUSD litepaper",
+        "url": "https://docs.solayer.org/susd/protocol-info/litepaper.md",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Perkins Coie: OCC GENIUS yield prohibition analysis",
+        "url": "https://perkinscoie.com/insights/update/stablecoin-interest-yield-and-rewards-occ-proposes-sweeping-regulations-under",
+        "sourceKind": "news"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act NPRM and public releases (Federal Register 2026-04089)",
+        "FDIC GENIUS Act NPRM (Federal Register 2026-06974)",
+        "Solayer issuer disclosures and token documentation",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
+        "Perkins Coie / Morgan Lewis / Sullivan & Cromwell GENIUS Act analysis",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "No GENIUS authorization, official PPSI application, state-qualified status, or foreign-registration has been located for Solayer Labs, Inc. or sUSD. The GENIUS Act framework remains in proposed-rules phase; no PPSI approvals have been granted to any issuer as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

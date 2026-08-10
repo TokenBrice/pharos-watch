@@ -1,0 +1,221 @@
+{
+  "id": "dusd-dtrinity",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Official ERC20StablecoinUpgradeable source (PAUSER_ROLE + ERC20Pausable; no holder blacklist)",
+        "url": "https://github.com/dtrinity/ethereum-solidity-contracts/blob/main/contracts/dstable/ERC20StablecoinUpgradeable.sol"
+      },
+      {
+        "label": "Ethereum dUSD proxy",
+        "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+      },
+      {
+        "label": "Fraxtal dUSD proxy",
+        "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+      },
+      {
+        "label": "Katana dUSD proxy",
+        "url": "https://katanascan.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+      },
+      {
+        "label": "Sonic dUSD proxy",
+        "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+      },
+      {
+        "label": "dTRINITY security addresses (Emergency Governance Safes / PAUSER path)",
+        "url": "https://docs.dtrinity.org/security/addresses"
+      },
+      {
+        "label": "Ethereum public RPC used for paused()/PAUSER_ROLE reads at block 25648892",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Fraxtal public RPC used for paused()/PAUSER_ROLE reads at block 39321334",
+        "url": "https://rpc.frax.com"
+      },
+      {
+        "label": "Katana public RPC used for paused()/PAUSER_ROLE reads at block 38710567",
+        "url": "https://rpc.katana.network"
+      },
+      {
+        "label": "Sonic public RPC used for paused()/PAUSER_ROLE reads at block 76782957",
+        "url": "https://rpc.soniclabs.com"
+      }
+    ],
+    "evidence": "Re-opened 2026-07-31. Official ERC20StablecoinUpgradeable inherits OpenZeppelin ERC20Pausable and exposes PAUSER_ROLE-gated pause()/unpause(); _update is whenNotPaused, so a live PAUSER can halt all holder transfers globally. Verified source and ABI expose no isBlacklisted/blacklist/freeze selectors. Fresh public-RPC reads at the latest observed blocks (2026-07-31 UTC) returned paused()=false and PAUSER_ROLE=true for the listed emergency/governance authority: Ethereum block 25648892 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), Fraxtal block 39321334 (Emergency Governance 5-of-5 Safe 0xABfBcf92986B4Ba43FaAecf545F0b2Cc45067af9), Katana block 38710567 (Emergency Governance 5-of-5 Safe 0x04401537CA997a43EBCFEc8194c7e88c7ee79804), and Sonic block 76782957 (Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262). Reach is token-level global pause, not per-address freeze. Residual: reserve assets include freezable upstream stablecoins (USDC/USDT/etc.), which is reserve-asset exposure rather than a dUSD token blacklist.",
+    "reviewer": "Codex T13 access review 2026-07-31",
+    "reviewedAt": "2026-07-31"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "Codex Safety Score V9 oracle review",
+      "rationale": "dUSD is minted and redeemed against protocol reserves, while dLEND separately values borrower collateral and manages liquidations. dUSD itself is disabled as dLEND collateral and is not a borrower-owned debt position with token-level liquidation branches, so the CDP branch inventory is not applicable; reserve and lending oracle dependencies remain captured in the profile summary.",
+      "sources": [
+        {
+          "label": "dTRINITY dUSD protocol documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd"
+        },
+        {
+          "label": "dTRINITY dLEND oracle and liquidation documentation",
+          "url": "https://docs.dtrinity.org/protocol-components/dlend"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex Safety Score V9 oracle review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD protocol documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
+      },
+      {
+        "label": "dTRINITY dLEND oracle and liquidation documentation",
+        "url": "https://docs.dtrinity.org/protocol-components/dlend"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "dTRINITY is chain-isolated by design: dUSD on Ethereum, Sonic, Katana, and Fraxtal are separately-issued non-fungible deployments, each administered by dTRINITY's own governance (1-day timelocked 3-of-5 Safes on Ethereum/Katana/Fraxtal; direct 3-of-5 Safe on Sonic). No third-party bridge controls dUSD minting anywhere.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-2 (lead usdc-circle)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "dTRINITY dUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd"
+      },
+      {
+        "label": "dTRINITY network support",
+        "url": "https://docs.dtrinity.org/key-concepts/network-support"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment: dTRINITY is chain-isolated by design ('dTRINITY intentionally sacrifices cross-chain fungibility'); the Ethereum dUSD is administered by the 1-day TimelockController 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b (DEFAULT_ADMIN_ROLE verified 2026-07-20) behind the 3-of-5 Timelocked Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262, with minting through the AMO Manager 0x29532F74A9302e0a1E9f7d015FE355FFdE6e6880 (MINTER_ROLE verified).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD ethereum token",
+            "url": "https://etherscan.io/address/0x07fff99e1664d9b116fbc158c0e99785f81ca236"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Fraxtal dUSD proxy is administered by the Fraxtal 1-day TimelockController 0x0bafada2a5824864720873ee40cd960b36445212 behind the Fraxtal 3-of-5 Governance Safe 0xfC2f89F9982BE98A9672CEFc3Ea6dBBdd88bc8e9 (role reads 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD fraxtal token",
+            "url": "https://fraxscan.com/address/0x788d96f655735f52c676a133f4dfc53cec614d4a"
+          }
+        ]
+      },
+      {
+        "id": "katana:0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "destinationChain": "katana",
+        "contractAddress": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Katana dUSD proxy is administered by the 1-day TimelockController at the same address as Ethereum 0x18cb0eb73d953ed20f2157ce6bde2a85e30e681b behind the 3-of-5 Governance Safe (role reads 2026-07-20).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD katana token",
+            "url": "https://katanascan.com/address/0xca52d08737e6af8763a2bf6034b3b03868f24dda"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+        "destinationChain": "sonic",
+        "contractAddress": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+        "protocol": "dTRINITY dUSD",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Issuer-native deployment (chain-isolated architecture): the Sonic dUSD proxy is administered directly by the 3-of-5 Governance Safe 0xE83c188a7BE46B90715C757A06cF917175f30262 with no timelock (role reads 2026-07-20) — a weaker control than the other chains, and the deployment is absent from dTRINITY's docs registry (flagged).",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "dTRINITY docs — contract addresses",
+            "url": "https://docs.dtrinity.org/security/addresses"
+          },
+          {
+            "label": "dTRINITY docs — network support (chain-isolated architecture)",
+            "url": "https://docs.dtrinity.org/key-concepts/network-support"
+          },
+          {
+            "label": "dUSD sonic token",
+            "url": "https://sonicscan.org/address/0x53a6abb52b2f968fa80df6a894e4f1b1020da975"
+          }
+        ]
+      }
+    ]
+  }
+}

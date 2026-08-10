@@ -1,0 +1,46 @@
+{
+  "id": "scrvusd-curve",
+  "reserves": [
+    {
+      "name": "crvUSD savings vault shares",
+      "pct": 100,
+      "risk": "medium",
+      "coinId": "crvusd-curve",
+      "depType": "wrapper",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Curve Savings crvUSD vault and crvUSD",
+      "riskFactors": [
+        "smart-contract",
+        "liquidity",
+        "market",
+        "counterparty"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-15",
+    "reviewer": "SOL-III Safety Score V9 reserve review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Curve Savings crvUSD repository",
+        "url": "https://github.com/curvefi/scrvusd"
+      },
+      {
+        "label": "Savings crvUSD Ethereum vault",
+        "url": "https://etherscan.io/address/0x0655977feb2f289a4ab78af67bab0d17aab84367#readContract"
+      },
+      {
+        "label": "Curve crvUSD documentation",
+        "url": "https://resources.curve.finance/crvusd/"
+      }
+    ],
+    "rationale": "scrvUSD is a vault-share claim on crvUSD managed by Curve's savings vault. The exact direct reserve is one protocol position; the parent crvUSD collateral and controller risks remain inherited through the tracked wrapper dependency.",
+    "compositionBasis": "Exact live ERC-4626 single-asset row and Curve's pinned savings-vault implementation",
+    "compositionAsOf": "2026-07-15",
+    "scope": "full-composition",
+    "knownUnknownExposure": "No additional direct scrvUSD reserve slice is identified; liquidity and upstream crvUSD backing remain structured risks of the classified position.",
+    "knownUnknownExposurePct": 0
+  }
+}

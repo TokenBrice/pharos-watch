@@ -420,7 +420,7 @@ export function AdminActionExecutionDialog({
               </span>
             </label>
           ) : (
-            <div className="rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-800 dark:text-green-200">
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-800 dark:text-emerald-200">
               Dry run only from this dashboard control.
             </div>
           ))}

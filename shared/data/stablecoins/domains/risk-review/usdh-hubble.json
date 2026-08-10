@@ -1,0 +1,336 @@
+{
+  "id": "usdh-hubble",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Solana finalized mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "Pinned SPL Token transfer, burn, and freeze-authority processor",
+        "url": "https://github.com/solana-program/token/blob/405c9172df3aeb508712142aae1caf0d31ada671/program/src/processor.rs"
+      },
+      {
+        "label": "Hubble USDH documentation (censorship-resistant, decentralized stablecoin)",
+        "url": "https://docs.hubbleprotocol.io/faq/usdh-stablecoin"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 at finalized Solana slot 438054830. USDH remains an 82-byte legacy SPL Token mint owned by Tokenkeg with freezeAuthority null. Pinned Tokenkeg logic requires holder/delegate authorization for transfers and burns, requires a current freeze authority to freeze an account, and prevents a disabled freeze authority from being restored. Hubble positively documents USDH as a censorship-resistant, decentralized stablecoin minted by users through the protocol and held in any Solana wallet; it identifies no off-chain issuer account-control rail. Hubble governance can upgrade the borrowing program but cannot replace immutable Tokenkeg or restore the mint's disabled freeze authority. Circle can freeze USDC held by the PSM and thereby impair reserves or exits, but it cannot freeze or seize a holder's USDH balance. The direct holder-seizure verdict is therefore No.",
+    "reviewer": "OpenAI Codex C09 control/access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Hubble values CDP collateral through the Kamino Scope Hubble feed (Pyth Pull for core assets; KToken for the kUSDH-USDC Orca market), with tryLiquidate/borrow reading scopePrices; hybrid Stability Vault and market-based liquidations backstop undercollateralized debt, with protocol-wide redistribution on empty vault or bad debt.",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-07-28",
+      "reviewer": "Grok Safety Score V9 wave-8 controls research",
+      "rationale": "At finalized Solana slot 435626373 the three configured BorrowingMarketState accounts held distinct non-dust debt and collateral inventories: market0 YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR (43,821.46 USDH; multi-asset DeFi Treasury deposits), market2 2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms (19,161.93 USDH; KUSDHUSDCORCA only), and dust market1 B6gckY3KmWR2u1gwruE55Hxoj5uqiTTtuXLbE6Bu7bZq (2.06 USDH). Official docs assign original-vault liquidations to the USDH Stability Vault and market-based liquidations to newly onboarded vaults, and Scope index types differ (PythPull vs KToken), so market-specific oracle and liquidation rows are required rather than a single asset-level path.",
+      "sources": [
+        {
+          "label": "Hubble hybrid liquidation model",
+          "url": "https://docs.hubbleprotocol.io/faq/liquidations/hybrid-liquidation-model"
+        },
+        {
+          "label": "Hubble official SDK config (borrowingMarketStates)",
+          "url": "https://github.com/hubbleprotocol/hubble-common/blob/master/packages/hubble-config/src/constants/configs.ts"
+        },
+        {
+          "label": "Solana mainnet RPC (finalized market reads)",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok Safety Score V9 wave-8 controls research",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Hubble GlobalConfig on-chain (scopeProgramId + scopePrices)",
+        "url": "https://explorer.solana.com/address/8HuhMF7ppoYdPD9fAdn9d9ZU1rL4ipty6CJEcZ5F17o1"
+      },
+      {
+        "label": "Scope SDK SCOPE_MAINNET_HUBBLE_FEED",
+        "url": "https://github.com/Kamino-Finance/scope-sdk/blob/master/src/constants/index.ts"
+      },
+      {
+        "label": "Scope mainnet Hubble feed config",
+        "url": "https://github.com/Kamino-Finance/scope/blob/master/configs/mainnet/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C.json"
+      },
+      {
+        "label": "Hubble SDK getAllPrices (Scope chains)",
+        "url": "https://github.com/hubbleprotocol/hubble-common/blob/master/packages/hubble-sdk/src/Hubble.ts"
+      },
+      {
+        "label": "Hubble hybrid liquidation model",
+        "url": "https://docs.hubbleprotocol.io/faq/liquidations/hybrid-liquidation-model"
+      },
+      {
+        "label": "Hubble redistribution / bad-debt docs",
+        "url": "https://docs.hubbleprotocol.io/faq/liquidations/redistribution"
+      },
+      {
+        "label": "Solana mainnet RPC",
+        "url": "https://api.mainnet-beta.solana.com"
+      }
+    ],
+    "branches": [
+      {
+        "id": "defi-treasury-market0",
+        "label": "DeFi Treasury borrowing market (multi-asset Scope/Pyth)",
+        "tier": "standard-external",
+        "summary": "Primary CDP market (43,821.46 USDH debt at slot 435626373) values SOL/ETH/BTC/mSOL and related deposits through Scope Hubble feed indices backed by Pyth Pull, and liquidates via the USDH Stability Vault hybrid path with protocol-wide redistribution fallback.",
+        "collateralAssets": [
+          "SOL",
+          "ETH",
+          "BTC",
+          "MSOL",
+          "daoSOL",
+          "STSOL",
+          "SRM",
+          "RAY",
+          "FTT",
+          "LDO"
+        ],
+        "chains": [
+          "solana"
+        ],
+        "feeds": [
+          {
+            "provider": "Scope Hubble feed / Pyth Pull SOL-USD",
+            "path": "Pyth Pull SOL/USD price-update account 7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE -> Scope OraclePrices 3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C index 0 (+ optional EMA index 52 for TWAP chain) -> Hubble borrow/tryLiquidate scopePrices",
+            "address": "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C",
+            "chain": "solana",
+            "observedAt": "2026-07-28",
+            "observedBlock": 435626373,
+            "failureDomainKeys": [
+              "scope:hubble-feed",
+              "scope-program:HFn8GnPADiny6XqUoWE8uRPPxb29ikn4yTuPa9MF2fWJ",
+              "pyth-pull:sol-usd",
+              "hubble-borrowing-market:YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR",
+              "solana"
+            ]
+          },
+          {
+            "provider": "Scope Hubble feed / Pyth Pull ETH-USD",
+            "path": "Pyth Pull ETH/USD 42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC -> Scope index 1 (+ EMA index 53) -> Hubble scopePrices",
+            "address": "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C",
+            "chain": "solana",
+            "observedAt": "2026-07-28",
+            "observedBlock": 435626373,
+            "failureDomainKeys": [
+              "scope:hubble-feed",
+              "pyth-pull:eth-usd",
+              "solana"
+            ]
+          },
+          {
+            "provider": "Scope Hubble feed / Pyth Pull BTC-USD",
+            "path": "Pyth Pull BTC/USD 4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo -> Scope index 2 -> Hubble scopePrices",
+            "address": "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C",
+            "chain": "solana",
+            "observedAt": "2026-07-28",
+            "observedBlock": 435626373,
+            "failureDomainKeys": [
+              "scope:hubble-feed",
+              "pyth-pull:btc-usd",
+              "solana"
+            ]
+          },
+          {
+            "provider": "Scope Hubble feed / Pyth Pull MSOL-USD",
+            "path": "Pyth Pull MSOL/USD 5CKzb9j4ChgLUt8Gfm5CNGLN6khXKiqMbnGAW4cgXgxK -> Scope index 6 (+ EMA index 58) -> Hubble scopePrices",
+            "address": "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C",
+            "chain": "solana",
+            "observedAt": "2026-07-28",
+            "observedBlock": 435626373,
+            "failureDomainKeys": [
+              "scope:hubble-feed",
+              "pyth-pull:msol-usd",
+              "solana"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Borrow and tryLiquidate instructions require the Scope prices account configured on GlobalConfig (scopeProgramId HFn8GnPADiny6XqUoWE8uRPPxb29ikn4yTuPa9MF2fWJ, scopePrices 3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C at slot 435626373). The borrowing IDL rejects invalid Scope parses (ParseScopePriceAccountFailed), invalid prices (PriceNotValid), and spot prices too divergent from TWAP (PriceTooDivergentFromTwap). No independent secondary oracle failover path is configured; Scope's published default_max_age for this feed is 160 (config units are max_age_slot-style; no second-denominated heartbeat is asserted here).",
+        "observedAt": "2026-07-28",
+        "observedBlock": 435626373,
+        "collateralParameters": [
+          {
+            "asset": "SOL",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Official borrowing docs use an 80% maximum LTV example for vault liquidation (125% minimum collateral ratio). Live market0 deposits include SOL plus other DeFi Treasury assets under the same market state."
+          },
+          {
+            "asset": "ETH",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Same DeFi Treasury vault LTV framing as SOL; ETH uses Scope index 1 Pyth Pull."
+          },
+          {
+            "asset": "BTC",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Same DeFi Treasury vault LTV framing; BTC uses Scope index 2 Pyth Pull."
+          },
+          {
+            "asset": "MSOL",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Same DeFi Treasury vault LTV framing; mSOL uses Scope index 6 Pyth Pull."
+          },
+          {
+            "asset": "daoSOL",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Extra-collateral map prices daoSOL via Scope chain [10,0] (daoSOL/SOL * SOL/USD). Per-asset LTV not separately published; inherits documented vault max-LTV framing."
+          },
+          {
+            "asset": "STSOL",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Present in market0 deposit slots at the pinned read; inherits DeFi Treasury vault LTV framing."
+          },
+          {
+            "asset": "SRM",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Legacy deposit slot remains non-zero at the pinned read; inherits DeFi Treasury vault LTV framing."
+          },
+          {
+            "asset": "RAY",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Legacy deposit slot remains non-zero at the pinned read; inherits DeFi Treasury vault LTV framing."
+          },
+          {
+            "asset": "FTT",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Legacy deposit slot remains non-zero at the pinned read; inherits DeFi Treasury vault LTV framing."
+          },
+          {
+            "asset": "LDO",
+            "maximumLtvPct": 80,
+            "minimumCollateralRatioPct": 125,
+            "note": "Extra-collateral id 11 deposit slot non-zero at the pinned read; inherits DeFi Treasury vault LTV framing."
+          }
+        ],
+        "liquidationMechanism": "Permissionless tryLiquidate (and tryLiquidateCashBased) consume scopePrices and, for the original DeFi Treasury vault path, settle debt by burning USDH from the Stability Vault while seizing collateral at about a 10% discount for vault depositors. Liquidation is immediate once the position breaches the vault maximum LTV; no grace delay is documented.",
+        "liquidationDelaySec": 0,
+        "backstop": "USDH Stability Vault (Stability Pool) is the first-loss liquidator for original-vault assets: deposited USDH is burned to cover liquidated debt and forfeited collateral is distributed to vault providers.",
+        "shutdownOrBadDebtBehavior": "If the Stability Vault is empty, debt and collateral of liquidated positions are redistributed pro-rata across remaining borrowers. If a position is already undercollateralized (bad debt), redistribution bypasses the Stability Vault even when it still holds USDH. GlobalConfig exposes emergencyMode and per-action block flags (including blockTryLiquidate) but no separate automatic global settlement module was identified in the reviewed sources.",
+        "debtSharePct": 69.57,
+        "failureDomainKeys": [
+          "hubble-borrowing-market:YSp9bJpQom2HA7VThxYZX9pNwrcBH88NBcBNWs5yskR",
+          "scope:hubble-feed",
+          "scope-program:HFn8GnPADiny6XqUoWE8uRPPxb29ikn4yTuPa9MF2fWJ",
+          "hubble-stability-vault",
+          "pyth-pull:solana",
+          "solana"
+        ],
+        "sources": [
+          {
+            "label": "Hubble borrowing docs (80% max LTV example)",
+            "url": "https://docs.hubbleprotocol.io/faq/borrowing"
+          },
+          {
+            "label": "Hubble hybrid liquidation model",
+            "url": "https://docs.hubbleprotocol.io/faq/liquidations/hybrid-liquidation-model"
+          },
+          {
+            "label": "Hubble redistribution / bad-debt docs",
+            "url": "https://docs.hubbleprotocol.io/faq/liquidations/redistribution"
+          },
+          {
+            "label": "Scope mainnet Hubble feed config",
+            "url": "https://github.com/Kamino-Finance/scope/blob/master/configs/mainnet/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C.json"
+          },
+          {
+            "label": "Hubble SDK ExtraCollateralMap scope chains",
+            "url": "https://github.com/hubbleprotocol/hubble-common/blob/master/packages/hubble-sdk/src/constants/tokens.ts"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      },
+      {
+        "id": "kusdh-usdc-orca-market2",
+        "label": "kUSDH-USDC Orca kToken borrowing market",
+        "tier": "single-source-or-laggy",
+        "summary": "Secondary CDP market (19,161.93 USDH debt at slot 435626373) holds only KUSDHUSDCORCA deposits and values them through a single Scope KToken index rather than a multi-source external median.",
+        "collateralAssets": [
+          "KUSDHUSDCORCA"
+        ],
+        "chains": [
+          "solana"
+        ],
+        "feeds": [
+          {
+            "provider": "Scope Hubble feed / KToken kUSDH-USDC Orca",
+            "path": "Kamino kToken accounting Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN -> Scope OraclePrices 3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C index 42 (oracle_type KToken) -> Hubble ExtraCollateralMap chain [42] -> borrow/tryLiquidate scopePrices",
+            "address": "3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C",
+            "chain": "solana",
+            "observedAt": "2026-07-28",
+            "observedBlock": 435626373,
+            "failureDomainKeys": [
+              "scope:hubble-feed",
+              "scope-ktoken:kusdh-usdc-orca",
+              "kamino-ktoken:Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN",
+              "hubble-borrowing-market:2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms",
+              "solana"
+            ]
+          }
+        ],
+        "fallbackBehavior": "Same GlobalConfig Scope prices account and fail-closed IDL price checks as market0. The KToken Scope entry is a single valuation path (no second independent price source or TWAP chain is configured for this collateral in ExtraCollateralMap; scopeTwapChain is all 65535 sentinels). Scope feed default_max_age remains 160 config units without a second-denominated heartbeat claim.",
+        "observedAt": "2026-07-28",
+        "observedBlock": 435626373,
+        "collateralParameters": [
+          {
+            "asset": "KUSDHUSDCORCA",
+            "note": "Market2 depositedCollateral is concentrated in the KUSDHUSDCORCA slot at the pinned read. Vault-specific maximum LTV is not published as a fixed public figure for this market; hybrid docs state newly onboarded vaults use market-based liquidations with LTV-dependent discounts."
+          }
+        ],
+        "liquidationMechanism": "Liquidations still go through the Hubble program tryLiquidate path with scopePrices, but hybrid docs assign newly onboarded assets and vaults to market-based bot liquidations that purchase collateral at a vault-LTV-dependent discount rather than relying solely on Stability Vault USDH burn.",
+        "liquidationDelaySec": 0,
+        "backstop": "Hybrid model: market liquidators are the primary settlers for newly onboarded vaults; USDH Vault stakers may still receive a residual share of seized collateral without burning their USDH. Protocol-wide redistribution remains the residual backstop when liquidations cannot clear debt.",
+        "shutdownOrBadDebtBehavior": "Same redistribution rules as the DeFi Treasury path: empty Stability Vault or undercollateralized bad debt socializes remaining debt and collateral across active borrowers. No separate market2-only settlement module was identified.",
+        "debtSharePct": 30.42,
+        "failureDomainKeys": [
+          "hubble-borrowing-market:2catbAPzCLX6YZA1axobPEYwbNo1XQaqhvWrZfR4Yxms",
+          "scope:hubble-feed",
+          "scope-ktoken:kusdh-usdc-orca",
+          "kamino-ktoken:Cfuy5T6osdazUeLego5LFycBQebm9PP3H7VNdCndXXEN",
+          "solana"
+        ],
+        "sources": [
+          {
+            "label": "Scope mainnet Hubble feed config (index 42 KToken)",
+            "url": "https://github.com/Kamino-Finance/scope/blob/master/configs/mainnet/3NJYftD5sjVfxSnUdZ1wVML8f3aC6mp1CXCL6L7TnU8C.json"
+          },
+          {
+            "label": "Hubble SDK ExtraCollateralMap KUSDHUSDCORCA",
+            "url": "https://github.com/hubbleprotocol/hubble-common/blob/master/packages/hubble-sdk/src/constants/tokens.ts"
+          },
+          {
+            "label": "Hubble hybrid liquidation model",
+            "url": "https://docs.hubbleprotocol.io/faq/liquidations/hybrid-liquidation-model"
+          },
+          {
+            "label": "Hubble redistribution / bad-debt docs",
+            "url": "https://docs.hubbleprotocol.io/faq/liquidations/redistribution"
+          },
+          {
+            "label": "Solana mainnet RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ]
+      }
+    ]
+  }
+}

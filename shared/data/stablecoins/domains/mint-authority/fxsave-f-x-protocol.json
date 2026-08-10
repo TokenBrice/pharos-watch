@@ -1,0 +1,130 @@
+{
+  "id": "fxsave-f-x-protocol",
+  "mintAuthority": {
+    "mintPath": "wrapped-or-variant-inherited",
+    "authorityPosture": "partially-bounded-admin",
+    "confidence": "verified",
+    "inheritedFrom": "fxusd-f-x-protocol",
+    "summary": "fxSAVE is a strategy-vault receipt over f(x) Protocol's fxUSD savings strategy; shares are minted against deposited fxUSD and do not create base fxUSD supply, so its mint authority is inherited from fxUSD (fxusd-f-x-protocol). Wrapper upgrade is guarded by a ProxyAdmin whose owner is an AladdinDAO TimelockController with a 3-day delay.",
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+        "label": "f(x) fxSAVE vault receipt token",
+        "role": "wrapper",
+        "authorityType": "contract",
+        "directMintAbility": "none",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "fxSAVE shares are minted/burned by the f(x) saving vault against fxUSD deposits and redemptions; this share accounting cannot create or destroy base fxUSD supply.",
+        "sources": [
+          {
+            "label": "f(x) Protocol docs",
+            "url": "https://fxprotocol.gitbook.io/fx-docs"
+          },
+          {
+            "label": "Ethereum fxSAVE contract",
+            "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280: asset() returned 0x65c9a641afceb9c0e6034e558a319488fa0fa3be (fxUSD Stability Pool); EIP-1967 implementation slot = 0xe4031e271809d20074e4bef1caeefec5f710e8a6 and admin slot = ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4. The receipt shares are minted and burned only through the vault's fxUSD deposit and redemption accounting.",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+        "label": "AladdinDAO 3-day TimelockController (fxSAVE ProxyAdmin owner)",
+        "role": "proxy-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "upgrade-only",
+        "timelockDelaySec": 259200,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-20",
+        "observedBlock": 25573280,
+        "sources": [
+          {
+            "label": "Ethereum fxSAVE contract",
+            "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+          },
+          {
+            "label": "AladdinDAO TimelockController",
+            "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+          }
+        ],
+        "evidence": "At Ethereum block 25573280, the fxSAVE EIP-1967 admin was ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4; ProxyAdmin.owner() returned this TimelockController, whose getMinDelay() returned 259200 seconds. It can replace the vault implementation only after the three-day delay."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+        "label": "Inherited fxUSD CDP mint path",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Underlying fxUSD is minted only against overcollateralized wstETH/WBTC CDP positions inside f(x) Protocol; fxSAVE cannot create base fxUSD outside that parent path.",
+        "observedAt": "2026-07-14",
+        "observedBlock": 25294712,
+        "sources": [
+          {
+            "label": "fxUSD token on Etherscan",
+            "url": "https://etherscan.io/address/0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+          }
+        ],
+        "evidence": "The separately reviewed fxUSD parent establishes this collateralized CDP mint path at Ethereum block 25294712. fxSAVE holds the fxUSD Stability Pool receipt and inherits that base-asset authority; it has no separate off-protocol issuer minter.",
+        "failureDomainKeys": [
+          "asset:fxusd-f-x-protocol"
+        ]
+      }
+    ],
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+      ],
+      "implementationAddresses": [
+        "0xe4031e271809d20074e4bef1caeefec5f710e8a6"
+      ],
+      "adminAddresses": [
+        "0x9b54b7703551d9d0ced177a78367560a8b2edda4",
+        "0x68863fb8855b04509a835082478d6e3d0be4e61a"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 259200,
+      "controlRef": "AladdinDAO 3-day TimelockController (fxSAVE ProxyAdmin owner)",
+      "observedAt": "2026-07-20",
+      "observedBlock": 25573280,
+      "sources": [
+        {
+          "label": "Ethereum fxSAVE contract",
+          "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        },
+        {
+          "label": "AladdinDAO TimelockController",
+          "url": "https://etherscan.io/address/0x68863fb8855b04509a835082478d6e3d0be4e61a"
+        }
+      ]
+    },
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "fxSAVE (variantOf fxusd-f-x-protocol, variantKind strategy-vault) is a yield-bearing vault receipt over fxUSD. At Ethereum block 25573280, asset() confirmed the fxUSD Stability Pool and the proxy chain resolved to ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 owned by TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second minimum delay. No privileged share mint outside deposit accounting was found; changing that accounting requires the delayed upgrade path. The wrapper has no issuer reserve or named prudential supervisor of its own.",
+      "reviewer": "P2 mint-free cohort",
+      "reviewedAt": "2026-07-20",
+      "sources": [
+        {
+          "label": "f(x) Protocol docs",
+          "url": "https://fxprotocol.gitbook.io/fx-docs"
+        },
+        {
+          "label": "Ethereum fxSAVE contract",
+          "url": "https://etherscan.io/address/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        }
+      ],
+      "disposition": "scoreable"
+    }
+  }
+}

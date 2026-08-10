@@ -1,0 +1,335 @@
+{
+  "id": "sfrxusd-frax",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Docs",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+      },
+      {
+        "label": "Website",
+        "url": "https://frax.com/"
+      }
+    ],
+    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
+    "reviewer": "Codex status/data pass",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-lock-mint",
+    "summary": "sfrxUSD is native on Ethereum and Fraxtal; the six other tracked deployments are FraxZero LayerZero OFTs. Frax documents that OFTs burn on the source and mint on the destination through LayerZero, while the Fraxtal hub and lockboxes provide the economic route. The OFT representations are external-validated bridge supply and are not direct Frax balance-sheet liabilities.",
+    "reviewedAt": "2026-07-31",
+    "reviewer": "T52 bridge-route review (fresh exact replay)",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "FraxZero LayerZero OFT hub",
+        "slug": "fraxzero",
+        "url": "https://docs.frax.com/protocol/crosschain/overview",
+        "bridgeTypes": [
+          "oft",
+          "burn-and-mint",
+          "hub"
+        ],
+        "note": "Frax states that non-Ethereum/non-Fraxtal deployments are OFTs, which mint on receipt and burn on send; all OFTs and lockboxes are managed by a 3/6 multisig per chain."
+      },
+      {
+        "source": "l2beat",
+        "name": "LayerZero",
+        "slug": "layerzero",
+        "url": "https://l2beat.com/interop/protocols/layerzero",
+        "bridgeTypes": [
+          "messaging",
+          "burn-and-mint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Frax crosschain strategy and contract design",
+        "url": "https://docs.frax.com/protocol/crosschain/overview"
+      },
+      {
+        "label": "Frax sfrxUSD contract addresses",
+        "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
+      },
+      {
+        "label": "LayerZero OFT technical reference",
+        "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+      },
+      {
+        "label": "LayerZero on L2BEAT",
+        "url": "https://l2beat.com/interop/protocols/layerzero"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "destinationChain": "ethereum",
+        "contractAddress": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+        "protocol": "Frax native sfrxUSD vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native-only deployment: bridge-route risk is not applicable to the Ethereum vault itself. At Ethereum block 25648896 (2026-07-30T23:16:59Z), symbol() is sfrxUSD and endpoint() is absent; Frax's address inventory identifies this as the native Ethereum vault.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "canonicalChain": "ethereum",
+        "observedBlock": 25648896,
+        "sources": [
+          {
+            "label": "Frax sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
+          },
+          {
+            "label": "sfrxUSD Ethereum deployment",
+            "url": "https://etherscan.io/address/0xcf62f905562626cfcdd2261162a51fd02fc9c5b6"
+          }
+        ]
+      },
+      {
+        "id": "fraxtal:0xfc00000000000000000000000000000000000008",
+        "destinationChain": "fraxtal",
+        "contractAddress": "0xfc00000000000000000000000000000000000008",
+        "protocol": "Frax native sfrxUSD vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native-only deployment: bridge-route risk is not applicable to the Fraxtal vault itself. At Fraxtal block 39321358 (2026-07-30T23:17:07Z), symbol() is sfrxUSD and endpoint() is absent; Fraxtal is the documented FraxZero hub/lockbox chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "canonicalChain": "fraxtal",
+        "observedBlock": 39321358,
+        "sources": [
+          {
+            "label": "Frax sfrxUSD contract addresses",
+            "url": "https://docs.frax.com/protocol/assets/frxusd/addresses"
+          },
+          {
+            "label": "sfrxUSD Fraxtal deployment",
+            "url": "https://fraxscan.com/address/0xfc00000000000000000000000000000000000008"
+          }
+        ]
+      },
+      {
+        "id": "sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "sei",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-read at Sei block 225324299 (2026-08-09): symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), owner()=0x0357d02fc95320b990322d3ff69204c3d251171b, and the EIP-1967 admin slot resolves to ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The prior note recorded owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on both Sei and Mode, which the fresh per-chain reads do not reproduce; the Sei owner is the chain-local Frax 3-of-6 Safe. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-09",
+        "observedBlock": 225324299,
+        "controllerChain": "sei",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sei:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:sei:0x0357d02fc95320b990322d3ff69204c3d251171b"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Sei OFT explorer",
+            "url": "https://seitrace.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "mode",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Re-read at Mode block 43071398 (2026-08-09): symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), owner()=0x6336cfa6edbec2a459d869031db77fc2770eaa66, and the EIP-1967 admin slot resolves to ProxyAdmin 0x223a681fc5c5522c85c96157c0efa18cd6c5405c. The prior note recorded owner()=0xb7570e32ded63b25163369d5eb4d8e89e70e5602 on both Sei and Mode, which the fresh per-chain reads do not reproduce; the Mode owner is the chain-local Frax 3-of-6 Safe. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-09",
+        "observedBlock": 43071398,
+        "controllerChain": "mode",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:mode:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:mode:0x6336cfa6edbec2a459d869031db77fc2770eaa66"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Mode OFT explorer",
+            "url": "https://modescan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "xlayer",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At X Layer block 66684387, symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), and owner()=0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "observedBlock": 66684387,
+        "controllerChain": "xlayer",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:xlayer:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:xlayer:0xe7cc52f0c86f4fab6630f1e26167b487fbf66a61"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD X Layer OFT explorer",
+            "url": "https://www.oklink.com/xlayer/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "katana",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Katana block 38710865, symbol()='sfrxUSD', endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b (LayerZero EndpointV2), and owner()=0x19a90b0476cdc8ec1239266663ca820175b9b527. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "observedBlock": 38710865,
+        "controllerChain": "katana",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:katana:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:katana:0x19a90b0476cdc8ec1239266663ca820175b9b527"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Katana OFT explorer",
+            "url": "https://katanascan.com/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "sonic",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Sonic block 76783101, symbol()='sfrxUSD', endpoint()=0x6f475642a6e85809b1c36fa62763669b1b48dd5b (LayerZero EndpointV2), and owner()=0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "observedBlock": 76783101,
+        "controllerChain": "sonic",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:sonic:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:sonic:0x87c7a1ef67c67cd57cbf101522a0c3b19d2c3aac"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Sonic OFT explorer",
+            "url": "https://sonicscan.org/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      },
+      {
+        "id": "arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "sourceChain": "fraxtal",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "fraxtal",
+        "contractAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At Arbitrum block 489447803, symbol()='sfrxUSD', endpoint()=0x1a44076050125825900e736c501f859c50fe728c (LayerZero EndpointV2), and owner()=0x3da490b19f300e7cb2280426c8ad536db2df445c. The direct OFT burns source units and mints destination units; the owner is the route's admin failure domain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-31",
+        "observedBlock": 489447803,
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:arbitrum:0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+          "safe:arbitrum:0x3da490b19f300e7cb2280426c8ad536db2df445c"
+        ],
+        "sources": [
+          {
+            "label": "Frax crosschain strategy",
+            "url": "https://docs.frax.com/protocol/crosschain/overview"
+          },
+          {
+            "label": "sfrxUSD Arbitrum OFT explorer",
+            "url": "https://arbiscan.io/address/0x5bff88ca1442c2496f7e475e9e7786383bc070c0"
+          }
+        ]
+      }
+    ]
+  }
+}

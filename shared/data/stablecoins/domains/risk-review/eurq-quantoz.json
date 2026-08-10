@@ -1,0 +1,139 @@
+{
+  "id": "eurq-quantoz",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver; no separate manual override source is attached.",
+    "evidence": "Inferred review retained: EURQ resolves to Yes because existing metadata classifies the asset as centralized and no manual override narrows that status.",
+    "reviewer": "Codex inferred-status backfill",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "EURQ is Quantoz-issued across multiple ledgers, and the reviewed issuer materials present it as a regulated fiat-backed EMT rather than a third-party bridge wrapper. The route is classified as issuer-native issuance/redemption.",
+    "reviewedAt": "2026-07-20",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-6 (lead usde-ethena)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Quantoz EURQ/USDQ",
+        "url": "https://www.quantoz.com/products/eurq-usdq"
+      },
+      {
+        "label": "Quantoz transparency",
+        "url": "https://quantoz.com/transparency"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8df723295214ea6f21026eeeb4382d475f146f9f",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8df723295214ea6f21026eeeb4382d475f146f9f",
+        "protocol": "Quantoz native EURQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Ethereum at block 25570711: EURQ token 0x8df723295214ea6f21026eeeb4382d475f146f9f is Quantoz's EIP-1967 upgradeable ERC-20 (symbol EURQ, 6 decimals; implementation 0xbae166f5e8b4b6735341446b1405fa779a92d7c7, proxy admin 0xa6724f792002d5677a7bc370986e1b580b8773e7), owner() = 0x284df7b9d9f471554e9257bd9b116189f7997d45, a 5-owner multisig with required() = 3 (getOwners/required verified). Quantoz's EURQ page lists this address as the official Ethereum issuance; EURQ is an e-money token issued by Quantoz Payments B.V. under a DNB e-money licence.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Quantoz EURQ (official issuance list)",
+            "url": "https://quantoz.com/eurq"
+          },
+          {
+            "label": "EURQ on Etherscan (verified 2026-07-20)",
+            "url": "https://etherscan.io/address/0x8df723295214ea6f21026eeeb4382d475f146f9f"
+          }
+        ],
+        "observedBlock": 25570711
+      },
+      {
+        "id": "polygon:0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd571edb2ef29df10fcd6200fd6d0ed2389983db3",
+        "protocol": "Quantoz native EURQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified on Polygon at block 90537833: EURQ token 0xd571edb2ef29df10fcd6200fd6d0ed2389983db3 is Quantoz's EIP-1967 upgradeable ERC-20 (symbol EURQ, 6 decimals; implementation 0x27858f66e09fe117f3c1d2ed98d8d6ca1a1d907c, proxy admin 0x2f875fa20c2b65fb7c6dc2671b870f2e7b84d7b8), owner() = 0x84e8d731fcbe186b803db51e9e58142083417929, a 5-owner multisig with required() = 3 (same signer set as the Ethereum EURQ multisig). Quantoz's EURQ page lists this address as the official Polygon issuance.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Quantoz EURQ (official issuance list)",
+            "url": "https://quantoz.com/eurq"
+          },
+          {
+            "label": "EURQ on Polygonscan (verified 2026-07-20)",
+            "url": "https://polygonscan.com/address/0xd571edb2ef29df10fcd6200fd6d0ed2389983db3"
+          }
+        ],
+        "observedBlock": 90537833
+      },
+      {
+        "id": "xrpl:EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "destinationChain": "xrpl",
+        "contractAddress": "EURQ.rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs",
+        "protocol": "Quantoz native EURQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "EURQ on XRPL is issued directly by Quantoz's issuer account rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs (account_info via xrplcluster.com, validated ledger 2026-07-20: account active, defaultRipple enabled, globalFreeze not set). Quantoz's EURQ page lists this account as the official XRPL issuance; XRPL issued currencies are controlled by their issuer account by design.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Quantoz EURQ (official issuance list)",
+            "url": "https://quantoz.com/eurq"
+          },
+          {
+            "label": "EURQ issuer account on XRP Ledger explorer",
+            "url": "https://livenet.xrpl.org/accounts/rDk1xiArDMjDqnrR2yWypwQAKg4mKnQYvs"
+          }
+        ]
+      },
+      {
+        "id": "algorand:2768422954",
+        "destinationChain": "algorand",
+        "contractAddress": "2768422954",
+        "protocol": "Quantoz native EURQ",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "EURQ on Algorand is ASA 2768422954 ('Quantoz EURQ', 6 decimals; mainnet-idx.algonode.cloud, 2026-07-20): manager UALFRIYMF7HTTWPGJCBEKJ2AIROCAQR57SO7ZK7LW2SFXQF6346PSDDU2M, reserve/freeze/clawback 3PJ3E3D6XI7YWMJAUX6WDCHWZ4GC2WHTAQIWJBYVJ326LM2I6NSMSLGCDY. Quantoz's EURQ page lists this ASA as the official Algorand issuance; ASA supply is controlled by the manager address by design.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sourceChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "sources": [
+          {
+            "label": "Quantoz EURQ (official issuance list)",
+            "url": "https://quantoz.com/eurq"
+          },
+          {
+            "label": "EURQ ASA on Algorand indexer",
+            "url": "https://mainnet-idx.algonode.cloud/v2/assets/2768422954"
+          }
+        ]
+      }
+    ]
+  }
+}

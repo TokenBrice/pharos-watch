@@ -1,0 +1,10 @@
+{
+  "id": "pc0000101-tradable",
+  "reserves": [
+    {
+      "name": "Legal-finance receivables",
+      "pct": 100,
+      "risk": "high"
+    }
+  ]
+}

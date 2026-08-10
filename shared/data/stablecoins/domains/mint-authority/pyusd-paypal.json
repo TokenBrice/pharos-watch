@@ -1,0 +1,284 @@
+{
+  "id": "pyusd-paypal",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "PYUSD is issuer-minted through three SupplyControl-listed Ethereum controllers with rolling limits. At block 25711753, a Paxos EOA controlled the controller list and limits, token administration, and SupplyControl upgrades, while a separate EOA controlled token-proxy upgrades; these administrator paths make the asset-level issuance bound raiseable without an on-chain ceiling.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0x6c3ea9036406852006290770bedfcaba0e23a0e8"
+      ],
+      "implementationAddresses": [
+        "0x8c35caa5fd5bdc64b6b11344ad57594a3676256a"
+      ],
+      "adminAddresses": [
+        "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "PYUSD token proxy admin",
+      "observedAt": "2026-08-08",
+      "observedBlock": 25711753,
+      "sources": [
+        {
+          "label": "Paxos PYUSD upgradeability documentation",
+          "url": "https://github.com/paxosglobal/pyusd-contract"
+        },
+        {
+          "label": "PYUSD Ethereum verified proxy",
+          "url": "https://eth.blockscout.com/address/0x6c3ea9036406852006290770bedfcaba0e23a0e8?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ]
+    },
+    "mintIncidents": [
+      {
+        "date": "2025-10-15",
+        "status": "resolved",
+        "resolvedAt": "2025-10-15",
+        "summary": "During a Paxos internal transfer, a technical error minted about 300 trillion PYUSD. Paxos burned the erroneous issuance the same day and stated that the cause was identified and addressed.",
+        "sources": [
+          {
+            "label": "Ethereum erroneous PYUSD mint transaction",
+            "url": "https://etherscan.io/tx/0xc45dd1a77c05d9ae5b2284eea5393ecce2ac8a7e88e973c6ba3fe7a18bf45634"
+          },
+          {
+            "label": "Ethereum corrective PYUSD burn transaction",
+            "url": "https://etherscan.io/tx/0xaa532ae7f06cccdbdc226f59b68733ae8594464a98e128365f8170e305c34f4b"
+          },
+          {
+            "label": "Paxos statement on X",
+            "url": "https://x.com/Paxos/status/1978565015943950411"
+          }
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xa2c323fe5a74adffad2bf3e007e36bb029606444",
+        "label": "PYUSD OFTWrapper supply controller",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Rolling capacity 560,000,000 PYUSD with a 6,482 PYUSD-per-second refill at block 25711753.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Paxos PYUSD contract documentation",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD SupplyControl verified proxy",
+            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+          },
+          {
+            "label": "PYUSD OFTWrapper verified contract",
+            "url": "https://eth.blockscout.com/address/0xa2c323fe5a74adffad2bf3e007e36bb029606444?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, SupplyControl listed this verified OFTWrapper as an active supply controller. Its controller configuration had a 560,000,000 PYUSD rolling capacity and a 6,482 PYUSD-per-second refill. The wrapper can call token mint subject to SupplyControl checks but cannot change its own configured capacity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2fb074fa59c9294c71246825c1c9a0c7782d41a4",
+        "label": "PYUSD allowlisted supply controller 0x2fb0",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Rolling capacity 1,000,000,000 PYUSD with a 277,777.777777 PYUSD-per-second refill; the mint-recipient whitelist contains only this controller.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Paxos PYUSD contract documentation",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD SupplyControl verified proxy",
+            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+          },
+          {
+            "label": "Supply controller address",
+            "url": "https://eth.blockscout.com/address/0x2fb074fa59c9294c71246825c1c9a0c7782d41a4"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, SupplyControl listed this EOA as an active supply controller. It can call token mint only within its rolling capacity and configured recipient whitelist, and it cannot raise that capacity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7",
+        "label": "PYUSD allowlisted supply controller 0xf845",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "cap-limited",
+        "capDescription": "Rolling capacity 500,000,000 PYUSD with a 138,888 PYUSD-per-second refill; the mint-recipient whitelist contains 0x264bd8291fae1d75db2c5f573b07faa6715997b5.",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Paxos PYUSD contract documentation",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD SupplyControl verified proxy",
+            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+          },
+          {
+            "label": "Supply controller address",
+            "url": "https://eth.blockscout.com/address/0xf845a0a05cbd91ac15c3e59d126de5dfbc2aabb7"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, SupplyControl listed this EOA as an active supply controller. It can call token mint only within its rolling capacity and configured recipient whitelist, and it cannot raise that capacity."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "PYUSD token and SupplyControl administrator",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Paxos PYUSD contract documentation",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD SupplyControl verified proxy",
+            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+          },
+          {
+            "label": "PYUSD Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x6c3ea9036406852006290770bedfcaba0e23a0e8?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, this EOA was the PYUSD token default admin and the SupplyControl owner, default admin, and supply-controller manager. It can add or remove controllers, change controller capacities and recipient policies, and replace the token's SupplyControl contract. eth_getCode returned no bytecode."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b",
+        "label": "PYUSD SupplyControl UUPS admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "PYUSD SupplyControl verified proxy",
+            "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+          },
+          {
+            "label": "PYUSD SupplyControl verified implementation",
+            "url": "https://eth.blockscout.com/address/0xfab5891ed867a1195303251912013b92c4fc3a1d?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "SupplyControl is a UUPS ERC-1967 proxy whose implementation was 0xfab5891ed867a1195303251912013b92c4fc3a1d at block 25711753. Its _authorizeUpgrade path is restricted to DEFAULT_ADMIN_ROLE, held by this EOA."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xc94bcf6e1d8b3558e3b62e743630d50497e3851c",
+        "label": "PYUSD token proxy admin",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-08-08",
+        "observedBlock": 25711753,
+        "sources": [
+          {
+            "label": "Paxos PYUSD upgradeability documentation",
+            "url": "https://github.com/paxosglobal/pyusd-contract"
+          },
+          {
+            "label": "PYUSD Ethereum verified proxy",
+            "url": "https://eth.blockscout.com/address/0x6c3ea9036406852006290770bedfcaba0e23a0e8?tab=contract"
+          },
+          {
+            "label": "Ethereum PublicNode RPC",
+            "url": "https://ethereum-rpc.publicnode.com"
+          }
+        ],
+        "evidence": "At Ethereum block 25711753, the org.zeppelinos.proxy.admin slot resolved to this EOA and the implementation slot resolved to 0x8c35caa5fd5bdc64b6b11344ad57594a3676256a. Paxos documents that this AdminUpgradeabilityProxy admin can replace the implementation through upgradeTo or upgradeToAndCall."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "PYUSD May 2026 KPMG reserve attestation",
+          "url": "https://framerusercontent.com/assets/99N5QwJCmGdSIzUsGoGdLXxYI0.pdf"
+        },
+        {
+          "label": "OCC Paxos national trust conversion record",
+          "url": "https://apps.occ.gov/CAS/home/details?FilingID=342828&FilingSubtypeID=1117&FilingTypeID=23"
+        },
+        {
+          "label": "NYDFS virtual-currency businesses and greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
+        },
+        {
+          "label": "Paxos PYUSD mainnet docs",
+          "url": "https://github.com/paxosglobal/pyusd-contract"
+        },
+        {
+          "label": "PYUSD SupplyControl verified proxy",
+          "url": "https://eth.blockscout.com/address/0x31d9bdea6f104606c954f8fe6ba614f1bd347ec3?tab=contract"
+        },
+        {
+          "label": "PYUSD Ethereum verified proxy",
+          "url": "https://eth.blockscout.com/address/0x6c3ea9036406852006290770bedfcaba0e23a0e8?tab=contract"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        }
+      ],
+      "evidence": "At block 25711753, the token delegated mint admission to SupplyControl, which listed three current controllers with explicit rolling capacities. The manager EOA can change those capacities, authorize controllers, replace SupplyControl, and upgrade its UUPS implementation; a separate EOA can upgrade the token implementation. The resolved 2025 incident is bound to the primary mint and burn transactions and Paxos's statement. KPMG's monthly PYUSD examination reconciles reserve assets and token liabilities, supporting periodic reconciliation, while the cited OCC and NYDFS records support prudential supervision of the issuer path.",
+      "reviewer": "OpenAI Codex C01 control review",
+      "reviewedAt": "2026-08-08",
+      "disposition": "scoreable"
+    }
+  }
+}

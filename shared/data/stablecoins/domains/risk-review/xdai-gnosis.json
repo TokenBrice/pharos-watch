@@ -1,0 +1,67 @@
+{
+  "id": "xdai-gnosis",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "Gnosis Chain token docs (xDAI native gas token)",
+        "url": "https://docs.gnosischain.com/about/tokens/"
+      },
+      {
+        "label": "Gnosis xDAI bridge documentation",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "WXDAI traded wrapper verified contract (WETH-style)",
+        "url": "https://gnosis.blockscout.com/address/0xe91d153e0b41518a2ce8dd3d7944fa863463a97d?tab=contract"
+      },
+      {
+        "label": "Gnosis block 47473648 (review pin)",
+        "url": "https://gnosis.blockscout.com/block/47473648"
+      },
+      {
+        "label": "Gnosis xDAI Home Bridge proxy",
+        "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08. Native xDAI balances and the WETH-style WXDAI wrapper expose no local issuer blacklist, freeze, pause, or arbitrary seizure path. The canonical bridge backing is approximately 99% sUSDS plus liquid USDS, however, and those tracked Sky assets carry possible/direct freeze reach. A Sky-side freeze can impair the bridge escrow and xDAI exit path, so the resolved posture is Upstream rather than No even though existing native balances are not directly blacklistable.",
+    "reviewer": "OpenAI Codex unfreezable-cohort audit",
+    "reviewedAt": "2026-08-08"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "xDAI is a native Gnosis gas balance, not an ERC-20 deployment: USDS enters the canonical Gnosis xDAI Foreign Bridge on Ethereum, a 4-of-7 validator network authorizes the Home Bridge to mint native xDAI through the block reward contract, and the reverse path burns xDAI before USDS is unlocked. This global bridge-representation route has no exact token-contract row to join; WXDAI is only a traded wrapper and is intentionally excluded from canonical supply matching.",
+    "reviewedAt": "2026-07-14",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Gnosis xDAI Bridge",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "bridgeTypes": [
+          "lockAndMint"
+        ],
+        "note": "Canonical Gnosis-native, global-scope bridge representation secured by a 4-of-7 validator network; native xDAI has no ERC-20 contract address for a deployment-row join."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Gnosis xDAI bridge docs",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
+      },
+      {
+        "label": "Gnosis bridge validator docs",
+        "url": "https://docs.gnosischain.com/bridges/management/validators"
+      },
+      {
+        "label": "Ethereum xDAI Foreign Bridge",
+        "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
+      },
+      {
+        "label": "Gnosis xDAI Home Bridge",
+        "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6"
+      }
+    ]
+  }
+}

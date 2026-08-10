@@ -1,0 +1,50 @@
+{
+  "id": "ustb-superstate",
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "USTB is a Section 3(c)(7) private investment fund offering tokenized shares in a short-duration U.S. Treasury fund; it meets the definition of a security under federal securities laws and is expressly excluded from the GENIUS Act definition of a payment stablecoin (which excludes any asset that otherwise qualifies as a security under the Securities Act of 1933, the Securities Exchange Act of 1934, the Investment Company Act of 1940, or the Investment Advisers Act of 1940). USTB is not marketed or used as a payment instrument; its token represents a fund share that accretes at NAV."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Superstate Trust (d/b/a Invesco Short-Duration U.S. Government Securities Fund after the completed Invesco takeover in Q2 2026)",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "SEC — private Section 3(c)(7) fund exempt from Investment Company Act registration; offered under Reg D Rule 506(c); N-1A pending for conversion to registered MMF",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "USTB is outside GENIUS payment-stablecoin tracking because it is a tokenized fund share (security), not a payment stablecoin. Invesco completed the takeover in Q2 2026; the token addresses, smart contracts, and USTB ticker will remain unchanged. A pending N-1A before the SEC (filed April 2025) would convert the fund to a registered money market fund upon reorganization — this would not change the excluded-security classification.",
+    "references": [
+      {
+        "label": "GENIUS Act S.1582 text — payment stablecoin definition (excludes securities)",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Superstate USTB product page — fund share structure",
+        "url": "https://superstate.com/assets/ustb",
+        "sourceKind": "issuer-disclosure"
+      },
+      {
+        "label": "Fortune — Invesco takes over Superstate USTB (March 2026)",
+        "url": "https://fortune.com/2026/03/24/invesco-superstate-ustb/",
+        "sourceKind": "news"
+      },
+      {
+        "label": "SEC EDGAR N-1A filing for Superstate USTB Money Market Fund (April 2025)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1982577/000110465925042142/tm2513524d1_n1a.htm",
+        "sourceKind": "issuer-filing"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "id": "usdon-ondo",
+  "genius": {
+    "applicability": "unclear",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Ondo Global Markets (BVI) Limited",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "USDon is issued by a BVI-incorporated SPV (Ondo Global Markets (BVI) Limited) under Regulation S, explicitly restricted to non-U.S. investors. It functions as the internal settlement stablecoin for Ondo Global Markets tokenized-stock platform. The GENIUS Act addresses foreign payment stablecoin issuers (FPSIs) accessing U.S. markets separately from domestic PPSIs; because USDon is structurally excluded from U.S.-person access, the payment-stablecoin classification and any FPSI pathway remain genuinely unresolved pending final FPSI rulemaking.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ondo Global Markets trust and transparency",
+        "url": "https://docs.ondo.finance/ondo-global-markets/trust-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ondo Global Markets available assets",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "Ondo investing and redeeming",
+        "url": "https://docs.ondo.finance/ondo-global-markets/investing-and-redeeming",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      },
+      {
+        "label": "RWA.xyz USDon asset page — confirms Non-U.S. Investor only, BVI FSC regulation",
+        "url": "https://app.rwa.xyz/assets/USDon",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-06-07"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3, Feb 2026) and Federal Register 2026-04089",
+        "Ondo Global Markets issuer disclosures and trust/transparency documentation",
+        "RWA.xyz USDon asset page (confirms Non-U.S. Investor only, BVI FSC regulation)",
+        "Web search for any Ondo Finance GENIUS Act authorization, PPSI application, or foreign exception filing — none found",
+        "No OCC, FDIC, Federal Reserve, or FinCEN public record of Ondo Global Markets as a permitted or foreign payment stablecoin issuer",
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "OCC Bulletin 2026-24 GENIUS reporting proposal",
+        "OCC digital asset licensing applications tracker",
+        "Treasury state-regime comparability NPRM",
+        "Treasury/FinCEN/OFAC AML/CFT NPRM",
+        "FDIC GENIUS Act NPRM",
+        "NCUA PPSI application and standards proposals"
+      ],
+      "summary": "USDon is issued by a BVI SPV under Regulation S for non-U.S. investors only; no GENIUS Act authorization, PPSI application, or foreign exception status found in any public regulatory record or issuer disclosure as of 2026-06-18.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-06-18"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-06-18"
+  }
+}

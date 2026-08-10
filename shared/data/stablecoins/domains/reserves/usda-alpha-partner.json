@@ -1,0 +1,51 @@
+{
+  "id": "usda-alpha-partner",
+  "reserves": [
+    {
+      "name": "Undisclosed reserve assets",
+      "pct": 100,
+      "risk": "very-high",
+      "assetClass": "other",
+      "issuerOrObligor": "Undisclosed reserve providers",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "legal",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 reserve re-verification",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "Alpha Partners official website re-opened 2026-07-28 for reserve disclosure",
+        "url": "https://alphapartner.vip/"
+      },
+      {
+        "label": "Alpha Partners official documentation (full GitBook corpus) re-opened 2026-07-28 for reserve disclosure",
+        "url": "https://ap-organization-1.gitbook.io/alpha-partners"
+      }
+    ],
+    "rationale": "Write-time re-open 2026-07-28 of both primary issuer surfaces confirms continued absence of any USDA reserve composition. (1) https://alphapartner.vip/ returned HTTP 200 as an AP U-Card marketing page; HTML and the shipped index JS contain multi-chain stablecoin/USDT top-up copy only and zero mentions of USDA, reserve composition, proof of reserves, attestation, FDIC, or itemized backing assets. Paths such as /transparency, /reserve, /reserves, and /usda serve the same SPA shell with no additional disclosure. (2) The full Alpha Partners GitBook corpus (llms.txt index plus every linked .md page: background, overview, settlement, multi-card, KYC, core features, usage guidelines, rules-and-trust, vision, roadmap, FAQ, contact, and strategy subpages) was re-fetched; none of the pages name USDA, publish reserve assets/weights/custodians/balances, or host an attestation or proof-of-reserves report—only U-Card USDT top-up flows and generic platform risk language. Secondary aggregator marketing (e.g. CoinGecko/DefiLlama 1:1 USD/FDIC phrasing) is not issuer primary disclosure and supplies no itemized composition; DefiLlama auditLinks remains null. Composition therefore remains a single 100% undisclosed-reserve bucket with knownUnknownExposurePct=100.",
+    "compositionBasis": "No primary USDA reserve-composition disclosure found in the re-opened issuer website and full GitBook corpus on 2026-07-28",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "All reserve asset identities, weights, obligors, custodians, legal safeguards, liquidity terms, valuation methods, and asset-versus-liability reconciliation remain unknown.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "Undisclosed reserve assets",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Re-opened official website and full GitBook corpus on 2026-07-28 still publish no USDA reserve source from which a composition could be authored."
+      }
+    ]
+  }
+}

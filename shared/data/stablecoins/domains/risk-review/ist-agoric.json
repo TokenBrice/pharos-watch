@@ -1,0 +1,44 @@
+{
+  "id": "ist-agoric",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "evidence": "IST itself is minted by the protocol, but PSM collateral assets can inherit issuer-level freeze controls.",
+    "reviewedAt": "2026-05-18",
+    "reviewer": "OpenAI Codex review",
+    "sourceFreeRationale": "Agoric Inter Protocol PSM collateral design"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "Inter Protocol vaults receive collateral prices from the Flux Aggregator data feed, whose operators submit median prices by round.",
+    "reviewedAt": "2026-06-12",
+    "reviewer": "Codex data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Inter Protocol vault docs",
+        "url": "https://docs.inter.trade/inter-protocol-system-documentation/vaults"
+      },
+      {
+        "label": "Agoric vault implementation discussion",
+        "url": "https://community.agoric.com/t/inter-protocol-vaults-contract-implementations/261?page=2"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "IST is native to the Agoric/Inter Protocol stack and appears on Osmosis through Cosmos ecosystem routing rather than a reviewed EVM bridge. No material third-party bridge route was resolved, so the profile is native/single-chain for scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Inter Protocol docs",
+        "url": "https://docs.inter.trade/"
+      },
+      {
+        "label": "Inter Protocol analytics",
+        "url": "https://analytics.inter.trade/"
+      }
+    ]
+  }
+}

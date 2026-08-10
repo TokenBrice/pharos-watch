@@ -1,0 +1,211 @@
+{
+  "id": "uktbl-spiko",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Spiko Treasury Bills Pound",
+        "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+      },
+      {
+        "label": "Spiko smart contracts",
+        "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+      }
+    ],
+    "evidence": "UKTBL is issued through permissioned fund or issuer rails with KYC-gated primary-market access and issuer/admin controls over transfer, mint, redemption, or token administration.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "UKTBL is natively issued by Spiko on its declared deployments, while Chainlink CCIP token pools hold group-2 UKTBL mint authority on Ethereum, Polygon, Base, and Arbitrum; Etherlink's current UKTBL group-2 set has no CCIP pool. This establishes an external validated-network transfer rail, although this review did not capture the current lane-by-lane rate-limit values.",
+    "reviewedAt": "2026-07-26",
+    "reviewer": "OpenAI Codex CTRL-uktbl-spiko CCIP control correction",
+    "confidence": "manual-review",
+    "protocols": [
+      {
+        "source": "issuer",
+        "name": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/",
+        "note": "Issuer technical write-up describes Spiko-controlled multichain token operations."
+      },
+      {
+        "source": "docs",
+        "name": "Chainlink CCIP",
+        "url": "https://docs.chain.link/ccip",
+        "note": "UKTBL CCIP token-pool contracts are independently observed as current group-2 minters on four EVM deployments; lane/rate-limit values remain uncaptured."
+      }
+    ],
+    "sources": [
+      {
+        "label": "Spiko blockchain infrastructure",
+        "url": "https://tech.spiko.io/posts/spiko-blockchain-infrastructure/"
+      },
+      {
+        "label": "Spiko UK T-Bills fund",
+        "url": "https://www.spiko.io/spiko-treasury-bills-pound"
+      },
+      {
+        "label": "Ethereum UKTBL CCIP pool",
+        "url": "https://eth.blockscout.com/address/0xb114e0e00622ffe5800004a98c8e01cd2c0c393b"
+      }
+    ],
+    "routes": [
+      {
+        "id": "arbitrum:0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "arbitrum",
+        "contractAddress": "0x903d5990119bc799423e9c25c56518ba7dd19474",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on arbitrum: authority() returns the chain-local Spiko PermissionManager 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on arbitrum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x903d5990119bc799423e9c25c56518ba7dd19474"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "destinationChain": "ethereum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xf695df6c0f3bb45918a7a82e83348fc59517734e",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on ethereum: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on ethereum explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xf695df6c0f3bb45918a7a82e83348fc59517734e"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "destinationChain": "polygon",
+        "canonicalChain": "polygon",
+        "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on polygon: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on polygon explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          }
+        ]
+      },
+      {
+        "id": "base:0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "destinationChain": "base",
+        "canonicalChain": "base",
+        "contractAddress": "0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on base: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on base explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0xa8de1f55aa0e381cb456e1dcc9ff781ea0079068"
+          }
+        ]
+      },
+      {
+        "id": "etherlink:0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "destinationChain": "etherlink",
+        "canonicalChain": "etherlink",
+        "contractAddress": "0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on etherlink: authority() returns the chain-local Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on etherlink explorer (authority() probed 2026-07-20)",
+            "url": "https://blockscout.com/search?q=0x970e2adc2fdf53aea6b5fa73ca6dc30eafedfe3d"
+          }
+        ]
+      },
+      {
+        "id": "starknet:0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "destinationChain": "starknet",
+        "canonicalChain": "starknet",
+        "contractAddress": "0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on starknet: the contract class is deployed (starknet_getClassAt) and owner() returns the Spiko admin contract 0x7bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on Starknet explorer (owner() probed 2026-07-20)",
+            "url": "https://starkscan.co/contract/0x0153d6e0462080bb2842109e9b64f589ef5aa06bb32b26bbdb894aca92674395"
+          }
+        ]
+      },
+      {
+        "id": "stellar:CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "destinationChain": "stellar",
+        "canonicalChain": "stellar",
+        "contractAddress": "CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR",
+        "protocol": "Spiko issuer-native fund token",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Native Spiko issuance on stellar: the Soroban token contract has a live instance entry with TotalSupply storage; Spiko operates it directly (no bridge wrapper) (verified on-chain 2026-07-20); Spiko issues its regulated fund tokens natively per chain with no bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "UKTBL on Stellar explorer (instance probed 2026-07-20)",
+            "url": "https://stellar.expert/explorer/public/contract/CDT3KU6TQZNOHKNOHNAFFDQZDURVC3MSTL4ML7TUTZGNOPBZCLABP4FR"
+          }
+        ]
+      }
+    ]
+  }
+}

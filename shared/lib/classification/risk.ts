@@ -29,20 +29,37 @@ export const THREAT_BAND_LABELS: Record<ThreatBand, string> = {
   DANGER: "Danger",
 };
 
-export const THREAT_BAND_COLORS: Record<ThreatBand, string> = {
-  CALM: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
-  WATCH: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
-  ALERT: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
-  WARNING: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
-  DANGER: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
-};
-
-export const THREAT_BAND_TEXT_COLORS: Record<ThreatBand, string> = {
-  CALM: "text-green-700 dark:text-green-400",
-  WATCH: "text-teal-700 dark:text-teal-400",
-  ALERT: "text-yellow-700 dark:text-yellow-400",
-  WARNING: "text-orange-700 dark:text-orange-400",
-  DANGER: "text-red-700 dark:text-red-400",
+/**
+ * Threat-band styles, one definition per band.
+ *
+ * `cls` is the outlined pill (tint + hairline + ink); `textCls` is the same
+ * ladder's text-only projection for flat surfaces that carry no pill. They used
+ * to be two sibling maps whose ink was spelled twice and drifted apart in
+ * review, so they now follow the `POR_TIER_STYLES` convention in `badges.ts`:
+ * one entry, both projections. `THREAT_BAND_HEX` below pins the same ladder for
+ * canvas/chart consumers and must move with it.
+ */
+export const THREAT_BAND_STYLES: Record<ThreatBand, { cls: string; textCls: string }> = {
+  CALM: {
+    cls: "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20",
+    textCls: "text-green-700 dark:text-green-400",
+  },
+  WATCH: {
+    cls: "bg-teal-500/10 text-teal-700 dark:text-teal-400 border-teal-500/20",
+    textCls: "text-teal-700 dark:text-teal-400",
+  },
+  ALERT: {
+    cls: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20",
+    textCls: "text-yellow-700 dark:text-yellow-400",
+  },
+  WARNING: {
+    cls: "bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/20",
+    textCls: "text-orange-700 dark:text-orange-400",
+  },
+  DANGER: {
+    cls: "bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20",
+    textCls: "text-red-700 dark:text-red-400",
+  },
 };
 
 export const THREAT_BAND_HEX: Record<ThreatBand, string> = {
@@ -81,7 +98,7 @@ export const CRON_STATUS_COLORS: Record<
   "ok" | "degraded" | "skipped_locked" | "skipped_neutral" | "error",
   string
 > = {
-  ok: "bg-green-500/15 text-green-700 dark:text-green-400",
+  ok: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
   degraded: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   skipped_locked: "bg-muted text-muted-foreground",
   skipped_neutral: "bg-muted text-muted-foreground",

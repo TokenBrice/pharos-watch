@@ -1,0 +1,282 @@
+{
+  "id": "jtrsy-anemoy",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Centrifuge JTRSY pool",
+        "url": "https://anemoy.io/funds/jtrsy"
+      }
+    ],
+    "evidence": "Anemoy / Centrifuge operate JTRSY with permissioned ERC-7540 vault transfers restricted to whitelisted Professional Investors and retain freeze and burn authority over fund shares.",
+    "reviewer": "Codex RWA expansion review",
+    "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "JTRSY uses Centrifuge V3's native burn-and-mint share bridge. The protocol burns shares through the source-chain Spoke before hub-authorized destination minting; the official deployment registry lists the complete Ethereum, Base, Arbitrum, Avalanche, Plume, BNB Chain, Monad, and Solana inventory.",
+    "reviewedAt": "2026-07-24",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex V9 runtime supply audit",
+    "confidence": "verified",
+    "protocols": [
+      {
+        "source": "docs",
+        "name": "Centrifuge V3 native share bridge",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "bridgeTypes": [
+          "burnAndMint"
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "label": "Anemoy JTRSY",
+        "url": "https://www.anemoy.io/funds/jtrsy"
+      },
+      {
+        "label": "Centrifuge protocol deployments",
+        "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+      },
+      {
+        "label": "Centrifuge share-token bridge guide",
+        "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "protocol": "Centrifuge V3 hub (native JTRSY)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY is native on Ethereum (Centrifuge V3 hub chain): the share token's wards are Root, BalanceSheet, and Spoke (all verified =1 on-chain), with the Anemoy/Janus Henderson issuer rail covered by the mint-authority review.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ]
+      },
+      {
+        "id": "base:0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "sourceChain": "ethereum",
+        "destinationChain": "base",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "base",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on base: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on base; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:base:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "arbitrum:0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "sourceChain": "ethereum",
+        "destinationChain": "arbitrum",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x8c213ee79581ff4984583c6a801e5263418c4b86",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "arbitrum",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on arbitrum: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on arbitrum; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:arbitrum:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "avalanche:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "sourceChain": "ethereum",
+        "destinationChain": "avalanche",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on avalanche: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on avalanche; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:avalanche:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "plume:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "sourceChain": "ethereum",
+        "destinationChain": "plume",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "plume",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on plume: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on plume; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:plume:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "bsc:0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "sourceChain": "ethereum",
+        "destinationChain": "bsc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xa5d465251fbcc907f5dd6bb2145488dfc6a2627b",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "bsc",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on bsc: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on bsc; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:bsc:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "monad:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "sourceChain": "ethereum",
+        "destinationChain": "monad",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "protocol": "Centrifuge V3 hub-and-spoke",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "monad",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "JTRSY share token on monad: wards(Spoke 0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB) = 1 verified on-chain at 2026-07-20 and the Spoke contract carries live bytecode on monad; shares mint on hub-authorized Centrifuge messages.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-20",
+        "sources": [
+          {
+            "label": "Centrifuge V3 docs",
+            "url": "https://docs.centrifuge.io/"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:monad:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
+        "sourceChain": "ethereum",
+        "destinationChain": "solana",
+        "canonicalChain": "ethereum",
+        "contractAddress": "JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
+        "protocol": "Centrifuge V3 native share bridge",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "solana",
+        "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Centrifuge's official deployment registry identifies this exact JTRSY Solana mint. Finalized RPC at slot 434941163 returned Token-2022 ownership, symbol JTRSY, 6 decimals, zero current supply, and the pinned direct mint/freeze/permanent-delegate authority. Centrifuge V3 burns source-chain shares before hub-authorized destination minting.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-07-24",
+        "observedBlock": 434941163,
+        "sources": [
+          {
+            "label": "Centrifuge protocol deployments",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge share-token bridge guide",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "JTRSY on Solscan",
+            "url": "https://solscan.io/token/JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,302 @@
+{
+  "id": "apxusd-apyx",
+  "mintAuthority": {
+    "mintPath": "offchain-attested-minter",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "Ethereum issuance uses MinterV0 and an OZ AccessManager: the 3/6 operator Safe holds the request/execute role, while MinterV0 reaches the token mint selector only after a four-hour delay. Base and BSC mint only through their configured Chainlink CCIP pools. The same signer set controls all three UUPS deployments through chain-local Safe instances, with a three-day Ethereum upgrade delay, seven-day Base delay, and no BSC delay.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0x98a878b1cd98131b271883b390f68d2c90674665",
+        "0xd993935e13851dd7517af10687ec7e5022127228",
+        "0x6b3788fd6604bbf03c5378d24e57bb334baad4af"
+      ],
+      "implementationAddresses": [
+        "0xdd71fd677fde2ed2579a3c45204f41a11016ccb4",
+        "0x0330964e5d42e2d88438bc17b2c26373efd4330a",
+        "0xf9c8235b5f0389eadc33d76767ddde73cfa5961b"
+      ],
+      "adminAddresses": [
+        "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+        "0x8afde6a90d2396a64eb97e8e69e7548289f78a1d",
+        "0x5f48866016eb8735a2ea450e66314828bdde6edc",
+        "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "Apyx deployment-wide UUPS authority — 3/6 Safe",
+      "observedAt": "2026-07-13",
+      "sources": [
+        {
+          "label": "Apyx ApxUSD source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApxUSD.sol"
+        },
+        {
+          "label": "Apyx bridged-token source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+        },
+        {
+          "label": "Ethereum apxUSD proxy",
+          "url": "https://etherscan.io/address/0x98a878b1cd98131b271883b390f68d2c90674665#code"
+        },
+        {
+          "label": "Base apxUSD proxy",
+          "url": "https://basescan.org/address/0xd993935e13851dd7517af10687ec7e5022127228#code"
+        },
+        {
+          "label": "BSC apxUSD proxy",
+          "url": "https://bscscan.com/address/0x6b3788fd6604bbf03c5378d24e57bb334baad4af#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "apxUSD AccessManager — Ethereum",
+        "role": "minter-admin",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "The 3/6 Safe holds role 2 on MinterV0 requestMint() and executeMint(); MinterV0 holds token-mint role 4 with a four-hour execution delay.",
+          "rateLimits": "MinterV0 enforces its configured rate limit and the token-mint call is scheduled through AccessManager with a four-hour delay.",
+          "caps": "The token enforces supplyCap(); the Safe holds the cap-change role with a one-day delay.",
+          "pausersAdminsUpgraders": "The Safe holds the token upgrade role with a three-day delay. The initial deployer and Safe no longer hold role 0, and AccessManager administration selectors remain assigned to role 0."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526753,
+        "evidence": "At Ethereum block 25526753, apxUSD.mint() resolved to AccessManager role 4 and MinterV0 held that role with a 14,400-second delay. MinterV0 requestMint() and executeMint() resolved to role 2, held by Safe 0xf9862efc with zero caller delay. setSupplyCap() resolved to role 23 (Safe delay 86,400 seconds) and upgradeToAndCall() to role 24 (Safe delay 259,200 seconds). hasRole(0) was false for both the initial deployer and Safe.",
+        "sources": [
+          {
+            "label": "apxUSD AccessManager on Etherscan",
+            "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+          }
+        ]
+      },
+      {
+        "label": "Apyx MinterV0 — Ethereum scheduled mint contract",
+        "role": "backend-signer",
+        "authorityType": "contract",
+        "directMintAbility": "can-authorize",
+        "chain": "ethereum",
+        "address": "0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "EIP-712 beneficiary-signed orders are requested and executed by the role-2 Safe through MinterV0.",
+          "rateLimits": "MinterV0 enforces maximum-mint and rolling-rate limits; its token-mint role carries a four-hour AccessManager delay.",
+          "pausersAdminsUpgraders": "MinterV0 authority() is AccessManager 0xe167330e; the Safe controls MinterV0 execution and separately controls delayed parameter and upgrade roles."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526753,
+        "evidence": "At Ethereum block 25526753, authority() returned AccessManager 0xe167330e. MinterV0 held the token's current role 4 with a 14,400-second delay; the Safe held role 2 used by requestMint() and executeMint(). The official source shows order validation, maximum-mint and rolling-rate checks, scheduling, and delayed execution through AccessManager.",
+        "sources": [
+          {
+            "label": "Apyx MinterV0 on Etherscan",
+            "url": "https://etherscan.io/address/0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e"
+          },
+          {
+            "label": "Apyx MinterV0 source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/MinterV0.sol"
+          }
+        ]
+      },
+      {
+        "label": "Apyx ROLE_MINTER Safe — Ethereum",
+        "role": "direct-minter",
+        "authorityType": "safe",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "canRaiseCap": true,
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 14400,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "signingModel": "The Safe holds role 2 directly and can request and execute MinterV0 orders after its 3-of-6 threshold; the downstream token mint is delayed four hours.",
+          "caps": "The Safe can raise the Ethereum token supply cap through role 23 after a one-day delay.",
+          "pausersAdminsUpgraders": "The Safe holds operational roles 21-25, including the three-day UUPS upgrade role, while role 0 has no current external holder."
+        },
+        "safe": {
+          "owners": [
+            "0xb51f89dea7df709cebb4809b40c6431361e61d0d",
+            "0x5db416bcfc1a8b5b921f55c1e078d1f39194e99f",
+            "0xd6bb3f9718d4f30ed2851c713275def7529d1411",
+            "0xcfcf3c9ed3d97db54c99bdd197e59952a0973f6e",
+            "0xb98cd8c868cf00cea934977dbe4ac090e808fb87",
+            "0xd66a0fc924fab7476d35afe5941856ef76ba0839"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": null,
+          "masterCopy": "0x41675c099f32341bf84bfc5382af534df5c7461a",
+          "observedBlock": 25526753,
+          "observedAt": "2026-07-13",
+          "source": "onchain"
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526753,
+        "failureDomainKeys": [
+          "operator:apyx-3-of-6-safe"
+        ],
+        "evidence": "At Ethereum block 25526753, getOwners() returned the six listed addresses, getThreshold() returned 3, VERSION() returned 1.4.1, getModulesPaginated() returned no modules, and slot 0 resolved to the Safe 1.4.1 master copy. AccessManager hasRole(2) returned true with zero caller delay.",
+        "sources": [
+          {
+            "label": "Apyx ROLE_MINTER Safe on Etherscan",
+            "url": "https://etherscan.io/address/0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+          }
+        ]
+      },
+      {
+        "label": "apxUSD Base CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "base",
+        "address": "0x49b577e70fd22b482aaa94c3799f41f3443c24b2",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The token's getCCIPPool() returns this Chainlink directory-listed Burn/Mint pool.",
+          "caps": "The pool cannot change the token supply cap; the Safe controls that function through AccessManager role 24 after three days.",
+          "pausersAdminsUpgraders": "The pool alone can call the destination token mint and burn hot paths; the Safe can rotate the pool after the configured AccessManager delay."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 48596526,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip"
+        ],
+        "evidence": "At Base block 48596526, apxUSD.getCCIPPool() returned 0x49b577e70fd22b482aaa94c3799f41f3443c24b2. The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to that stored pool address, and the Chainlink CCIP directory identifies it as the Base Burn/Mint pool.",
+        "sources": [
+          {
+            "label": "Chainlink CCIP apxUSD directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "Base apxUSD token pool",
+            "url": "https://basescan.org/address/0x49b577e70fd22b482aaa94c3799f41f3443c24b2#code"
+          }
+        ]
+      },
+      {
+        "label": "apxUSD BSC CCIP BurnMintTokenPool",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "bsc",
+        "address": "0xfd957d7e27d239da5455b82303b2f618f73a9c49",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The token's getCCIPPool() returns this Chainlink directory-listed Burn/Mint pool.",
+          "caps": "The pool cannot change the token supply cap; the chain-local Safe can change it immediately through role 0.",
+          "pausersAdminsUpgraders": "The pool alone can call the destination token mint and burn hot paths; the Safe can immediately rotate the pool or upgrade the token."
+        },
+        "observedAt": "2026-07-13",
+        "observedBlock": 109829074,
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip"
+        ],
+        "evidence": "At BSC block 109829074, apxUSD.getCCIPPool() returned 0xfd957d7e27d239da5455b82303b2f618f73a9c49. The verified BridgedApyxToken source gates mint(), burn(), and burnFrom() to that stored pool address, and the Chainlink CCIP directory identifies it as the BSC Burn/Mint pool.",
+        "sources": [
+          {
+            "label": "Chainlink CCIP apxUSD directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+          },
+          {
+            "label": "BSC apxUSD token pool",
+            "url": "https://bscscan.com/address/0xfd957d7e27d239da5455b82303b2f618f73a9c49#code"
+          }
+        ]
+      },
+      {
+        "label": "Apyx deployment-wide UUPS authority — 3/6 Safe",
+        "role": "proxy-admin",
+        "authorityType": "multisig",
+        "directMintAbility": "upgrade-only",
+        "chain": "ethereum",
+        "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+        "threshold": 3,
+        "signerCount": 6,
+        "timelockDelaySec": 0,
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "none-detected",
+        "failureDomainKeys": [
+          "ethereum:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+          "base:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+          "bsc:0xf9862efc1704ac05e687f66e5cd8c130e5663ce2"
+        ],
+        "routeChecks": {
+          "caps": "The Safe can raise supply caps after one day on Ethereum, three days on Base, and immediately on BSC.",
+          "pausersAdminsUpgraders": "upgradeToAndCall() requires Safe-held role 24 with a three-day delay on Ethereum, role 25 with a seven-day delay on Base, and role 0 with no delay on BSC."
+        },
+        "observedAt": "2026-07-13",
+        "evidence": "All three proxies had nonzero EIP-1967 implementation slots, zero proxy-admin and beacon slots, and implementations returning the UUPS proxiable UUID. Ethereum role 24 was held by the Safe with a 259,200-second delay; Base role 25 by the Safe with a 604,800-second delay; BSC upgradeToAndCall() resolved to role 0, held by the Safe with no delay. Current chain-local Safe reads returned threshold 3, the same six owners, Safe 1.4.1, and no enabled modules on all three chains.",
+        "sources": [
+          {
+            "label": "Apyx ApxUSD source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/ApxUSD.sol"
+          },
+          {
+            "label": "Apyx bridged-token source",
+            "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+          },
+          {
+            "label": "Ethereum apxUSD AccessManager",
+            "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+          },
+          {
+            "label": "Base apxUSD AccessManager",
+            "url": "https://basescan.org/address/0x8afde6a90d2396a64eb97e8e69e7548289f78a1d"
+          },
+          {
+            "label": "BSC apxUSD AccessManager",
+            "url": "https://bscscan.com/address/0x5f48866016eb8735a2ea450e66314828bdde6edc"
+          }
+        ]
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "review": {
+      "sources": [
+        {
+          "label": "Apyx docs",
+          "url": "https://docs.apyx.fi"
+        },
+        {
+          "label": "Apyx third-party reserve attestations",
+          "url": "https://docs.apyx.fi/collateral-and-custody/third-party-attestation"
+        },
+        {
+          "label": "Apyx terms of service",
+          "url": "https://docs.apyx.fi/resources/terms-of-service"
+        },
+        {
+          "label": "Apyx EVM contracts",
+          "url": "https://apyx-labs.github.io/evm-contracts/"
+        },
+        {
+          "label": "apxUSD AccessManager on Etherscan",
+          "url": "https://etherscan.io/address/0xe167330e2eac88666de253e9607c6d9ae0ca2824"
+        },
+        {
+          "label": "Chainlink CCIP apxUSD directory",
+          "url": "https://docs.chain.link/ccip/directory/mainnet/token/apxUSD"
+        },
+        {
+          "label": "Apyx bridged-token source",
+          "url": "https://github.com/apyx-labs/evm-contracts/blob/main/src/bridge/BridgedApyxToken.sol"
+        }
+      ],
+      "evidence": "Current reads at Ethereum block 25526753, Base block 48596526, and BSC block 109829074 resolved every listed token's UUPS implementation, AccessManager, active mint path, cap authority, and upgrade role. Ethereum minting is scheduled through MinterV0 with a four-hour token-mint delay and the operator Safe controls request/execute. Base and BSC mint only through the Chainlink directory-listed pools returned by getCCIPPool(). Chain-local instances of the same 3/6 Safe control upgrades after three days on Ethereum, seven days on Base, and immediately on BSC; no enabled Safe modules were detected. On 2026-07-15, Apyx's primary attestation index was rechecked and listed Wolf & Company reports for March, April, and May 2026. The BVI service entity has no named prudential reserve supervisor, while the same operator signer set can raise caps and retains an immediate BSC upgrade path, so the mint is economically unbounded but periodically reconciled under attestation-only oversight.",
+      "reviewer": "OpenAI Codex control review / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

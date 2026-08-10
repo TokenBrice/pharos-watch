@@ -28,7 +28,6 @@ export interface ApiKeyRequestRow {
   organization: string | null;
   project_url: string | null;
   use_case: string;
-  intended_endpoints_json: string | null;
   expected_cadence: string | null;
   expected_volume: string | null;
   accepted_terms: number;
@@ -100,6 +99,11 @@ export const ApiKeySelfServeRequestSchema = z
         SELF_SERVE_USE_CASE_MAX_LENGTH,
         `Use case must be ${SELF_SERVE_USE_CASE_MIN_LENGTH}-${SELF_SERVE_USE_CASE_MAX_LENGTH} characters`,
       ),
+    /**
+     * Accepted and ignored since 2026-08-10. The field was a free-text operator
+     * note with no reader left; the schema is `.strict()` and the site ships as
+     * a static export, so stale bundles must not start 400-ing on submit.
+     */
     intendedEndpoints: z.array(z.string().trim().max(160)).max(20).optional(),
     expectedCadence: z.enum(["hourly", "every_5_min", "every_1_min", "manual", "other"], {
       message: "Expected cadence is required",

@@ -1,0 +1,133 @@
+{
+  "id": "chfau-allunity",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "CHFAU is issuer-native on Ethereum, Polygon, Base, and Tempo. The three EVM deployments use the same deterministic ERC1967 proxy address and UUPS implementation; the same AllUnity EOAs hold DEFAULT_ADMIN_ROLE and MINTER_ROLE on Ethereum, Polygon, and Base. Tempo uses a native TIP-20 token whose role members are not enumerable through the standard EVM interface.",
+    "upgradeability": {
+      "model": "uups",
+      "proxyAddresses": [
+        "0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78"
+      ],
+      "implementationAddresses": [
+        "0x5cad3aaaef687009665d15fed23ded57862ee003"
+      ],
+      "adminAddresses": [
+        "0xddaca43e3ae3a1485880a835edbf8924ab142b5f"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "CHFAU EVM default admin",
+      "observedAt": "2026-07-21",
+      "observedBlock": 25584014,
+      "sources": [
+        {
+          "label": "CHFAU Ethereum UUPS proxy",
+          "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#code"
+        },
+        {
+          "label": "CHFAU Ethereum implementation",
+          "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
+        },
+        {
+          "label": "Ethereum PublicNode RPC",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "CHFAU Base UUPS proxy",
+          "url": "https://basescan.org/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#code"
+        },
+        {
+          "label": "CHFAU Polygon UUPS proxy",
+          "url": "https://polygonscan.com/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0xd443f0460c39194faaa06bcd018422fcc70178dd",
+        "label": "CHFAU EVM MINTER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "CHFAU Ethereum token",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          },
+          {
+            "label": "CHFAU Ethereum implementation",
+            "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
+          }
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 25584014,
+        "evidence": "hasRole(MINTER_ROLE, 0xd443f046...) returned true on Ethereum block 25584014, Base block 48941293, and Polygon block 90644625. eth_getCode on Ethereum returned no bytecode, resolving the shared active EVM minter as an EOA."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xddaca43e3ae3a1485880a835edbf8924ab142b5f",
+        "label": "CHFAU EVM default admin",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": "unknown",
+        "modulesOrGuardsStatus": "not-applicable",
+        "sources": [
+          {
+            "label": "CHFAU Ethereum token",
+            "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+          }
+        ],
+        "observedAt": "2026-07-21",
+        "observedBlock": 25584014,
+        "evidence": "hasRole(DEFAULT_ADMIN_ROLE, 0xddaca43e...) returned true on Ethereum block 25584014, Base block 48941293, and Polygon block 90644625. Each proxy's EIP-1967 implementation slot resolved to 0x5cad3aaa..., and eth_getCode on Ethereum returned no bytecode for the admin. The verified UUPS token interface gates upgrades through DEFAULT_ADMIN_ROLE with no separate on-chain delay."
+      }
+    ],
+    "reconciliation": "unknown",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "AllUnity CHFAU launch",
+          "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+        },
+        {
+          "label": "AllUnity stablecoins",
+          "url": "https://allunity.com/stablecoins"
+        },
+        {
+          "label": "CHFAU Ethereum token",
+          "url": "https://etherscan.io/address/0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78#readContract"
+        },
+        {
+          "label": "CHFAU Ethereum implementation",
+          "url": "https://etherscan.io/address/0x5cad3aaaef687009665d15fed23ded57862ee003#code"
+        },
+        {
+          "label": "CHFAU RoleGranted logs",
+          "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&address=0xbd4dfc058eb95b8de5ceaf39966a1a70f5556f78&fromBlock=24319783&toBlock=25295047&topic0=0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d"
+        },
+        {
+          "label": "AllUnity Trust Center",
+          "url": "https://allunity.com/trust-center"
+        },
+        {
+          "label": "AllUnity CHFAU whitepaper v1.2",
+          "url": "https://framerusercontent.com/assets/lfHzRwNo9LAdtDuKhicsDSTFM2g.pdf"
+        },
+        {
+          "label": "ESMA MiCA registers",
+          "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        }
+      ],
+      "evidence": "On 2026-07-21, Ethereum block 25584014, Base block 48941293, and Polygon block 90644625 each resolved the CHFAU proxy to implementation 0x5cad3aaa... and confirmed the same active EOA MINTER_ROLE (0xd443f046...) and DEFAULT_ADMIN_ROLE (0xddaca43e...). AllUnity's live CHFAU page identifies those three deterministic EVM deployments plus native Tempo TIP-20 0x20c000...b28e1; the Tempo token reported symbol CHFAU, 6 decimals, and zero supply at block 31095212, while standard EVM role enumeration is unavailable. No independent attestor, cadence, or dated reserve report is public; AllUnity's Trust Center still says the reserve audit report is coming soon. The ESMA MiCA register and BaFin authorization match AllUnity GmbH as the EMI and CHFAU EMT issuer, so prudential supervision is present but independent reconciliation remains unknown.",
+      "reviewer": "Codex SOL-V mint-tier research",
+      "reviewedAt": "2026-07-21"
+    }
+  }
+}

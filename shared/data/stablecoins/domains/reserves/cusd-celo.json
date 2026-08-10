@@ -1,0 +1,166 @@
+{
+  "id": "cusd-celo",
+  "reserves": [
+    {
+      "name": "AUSD (Agora Dollar; Ethereum and Monad)",
+      "pct": 26.3979768726,
+      "risk": "low",
+      "coinId": "ausd-agora",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Agora (AUSD issuer)",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "sUSDS (Sky savings USDS)",
+      "pct": 25.1166301479,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Sky Ecosystem (sUSDS savings vault)",
+      "riskFactors": [
+        "counterparty",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "CELO",
+      "pct": 17.126210177,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDT family (Ethereum/Celo USDT and Monad USDT0)",
+      "pct": 12.8710435291,
+      "risk": "low",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Tether and the USDT0 bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "concentration",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "EURC family (Ethereum EURC and Celo axlEUROC)",
+      "pct": 11.9028120881,
+      "risk": "low",
+      "coinId": "eurc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "USDC family (Ethereum/Celo/Monad USDC and Celo axlUSDC)",
+      "pct": 3.0837494912,
+      "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle and the Axelar bridge system",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "stETH (Lido staked ETH)",
+      "pct": 2.6122434577,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido (stETH liquid staking issuer)",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "name": "ETH",
+      "pct": 0.8893342364,
+      "risk": "very-low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Ethereum network native asset held by Mento Reserve governance",
+      "riskFactors": [
+        "market",
+        "liquidity"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-27",
+    "reviewer": "Kimi data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Mento Reserve analytics API (live read 2026-07-27)",
+        "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+      },
+      {
+        "label": "Mento Reserve documentation",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/the-reserve"
+      },
+      {
+        "label": "Pinned Mento stablecoin backing config",
+        "url": "https://github.com/mento-protocol/mento-analytics-api/blob/36441a61f7ad339fe4998596f6bbed1005342ba8/src/api/v2/config/stablecoin-backing.config.ts"
+      }
+    ],
+    "rationale": "The issuer-run reserve API was re-read on 2026-07-27 and reported $18,784,067.026359823 of collateral across 17 chain-level positions (reported percentages sum to 99.1%; weights below are normalized to 100). The reviewed grouping combines the same stablecoin family across chains and retains every positive category: AUSD, sUSDS, CELO, USDT/USDT0, EURC/axlEUROC, USDC/axlUSDC, stETH, and ETH. The ETH slice merges the plain ETH position on Ethereum with the WETH residual on Celo, matching the live Mento adapter's merged ETH identity. Each tracked stablecoin exposure has an exact collateral edge; CELO, stETH, and ETH remain explicit exogenous collateral.",
+    "compositionBasis": "Issuer-run Mento Reserve API values grouped by stablecoin family; USDm is reserve-backed under Mento's documented model",
+    "compositionAsOf": "2026-07-27",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Every positive reserve API category is either linked to its tracked stablecoin family or explicitly dispositioned as an exogenous cryptoasset.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 2,
+        "reserveName": "CELO",
+        "pct": 17.126210177,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "CELO is the Celo network native asset held as external reserve collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "stETH (Lido staked ETH)",
+        "pct": 2.6122434577,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "stETH is external liquid-staking collateral, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "ETH",
+        "pct": 0.8893342364,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "ETH is identified external cryptoasset collateral (plain ETH on Ethereum plus the WETH residual on Celo, merged under the live adapter's ETH identity), not a tracked stablecoin dependency."
+      }
+    ]
+  }
+}

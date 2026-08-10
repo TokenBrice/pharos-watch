@@ -1,0 +1,73 @@
+{
+  "id": "fxsave-f-x-protocol",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      {
+        "label": "f(x) fxSAVE integration documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+      },
+      {
+        "label": "f(x) Stability Pool documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
+      },
+      {
+        "label": "fxSAVE verified proxy contract",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+      },
+      {
+        "label": "Sourcify exact-match SavingFxUSD implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xe4031e271809d20074e4bef1caeefec5f710e8a6?fields=sources"
+      },
+      {
+        "label": "Pinned fxSAVE implementation source",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/59551dba909da826f54d090c552cc8dceaa29bd9/contracts/core/SavingFxUSD.sol"
+      },
+      {
+        "label": "Ethereum public RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      }
+    ],
+    "evidence": "fxSAVE is the documented tokenized ERC-4626 Stability Pool vault over fxUSD/fxSP, so its parent fxUSD transfer-risk remains the applicable inherited exposure. Re-verified 2026-07-30 at Ethereum block 25648480: proxy 0x7743e50f534a7f9f1791dde7dcd89f7783eefc39 still resolves through its EIP-1967 implementation slot to SavingFxUSD implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6, which retains a Sourcify exact match, and asset() returned fxSP 0x65c9a641afceb9c0e6034e558a319488fa0fa3be. The verified current implementation contains ordinary ERC20/ERC4626 transfers and no pause, blacklist, freeze, recipient-blocklist, or arbitrary-holder-burn path. CLAIM_FOR_ROLE gates claimFor() for a previously initiated redemption claim; it does not bypass the ERC20/ERC4626 allowance and share-burn checks for outstanding fxSAVE shares. ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 is owned by timelock 0x68863fb8855b04509a835082478d6e3d0be4e61a with a 259200-second delay, so this direct-code finding is upgrade-bound. No direct override is authored: the inherited status preserves the separately confirmed fxUSD parent pause exposure.",
+    "reviewer": "Codex Safety Score V9 access review; Kimi T51 re-verification",
+    "reviewedAt": "2026-07-30"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "fxSAVE is an ERC-4626 vault over the f(x) Stability Pool and has no borrower-owned collateral positions or token-level liquidation engine. Its required fxUSD parent carries the separately reviewed WBTC and wstETH oracle and liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "f(x) documents fxSAVE as a tokenized ERC-4626 Stability Pool vault that compounds rewards into fxUSD and USDC. Holders mint and redeem vault shares; fxSAVE does not create borrower debt positions or collateral-ratio-triggered liquidation markets. The variantOf relationship preserves the complete fxUSD parent branch review.",
+      "sources": [
+        {
+          "label": "f(x) Stability Pool documentation",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
+        },
+        {
+          "label": "f(x) fxSAVE integration documentation",
+          "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "f(x) Stability Pool documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/f-x-protocol-mechanisms/stability-pool"
+      },
+      {
+        "label": "f(x) fxSAVE integration documentation",
+        "url": "https://fxprotocol.gitbook.io/fx-docs/developers/integrating-fxsave"
+      },
+      {
+        "label": "f(x) parent protocol contracts",
+        "url": "https://github.com/AladdinDAO/fx-protocol-contracts"
+      }
+    ]
+  }
+}

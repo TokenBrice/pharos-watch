@@ -1,0 +1,10 @@
+{
+  "id": "usdr-stablr",
+  "reserves": [
+    {
+      "name": "Cash and short-term government bonds (EU financial institutions)",
+      "pct": 100,
+      "risk": "very-low"
+    }
+  ]
+}

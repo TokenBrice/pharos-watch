@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
-import syzusdMetaSource from "@shared/data/stablecoins/coins/syzusd-yuzu.json";
-import xautMetaSource from "@shared/data/stablecoins/coins/xaut-tether.json";
-import wmMetaSource from "@shared/data/stablecoins/coins/wm-m0.json";
+import syzusdRiskReview from "@shared/data/stablecoins/domains/risk-review/syzusd-yuzu.json";
+import xautRiskReview from "@shared/data/stablecoins/domains/risk-review/xaut-tether.json";
+import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9SupplyReview, safetyScoreV9RouteSupplyShare } from "../safety-score-v9-extension-supply";
 import { deriveLockMintSupplyPartition, safetyScoreV9ChainRows } from "../safety-score-v9-supply-attribution";
@@ -27,7 +27,7 @@ const ETH_ROUTE = {
 
 describe("buildSafetyScoreV9SupplyReview", () => {
   it("joins a reviewed deployment packet by exact wM route ID and retains zero supply", () => {
-    const profile = wmMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const profile = wmRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const supplyUsdByChain: Record<string, number> = {
       ethereum: 86_613_000,
       arbitrum: 88_000,
@@ -161,7 +161,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       buildSafetyScoreV9SupplyReview(
         fixedInput,
         "syzusd-yuzu",
-        syzusdMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
+        syzusdRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile,
       ),
     ).toBeNull();
   });
@@ -356,7 +356,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
               "representation-group:xaut-tether:xaut0-omnichain",
             representationId: "xaut0-omnichain",
             routeIds: (
-              xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile
+              xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile
             ).routes!
               .filter(
                 (route) =>
@@ -378,7 +378,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     const review = buildSafetyScoreV9SupplyReview(
       fixedInput,
       "xaut-tether",
-      xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile,
+      xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile,
     );
 
     expect(review).not.toBeNull();
@@ -418,7 +418,7 @@ describe("buildSafetyScoreV9SupplyReview", () => {
 
   it("fails a representation group closed once its unknown destination split is material", () => {
     const profile =
-      xautMetaSource.bridgeRouteRisk as BridgeRouteRiskProfile;
+      xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
     const fixedInput = {
       chainCirculatingById: { "xaut-tether": {} },
       safetyScoreV9SupplyAttributionById: {

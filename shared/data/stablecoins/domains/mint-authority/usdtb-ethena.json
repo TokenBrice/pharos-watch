@@ -1,0 +1,165 @@
+{
+  "id": "usdtb-ethena",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-reconciled",
+    "confidence": "verified",
+    "summary": "USDtb is issued by Anchorage Digital Bank against BUIDL/cash reserves. Ethereum issuance uses a MINTER_BURNER_ROLE and immediate proxy admin controlled by issuer EOAs; the native Solana Token-2022 mint has a distinct wallet authority. LayerZero OFT routes are reviewed separately as bridge controls.",
+    "upgradeability": {
+      "model": "transparent-proxy",
+      "proxyAddresses": [
+        "0xc139190f447e929f090edeb554d95abb8b18ac1c"
+      ],
+      "implementationAddresses": [
+        "0x9D6d77a21702b9AFcF924983fbFB84AAAAe79589"
+      ],
+      "adminAddresses": [
+        "0x3c405f68d5c6ece868e5646cac926679839acd68"
+      ],
+      "canChangeMintLogic": true,
+      "delaySec": 0,
+      "controlRef": "USDtb DEFAULT_ADMIN_ROLE holder",
+      "observedAt": "2026-07-13",
+      "observedBlock": 25526176,
+      "sources": [
+        {
+          "label": "Ethereum USDtb transparent proxy",
+          "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c#code"
+        },
+        {
+          "label": "USDtb Anchorage implementation",
+          "url": "https://etherscan.io/address/0x9d6d77a21702b9afcf924983fbfb84aaaae79589#code"
+        },
+        {
+          "label": "USDtb ProxyAdmin",
+          "url": "https://etherscan.io/address/0x3c405f68d5c6ece868e5646cac926679839acd68#code"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x364366a7164fb518eafaa42af0c86eddab78e6f3",
+        "label": "USDtb MINTER_BURNER_ROLE holder",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "USDtb mint and redeem docs",
+              "url": "https://docs.usdtb.money/mint-and-redeem"
+            }
+          ]
+        },
+        "sources": [
+          {
+            "label": "USDtb mint and redeem docs",
+            "url": "https://docs.usdtb.money/mint-and-redeem"
+          },
+          {
+            "label": "Ethereum USDtb contract",
+            "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
+          }
+        ],
+        "evidence": "At Ethereum block 25294739, hasRole(MINTER_BURNER_ROLE=0xcfd53186, 0x364366) returned true. eth_getCode returned empty (EOA confirmed). This is the sole active MINTER_BURNER_ROLE holder per Blockscout RoleGranted/RoleRevoked log scan from block 21287284. Issuer-operated model corroborated by USDtb docs (Anchorage Digital Bank)."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0xd93826BB299765c87D13AeBa2A7E5d9B27A03956",
+        "label": "USDtb DEFAULT_ADMIN_ROLE holder",
+        "role": "minter-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "can-authorize",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 25526176,
+        "keyCustodyAttestation": {
+          "kind": "hsm",
+          "sources": [
+            {
+              "label": "USDtb introduction",
+              "url": "https://docs.usdtb.money/introduction"
+            }
+          ]
+        },
+        "sources": [
+          {
+            "label": "Ethereum USDtb contract",
+            "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
+          },
+          {
+            "label": "USDtb ProxyAdmin",
+            "url": "https://etherscan.io/address/0x3c405f68d5c6ece868e5646cac926679839acd68#code"
+          }
+        ],
+        "evidence": "At Ethereum block 25526176, hasRole(DEFAULT_ADMIN_ROLE, 0xd93826BB299765c87D13AeBa2A7E5d9B27A03956) returned true and token owner() returned the same EOA. The token's EIP-1967 admin slot resolves to verified ProxyAdmin 0x3c405f68d5c6ece868e5646cac926679839acd68, whose owner() is this EOA; the implementation slot resolves to AnchorageTokenUSDtb 0x9D6d77a21702b9AFcF924983fbFB84AAAAe79589. The EOA can grant or revoke MINTER_BURNER_ROLE and execute immediate ProxyAdmin upgrades; no on-chain timelock applies."
+      },
+      {
+        "chain": "solana",
+        "address": "C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt",
+        "label": "USDtb Solana Token-2022 mint and permanent-delegate authority",
+        "role": "direct-minter",
+        "authorityType": "eoa",
+        "directMintAbility": "direct",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-13",
+        "observedBlock": 432721335,
+        "sources": [
+          {
+            "label": "Anchorage USDtb March 2026 attestation",
+            "url": "https://learn.anchorage.com/03.31.26_USDtb-Stablecoin-Attestation-Report.pdf"
+          },
+          {
+            "label": "Solana RPC",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432721335, the official Token-2022 mint reports this address as both mintAuthority and permanentDelegate. At slot 432721398 the authority account was system-program-owned, non-executable, and zero-data, confirming an externally controlled wallet. No mint cap is encoded."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
+    "review": {
+      "sources": [
+        {
+          "label": "Anchorage USDtb reserve-attestation archive",
+          "url": "https://www.anchorage.com/platform/usdtb-reserve-attestations"
+        },
+        {
+          "label": "Deloitte USDtb reserve examination, May 2026",
+          "url": "https://learn.anchorage.com/05.31.26_USDtb_Stablecoin_Attestation_Report_signed.pdf"
+        },
+        {
+          "label": "OCC active national banks by name",
+          "url": "https://occ.gov/topics/charters-and-licensing/financial-institution-lists/national-by-name.pdf"
+        },
+        {
+          "label": "USDtb introduction",
+          "url": "https://docs.usdtb.money/introduction"
+        },
+        {
+          "label": "USDtb mint and redeem docs",
+          "url": "https://docs.usdtb.money/mint-and-redeem"
+        },
+        {
+          "label": "Ethereum USDtb contract",
+          "url": "https://etherscan.io/address/0xc139190f447e929f090edeb554d95abb8b18ac1c"
+        },
+        {
+          "label": "Anchorage USDtb March 2026 attestation",
+          "url": "https://learn.anchorage.com/03.31.26_USDtb-Stablecoin-Attestation-Report.pdf"
+        }
+      ],
+      "evidence": "Ethereum reads at block 25526176 resolve the active MINTER_BURNER_ROLE holder, DEFAULT_ADMIN_ROLE holder, transparent-proxy implementation, ProxyAdmin, and immediate ProxyAdmin owner. Anchorage's March 2026 attestation identifies Ethereum and Solana as native USDtb deployments; finalized Solana reads at slot 432721335 resolve the mint and permanent-delegate authority to an externally controlled wallet. LayerZero OFT ownership is handled by the separate bridge-route review.",
+      "reviewer": "Codex mint-authority review / SOL-IV calibration",
+      "reviewedAt": "2026-07-15"
+    }
+  }
+}

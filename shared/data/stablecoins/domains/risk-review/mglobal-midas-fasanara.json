@@ -1,0 +1,20 @@
+{
+  "id": "mglobal-midas-fasanara",
+  "canBeBlacklisted": true,
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "Midas docs",
+        "url": "https://docs.midas.app/"
+      },
+      {
+        "label": "Midas mGLOBAL",
+        "url": "https://midas.app/mglobal"
+      }
+    ],
+    "evidence": "Explicit Yes: Midas Fasanara Global is a permissioned tokenized certificate with issuer/admin control surfaces around minting, redemption, transfer administration, and upgradeable protocol contracts.",
+    "reviewer": "Codex 2026-05-14 execution-ready expansion",
+    "reviewedAt": "2026-05-14"
+  }
+}

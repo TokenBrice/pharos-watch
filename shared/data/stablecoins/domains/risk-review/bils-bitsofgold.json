@@ -1,0 +1,10 @@
+{
+  "id": "bils-bitsofgold",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata; no separate manual override source is attached.",
+    "evidence": "BILS resolves to Yes because it is a centralized, single-issuer fiat-referenced stablecoin under CMISA oversight, and no manual override narrows that status.",
+    "reviewer": "Pharos pre-launch addition",
+    "reviewedAt": "2026-06-13"
+  }
+}

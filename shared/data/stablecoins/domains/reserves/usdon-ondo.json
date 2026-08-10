@@ -1,0 +1,98 @@
+{
+  "id": "usdon-ondo",
+  "reserves": [
+    {
+      "name": "USDon settlement cash and cash equivalents held at Ondo Global Markets brokerage accounts",
+      "pct": 100,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Ondo Global Markets (BVI) Limited at one or more undisclosed US-registered custodial broker-dealers",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-07-28",
+    "reviewer": "Grok wave-8 GROK-RESEARCH phase-1 reserve",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Stocks available assets — What is USDon? (re-opened 2026-07-28)",
+        "url": "https://docs.ondo.finance/ondo-stocks/available-assets"
+      },
+      {
+        "label": "Ondo Stocks investing and redeeming — cash or equivalents backing (re-opened 2026-07-28)",
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
+      },
+      {
+        "label": "Ondo Stocks trust and transparency — Ankura scope and broker-dealers (re-opened 2026-07-28)",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+      },
+      {
+        "label": "DefiLlama stablecoin module 408 mint/redeem description (re-opened 2026-07-28)",
+        "url": "https://stablecoins.llama.fi/stablecoin/408"
+      },
+      {
+        "label": "Ondo Global Markets available assets (alias path, re-opened 2026-07-28)",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+      }
+    ],
+    "rationale": "Re-verified 2026-07-28 by re-opening primary issuer docs and an independent aggregator. Ondo available-assets still states USDon is 'backed 1:1 by a US dollar in one of Ondo Stocks' brokerage accounts'; investing-and-redeeming still states each USDon is 'backed by a dollar of cash or equivalents at an Ondo Stocks brokerage account' with instant USDon settlement in the invest/redeem flow. DefiLlama module 408 independently restates 'backed 1:1 by US dollars held in Ondo Global Markets' brokerage accounts' with 1:1 USDC mint/redeem. Because the issuer does not disclose cash-versus-cash-equivalent instruments or weights, the aggregate remains assetClass other at 100% rather than assuming pure cash. Trust-and-transparency still scopes Ankura daily attestations and first-priority security interest to tokenized-stock securities/collateral and 'Ondo Stocks holdings' at US-registered custodial broker-dealers, not to a USDon-specific cash-balance report. No public USDon reserve balance, named broker for USDon cash, account reconciliation, or independent USDon cash attestation was found on re-open.",
+    "compositionBasis": "Ondo issuer product documentation for USDon cash-or-equivalent brokerage-account backing, re-opened 2026-07-28; DefiLlama module 408 mint/redeem description as independent corroboration",
+    "compositionAsOf": "2026-07-28",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Current cash balances, brokerage identity for USDon settlement cash, cash-versus-cash-equivalent instrument weights, account reconciliation, provider allocation, custody terms for the USDon cash sleeve, and any USDon-specific reserve assurance remain undisclosed in the re-opened sources.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "USDon settlement cash and cash equivalents held at Ondo Global Markets brokerage accounts",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Issuer and DefiLlama document the cash-or-equivalent brokerage backing category, but the current amount, instrument mix, broker identity, and reserve reconciliation cannot be reproduced from public evidence."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "One or more undisclosed US-registered custodial broker-dealers holding Global Markets brokerage accounts",
+        "role": "prime-broker",
+        "jurisdiction": "United States"
+      },
+      {
+        "name": "Ondo Global Markets (BVI) Limited (issuer SPV named as the brokerage account holder)",
+        "role": "other",
+        "jurisdiction": "British Virgin Islands"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "structured",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-07-22",
+    "reviewer": "GPT SOL-EVD-A wave6",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Ondo Stocks trust and transparency (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+      },
+      {
+        "label": "Ondo Stocks investing and redeeming (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming"
+      },
+      {
+        "label": "Ondo Global Markets disclaimer (accessed 2026-07-22)",
+        "url": "https://docs.ondo.finance/ondo-global-markets/disclaimer"
+      }
+    ],
+    "uncertainty": "Ondo documents that all Global Markets holdings sit with one or more US-registered custodial broker-dealers and that the issuer is a dedicated BVI SPV with an independent director and full segregation of assets, books, and accounts from Ondo Finance Inc. and the Ondo Foundation group; that supports a structured bankruptcy-remoteness posture at the entity level. Not known: the identity of the broker-dealer(s) holding USDon settlement cash, account titles, whether USDon cash sits in segregated or omnibus accounts, any SIPC or private insurance coverage, and rehypothecation terms. Ankura Trust's first-priority perfected security interest and daily verification are documented for tokenized-stock collateral, and whether either extends to USDon's brokerage cash is unstated. No USDon-specific attestation or report exists, and Ondo's disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC, or any financial regulator."
+  }
+}

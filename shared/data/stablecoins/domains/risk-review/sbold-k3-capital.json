@@ -1,0 +1,99 @@
+{
+  "id": "sbold-k3-capital",
+  "canBeBlacklisted": false,
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "sBOLD documentation",
+        "url": "https://k3-capital.gitbook.io/sbold"
+      },
+      {
+        "label": "sBOLD technical details",
+        "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
+      {
+        "label": "K3 Capital GitHub",
+        "url": "https://github.com/K3Capital"
+      },
+      {
+        "label": "Tracked sBOLD Ethereum deployment",
+        "url": "https://etherscan.io/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11#code"
+      },
+      {
+        "label": "Blockscout verified sBold source",
+        "url": "https://eth.blockscout.com/address/0x50bd66d59911f5e086ec87ae43c811e0d059dd11?tab=contract"
+      },
+      {
+        "label": "Blockscout verified BOLD (BoldToken) source",
+        "url": "https://eth.blockscout.com/address/0x6440f144b7e50d6a8439336510312d2f54beb01d?tab=contract"
+      },
+      {
+        "label": "Ethereum PublicNode RPC fixed-block reads",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum observation block 25712319",
+        "url": "https://etherscan.io/block/25712319"
+      }
+    ],
+    "evidence": "Re-reviewed 2026-08-08 against the exact-match sBold source, the public K3Capital/sBOLD repository, and K3's protocol documentation. The sole tracked token is a direct, non-proxy ERC-4626 deployment: its EIP-1967 implementation, admin, and beacon slots are zero. transfer and transferFrom remain unmodified OpenZeppelin ERC-20 paths with no transfer hook; the code exposes no holder blacklist, balance freeze, seizure, arbitrary burn, allowlist, or privileged transfer. BaseSBold does add owner-only pause()/unpause(), but whenNotPaused guards only deposit, mint, redeem, withdraw, and swap. A pause can stop vault entry/exit and solver activity globally; it cannot stop sBOLD share transfers or target an individual holder, so it is not a token-freeze mechanism. At Ethereum block 25712319, paused() was false, asset() returned canonical BOLD, owner() returned K3's 2-of-3 Safe 0x2df68ea583b8394a8cc71eebcd4fa7c6746027d5, and all EIP-1967 slots remained zero. K3's official materials describe sBOLD strictly as an on-chain ERC-4626 vault and its active-manager parameter role; they establish no separate issuer terms power to seize or freeze holder shares. The verified parent BoldToken likewise exposes no pause, blacklist, freeze, or seizure function. Conclusion: reviewedStatus=false for holder balance/transfer freeze; the distinct owner ability to pause vault operations remains documented here and in the transfer-overlay evidence.",
+    "reviewer": "OpenAI Codex C07 access review; Kimi T29 Safety Score V9 access review",
+    "reviewedAt": "2026-08-08"
+  },
+  "oracleRisk": {
+    "tier": "redundant-with-failover",
+    "summary": "sBOLD is an ERC-4626 allocator over Liquity V2 Stability Pools and has no borrower-owned debt positions or local collateral liquidation thresholds. Its required BOLD parent carries the separately reviewed WETH, wstETH, and rETH oracle and liquidation branches.",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-07-14",
+      "reviewer": "ORCL-MAX data review",
+      "rationale": "K3 documents sBOLD as an ERC-4626 vault that allocates deposited BOLD across Liquity V2 Stability Pools and swaps liquidation gains back to BOLD. The wrapper has share accounting and swap valuation but does not originate borrower debt or operate collateral-ratio liquidation branches. The variantOf relationship preserves the complete BOLD parent review.",
+      "sources": [
+        {
+          "label": "K3 sBOLD technical details",
+          "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+        },
+        {
+          "label": "Liquity V2 contracts and mainnet addresses",
+          "url": "https://github.com/liquity/bold/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-07-14",
+    "reviewer": "ORCL-MAX data review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "K3 sBOLD technical details",
+        "url": "https://k3-capital.gitbook.io/sbold/technical-details"
+      },
+      {
+        "label": "Liquity V2 risk disclosure",
+        "url": "https://docs.liquity.org/v2-documentation/risk-disclosure"
+      },
+      {
+        "label": "Liquity BOLD contracts",
+        "url": "https://github.com/liquity/bold/"
+      }
+    ]
+  },
+  "bridgeRouteRisk": {
+    "tier": "single-chain-or-native",
+    "summary": "sBOLD is a K3 Capital wrapper deployed only on Ethereum in the registry. No material bridge route was resolved for the wrapper, so it is reviewed as single-chain/native for bridge-route scoring.",
+    "reviewedAt": "2026-06-13",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "K3 sBOLD docs",
+        "url": "https://k3-capital.gitbook.io/sbold"
+      },
+      {
+        "label": "K3 Capital website",
+        "url": "https://www.k3.capital/"
+      }
+    ]
+  }
+}

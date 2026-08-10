@@ -1,0 +1,97 @@
+{
+  "id": "moveusd-cfx",
+  "mintAuthority": {
+    "mintPath": "issuer-direct-mint",
+    "authorityPosture": "unbounded-or-compromised",
+    "confidence": "verified",
+    "summary": "Finalized Solana state at slot 432837826 sets the MOVEUSD SPL mint and freeze authorities to the mint address, an off-curve program-derived address. Finalized transaction 4G6Asw...PE4wH3 at slot 432775304 proves that the executable program EmiytJ3z...oiA1KC can sign for that PDA and invoke MintToChecked. MOVEUSD therefore has an active, concentrated program-controlled mint route rather than a burned authority.",
+    "upgradeability": {
+      "model": "custom",
+      "proxyAddresses": [
+        "EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC"
+      ],
+      "implementationAddresses": [
+        "DybKXmycEuZDF4u8EVxr21Ljza9dEHKF6CKJ9G91zMMY"
+      ],
+      "adminAddresses": [
+        "6fTsNdopg4K5nFBFoBhfiU7GnaEkVa3cvxHoVc1Q9Rw1"
+      ],
+      "canChangeMintLogic": true,
+      "controlRef": "MOVEUSD Solana program upgrade authority",
+      "observedAt": "2026-07-14",
+      "observedBlock": 432839398,
+      "sources": [
+        {
+          "label": "Solana RPC program and ProgramData state",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "label": "MOVEUSD Solana mint program",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "solana",
+        "address": "EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC",
+        "observedAt": "2026-07-14",
+        "observedBlock": 432775304,
+        "sources": [
+          {
+            "label": "Solana finalized MOVEUSD mint transaction",
+            "url": "https://explorer.solana.com/tx/4G6AsvwDghYgrBYwFsoQh6XnMLPd7jEmkW8N5pQpHGw8Qe8TG9hvPSFz9o1jeZDdX4XfsSpB4Dxf1wX6RpPE4wH3"
+          },
+          {
+            "label": "Solana RPC getAccountInfo and getTransaction",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "Finalized transaction 4G6Asw...PE4wH3 at Solana slot 432775304 invokes program EmiytJ3zWX9koH3emPsWDEs9RqNm6NNFp4CkMLoiA1KC, whose Mint instruction successfully calls SPL Token MintToChecked for 50 MOVEUSD with 3AdhVEX6...aeC2qm as mintAuthority. Other finalized transactions on 2026-07-14 show the same program minting and burning MOVEUSD. The mint address is off-curve, so these successful CPI calls prove it is a live program-controlled PDA, not a burned signer."
+      },
+      {
+        "label": "MOVEUSD Solana program upgrade authority",
+        "role": "proxy-admin",
+        "authorityType": "eoa",
+        "directMintAbility": "upgrade-only",
+        "chain": "solana",
+        "address": "6fTsNdopg4K5nFBFoBhfiU7GnaEkVa3cvxHoVc1Q9Rw1",
+        "canRaiseCap": true,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-07-14",
+        "observedBlock": 432840439,
+        "sources": [
+          {
+            "label": "Solana RPC ProgramData and authority account state",
+            "url": "https://api.mainnet-beta.solana.com"
+          }
+        ],
+        "evidence": "At finalized Solana slot 432839398, upgradeable-loader ProgramData DybKXmycEuZDF4u8EVxr21Ljza9dEHKF6CKJ9G91zMMY for program EmiytJ3z...oiA1KC named 6fTsNdopg4K5nFBFoBhfiU7GnaEkVa3cvxHoVc1Q9Rw1 as upgrade authority. At slot 432840439 the authority was an on-curve, zero-data system account, not an on-chain multisig or timelock, so it can replace the mint program without an observed delay."
+      }
+    ],
+    "review": {
+      "evidence": "Finalized chain state keeps the SPL mint and freeze authorities self-referential, but the address is an off-curve PDA and finalized 2026-07-14 transactions prove program EmiytJ3z...oiA1KC actively signs for it to mint and burn MOVEUSD. The program is upgradeable: ProgramData DybKXmyc...1zMMY names 6fTsNdop...Q9Rw1 as upgrade authority at slot 432839398. CFX's public product materials describe issuer-managed minting and redemption, while Wormhole describes MOVEUSD as a CFX-controlled multichain burn-and-mint token. The prior directMintAbility none and fixed-supply conclusion were contradicted by current on-chain execution.",
+      "reviewer": "Codex V9 control curation",
+      "reviewedAt": "2026-07-14",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "CFX docs (key features)",
+          "url": "https://docs.cfx.to/docs/key-features"
+        },
+        {
+          "label": "Wormhole: MOVEUSD adopts NTT (issuer-controlled burn-and-mint)",
+          "url": "https://wormhole.com/blog/moveusd-stablecoin-chooses-wormholes-ntt-standard-for-multichain-expansion"
+        },
+        {
+          "label": "Solana finalized MOVEUSD mint transaction",
+          "url": "https://explorer.solana.com/tx/4G6AsvwDghYgrBYwFsoQh6XnMLPd7jEmkW8N5pQpHGw8Qe8TG9hvPSFz9o1jeZDdX4XfsSpB4Dxf1wX6RpPE4wH3"
+        },
+        {
+          "label": "Solana RPC mint, program, and ProgramData state",
+          "url": "https://api.mainnet-beta.solana.com"
+        }
+      ]
+    }
+  }
+}
