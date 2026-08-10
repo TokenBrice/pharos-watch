@@ -1,11 +1,7 @@
--- Squash candidate baseline: consolidates migrations 0001 through 0227.
---
--- LOCAL PROOF ONLY. This file is not part of the active migration inventory.
--- It must not replace worker/migrations/0000_baseline.sql or alter MANIFEST.md
--- until the owner-gated, coordinated D1 rollout is approved.
---
--- Fresh databases only. Existing databases retain their applied-migration ledger.
--- Source replay: 0000_baseline.sql plus active migrations 0072-0227; 0086 is retired.
+-- Active fresh-database baseline, accepted 2026-07-30.
+-- Consolidates historical migrations 0001 through 0227.
+-- Existing databases retain their applied-migration ledger; fresh databases apply
+-- this baseline followed by active migrations 0228 onward. See MANIFEST.md.
 
 CREATE TABLE IF NOT EXISTS admin_action_audit (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

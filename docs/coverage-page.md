@@ -96,7 +96,7 @@ Additional page-level sources:
 
 ## Feature Snapshot
 
-The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets. It is framed as the route's signature full-width hero (design canon): a compact header strip carries the frost-blue "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics, and the stacked-bar breadth chart reads as the drawn metaphor full-width beneath. See `docs/design-language.md` → Reference-group hero calls.
+The feature snapshot leads the page. It is the first stop for users who want to understand total Pharos coverage before drilling into individual assets. It is framed as the route's signature full-width hero under the shared [Feature-page heroes](./design-language.md#feature-page-heroes) rule: a compact header strip carries the frost-blue "One Beam" = the active-coin universe count, with neutral `.pharos-numeric` avg-reach % and tracked-surfaces sub-metrics, and the stacked-bar breadth chart reads as the drawn metaphor full-width beneath.
 
 Every row shows:
 

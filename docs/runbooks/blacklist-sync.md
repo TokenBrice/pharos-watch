@@ -23,7 +23,7 @@ The blacklist ingestion pipeline has unresolved gaps in recent blocks. Missing a
 
 Use the guarded reconciliation only for the immutable `night-watch-usdt-tron-2026-07-09` manifest. It contains the exact 86 confirmed events after the audited cursor through `2026-07-09T20:28:03Z`: 72 blacklist additions, 3 removals, and 11 destroys totaling `8,874,287.612325 USDT`. The tool never invokes the global reset path.
 
-1. Confirm production already includes migration `0181_blacklist_reconciliation_and_efficiency.sql` and the matching safe blacklist writers. If either is missing in a fresh or recovered environment, use the standard deployment flow before running this action.
+1. Confirm the deployed Worker has the guarded reconciliation writers and production D1 has the required blacklist reconciliation/run/repair schema from the active baseline. Historical migration 0181 is squashed; use `worker/migrations/MANIFEST.md` only for lineage. If code or schema is missing in a fresh or recovered environment, use the standard deployment flow before running this action.
 2. Run the read-only preflight from the repository root:
 
    ```bash

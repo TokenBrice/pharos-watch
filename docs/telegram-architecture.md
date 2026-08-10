@@ -138,8 +138,8 @@ that module before parsed commands reach `COMMAND_HANDLERS`.
   - `index.ts` — `COMMAND_HANDLERS` dispatch table
   - `context.ts` — `WebhookCommandContext` shape passed to every handler
   - `action-runner.ts` — shared `/subscribe`, `/unsubscribe`, `/set` coin-resolution + bulk-confirm flow (also used by Ingress's disambiguation reply path)
+  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `pause.ts`, `recap.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `export.ts`, `import.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
 - `worker/src/api/telegram-webhook-disambiguation-selection.ts` — executes pending disambiguation selections from callback replies through the shared action runner
-  - One file per command: `start.ts`, `help.ts`, `list.ts`, `status.ts`, `brief.ts`, `top.ts`, `why.ts`, `coverage.ts`, `health.ts`, `subscribe.ts`, `unsubscribe.ts`, `set.ts`, `settings.ts`, `mute.ts`, `pause.ts`, `timezone.ts`, `unmutehours.ts`, `unsnooze.ts`, `cancel.ts`, `presets.ts`, `forget.ts`, `export.ts`, `import.ts`, `sample.ts`, `single-target.ts` (shared helper for `/why` and `/coverage`)
 - `worker/src/api/telegram-webhook-messages.ts` (message builders shared across handlers)
 - `worker/src/api/telegram-webhook-insights.ts` (`/top`, `/why`, `/coverage` data-loading and rendering; `/why` and `/coverage` attach the status discovery keyboard in every chat, with Mini App buttons only in private chats)
 - `worker/src/api/telegram-webhook-status.ts` (the `/status` data loader)

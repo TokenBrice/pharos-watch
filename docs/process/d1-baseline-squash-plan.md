@@ -4,7 +4,7 @@ Use this procedure to consolidate the post-baseline tail in `worker/migrations/`
 
 ## Scheduling Gate
 
-The previous squash (`0000_baseline.sql`, S-014) landed on 2026-03-25 and consolidated migrations 0001-0071. Review another squash when either condition is met:
+The latest squash (`0000_baseline.sql`, S-03 / P4-01) landed on 2026-07-30 and consolidated migrations 0001–0227. Review another squash when either condition is met:
 
 - about 12 months have passed since the previous baseline; or
 - more than 80 active migrations have accumulated after the baseline.
@@ -17,7 +17,7 @@ Run `npm run check:migrations` for the current active/retired inventory. Crossin
 - Announce a soft migration freeze. Incident fixes may proceed only with an explicit announcement and a new rehearsal after the fix lands.
 - Record the current D1 Time Travel bookmark and deployed Worker version.
 - Use named scratch D1 databases and the remote-target flag for rehearsal. Do not validate a production squash only against the local emulator.
-- Use prior squash commit `fb267826d` as the implementation reference, then re-check current Wrangler behavior before executing.
+- Use the latest squash commit `5ea2d360f` as the implementation reference, then re-check current Wrangler behavior before executing.
 
 ## Procedure
 

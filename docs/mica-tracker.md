@@ -4,7 +4,7 @@
 
 The tracker maps assessed stablecoins to their standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114): authorization tier, token type (EMT vs ART), competent authority, the authorized issuer entity, and per-coin register references. Missing `mica` metadata means "not assessed", not out-of-scope or non-compliant. It is an **informational tracking surface with sourced links, not legal advice** — see [Legal framing](#legal-framing-non-goals).
 
-The data foundation already half-exists: 241 coins carry a `jurisdiction` block, EU regulators (ACPR, DNB, BaFin, MFSA, AMF) and 9 `"EMI (MiCA)"` licenses appear as free text, and 23 EUR-pegged coins plus the major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort.
+The data foundation already exists in the tracked registry: many coins carry a `jurisdiction` block, EU regulators and `"EMI (MiCA)"` licenses appear as free text, and EUR-pegged plus major USD coins are in scope. This feature **structures and classifies** that existing free text — it is not a green-field data collection effort. Derive current inventory counts from the registry rather than freezing them in this doc.
 
 ---
 

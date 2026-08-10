@@ -28,7 +28,7 @@ Active Pharos taxonomy no longer exposes `algorithmic` as a standalone backing b
 
 ### Peg Currency
 
-`USD`, `EUR`, `GBP`, `CHF`, `BRL`, `RUB`, `JPY`, `KRW`, `IDR`, `INR`, `MYR`, `SGD`, `HKD`, `TRY`, `AUD`, `ZAR`, `CAD`, `CNY`, `CNH`, `PHP`, `MXN`, `VND`, `UAH`, `ARS`, `KGS`, `NGN`, `XOF`, `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), `OTHER`
+`PEG_CURRENCY_VALUES` in `shared/types/core.ts` is the runtime authority. It covers the tracked fiat pegs (including COP, CLP, GHS, KES, and PEN), `GOLD`, `SILVER`, `VAR` (variable/CPI-linked), and `OTHER`; do not maintain a second literal enum here.
 
 ### Boolean Flags
 
@@ -75,11 +75,11 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `oracleRisk?: OracleRiskProfile` — reviewed CDP oracle / collateral price-feed setup, with optional review provenance and collateral-branch rows. Branch evidence can record feed provider/path/address/chain, heartbeat and staleness bounds, fallback behavior, observation block/date, collateral parameters, liquidation behavior, backstops, shutdown/bad-debt handling, and sources. Safety Score V9 compiles applicable branch evidence and unresolved applicability into typed Economic Control facts and gaps.
 - `bridgeRouteRisk?: BridgeRouteRiskProfile` — reviewed cross-chain route setup, with route tier, summary, provenance, confidence, optional protocol evidence, sources, and deployment-level `routes[]`. Each route identifies its exact chain/contract representation, issuance/transfer semantics, reviewed tier, scope (`global`, `canonical`, `peripheral`, or `unknown`), and optional controller/failure-domain evidence. Routes that are liabilities against one shared lockbox may carry the same `representationId`; this binds an observed pooled lockbox balance to an exact reviewed member inventory without implying per-destination supply. Safety Score V9 combines these reviewed identities with bounded runtime materiality evidence and fails closed when a required route fact is unresolved.
 - `infrastructures?: Infrastructure[]` — structured infrastructure-lineage list (`"liquity-v1"` / `"liquity-v2"` / `"m0"`) used for UI badges, cohort filters, and discovery hubs. An array so a coin can belong to more than one infrastructure simultaneously, though in practice each coin currently has zero or one entry.
-- `variantOf?: string` / `variantKind?: "savings-passthrough" | "strategy-vault" | "risk-absorption" | "bond-maturity"` — active-only parent-variant metadata for tracked wrapper, strategy-vault, or bond-leg products whose user expectation is still direct exposure to another tracked stablecoin
+- `variantOf?: string` / `variantKind?: VariantKind` — active-only parent-variant metadata for tracked pure wrappers, savings passthroughs, strategy vaults, risk-absorption legs, or bond-maturity products whose user expectation is still direct exposure to another tracked stablecoin. `VARIANT_KIND_VALUES` in `shared/types/core.ts` owns the exact enum.
 - `pegReferenceId?: string` — id of the tracked stablecoin used as this coin's peg-deviation reference (drives severe active-depeg cap inheritance from a parent). For tracked variants it is invariant-bound to equal `variantOf` (enforced in `shared/lib/stablecoins/schema.ts` and `validate-variants.ts`)
 - `reserves?: ReserveSlice[]` — reserve composition data; slices may add structured asset class, obligor, risk factors, liquidity horizon, or evidenced maximum maturity without encoding a score
 - `reserveReview?: ReserveReview` — sourced, dated review of the reserve composition and its known unknown exposure; optional per-slice non-link dispositions are fingerprinted by current index and name and remain non-scoring until a real `coinId` is authored
-- `custodyProfile?: CustodyProfile` — reviewed providers, optional sourced shares, legal safeguards, reuse posture, provenance, and uncertainty behind the current `custodyModel`; consistency checks are advisory and do not auto-derive the v8 tier
+- `custodyProfile?: CustodyProfile` — reviewed providers, optional sourced shares, legal safeguards, reuse posture, provenance, and uncertainty behind the current `custodyModel`; Safety Score V9 compiles applicable wrapper-custody evidence, while consistency checks remain advisory rather than auto-deriving a tier
 - `yieldConfig?: YieldConfig` — yield intelligence configuration
 - `pythFeedId?: string` — Pyth Network oracle feed ID (used for gold/commodity stablecoins)
 - `tradedContracts?: ContractDeployment[]` — traded contract addresses separate from `contracts`
@@ -91,7 +91,7 @@ Key fields on `StablecoinMeta` (see `shared/types/core.ts` plus `shared/types/st
 - `frozenAt?: string` / `obituary?: StablecoinObituary` — freeze date and cemetery/detail-page obituary content required for frozen tracked coins
 - `launchDate?`, `announcedDate?`, `expectedLaunchDate?`, `launchPhase?`, `launchPhaseDetail?`, `featuredContent?`, `milestones?`, `dateHistory?` — launch/upcoming timeline metadata for pre-launch and newly launched assets
 - `pegScoreCoverage?` — reviewed lower bound for PegScore and recent-window observation. Author only after replay plus continuous live coverage has been audited; record the exact `startDate`, `reviewedAt`, optional `replayRunId`, and a note describing the verified boundary. It takes precedence over age-derived tracking anchors and must not imply coverage before the reviewed date.
-- `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority posture used by the Mint Authority Score and detail-page authority summaries; profiles can also carry structured upgradeability, active/resolved incident state, observation points, and reviewed common failure-domain keys
+- `mintAuthority?: MintAuthorityProfile` — reviewed mint/burn authority evidence compiled into Safety Score V9's Economic Control mint component and used by detail-page authority summaries; profiles can also carry structured upgradeability, active/resolved incident state, observation points, and reviewed common failure-domain keys
 - `tags?: string[]` — freeform tag array for filtering and categorization
 
 ### Implementation Age Policy

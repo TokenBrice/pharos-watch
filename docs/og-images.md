@@ -101,9 +101,11 @@ Generated for `/learn/mechanisms/[archetype]` pages. The pipeline renders the me
 
 ```bash
 tsx scripts/maintenance/build-og-learn-images.ts   # writes SVGs to agents/og-learn-staging/
-# Then convert SVG → PNG (e.g. via the svg-to-png skill / Playwright Firefox)
-# and move the PNGs into public/og-learn-<slug>.png
+# Then rasterize each staged SVG at 1200x628 (Playwright Firefox is the known manual path),
+# visually inspect it, and move it to public/og-learn-<slug>.png
 ```
+
+`tsx scripts/maintenance/build-og-learn-images.ts --check` verifies only that the expected PNG roster exists and every file is non-empty. It does not prove that PNG pixels are fresh relative to the generated SVGs, so renewal remains a manual rasterize-and-review seam.
 
 ### When to renew
 

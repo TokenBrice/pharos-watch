@@ -456,7 +456,7 @@ Filters, cursor/offset pagination, ordering, response fields, cache/freshness be
 
 The recent cron path auto-heals bounded NULL-price debt; this operator path handles older history. It accepts only exact UTC event-day evidence from stored history or bounded historical providers, never current spot, peg par, or another day's price. Definitive no-source results become irreducible, transient provider failures remain retryable, and recovered rows stay `pending_aggregate` until every affected hourly bucket is rebuilt and verified. An interrupted run resumes aggregate verification before selecting new valuation work.
 
-Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference.md#post-apibackfill-mint-burn-prices). The operational sequence remains in [Worker Structural Hardening Rollout](./process/worker-hardening-rollout.md#historical-data-debt-closure).
+Auth, dry-run/confirmation/bookmark/idempotency requirements, parameters, dispositions, response fields, and errors are canonical in [API Reference: `POST /api/backfill-mint-burn-prices`](./api-reference.md#post-apibackfill-mint-burn-prices). Use the [Mint/Burn Integrity runbook](./runbooks/mint-burn-integrity.md#historical-price-debt) for the operator sequence.
 
 ### POST /api/backfill-mint-burn (admin)
 

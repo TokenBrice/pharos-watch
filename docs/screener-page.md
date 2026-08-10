@@ -55,7 +55,7 @@ The default sort is Safety Score descending. Sortable keys are name, supply, Peg
 
 `TableExportMenu` exports the currently filtered and sorted rows, not the unfiltered universe. The CSV includes identity, lifecycle/classification, supply, score fields, blacklistability, and the mint route/score/band. Export stays disabled while an active score filter is waiting on source data and includes methodology labels for the score families.
 
-Since safety `9.1` the mint columns come from the published V9 mint component, and their CSV headers were renamed accordingly: `Mint Authority Score` is now `Mint Control Score` and `Mint Authority Band` is now `Mint Control Band` (the curated route column stays `Mint Authority Status`). This is breaking for header-keyed consumers; band keys, filter values, and saved screener URLs are unchanged. The export provenance line stamps the safety-score identity rather than the retired mint-authority lane.
+Since safety `9.1` the mint columns come from the published V9 mint component. The Screener CSV contract uses the literal headers `mint_authority`, `mint_authority_score`, and `mint_authority_score_band`; the shared directory-table export has a separate title-case header contract. Band keys, filter values, and saved Screener URLs are unchanged. The export provenance line stamps the safety-score identity rather than the retired mint-authority lane.
 
 ## Picker Handoff
 

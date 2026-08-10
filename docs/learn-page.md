@@ -12,7 +12,7 @@ Mechanism explainers remain documented in [learn-mechanisms-page.md](./learn-mec
 
 ## Hero And Title Treatment
 
-All `/learn/*` hub pages carry the homepage design grammar in their Category-C "light editorial" register (canonical record: `docs/design-language.md` → Feature-Page Hero → Learn-group hero calls):
+All `/learn/*` hub pages carry the homepage design grammar in its Category-C "light editorial" register; the shared One Beam rule lives under [Feature-page heroes](./design-language.md#feature-page-heroes):
 
 - **Titles** use the homepage Bricolage Grotesque display face. `LearnPageShell` (`/learn/`, `/learn/case-studies/`) sets its `h1` via `.pharos-page-title`, and section/list headings use the `.pharos-display` recipe at a fixed `text-2xl/sm:text-3xl` scale. `/learn/glossary/` inherits the face through the same `LearnPageShell`.
 - **Header hero** — a lighter shared band, `src/app/learn/_shared/learn-hero.tsx` (`LearnHero`): a flat `pharos-card-shell` with one frost "One Beam" figure + muted sub-metrics. `/learn/` opts out (its `OutcomeLedger` is promoted into a card-shell band and keeps the semantic survived/wounded/died ramp — a directional figure, never frost); `/learn/case-studies/` lights the neutral archive count; `/learn/glossary/` lights the term count.

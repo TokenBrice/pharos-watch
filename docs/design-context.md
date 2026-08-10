@@ -33,7 +33,7 @@ The gradient runs Discovery → Analytics → Power-user. Drift between adjacent
 - **Theme**: Light theme by default, with the same dense financial-dashboard hierarchy preserved in dark mode
 - **References**: DeFi-native research products with strong data density and practical crypto analytics, but Pharos should not collapse into looking like another interchangeable dashboard
 - **Brand accent**: Frost-blue `#4BC4DE`, sampled from the Figma Market Pulse frame — used sparingly for navigation active states, homepage metrics, and brand touches
-- **Fonts**: Geist Sans for core UI, JetBrains Mono for data figures, and the tracked Bricolage Grotesque face for display. Intentional non-core carve-outs include Newsreader serif for editorial/tombstone surfaces, Georgia serif for `AiSummary` and route error treatments, Courier New for Digest/depeg editorial body copy, and the Tape `/timeline/` mono-token wire-service stream.
+- **Fonts**: the system UI stack for core UI, JetBrains Mono for data figures, and the tracked Bricolage Grotesque face for display. The retained `--font-geist-*` variable names are legacy tokens, not loaded Geist webfonts. Intentional non-core carve-outs include Newsreader serif for editorial/tombstone surfaces, Georgia serif for `AiSummary` and route error treatments, Courier New for Digest/depeg editorial body copy, and the Tape `/timeline/` mono-token wire-service stream.
 - **Color use**: Semantic first — color communicates state (health, risk, trend direction), not empty decoration
 - **Design bar**: Avoid generic SaaS sameness; every major surface should feel authored and recognizably Pharos
 

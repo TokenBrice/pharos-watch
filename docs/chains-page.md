@@ -17,7 +17,7 @@ Contract for the public chain analytics surfaces:
 - **Data hook:** `src/hooks/use-chains.ts`
 - **Profile coordination hook:** `src/hooks/use-chain-profile-data.ts`
 - **Primary API:** `GET /api/chains`
-- **Methodology version source:** `shared/lib/methodology-versions/chain-health.ts` (re-exported by `shared/lib/methodology-versions/chain-health.ts`)
+- **Methodology version source:** `shared/lib/methodology-versions/chain-health.ts` (compatibility re-export: `shared/lib/chains/health-version.ts`)
 - **Scoring implementation:** `shared/lib/chain-health.ts`, `shared/lib/chain-aggregator.ts`, `shared/lib/chains/index.ts`
 - **Shared chain UI helpers:** `src/lib/chain-ui.ts` (formatting + health band color maps)
 - **Active chain derivation:** `getActiveChainIds()` in `shared/lib/chains/index.ts`

@@ -72,7 +72,7 @@ For deployment/worktree operating procedure, secrets, and rollback, see [Deploym
 
 CI shape:
 
-1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and agent-doc-sync checks.
+1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and the generated `AGENTS.md` mirror check.
 2. Other PRs run `check:pr:static` plus two shards of `test:pr`. The static runner always checks changed-file lint, source types, environment/import contracts, and high-stakes coverage-waiver completeness; root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. It runs `check:structural` for affected production and validation paths, enforcing the Worker raw-console, provider-resilience, fetch-body, script-entrypoint, CLI-policy, and stale-flag checks. It adds data and Worker/Telegram checks only for relevant paths. Generated-artifact freshness is selected from the changed sources themselves through `scripts/ci/select-generated-artifacts.mjs`, in every lane rather than only when a Pages surface moved, so a Worker-only or shared-only commit that leaves a manifest-pinned artifact such as the Safety Score V9 evaluation-build manifest stale fails the PR gate rather than the release discovery gate. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. A separate 15-minute coverage job runs only when an enrolled critical source file changes, using the PR base SHA for the touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
 3. PRs do not build the static site. The production Pages workflow performs the one authoritative build after merge.
 4. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, `check:structural`, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor additionally analyzes relevant pull requests. The weekly/manual all-critical coverage ratchet is blocking. The separate weekly Cloudflare account-state workflow compares the committed secret-free manifest through read-only API requests and fails clearly if `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` is not configured.
@@ -361,10 +361,10 @@ When adding tests, prefer colocating them near the module under test unless an e
 - **API contract tests** — when a worker handler has multiple response modes (different JSON shapes based on query params), add a contract test for each mode in `worker/src/api/__tests__/`. Use the shared D1 mock from `worker/src/test-helpers/__shared/mock-d1.ts`.
 - **Degraded-mode scenarios** — for cron jobs, test the normal path plus at least one failure/fallback scenario (e.g., upstream API 503, stale cache, missing data). Use `mockFetch()` to simulate API failures and `vi.useFakeTimers()` for deterministic time.
 
-### What NOT to test (for now)
+### Default test boundaries
 
 - **Broad DOM-rendered React integration tests** — jsdom is available only when a test opts in via `// @vitest-environment jsdom` (for example `src/hooks/__tests__/use-chart-container-ready.test.tsx`). Most existing tests stay pure or use server rendering instead of full browser-like component integration.
-- **API/worker handlers (full integration)** — the D1 mock tests response shape, not SQL correctness. Full end-to-end worker testing would need a real D1 instance.
+- **API/worker handlers** — use `mockD1()` for response-shape and branch tests. When correctness depends on transactions, constraints, migrations, concurrency, or SQL semantics, use the latest-schema SQLite harness in `worker/src/test-helpers/latest-schema-sqlite.ts` with `createSqliteD1()` rather than treating substring-matched mocks as persistence proof.
 - **React-rendering behavior inside hooks/components** — prefer pure derivation tests and mocked query tests unless there is high-value UI coupling.
 - **Full external-service integration for cron orchestrators** — orchestration tests should mock `fetch`/D1 boundaries and assert status/metadata contracts, not live upstream behavior.
 
@@ -385,7 +385,7 @@ Use `vi.mock()` to stub external modules (stablecoin list, peg-rates, supply hel
 - `npm run audit:coverage -- --domain=oracle-risk --enforce` remains the direct content audit for CDP oracle profiles and required branch evidence. It is a manual curation audit, not a merge gate; its reviewed applicability queue is advisory for current v8 scoring, while explicit unresolved dispositions remain v9 blockers rather than silently passing as profile-only evidence.
 - `src/lib/__tests__/term-markup.test.ts` owns AI-summary glossary-marker integrity as an ordinary noncritical runtime-parser test, including known slugs, balanced markers, and the current corpus totals.
 - Mechanism explainer completeness is split across ordinary noncritical domain tests: `src/app/learn/mechanisms/__tests__/content.test.ts` owns labels, one-liners, editorial content, and representative coin IDs; the existing dynamic-route test owns exact static params; `src/app/__tests__/sitemap-frozen.test.ts` owns sitemap membership. OG images remain generated-artifact-owned.
-- `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test (41 files at relocation), including Picker route/component copy and checked-in worked examples.
+- `shared/lib/selector/__tests__/editorial-policy.test.ts` owns the Selector banned-phrase rule matrix and complete editorial corpus as an ordinary noncritical domain test, including Picker route/component copy and checked-in worked examples.
 - `scripts/__tests__/weekly-curation-digest.test.ts` owns attestor-tier, coin one-liner, and mechanism-archetype coverage as an ordinary noncritical domain test. It reads authored per-coin entries and preserves the editorial rubric: all active/pre-launch coins need nonblank one-liners, more than 20% missing attestor tiers fails the independent-audit cohort, and unknown baseline IDs or more than 27% missing archetypes fails the fixed non-variant/non-frozen cohort.
 - `npm run audit:coverage -- --domain=redemption-backstops` validates the redemption-backstop registry split across `shared/lib/redemption-backstop-configs/*`, catches duplicate IDs across modules, enforces allowed route-family membership per module, and keeps the headline counts in `docs/redemption-backstops.md` synced to the real registry.
 - `npm run audit:coverage -- --domain=redemption-coverage --check` requires every active unconfigured asset to have a source-reviewed row in `shared/data/coverage-dispositions/redemption-coverage-dispositions.ts`. It rejects missing, duplicate, unknown, inactive, configured-stale, and malformed reviews and ranks the queue by canonical market-cap order. The backlog counts are no longer ratcheted: a growing gap list is curation work, not a merge failure.
@@ -449,14 +449,6 @@ Selected files have explicit threshold overrides in `scripts/ci/check-critical-c
 - `npm run test:smoke-ops` checks the Access-protected operator UI/API surfaces and their same-origin proxy where an authenticated session is available.
 - `npm run test:smoke-transport` verifies that public HTTP API origins upgrade to the exact HTTPS host, path, and query.
 - `npm run test:smoke-ui` covers the main hydrated browser path, analytics, first-party data availability, and responsive overflow checks; `npm run test:smoke-ui:mobile` applies the stricter tracked mobile-route geometry and control-size assertions. Production scope, retries, environment, and publish ordering remain canonical in [Deployment Process](./deployment-process.md#ci-deploy-sequence).
-
-### Tier-3 Structural Refactor Targeted Suites
-
-These are the narrow suites used to lock behavior parity before and after the Tier-3 structural extractions:
-
-- `npm test -- src/lib/__tests__/stablecoin-detail-derive.test.ts` validates pure detail-page derivations independently of React rendering.
-- `npm test -- worker/src/lib/__tests__/mint-burn-pipeline.test.ts` validates shared cron/backfill ingestion helpers without endpoint orchestration noise.
-- `npm test -- worker/src/cron/__tests__/sync-mint-burn.test.ts worker/src/api/__tests__/backfill-mint-burn.test.ts` validates entrypoint-level progression semantics (`inserted/ignored`, burn counters, `done/nextFromBlock`, sync-state mode differences).
 
 ## Adding a New Test
 
@@ -557,34 +549,7 @@ Because flat config *replaces* a rule's options when several config objects matc
 
 ### Zod Runtime Validation
 
-Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQueryWithMeta(..., { schema })`. Current schema-validated response paths include:
-
-- `StablecoinListResponseSchema`
-- `SupplyHistoryResponseSchema`
-- `HealthResponseSchema`
-- `BluechipRatingsMapSchema`
-- `BlacklistResponseSchema`
-- `BlacklistSummaryResponseSchema`
-- `DepegEventsResponseSchema`
-- `PegSummaryResponseSchema`
-- `DexLiquidityMapSchema`
-- `RedemptionBackstopsResponseSchema`
-- `StabilityIndexResponseSchema`
-- `ReportCardsResponseSchema`
-- `SafetyScoreHistoryResponseSchema`
-- `MintBurnFlowsResponseSchema`
-- `MintBurnPerCoinResponseSchema`
-- `MintBurnEventsResponseSchema`
-- `StressSignalsAllResponseSchema`
-- `StressSignalDetailResponseSchema`
-- `YieldHistoryResponseSchema`
-- `YieldRankingsResponseSchema`
-- `StablecoinReservesResponseSchema`
-- `StablecoinChartResponseSchema`
-- `UsdsStatusResponseSchema`
-- `ChainsResponseSchema`
-
-Use `rg "schema:" src/hooks src/lib` for the live callsite set before adding or auditing endpoint validation.
+Schema validation in hooks is done via `useApiQuery(..., { schema })` / `useApiQueryWithMeta(..., { schema })`. Use `rg "schema:" src/hooks src/lib` for the live callsite and schema set before adding or auditing endpoint validation; do not maintain a second response-schema inventory here.
 
 When a schema is provided, frontend API helpers now validate in `strict` mode by default and throw on schema mismatch. Use `contractMode: "warn"` only for explicitly degraded surfaces where returning raw data is acceptable.
 

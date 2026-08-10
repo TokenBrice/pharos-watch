@@ -213,8 +213,8 @@ Scheduled/manual Pages rebuild sequence in `.github/workflows/rebuild-pages.yml`
 
 - Schedule: `17 8 * * *` UTC, after the 08:05 UTC daily digest slot.
 - The workflow has one main-only reusable job and calls `pages-release.yml` with `refresh_data: true`.
-- It refreshes all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, builds and checks the exact artifact, publishes once, and verifies the release marker on the immutable production deployment URL.
-- It intentionally skips Worker deployment and broad live smoke lanes. Missing or invalid refresh data fails before publication.
+- It uses the reusable Pages sequence above: attempt to refresh all three API-backed datasets through the production `stablecoin-dashboard.pages.dev/_site-data` proxy, then build and verify the exact artifact, publish once, and verify the release marker on the immutable production deployment URL.
+- Refresh failure, invalid data, or archive shrink restores the committed snapshots and continues fail-open. Later build, artifact, SEO-continuity, deployment, and release-marker checks remain fail-closed. The rebuild intentionally skips Worker deployment and broad live smoke lanes.
 - Manual rebuild dispatch uses the same path and the shared `production-deploy` lock.
 
 ### Wrangler and Workspace Layout
@@ -267,23 +267,11 @@ The public self-serve API-key form is not a production Pages proxy route. On `ph
 
 For an incident isolated to public self-serve key issuance:
 
-1. Enable or tighten the exact-path WAF rule `api-self-serve-key-intake-limit` for `POST /api/api-key-requests` and `POST /api/api-key-requests/verify`; do not block `/api/api-key-requests-admin*`.
-2. Hide or disable the `/api/` form in Pages if the incident is not resolved by edge blocking.
+1. Hide or disable the `/api/` form in Pages.
+2. If edge blocking is required, the account owner may replace the deliberately disabled `api-rate-limit-ip` placeholder with one exact POST-path rule for `/api/api-key-requests` and `/api/api-key-requests/verify`; the free plan has one slot, so this is an explicit reallocation, not activation of a pre-existing self-serve rule. Do not match `/api/api-key-requests-admin*`. Update `scripts/ci/cloudflare-account-state-manifest.json` in the same operated change, record the rule ID, and verify matches in Security Events.
 3. Roll back Worker or Pages through the normal deployment rollback path as needed.
 4. Query self-serve keys created after the incident cutoff, deactivate incident or smoke keys, release associated claims through the Access-gated admin route, and verify matching audit rows.
 5. Check Worker logs, email-provider logs, and Cloudflare Security Events for plaintext API keys, raw verification tokens, raw IP addresses, or provider-echoed requester data.
-
-The WAF expression of record is:
-
-```text
-(http.host eq "api.pharos.watch"
-  and http.request.method eq "POST"
-  and (http.request.uri.path eq "/api/api-key-requests"
-    or http.request.uri.path eq "/api/api-key-requests/verify")
-  and not cf.bot_management.verified_bot)
-```
-
-Record the Cloudflare rule ID from Security -> WAF -> Rate limiting rules in the incident note when the rule is created or edited, then verify matches under Security -> Events filtered by that rule ID.
 
 Use these SQL templates from a trusted operator shell. Set `cutoff_epoch` to the first suspect issuance timestamp.
 
