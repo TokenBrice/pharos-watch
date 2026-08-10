@@ -1,7 +1,7 @@
 {
   "id": "usdd-tron-dao-reserve",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "USDD freeze-free core-features disclosure",

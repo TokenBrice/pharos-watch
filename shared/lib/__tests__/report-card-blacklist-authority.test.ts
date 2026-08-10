@@ -87,6 +87,9 @@ describe("report-card blacklist authority", () => {
     // The supply key is used by HLiquity's collateralized CDP mint path, not
     // treated as standalone unbounded admin dilution authority.
     expect(resolved.get("hchf-hedera-swiss-franc")).toBe(false);
+    // EURO3: no direct token freeze, but the dominant meUSDC collateral is a
+    // Mendi receipt over Circle's official Linea USDC deployment.
+    expect(resolved.get("euro3-3a-dao")).toBe("inherited");
   });
 
   it("pins the May 2026 unfreezable audit (upgradeable-proxy + admin-mint corrections)", () => {

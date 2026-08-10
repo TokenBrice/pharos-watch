@@ -1,7 +1,7 @@
 {
   "id": "susdd-tron-dao-reserve",
   "blacklistabilityReview": {
-    "reviewedStatus": false,
+    "reviewedStatus": "inherited",
     "sources": [
       {
         "label": "Archived USDD sUSDD mechanism",

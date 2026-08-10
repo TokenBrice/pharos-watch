@@ -5,6 +5,8 @@
       "name": "Mendi meUSDC collateral (Linea)",
       "pct": 70.13806014,
       "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Mendi Finance meUSDC lending market and its borrowers",
       "riskFactors": [
@@ -14,12 +16,15 @@
         "counterparty",
         "smart-contract"
       ],
+      "blacklistabilityExposure": "upstream",
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Mendi meUSDT collateral (Linea)",
       "pct": 3.77463048,
       "risk": "high",
+      "coinId": "usdt-tether",
+      "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Mendi Finance meUSDT lending market and its borrowers",
       "riskFactors": [
@@ -29,6 +34,7 @@
         "counterparty",
         "smart-contract"
       ],
+      "blacklistabilityExposure": "upstream",
       "liquidityHorizon": "unknown"
     },
     {
@@ -222,8 +228,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-31",
-    "reviewer": "Codex T46 live reserve re-derivation",
+    "reviewedAt": "2026-08-10",
+    "reviewer": "Codex FreezeWatch upstream audit",
     "confidence": "verified",
     "sources": [
       {
@@ -249,29 +255,23 @@
       {
         "label": "Verified Polygon TokenToPriceFeed ABI",
         "url": "https://sourcify.dev/server/v2/contract/137/0xfBC5cfEb809c6352Bc4ef2FFe842f72a8769E45e?fields=abi"
+      },
+      {
+        "label": "Mendi Finance cToken exchange documentation",
+        "url": "https://docs.mendi.finance/protocol/developer-docs"
+      },
+      {
+        "label": "Circle official Linea USDC contract registry",
+        "url": "https://developers.circle.com/stablecoins/usdc-contract-addresses"
       }
     ],
-    "rationale": "Re-derived 2026-07-31 from the documented supported-collateral registries and live VaultFactory.collateral(token) plus TokenToPriceFeed.tokenPrice(token) reads: Polygon block 91165709 and Linea block 31573732 (both around 2026-07-30T23:19Z). Positive balances were normalized to EUR value across both current factories; the largest exposures are Linea meUSDC 70.1381%, Linea WETH 11.8076%, Linea WBTC 8.4683%, and Linea meUSDT 3.7746%. The tiny residual row preserves rounding/registry precision rather than forcing unsupported zero exposure.",
+    "rationale": "Re-derived 2026-07-31 from the documented supported-collateral registries and live VaultFactory.collateral(token) plus TokenToPriceFeed.tokenPrice(token) reads: Polygon block 91165709 and Linea block 31573732 (both around 2026-07-30T23:19Z). Positive balances were normalized to EUR value across both current factories; the largest exposures are Linea meUSDC 70.1381%, Linea WETH 11.8076%, Linea WBTC 8.4683%, and Linea meUSDT 3.7746%. The 2026-08-10 FreezeWatch review resolved meUSDC.underlying() to Circle's official Linea USDC contract 0x176211869ca2b568f2a7d4ee941e073a821ee1ff and meUSDT.underlying() to Linea USDT 0xa219439258ca9da29e9cc4ce5596924745e12b93. At Linea block 31673691, the same factory and price-feed reads put meUSDC at 71.79% and meUSDT at 3.86% of current Linea collateral, confirming that named upstream stablecoin exposure remains a strict majority. The tiny residual row preserves rounding/registry precision rather than forcing unsupported zero exposure.",
     "compositionBasis": "3A supported-collateral registries plus live VaultFactory collateral balances valued by TokenToPriceFeed",
     "compositionAsOf": "2026-07-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The source registries expose the complete supported token set used in the current factories; the residual row is only rounding/precision remainder and no material positive balance was omitted.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Mendi meUSDC collateral (Linea)",
-        "pct": 70.13806014,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Mendi receipt-token exposure is a protocol position, not a tracked Pharos stablecoin ID."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Mendi meUSDT collateral (Linea)",
-        "pct": 3.77463048,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "Mendi receipt-token exposure is a protocol position; its borrower mix is not an exact upstream USDT dependency."
-      },
       {
         "reserveIndex": 2,
         "reserveName": "WETH collateral (Linea)",
