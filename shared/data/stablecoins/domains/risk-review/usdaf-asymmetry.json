@@ -1,7 +1,7 @@
 {
   "id": "usdaf-asymmetry",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Asymmetry USDaf overview",
@@ -36,7 +36,7 @@
         "url": "https://app.asymmetry.finance/api/stats"
       }
     ],
-    "evidence": "At Ethereum block 25712463 (2026-08-08T19:53:59Z; hash 0x618ff702108d99dab9aefdef506ad07bb2bf95a86f571ea65db27698420510af), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots; its runtime code remained the verified direct BoldToken deployment. The pinned and verified source exposes ordinary holder transfer and allowance transferFrom behavior, a fixed core-contract recipient guard, and fixed protocol mint/burn routes, but no mutable pause, holder blacklist, seizure, or arbitrary-holder burn. The reviewed project materials and holder terms identify protocol and reserve risks but no separate issuer power to freeze existing USDaf balances. Direct holder freeze is therefore false; reserve-asset controls remain upstream dependencies rather than token access controls.",
+    "evidence": "At Ethereum block 25712463 (2026-08-08T19:53:59Z; hash 0x618ff702108d99dab9aefdef506ad07bb2bf95a86f571ea65db27698420510af), the sole tracked USDaf deployment 0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8 returned owner() = zero and zero EIP-1967 implementation, admin, and beacon slots; its runtime code remained the verified direct BoldToken deployment. The pinned and verified source exposes ordinary holder transfer and allowance transferFrom behavior, a fixed core-contract recipient guard, and fixed protocol mint/burn routes, but no mutable pause, holder blacklist, seizure, or arbitrary-holder burn. The reviewed project materials and holder terms identify protocol and reserve risks but no separate issuer power to freeze existing USDaf balances. Direct holder freeze is therefore false; matched reserve-asset controls remain below the strict >50% upstream threshold.",
     "reviewer": "OpenAI Codex C10 access review; OpenAI Codex unfreezable-cohort audit",
     "reviewedAt": "2026-08-08"
   },

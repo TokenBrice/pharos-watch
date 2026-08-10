@@ -1,9 +1,9 @@
 {
   "id": "msusd-main-street",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
-    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver through parent, reserve, custody, variant, or text-signal exposure; no separate manual override source is attached.",
-    "evidence": "Inferred review retained: MSUSD resolves to Upstream because existing dependency, reserve, custody, variant, or text metadata links exposure to a freezable upstream asset.",
+    "reviewedStatus": false,
+    "sourceFreeRationale": "Resolved from Pharos stablecoin metadata by the blacklistability resolver under the v3.9973 majority-threshold upstream policy; no separate manual override source is attached.",
+    "evidence": "Inferred review updated: MSUSD has no resolved direct holder freeze surface, and the current metadata does not establish >50% reserve exposure to Yes, Upstream, or Possible freeze assets or rails.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
   },

@@ -5,6 +5,10 @@ export const RESERVE_RISK_VALUES = ["very-low", "low", "medium", "high", "very-h
 export type ReserveRisk = (typeof RESERVE_RISK_VALUES)[number];
 export const ReserveRiskSchema = z.enum(RESERVE_RISK_VALUES);
 
+export const RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES = ["yes", "upstream", "possible", "no", "unknown"] as const;
+export type ReserveBlacklistabilityExposure = (typeof RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES)[number];
+export const ReserveBlacklistabilityExposureSchema = z.enum(RESERVE_BLACKLISTABILITY_EXPOSURE_VALUES);
+
 const RESERVE_ASSET_CLASS_VALUES = [
   "cash",
   "bank-deposit",
@@ -53,6 +57,7 @@ export interface ReserveSlice {
   coinId?: string;
   depType?: DependencyType;
   blacklistable?: boolean;
+  blacklistabilityExposure?: ReserveBlacklistabilityExposure;
   assetClass?: ReserveAssetClass;
   issuerOrObligor?: string;
   riskFactors?: ReserveRiskFactor[];
@@ -67,12 +72,24 @@ export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
   coinId: z.string().optional(),
   depType: DependencyTypeSchema.optional(),
   blacklistable: z.boolean().optional(),
+  blacklistabilityExposure: ReserveBlacklistabilityExposureSchema.optional(),
   assetClass: ReserveAssetClassSchema.optional(),
   issuerOrObligor: z.string().min(1).optional(),
   riskFactors: z.array(ReserveRiskFactorSchema).min(1).optional(),
   liquidityHorizon: ReserveLiquidityHorizonSchema.optional(),
   maturityDaysMax: z.number().finite().int().nonnegative().optional(),
-}).strict();
+}).strict().superRefine((slice, ctx) => {
+  if (
+    slice.blacklistable === true &&
+    (slice.blacklistabilityExposure === "no" || slice.blacklistabilityExposure === "unknown")
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "blacklistable reserve slices cannot declare blacklistabilityExposure=no or unknown",
+      path: ["blacklistabilityExposure"],
+    });
+  }
+});
 
 export type ReserveCompositionValidationMode = "full" | "partial-known-exposure";
 

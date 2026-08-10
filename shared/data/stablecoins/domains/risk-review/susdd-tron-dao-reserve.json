@@ -1,7 +1,7 @@
 {
   "id": "susdd-tron-dao-reserve",
   "blacklistabilityReview": {
-    "reviewedStatus": "inherited",
+    "reviewedStatus": false,
     "sources": [
       {
         "label": "Archived USDD sUSDD mechanism",
@@ -40,7 +40,7 @@
         "url": "https://bsc-dataseed.binance.org"
       }
     ],
-    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115 and BNB Chain block 114787010. The official inventory identifies Ethereum 0xc5d6a7b61d18afa11435a889557b068bb9f29930 and BNB Chain 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d as sUSDD; both remained identical-size direct deployments with zero EIP-1967 implementation slots. Their verified SavingsUsdd source exposes ordinary ERC-20 transfers and allowance-gated ERC-4626 withdrawals, with no owner, role administration, pause, blacklist, denylist, seizure, or arbitrary-holder burn. The valid inherited finding is from tracked parent usdd-tron-dao-reserve; PSM, reserve, redemption, and collateral impairment do not create a direct wrapper holder-freeze power.",
+    "evidence": "Re-verified 2026-08-08 at Ethereum block 25712115 and BNB Chain block 114787010. The official inventory identifies Ethereum 0xc5d6a7b61d18afa11435a889557b068bb9f29930 and BNB Chain 0x8ba9da757d1d66c58b1ae7e2ed6c04087348a82d as sUSDD; both remained identical-size direct deployments with zero EIP-1967 implementation slots. Their verified SavingsUsdd source exposes ordinary ERC-20 transfers and allowance-gated ERC-4626 withdrawals, with no owner, role administration, pause, blacklist, denylist, seizure, or arbitrary-holder burn. The parent usdd-tron-dao-reserve now falls below the v3.9973 >50% upstream reserve threshold, so the wrapper no longer inherits an Upstream freeze classification.",
     "reviewer": "OpenAI Codex C02 control review",
     "reviewedAt": "2026-08-08"
   },

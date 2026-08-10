@@ -41,8 +41,10 @@ export function BlacklistTrackerMethodologySection() {
               </p>
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No.
-                Any reserve, custody, backing, parent-asset, or CEX/custody-rail exposure resolves as Upstream; Possible
-                is reserved for curated direct token or vault controls that are not confirmed direct blacklist controls.
+                Upstream applies when a token has no direct Yes or Possible holder-facing freeze control and strictly
+                more than half of its reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
+                Possible is reserved for curated direct token or vault controls that are not confirmed direct blacklist
+                controls.
               </p>
               <MethodologyFacts
                 facts={[

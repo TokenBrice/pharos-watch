@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   getBlacklistStatusLabel,
+  getReserveBlacklistabilityExposurePct,
   isBlacklistable,
   enrichLiveSlicesForBlacklist,
   resolveBlacklistStatuses,
@@ -40,7 +41,7 @@ describe("isBlacklistable", () => {
     expect(isBlacklistable(meta as never, new Set(["usdc-circle"]))).toBe("inherited");
   });
 
-  it("honors curated upstream reviews when direct token freezability is absent", () => {
+  it("requires majority support before a curated upstream review resolves upstream", () => {
     const meta = {
       flags: { governance: "centralized" as const },
       canBeBlacklisted: undefined,
@@ -52,10 +53,10 @@ describe("isBlacklistable", () => {
         reviewedAt: "2026-05-25",
       },
     };
-    expect(isBlacklistable(meta as never)).toBe("inherited");
+    expect(isBlacklistable(meta as never)).toBe(false);
   });
 
-  it("returns inherited for direct reserve exposure below the old inherited threshold", () => {
+  it("does not return inherited for direct reserve exposure below the majority threshold", () => {
     const meta = {
       flags: { governance: "centralized-dependent" as const },
       canBeBlacklisted: undefined,
@@ -64,7 +65,28 @@ describe("isBlacklistable", () => {
         { name: "ETH", pct: 65, risk: "very-low" },
       ],
     };
-    expect(isBlacklistable(meta as never)).toBe("inherited");
+    expect(isBlacklistable(meta as never)).toBe(false);
+  });
+
+  it("requires strictly more than half of reserves to carry upstream exposure", () => {
+    const exactHalf = [
+      { name: "USDC buffer", pct: 50, risk: "low" as const },
+      { name: "ETH", pct: 50, risk: "very-low" as const },
+    ];
+    const majority = [
+      { name: "USDC buffer", pct: 40, risk: "low" as const },
+      { name: "RWA sleeve", pct: 10.1, risk: "medium" as const, blacklistabilityExposure: "upstream" as const },
+      { name: "ETH", pct: 49.9, risk: "very-low" as const },
+    ];
+    const meta = {
+      flags: { governance: "centralized-dependent" as const },
+      canBeBlacklisted: undefined,
+    };
+
+    expect(getReserveBlacklistabilityExposurePct(exactHalf)).toBe(50);
+    expect(isBlacklistable({ ...meta, reserves: exactHalf } as never)).toBe(false);
+    expect(getReserveBlacklistabilityExposurePct(majority)).toBe(50.1);
+    expect(isBlacklistable({ ...meta, reserves: majority } as never)).toBe("inherited");
   });
 
   it("returns inherited for cex-backed reserve rails even without explicit reserve annotations", () => {
@@ -253,7 +275,7 @@ describe("resolveBlacklistStatuses variant inheritance", () => {
 
     const resolved = resolveBlacklistStatuses(metas as never);
     expect(resolved.get("parent")).toBe("possible");
-    expect(resolved.get("child")).toBe("possible");
+    expect(resolved.get("child")).toBe("inherited");
   });
 
   it("uses the parent's live reserves when resolving variant inheritance", () => {

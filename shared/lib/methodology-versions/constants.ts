@@ -4,7 +4,7 @@ function methodologyLabel(version: string): string {
   return `v${version}`;
 }
 
-export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "3.9972";
+export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "3.9973";
 export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = methodologyLabel(BLACKLIST_TRACKER_METHODOLOGY_VERSION);
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = "/methodology/blacklist-tracker-changelog/";
 

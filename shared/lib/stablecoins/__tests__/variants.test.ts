@@ -68,11 +68,10 @@ describe("stablecoin variants", () => {
     }
   });
 
-  it("keeps stkgho's direct pause authority above gho-aave inheritance", () => {
-    // Regression: before the variant-aware inheritance rule, this resolved to
-    // `false` because gho-aave was not in blacklistableIds and
-    // no reserve-text pattern matched "gho".
-    expect(trackedBlacklistStatuses.get("gho-aave")).toBe("inherited");
+  it("keeps stkgho's direct pause authority above gho-aave's direct false status", () => {
+    // GHO has minority upstream reserve exposure under the strict majority
+    // rule, while stkGHO keeps its local pause authority.
+    expect(trackedBlacklistStatuses.get("gho-aave")).toBe(false);
     expect(trackedBlacklistStatuses.get("stkgho-umbrella-aave")).toBe(true);
   });
 

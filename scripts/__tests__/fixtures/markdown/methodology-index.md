@@ -120,7 +120,7 @@ Events are normalized by chain, stablecoin, action type, native amount, USD amou
 
 Frozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.
 
-Blacklist exposure uses the four-status report-card model: Yes, Upstream, Possible, and No. Any reserve, custody, backing, parent-asset, or CEX/custody-rail path resolves as Upstream; Possible is reserved for curated direct token or vault controls.
+Blacklist exposure uses the four-status report-card model: Yes, Upstream, Possible, and No. Upstream applies when a token has no direct Yes/Possible freeze control and strictly more than half of reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
 
 
 ## Chain Health Score

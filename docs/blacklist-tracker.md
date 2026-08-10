@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** `v3.9972`
+- **Current methodology version:** `v3.9973`
 - **Version source:** `shared/lib/methodology-versions/blacklist-tracker.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -24,7 +24,7 @@ Every stablecoin ID in `CONTRACT_CONFIGS` must resolve to direct `Freezable: Yes
 The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and the same resolved four-state model as Report Cards:
 
 - `yes`: direct issuer blacklist, freeze, seizure, or equivalent holder-facing control.
-- `upstream`: a reserve, backing, custody, parent-asset, or custody-rail dependency can block value upstream of the token. Any matched reserve path is sufficient; it need not be a majority position.
+- `upstream`: the token has no direct `yes` or `possible` holder-facing freeze control, but strictly more than 50% of its reserve composition is exposed to assets or rails classified `yes`, `upstream`, or `possible`. Tracked parent/wrapper inheritance and full CEX custody still resolve as upstream exposure.
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
 
@@ -36,7 +36,10 @@ the product exposure tier remains `upstream`.
 ### Upstream Exposure And The Safety Score V9 Access Branch
 
 `upstream` needs no parent asset: `resolveBlacklistStatusWithoutExplicitOverride()` in
-`shared/lib/report-card-blacklist-matchers.ts` resolves it from any positive freezable reserve share.
+`shared/lib/report-card-blacklist-matchers.ts` resolves it when strictly more than 50% of the
+available reserve composition is marked by `coinId`, explicit reserve-slice exposure, or reserve-label
+heuristics as `yes`, `upstream`, or `possible` blacklistability exposure. A direct `Possible` token
+review stays in the `possible` tier even when its reserves also exceed the upstream threshold.
 The Safety Score V9 access branch honours the same edge. `adaptAccessReview()` in
 `worker/src/lib/safety-score-v9-extension.ts` grants `structuralDisposition: "inherited-upstream"` —
 which reclassifies the access gap from `missing-access-review` to the measured
