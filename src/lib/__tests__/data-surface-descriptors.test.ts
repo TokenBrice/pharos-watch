@@ -123,8 +123,8 @@ describe("data surface descriptors", () => {
     }).toEqual({
       path: "/api/dex-liquidity",
       queryKey: ["dex-liquidity"],
-      producerIntervalSec: 1800,
-      endpointMaxAgeSec: 3600,
+      producerIntervalSec: 7200,
+      endpointMaxAgeSec: 14_400,
       availabilityMaxAgeSec: 43_200,
       producerJob: "sync-dex-liquidity",
       cacheKey: "dex-liquidity",
@@ -289,8 +289,8 @@ describe("data surface descriptors", () => {
     expect(CACHE_FRESHNESS_LANES_BY_KEY.dexLiquidity).toMatchObject({
       cacheKey: "dex-liquidity",
       producerJob: "sync-dex-liquidity",
-      producerIntervalSec: 1800,
-      endpointMaxAgeSec: 3600,
+      producerIntervalSec: 7200,
+      endpointMaxAgeSec: 14_400,
       availabilityMaxAgeSec: 43_200,
       freshnessSentinelKey: "freshness:dex-liquidity",
     });
@@ -435,7 +435,7 @@ describe("data surface descriptors", () => {
       reportCards: DATA_HEALTH_PRESETS_BY_KEY.reportCards,
     }).toEqual({
       stablecoins: { label: "Prices", staleTime: 600_000 },
-      dexLiquidity: { label: "Liquidity", staleTime: 3_600_000 },
+      dexLiquidity: { label: "Liquidity", staleTime: 14_400_000 },
       yieldRankings: { label: "Yield Rankings", staleTime: 3_600_000 },
       stressSignals: { label: "DEWS", staleTime: 1_800_000 },
       reportCards: { label: "Report Cards", staleTime: 900_000 },

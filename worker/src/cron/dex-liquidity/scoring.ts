@@ -12,6 +12,7 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { batchExecute, executeAtomicBatch } from "../../lib/db";
 import { toErrorMessage } from "../../lib/error-utils";
+import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import type { DexPriceObs, LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
@@ -30,9 +31,11 @@ import {
 } from "../measured-execution/join";
 import {
   publishDexMeasuredTargetInventory,
+  publishDexShadowMeasuredTargetInventory,
   publishSolanaMeasuredTargetInventory,
   publishTronMeasuredTargetInventory,
 } from "../measured-execution/persistence";
+import { isDexMeasuredExecutionTargetScoreEligible } from "../measured-execution/sync";
 import {
   buildDexMeasuredTargetFingerprintIndex,
   resolveDexMeasuredTargetForRetainedPool,
@@ -469,6 +472,24 @@ interface DexScoringGenerationCoverage {
   public_row_count: number;
 }
 
+export async function loadCurrentDexScoringGenerationId(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  throwIfAborted(signal);
+  const row = await db
+    .prepare(
+      `SELECT generation_id
+       FROM dex_liquidity_publication_generations
+       WHERE state = 'published'
+       ORDER BY published_at DESC, started_at DESC
+       LIMIT 1`,
+    )
+    .first<{ generation_id: string }>();
+  throwIfAborted(signal);
+  return row?.generation_id?.trim() || null;
+}
+
 async function assertCurrentDexScoringGeneration(
   db: D1Database,
   generationId: string,
@@ -634,9 +655,13 @@ interface ScoreDiagnostics {
     solanaJoin: SolanaMeasuredExecutionJoinDiagnostics;
     tronJoin: TronMeasuredExecutionJoinDiagnostics;
     inventoryTargetCount: number;
+    shadowInventoryTargetCount: number;
     solanaInventoryTargetCount: number;
     tronInventoryTargetCount: number;
     targetPublication:
+      | { status: "published"; generationId: string; rowCount: number }
+      | { status: "skipped" | "failed"; reason: string };
+    shadowTargetPublication:
       | { status: "published"; generationId: string; rowCount: number }
       | { status: "skipped" | "failed"; reason: string };
     solanaTargetPublication:
@@ -647,6 +672,8 @@ interface ScoreDiagnostics {
       | { status: "skipped" | "failed"; reason: string };
   };
 }
+
+export type MeasuredTargetPublicationMode = "none" | "active" | "active-and-shadow";
 
 type P4aFullScoreResult = FullScoreResult & {
   exitRouteObservations: ExitRouteObservation[];
@@ -771,6 +798,7 @@ export async function computeStablecoinScores(
   solanaMeasuredTargets: Map<string, SolanaMeasuredExecutionTarget> = new Map(),
   slipstreamMeasuredTargets: Map<string, DexMeasuredExecutionTarget> = new Map(),
   tronMeasuredTargets: Map<string, TronMeasuredExecutionTarget> = new Map(),
+  measuredTargetPublicationMode: MeasuredTargetPublicationMode = "active-and-shadow",
 ): Promise<{
   scores: Map<string, FullScoreResult>;
   globalAgg: GlobalAgg;
@@ -993,17 +1021,24 @@ export async function computeStablecoinScores(
   slipstreamMeasuredTargetsByFingerprint.clear();
   tronMeasuredTargets.clear();
 
-  const inventoryTargetCount = targetInventoryById.size;
+  const activeTargetInventory = [...targetInventoryById.values()].filter(isDexMeasuredExecutionTargetScoreEligible);
+  const shadowTargetInventory = [...targetInventoryById.values()].filter(
+    (target) => !isDexMeasuredExecutionTargetScoreEligible(target),
+  );
+  const inventoryTargetCount = activeTargetInventory.length;
+  const shadowInventoryTargetCount = shadowTargetInventory.length;
   const solanaInventoryTargetCount = solanaTargetInventoryById.size;
   const tronInventoryTargetCount = tronTargetInventoryById.size;
   let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
-  if (inventoryTargetCount === 0) {
-    targetPublication = { status: "skipped", reason: "no-applicable-targets" };
+  if (measuredTargetPublicationMode === "none") {
+    targetPublication = { status: "skipped", reason: "publication-not-due" };
+  } else if (inventoryTargetCount === 0) {
+    targetPublication = { status: "skipped", reason: "no-score-eligible-targets" };
   } else {
     try {
       const publication = await publishDexMeasuredTargetInventory({
         db,
-        targets: [...targetInventoryById.values()],
+        targets: activeTargetInventory,
         capturedAt: routeObservedAt,
         signal,
       });
@@ -1015,8 +1050,30 @@ export async function computeStablecoinScores(
       targetInventoryById.clear();
     }
   }
+  let shadowTargetPublication: ScoreDiagnostics["measuredExecution"]["shadowTargetPublication"];
+  if (measuredTargetPublicationMode !== "active-and-shadow") {
+    shadowTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
+  } else if (shadowInventoryTargetCount === 0) {
+    shadowTargetPublication = { status: "skipped", reason: "no-shadow-targets" };
+  } else {
+    try {
+      const publication = await publishDexShadowMeasuredTargetInventory({
+        db,
+        targets: shadowTargetInventory,
+        capturedAt: routeObservedAt,
+        signal,
+      });
+      shadowTargetPublication = { status: "published", ...publication };
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      shadowTargetPublication = { status: "failed", reason: String(error).slice(0, 500) };
+    }
+  }
+  targetInventoryById.clear();
   let solanaTargetPublication: ScoreDiagnostics["measuredExecution"]["solanaTargetPublication"];
-  if (solanaInventoryTargetCount === 0) {
+  if (measuredTargetPublicationMode !== "active-and-shadow") {
+    solanaTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
+  } else if (solanaInventoryTargetCount === 0) {
     solanaTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
   } else {
     try {
@@ -1035,7 +1092,9 @@ export async function computeStablecoinScores(
     }
   }
   let tronTargetPublication: ScoreDiagnostics["measuredExecution"]["tronTargetPublication"];
-  if (tronInventoryTargetCount === 0) {
+  if (measuredTargetPublicationMode !== "active-and-shadow") {
+    tronTargetPublication = { status: "skipped", reason: "daily-shadow-publication-not-due" };
+  } else if (tronInventoryTargetCount === 0) {
     tronTargetPublication = { status: "skipped", reason: "no-applicable-targets" };
   } else {
     try {
@@ -1240,9 +1299,11 @@ export async function computeStablecoinScores(
         solanaJoin: solanaMeasuredExecutionJoin,
         tronJoin: tronMeasuredExecutionJoin,
         inventoryTargetCount,
+        shadowInventoryTargetCount,
         solanaInventoryTargetCount,
         tronInventoryTargetCount,
         targetPublication,
+        shadowTargetPublication,
         solanaTargetPublication,
         tronTargetPublication,
       },
@@ -1664,6 +1725,9 @@ export async function computeDexPrices(
         ` staged=${published?.staged_row_count ?? 0}/${observedIds.size})`,
     );
   }
+  // The sentinel tracks the live DEX publication pipeline (prices hourly), while
+  // endpoint freshness is derived from the score rows' own two-hour timestamp.
+  await writeFreshnessSentinel(db, "dex-liquidity", nowSec, signal);
 
   try {
     const cleanup = await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();

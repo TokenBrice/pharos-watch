@@ -117,7 +117,7 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
     ],
   },
   daily0810Utc: {
-    jobChains: [["weekly-recap"]],
+    jobChains: [["weekly-recap"], ["sync-cl-exit-depth"]],
   },
   monthlyYieldAudit: {
     jobChains: [["yield-coverage-audit"]],
@@ -159,6 +159,7 @@ export const SCHEDULED_SLOT_PLANS_BY_SCHEDULE: Readonly<Record<string, Scheduled
 export const SHARED_SCHEDULED_JOB_IDENTITIES = {
   "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
   "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+  "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"],
 } as const satisfies Record<string, readonly CronScheduleKey[]>;
 
 export type ScheduledProducerKind = "scheduled-job" | "budget-only";

@@ -4,7 +4,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.1`
+- **Current methodology version:** `v6.2`
 - **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -30,7 +30,7 @@ Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), 
 | `DEPEG_RECOVERY_THRESHOLD_RATIO` | 0.5 | Recovery must reach half the trigger threshold before its confirmation window starts |
 | `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` | 1800 (30 min) | Primary prices older than this are marked `confirm_required` |
 | `DEPEG_EXTREME_MOVE_BPS` | 5000 (50%) | Adds the severe/extreme pending reason and extended expiry policy |
-| `DEX_FRESHNESS_SEC` | 2100 (35 min) | DEX prices older than this are ignored |
+| `DEX_FRESHNESS_SEC` | 4500 (75 min) | Hourly DEX prices older than this are ignored |
 | `DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD` | 1,000,000 | Minimum aggregate DEX source TVL required before depeg logic trusts a DEX row |
 | `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` | 2 protocol groups | Minimum protocol-level DEX corroborations required before aggregate DEX rows can directly suppress or resolve live depeg state |
 | `POOL_CHALLENGE_CONFIRM_MIN` | 2 protocol/source-family groups | Number of independent pool challenger groups that can veto a primary recovery or confirm a pending depeg |
@@ -146,7 +146,7 @@ The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts
 3. Load DEX prices from `dex_prices` table (silently skip if table missing)
 4. Merge duplicate open events: same-direction duplicates keep the earliest row and absorb only same-direction peaks; if opposite directions are open, the newest direction remains live and older direction rows close with `close_reason = 'superseded-direction'` and `recovery_price = NULL`
 
-`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 35 min`) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
+`dex_prices` rows are only trusted for depeg logic when they are both fresh (`updated_at < 75 min`, covering the hourly producer plus one bounded delay) and deep enough (`source_total_tvl >= $1M`). Thin DEX rows remain visible in storage for analytics, but they do not suppress or confirm events.
 
 The stablecoin detail page can still show the live price deviation for a tracked coin below the live depeg-event floor, but that state is explicitly labelled as coverage-limited. Low-cap tracked coins can therefore look off-peg in the detail UI without opening a new `depeg_events` row. If the coin already had an open live row from a period above the floor, the row closes as coverage-lost with `close_reason = 'coverage-lost-supply'` and `recovery_price = NULL` instead of remaining live indefinitely.
 
@@ -260,7 +260,7 @@ Age checks:
 **DEX check:**
 
 - Read from `dex_prices` table (same data as Stage 1)
-- Must be within 35-minute freshness window and have aggregate source TVL >= $1M
+- Must be within the 75-minute hourly-producer freshness window and have aggregate source TVL >= $1M
 - Aggregate DEX confirmation now also requires at least `DEPEG_DEX_PROTOCOL_CORROBORATION_MIN` independent protocol groups from fresh per-source `price_sources_json`; one protocol cannot promote, recover, or decisively contradict a pending row by itself
 - Counts as confirmation only when deviation reaches the full trigger threshold and points in the same direction as the pending incident
 - Persisted confirmation keys use `dex:<protocol>`.
@@ -531,6 +531,6 @@ Returns `null` if < 7 days tracking. Scores based on 7–30 days are flagged as 
 | Supply < $1M | Skipped for live event recording (prevents micro-cap noise); detail UI may still show current price deviation with an explicit coverage-limited note; existing rows close with `close_reason = 'coverage-lost-supply'` |
 | Missing/invalid prices | Multiple null/NaN/<= 0 checks |
 | Peg reference validation | Must be finite and > 0 |
-| DEX freshness | Prices > 35 min old ignored |
+| DEX freshness | Prices > 75 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |

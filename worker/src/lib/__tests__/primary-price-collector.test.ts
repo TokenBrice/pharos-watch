@@ -500,7 +500,7 @@ describe("buildPrimarySourceCandidates", () => {
           protocol: "balancer",
           price: 1.0,
           tvl: 500_000,
-          updatedAt: 1_699_997_800,
+          updatedAt: 1_699_995_400,
           chain: "ethereum",
         },
       ],

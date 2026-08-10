@@ -153,7 +153,7 @@ describe("DEX trust policy", () => {
       minTvlUsd: 250_000,
     });
     expect(getDexTrustPolicy("depeg")).toEqual({
-      maxAgeSec: 2100,
+      maxAgeSec: 4500,
       minTvlUsd: 1_000_000,
     });
   });

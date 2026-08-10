@@ -11,13 +11,13 @@ describe("status cron config", () => {
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-dex-liquidity-stage")).toEqual({
-      group: "half-hourly",
+      group: "hourly",
       label: "DEX liquidity source stage",
       schedule: "10,40 * * * *",
       triggerMode: "isolated",
     });
     expect(getStatusCronDisplay("sync-dex-liquidity")).toEqual({
-      group: "half-hourly",
+      group: "multi-hourly",
       label: "DEX liquidity scoring",
       schedule: "16,46 * * * *",
       triggerMode: "shared",
@@ -109,6 +109,9 @@ describe("status cron config", () => {
     const intervals = Object.fromEntries(CRON_JOB_DEFINITIONS.map((cron) => [cron.job, cron.intervalSec]));
     expect(intervals["sync-blacklist"]).toBe(6 * 3600);
     expect(intervals["sync-dex-discovery"]).toBe(2 * 3600);
+    expect(intervals["sync-dex-liquidity-stage"]).toBe(3600);
+    expect(intervals["sync-dex-liquidity"]).toBe(2 * 3600);
+    expect(intervals["sync-cl-exit-depth"]).toBe(1800);
     expect(intervals["sync-live-reserves"]).toBe(4 * 3600);
     expect(intervals["sync-redemption-backstops"]).toBe(4 * 3600);
     expect(intervals["sync-kinesis-supply"]).toBe(4 * 3600);

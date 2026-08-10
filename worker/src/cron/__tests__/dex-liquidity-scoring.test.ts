@@ -41,6 +41,7 @@ vi.mock("../../lib/db", () => ({
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
+  writeFreshnessSentinel: vi.fn(async () => undefined),
 }));
 
 import { batchExecute, executeAtomicBatch } from "../../lib/db";

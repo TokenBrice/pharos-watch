@@ -202,7 +202,7 @@ describe("pricing source registry", () => {
       key: "uniswap-v3-dex",
       trustTier: "soft_dex",
       depegSourceFamily: "dex:uniswap-v3",
-      maxTrustedAgeSec: 35 * 60,
+      maxTrustedAgeSec: 75 * 60,
       defaultWeight: 2,
       requiresObservedAt: true,
     });
@@ -231,7 +231,7 @@ describe("pricing source registry", () => {
       key: "uniswap-v4-dex",
       trustTier: "soft_dex",
       depegSourceFamily: "dex:uniswap-v4",
-      maxTrustedAgeSec: 35 * 60,
+      maxTrustedAgeSec: 75 * 60,
       defaultWeight: 2,
       requiresObservedAt: true,
     });

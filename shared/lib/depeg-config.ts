@@ -12,7 +12,7 @@ export const DEPEG_THRESHOLD_BPS_NON_USD = 150;
 // threshold. This deadband prevents boundary noise from splitting one incident.
 export const DEPEG_RECOVERY_THRESHOLD_RATIO = 0.5;
 
-export const DEX_FRESHNESS_SEC = 2100;
+export const DEX_FRESHNESS_SEC = 75 * 60;
 export const DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD = 1_000_000;
 export const DEPEG_EVENT_MIN_SUPPLY_USD = 1_000_000;
 export const DEPEG_DEX_PROTOCOL_CORROBORATION_MIN = 2;

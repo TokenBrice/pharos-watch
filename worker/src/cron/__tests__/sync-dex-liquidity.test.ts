@@ -67,6 +67,7 @@ vi.mock("../dex-liquidity/staging-merge", () => ({
 }));
 
 vi.mock("../dex-liquidity/scoring", () => ({
+  loadCurrentDexScoringGenerationId: vi.fn(async () => null),
   computeStablecoinScores: vi.fn(async () => ({
     scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
     globalAgg: { totalTvl: 0 },
@@ -212,7 +213,11 @@ vi.mock("../../lib/cex-orderbooks", () => ({
   })),
 }));
 
-import { consumeDexLiquidityScoringStage, stageDexLiquidityScoring } from "../dex-liquidity/orchestrator";
+import {
+  consumeDexLiquidityScoringStage,
+  reuseCurrentDexLiquidityScoringGeneration,
+  stageDexLiquidityScoring,
+} from "../dex-liquidity/orchestrator";
 import { UNIV3_SUBGRAPHS } from "../dex-liquidity/constants";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { convertToGtNewPools, extractPriceObservations } from "../../lib/dex-api-common";
@@ -225,7 +230,12 @@ import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchMeteoraPools } from "../dex-liquidity/fetch-meteora";
 import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
-import { computeDepthStability, computeDexPrices, computeStablecoinScores } from "../dex-liquidity/scoring";
+import {
+  computeDepthStability,
+  computeDexPrices,
+  computeStablecoinScores,
+  loadCurrentDexScoringGenerationId,
+} from "../dex-liquidity/scoring";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import { filterPrimaryPoolsPreferDirectApi } from "../dex-liquidity/orchestrator";
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
@@ -257,9 +267,10 @@ async function runDexLiquidityScoringCycle(
   coingeckoApiKey?: string | null,
   chainRpcs?: Map<string, ChainRpcConfig>,
   reportProgress?: CronProgressReporter,
+  options?: { publishLiquidity?: boolean; publishShadowTargets?: boolean },
 ): Promise<CronResult> {
   await stageDexLiquidityScoring(database, graphApiKey, signal, coingeckoApiKey, chainRpcs, reportProgress);
-  return await consumeDexLiquidityScoringStage(database, signal, reportProgress);
+  return await consumeDexLiquidityScoringStage(database, signal, reportProgress, undefined, options);
 }
 
 function makeTrackedStablecoin(id: string, symbol: string, price: number): StablecoinData {
@@ -310,6 +321,7 @@ describe("dex liquidity scoring stage cycle", () => {
     });
     vi.mocked(convertToGtNewPools).mockReturnValue(new Map());
     vi.mocked(extractPriceObservations).mockReturnValue(new Map());
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValue(null);
   });
 
   it("throws on catastrophic source failure instead of silently returning", async () => {
@@ -483,6 +495,97 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
     expect(metadata.sourceCoverage?.coinsWithoutMeasuredBalances).toBe(0);
     expect(metadata.sourceCoverage?.protocolCapReductions?.reducedTvlUsd).toBe(0);
+  });
+
+  it("reuses the current generation for hourly prices without liquidity writes", async () => {
+    vi.mocked(loadCurrentDexScoringGenerationId).mockResolvedValueOnce("dex-liquidity-current");
+
+    const result = await runDexLiquidityScoringCycle(
+      db,
+      "graph-key",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { publishLiquidity: false, publishShadowTargets: false },
+    );
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      rowsWritten?: number;
+      persistence?: { generationId?: string; skippedReason?: string | null };
+    };
+    expect(result.status).toBe("ok");
+    expect(metadata.rowsWritten).toBe(0);
+    expect(metadata.persistence).toMatchObject({
+      generationId: "dex-liquidity-current",
+      skippedReason: "liquidity-cadence-reuse",
+    });
+    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
+    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("none");
+    expect(persistScores).not.toHaveBeenCalled();
+    expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
+    expect(computeDepthStability).not.toHaveBeenCalled();
+    expect(computeDexPrices).toHaveBeenCalledOnce();
+  });
+
+  it("bootstraps full liquidity publication when the current generation is missing", async () => {
+    const result = await runDexLiquidityScoringCycle(
+      db,
+      "graph-key",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { publishLiquidity: false, publishShadowTargets: false },
+    );
+
+    expect(result.status).toBe("ok");
+    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
+    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("active");
+    expect(persistScores).toHaveBeenCalledOnce();
+    expect(writeHistoricalSnapshots).toHaveBeenCalledOnce();
+    expect(computeDepthStability).toHaveBeenCalledOnce();
+  });
+
+  it("publishes active and shadow measured targets during the daily inventory cycle", async () => {
+    await runDexLiquidityScoringCycle(
+      db,
+      "graph-key",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { publishLiquidity: true, publishShadowTargets: true },
+    );
+
+    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
+    expect(scoreCalls[scoreCalls.length - 1]?.[11]).toBe("active-and-shadow");
+  });
+
+  it("returns explicit neutral and degraded results when reusing a scoring generation", async () => {
+    vi.mocked(loadCurrentDexScoringGenerationId)
+      .mockResolvedValueOnce("dex-liquidity-current")
+      .mockResolvedValueOnce(null);
+
+    const reused = await reuseCurrentDexLiquidityScoringGeneration(db);
+    const missing = await reuseCurrentDexLiquidityScoringGeneration(db);
+
+    expect(reused).toMatchObject({
+      status: "skipped_neutral",
+      productivity: { productive: false, reason: "liquidity-cadence-reuse" },
+    });
+    expect(JSON.parse(reused.metadata ?? "{}")).toMatchObject({
+      cadenceReuse: true,
+      persistence: { generationId: "dex-liquidity-current", skipped: false },
+    });
+    expect(missing).toMatchObject({
+      status: "degraded",
+      productivity: { productive: false, reason: "current-dex-liquidity-generation-missing" },
+    });
+    expect(JSON.parse(missing.metadata ?? "{}")).toMatchObject({
+      reason: "current-dex-liquidity-generation-missing",
+      persistence: { generationId: null, skipped: true, skippedReason: "hourly-price-not-due" },
+    });
   });
 
   it("fetches bounded market telemetry before pool graphs accumulate", async () => {

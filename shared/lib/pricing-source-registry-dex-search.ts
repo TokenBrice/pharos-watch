@@ -7,7 +7,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "DEX prices",
     shortLabel: "DEX",
     depegSourceFamily: "dex:aggregate",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 1,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -15,7 +15,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Fluid",
     shortLabel: "Fluid",
     depegSourceFamily: "dex:fluid",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -23,7 +23,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Balancer",
     shortLabel: "Balancer",
     depegSourceFamily: "dex:balancer",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -31,7 +31,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Curve",
     shortLabel: "Curve",
     depegSourceFamily: "dex:curve",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 3,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -51,7 +51,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Uniswap V3",
     shortLabel: "Uniswap V3",
     depegSourceFamily: "dex:uniswap-v3",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -71,7 +71,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Uniswap V4",
     shortLabel: "Uniswap V4",
     depegSourceFamily: "dex:uniswap-v4",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -79,7 +79,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Raydium",
     shortLabel: "Raydium",
     depegSourceFamily: "dex:raydium",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -87,7 +87,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Orca",
     shortLabel: "Orca",
     depegSourceFamily: "dex:orca",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -95,7 +95,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Meteora",
     shortLabel: "Meteora",
     depegSourceFamily: "dex:meteora",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -103,7 +103,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "PancakeSwap",
     shortLabel: "PancakeSwap",
     depegSourceFamily: "dex:pancakeswap",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -111,7 +111,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Aerodrome Slipstream",
     shortLabel: "Aerodrome",
     depegSourceFamily: "dex:aerodrome-slipstream",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.softDex, {
@@ -119,7 +119,7 @@ export const PRICING_SOURCE_REGISTRY_DEX_SEARCH = [
     label: "Velodrome Slipstream",
     shortLabel: "Velodrome",
     depegSourceFamily: "dex:velodrome-slipstream",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 2,
   }),
   definePricingSource(PRICING_SOURCE_PRESETS.fallbackSearch, {

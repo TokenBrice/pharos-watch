@@ -1023,7 +1023,7 @@ describe("resolveDdrIncidents", () => {
             concentration_hhi: 0.9,
             total_tvl_usd: 10,
             total_volume_24h_usd: 5,
-            updated_at: NOW_SEC - 3 * 3600,
+            updated_at: NOW_SEC - 5 * 3600,
           },
         ],
       ]),

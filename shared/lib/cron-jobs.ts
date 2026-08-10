@@ -419,12 +419,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyMeasuredExecution",
     triggerMode: "isolated",
-    maxConnections: 5, // Three EVM chain lanes plus serialized Solana and Tron quote streams.
+    maxConnections: 3, // Three EVM lanes; daily shadow EVM/Solana/Tron streams execute serially at the same peak.
   },
   {
     job: "sync-dex-liquidity-stage",
     label: "DEX liquidity source stage",
-    group: "half-hourly",
+    group: "hourly",
+    intervalSec: 3600,
     scheduleKey: "halfHourlyOffset",
     triggerMode: "isolated",
     maxConnections: 5, // Nested direct-API peak; below the platform header-wait ceiling and repo budget.
@@ -432,7 +433,8 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
   {
     job: "sync-dex-liquidity",
     label: "DEX liquidity scoring",
-    group: "half-hourly",
+    group: "multi-hourly",
+    intervalSec: 2 * 3600,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
     maxConnections: 0, // D1-only consumer of the complete source-stage generation.
