@@ -388,8 +388,8 @@ describe("handleDexLiquidity", () => {
     expect(res.headers.get("Warning") ?? "").toContain("nearValueGuard");
   });
 
-  it("normalizes legacy topPools source values and uses latest successful cron timestamp for freshness", async () => {
-    const legacySourceRow = {
+  it("omits retired topPools source values and uses latest successful cron timestamp for freshness", async () => {
+    const retiredSourceRow = {
       ...makeDexLiquidityRow({
         updated_at: 1_700_000_000,
         top_pools_json: JSON.stringify([
@@ -428,14 +428,14 @@ describe("handleDexLiquidity", () => {
         rows: [],
         first: { status: "ok", metadata: null },
       },
-      { match: "dex_liquidity", rows: [legacySourceRow] },
+      { match: "dex_liquidity", rows: [retiredSourceRow] },
     ]);
 
     const before = Math.floor(Date.now() / 1000);
     const res = await handleDexLiquidity(db);
     const after = Math.floor(Date.now() / 1000);
     const body = (await res.json()) as Record<string, { topPools: Array<{ source?: string }> }>;
-    expect(body["usdt-tether"]?.topPools.map((pool) => pool.source)).toEqual(["cg_onchain", "gecko_terminal"]);
+    expect(body["usdt-tether"]?.topPools.map((pool) => pool.source)).toEqual([undefined, undefined]);
 
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeGreaterThanOrEqual(before - latestCronStartedAt);

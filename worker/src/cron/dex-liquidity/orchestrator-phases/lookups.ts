@@ -19,7 +19,7 @@ export async function loadTrackedStablecoinMaps(
 ): Promise<TrackedStablecoinMaps> {
   const stablecoinPriceById = new Map<string, number>();
   const stablecoinMcapById = new Map<string, number>();
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (hasUsableStablecoinsPayload(stablecoinsCache)) {
     let skippedWeakTrackedPrices = 0;
     for (const asset of stablecoinsCache.payload.peggedAssets) {

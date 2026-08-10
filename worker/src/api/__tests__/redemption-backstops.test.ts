@@ -52,8 +52,6 @@ function makeRedemptionRow(overrides: Record<string, unknown> = {}) {
 
 const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
-const CURRENT_ROWS_BY_RUN_ID_SQL =
-  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop WHERE snapshot_run_id = ?";
 const RUN_ROWS_BY_RUN_ID_SQL =
   "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
@@ -159,7 +157,7 @@ describe("handleRedemptionBackstops", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("reports snapshotSource legacy-current when run rows are empty for the completed run", async () => {
+  it("returns 503 when a completed run has no immutable rows", async () => {
     const updatedAt = 1_700_000_000;
     const db = mockD1Strict([
       {
@@ -182,21 +180,13 @@ describe("handleRedemptionBackstops", () => {
         matchBinds: ["run-mirror"],
         rows: [],
       },
-      {
-        match: CURRENT_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-mirror"],
-        rows: [makeRedemptionRow({ snapshot_run_id: "run-mirror", updated_at: updatedAt })],
-      },
     ]);
 
     const response = await handleRedemptionBackstops(db);
-    expect(response.status).toBe(200);
-
-    const rawBody = await response.json();
-    const parsed = RedemptionBackstopsResponseSchema.safeParse(rawBody);
-    expect(parsed.success).toBe(true);
-    expect(parsed.success ? parsed.data.snapshotSource : null).toBe("legacy-current");
-    expect(parsed.success ? parsed.data.coins["cusd-cap"]?.updatedAt : null).toBe(updatedAt);
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      error: "Redemption backstop snapshot unavailable",
+    });
     assertAllD1MatchesUsed(db);
   });
 

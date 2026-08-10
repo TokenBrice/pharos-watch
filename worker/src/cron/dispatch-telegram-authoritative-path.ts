@@ -118,7 +118,7 @@ export async function executeAuthoritativeFanoutPath(
   const sourceResolutionStartedAtMs = Date.now();
   const sourceResolution = await resolveTelegramAlertSourcePresetPages(db, sourceEvent, nowSec, {
     getStablecoinsCacheResult: () => {
-      cacheResult ??= loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+      cacheResult ??= loadStablecoinsCache(db, { mode: "strict" });
       return cacheResult;
     },
     includeSubscriberMaps: false,

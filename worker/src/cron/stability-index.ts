@@ -19,7 +19,7 @@ const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
 const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     return {
       status: "degraded",

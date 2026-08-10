@@ -263,7 +263,7 @@ export async function snapshotPublicDataset(
   }
 
   // --- 1. Stablecoins (canonical market cache; required) ---
-  let stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  let stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
     console.warn(`[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
@@ -286,7 +286,7 @@ export async function snapshotPublicDataset(
   ) {
     stablecoinsCacheRetryAttempts += 1;
     await sleepWithSignal(stablecoinsCacheRetryDelayMs, signal);
-    stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+    stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
     throwIfAborted(signal);
     if (stablecoinsCache.kind !== "ok") {
       return {

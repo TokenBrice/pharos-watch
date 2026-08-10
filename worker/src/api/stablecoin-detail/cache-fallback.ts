@@ -33,7 +33,6 @@ export async function handleCacheBackedDetail(
 
   const stablecoinsCache = await loadStablecoinsCache(config.db, {
     mode: "strict",
-    allowLegacyArray: false,
   });
   if (stablecoinsCache.kind !== "ok") {
     return detail.staleCacheOrError(503, "Cached stablecoins data is unavailable");

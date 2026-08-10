@@ -22,7 +22,7 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
 
 ## Algorithm
 
-1. Fetch, parse, and validate the cached "stablecoins" payload via `loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false })`
+1. Fetch, parse, and validate the object-shaped cached "stablecoins" payload via `loadStablecoinsCache(db, { mode: "strict" })`
 2. For the 08:00 UTC safety-net fallback, require the `stablecoins` cache row to have `updated_at >= slotStartedAt`; if it still reflects the previous 07:45 quarter-hourly run, return `status: "degraded"` with `reason: "stablecoins_cache_before_slot"` and do not consume the daily write marker
 3. Verify cache freshness:
    - Cache age > 1200 seconds (20 min): skip snapshot and return cron `status: "degraded"` with `reason: "cache_stale"`

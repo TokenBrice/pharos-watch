@@ -45,7 +45,7 @@ export async function snapshotChainSupply(
 ): Promise<CronResult> {
   if (signal?.aborted) return abortedCronResult();
 
-  const cache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const cache = await loadStablecoinsCache(db, { mode: "strict" });
   if (cache.kind !== "ok") {
     console.error("[snapshot-chain-supply] No stablecoins cache found");
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: cache.reason }) };

@@ -1,7 +1,5 @@
 export type RuntimeFallbackFamily =
-  | "stablecoins-cache-legacy-array"
   | "dex-challenger-legacy"
-  | "redemption-backstop-legacy-current"
   | "blacklist-current-balance-legacy-identity";
 
 export function recordRuntimeFallbackUsage(

@@ -8,7 +8,6 @@ import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
-  loadLegacyRedemptionBackstopCurrentMap,
   loadRedemptionBackstopLiveSignalRows,
   loadRedemptionBackstopSnapshot,
   normalizeRedemptionBackstopRunMetadata,
@@ -145,9 +144,6 @@ const LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW = {
 
 const COMPLETED_RUNS_SQL =
   "SELECT run_id, completed_at, expected_count, written_count, min_updated_at, max_updated_at, methodology_version, status, metadata_json FROM redemption_backstop_runs WHERE status = 'completed' ORDER BY completed_at DESC LIMIT ?";
-const CURRENT_ROWS_SQL =
-  "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop";
-const CURRENT_ROWS_BY_RUN_ID_SQL = `${CURRENT_ROWS_SQL} WHERE snapshot_run_id = ?`;
 const RUN_ROWS_BY_RUN_ID_SQL =
   "SELECT stablecoin_id, score, dex_liquidity_score, access_score, settlement_score, execution_certainty_score, capacity_score, output_asset_quality_score, cost_score, route_family, access_model, settlement_model, execution_model, output_asset_type, provider, source_mode, immediate_capacity_usd, immediate_capacity_ratio, fee_bps, queue_enabled, updated_at, methodology_version, details_json, snapshot_run_id FROM redemption_backstop_run_rows WHERE snapshot_run_id = ?";
 
@@ -189,190 +185,7 @@ function makeWriteRecord(overrides: Partial<RedemptionBackstopEntry> = {}): Rede
   };
 }
 
-describe("loadLegacyRedemptionBackstopCurrentMap", () => {
-  it("keeps the row and drops malformed details JSON", async () => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [
-          makeRealisticRow({
-            stablecoin_id: "usdc-circle",
-            score: 65,
-            source_mode: "dynamic",
-            fee_bps: 10,
-            details_json: "{bad json",
-          }),
-        ],
-      },
-    ]);
-
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
-
-    expect(result["usdc-circle"]).toMatchObject({
-      stablecoinId: "usdc-circle",
-      score: 65,
-      routeFamily: "offchain-issuer",
-    });
-    expect(result["usdc-circle"]?.docs).toBeUndefined();
-    expect(result["usdc-circle"]?.notes).toBeUndefined();
-    expect(result["usdc-circle"]?.capsApplied).toBeUndefined();
-    expect(result["usdc-circle"]?.feeDescription).toBeUndefined();
-    // Inferred from row columns when details_json is malformed
-    expect(result["usdc-circle"]?.resolutionState).toBe("resolved");
-    expect(result["usdc-circle"]?.capacityConfidence).toBe("heuristic");
-    expect(result["usdc-circle"]?.capacitySemantics).toBe("eventual-only");
-    expect(result["usdc-circle"]?.feeConfidence).toBe("fixed");
-    expect(result["usdc-circle"]?.feeModelKind).toBe("fixed-bps");
-    expect(result["usdc-circle"]?.modelConfidence).toBe("low");
-    expect(result["usdc-circle"]?.routeStatus).toBe("unknown");
-    expect(result["usdc-circle"]?.routeStatusSource).toBe("static-config");
-    expect(result["usdc-circle"]?.holderEligibility).toBe("unknown");
-  });
-
-  it("throws a typed error when the current map query fails", async () => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [],
-        throwError: new Error("d1 unavailable"),
-      },
-    ]);
-
-    await expect(loadLegacyRedemptionBackstopCurrentMap(db)).rejects.toBeInstanceOf(
-      RedemptionBackstopSnapshotUnavailableError,
-    );
-  });
-
-  it("round-trips details JSON fields through serialize → deserialize", async () => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [makeRealisticRow()],
-      },
-    ]);
-
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
-    const entry = result["eurc-circle"];
-
-    expect(entry).toBeDefined();
-    expect(entry!.resolutionState).toBe("resolved");
-    expect(entry!.capacityConfidence).toBe("heuristic");
-    expect(entry!.capacitySemantics).toBe("eventual-only");
-    expect(entry!.feeConfidence).toBe("undisclosed-reviewed");
-    expect(entry!.feeModelKind).toBe("undisclosed-reviewed");
-    expect(entry!.modelConfidence).toBe("low");
-    expect(entry!.routeStatus).toBe("open");
-    expect(entry!.routeStatusSource).toBe("static-config");
-    expect(entry!.holderEligibility).toBe("verified-customer");
-    expect(entry!.capacityProfile).toMatchObject({
-      immediateUsd: 10_000_000,
-      scoringHorizon: "daily",
-      capacityProfileConfidence: "heuristic",
-    });
-    expect(entry!.capacityKind).toBe("live-proxy-validated");
-    expect(entry!.freshnessKind).toBe("verified-source-timestamp");
-    expect(entry!.sourceTimestamp).toBe(1_699_999_900);
-    expect(entry!.sourceUrls).toEqual(["https://example.com/redemption.json"]);
-    expect(entry!.settlementDelaySec).toBe(3600);
-    expect(entry!.queueDepthUsd).toBe(12_000_000);
-    expect(entry!.dailyLimitUsd).toBe(5_000_000);
-    expect(entry!.minRedeemUsd).toBe(100_000);
-    expect(entry!.liveHolderEligibility).toBe("whitelisted-primary");
-    expect(entry!.eventualRedeemabilityScore).toBe(72);
-    expect(entry!.confidenceDetails?.reasons).toEqual(["heuristic capacity"]);
-    expect(entry!.costScenarioScores).toEqual({ retail: 30, activeUser: 40, institutional: null });
-    expect(entry!.routeExitCorrelation).toBe("independent-issuer-rail");
-    expect(entry!.capsApplied).toEqual(["offchain-route-cap"]);
-    expect(entry!.feeDescription).toBe("EEA burn fee is 0 bps; other Circle redemption fees may vary");
-    expect(entry!.docs).toEqual({
-      label: "Reserve feed",
-      url: "https://example.com/reserves",
-      provenance: "proof-of-reserves",
-    });
-    expect(entry!.notes).toEqual(["Some note"]);
-  });
-
-  it("infers confidence from row columns when details_json omits them", async () => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [
-          makeRealisticRow({
-            stablecoin_id: "dai-makerdao",
-            score: 85,
-            source_mode: "estimated",
-            provider: "supply-ratio-model",
-            fee_bps: 0,
-            details_json: JSON.stringify({
-              resolutionState: "resolved",
-              // No capacityConfidence, feeConfidence, or modelConfidence
-              capsApplied: [],
-            }),
-          }),
-        ],
-      },
-    ]);
-
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
-    const entry = result["dai-makerdao"];
-
-    expect(entry).toBeDefined();
-    expect(entry!.capacityConfidence).toBe("heuristic");
-    expect(entry!.capacitySemantics).toBe("immediate-bounded");
-    expect(entry!.feeConfidence).toBe("fixed");
-    expect(entry!.feeModelKind).toBe("fixed-bps");
-    expect(entry!.modelConfidence).toBe("low");
-    expect(entry!.routeStatus).toBe("unknown");
-    expect(entry!.routeStatusSource).toBe("static-config");
-    expect(entry!.holderEligibility).toBe("unknown");
-  });
-
-  it("infers missing-capacity resolution when score is null and details omit resolutionState", async () => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [
-          makeRealisticRow({
-            stablecoin_id: "missing-coin",
-            score: null,
-            capacity_score: null,
-            source_mode: "static",
-            details_json: JSON.stringify({}),
-          }),
-        ],
-      },
-    ]);
-
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
-    const entry = result["missing-coin"];
-
-    expect(entry).toBeDefined();
-    expect(entry!.resolutionState).toBe("missing-capacity");
-    expect(entry!.score).toBeNull();
-  });
-
-  it.each<[string, Record<string, unknown>]>([
-    ["negative score", { score: -1 }],
-    ["score above 100", { score: 101 }],
-    ["negative immediate capacity", { immediate_capacity_usd: -1 }],
-    ["immediate capacity ratio above 1", { immediate_capacity_ratio: 1.01 }],
-    ["negative fee bps", { fee_bps: -1 }],
-    ["negative updated timestamp", { updated_at: -1 }],
-  ])("skips malformed numeric row values rather than aborting the decode (%s)", async (_label, overrides) => {
-    const db = mockD1([
-      {
-        match: "FROM redemption_backstop",
-        rows: [makeRealisticRow(overrides)],
-      },
-    ]);
-
-    // A schema-invalid row is logged and skipped so a single bad row cannot
-    // take down the whole snapshot decode; it is simply absent from the map.
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
-    expect(result["eurc-circle"]).toBeUndefined();
-    expect(Object.keys(result)).toEqual([]);
-  });
-
+describe("loadRedemptionBackstopSnapshot", () => {
   it("prefers the latest completed run when loading a snapshot", async () => {
     const db = mockD1Strict([
       {
@@ -453,7 +266,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
     assertAllD1MatchesUsed(db);
   });
 
-  it("serves legacy current rows scoped to the completed run when immutable run rows are empty", async () => {
+  it("rejects a completed manifest when its immutable run rows are missing", async () => {
     const db = mockD1Strict([
       {
         match: COMPLETED_RUNS_SQL,
@@ -475,18 +288,11 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
         matchBinds: ["run-mirror"],
         rows: [],
       },
-      {
-        match: CURRENT_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-mirror"],
-        rows: [makeRealisticRow({ snapshot_run_id: "run-mirror" })],
-      },
     ]);
 
-    const result = await loadRedemptionBackstopSnapshot(db);
-
-    expect(result.runId).toBe("run-mirror");
-    expect(result.snapshotSource).toBe("legacy-current");
-    expect(Object.keys(result.map)).toEqual(["eurc-circle"]);
+    await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
+      "No valid completed redemption backstop run found",
+    );
     assertAllD1MatchesUsed(db);
   });
 
@@ -667,11 +473,6 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
         matchBinds: ["run-missing-row"],
         rows: [],
       },
-      {
-        match: CURRENT_ROWS_BY_RUN_ID_SQL,
-        matchBinds: ["run-missing-row"],
-        rows: [],
-      },
     ]);
 
     await expect(loadRedemptionBackstopSnapshot(db)).rejects.toThrow(
@@ -778,10 +579,26 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
   it("drops invalid enum and collection values from details JSON before applying fallbacks", async () => {
     const db = mockD1([
       {
-        match: "FROM redemption_backstop",
+        match: "FROM redemption_backstop_runs",
+        rows: [
+          {
+            run_id: "run-invalid-details",
+            completed_at: 1_700_000_010,
+            expected_count: 1,
+            written_count: 1,
+            min_updated_at: 1_700_000_000,
+            max_updated_at: 1_700_000_000,
+            methodology_version: "1.1",
+          },
+        ],
+      },
+      {
+        match: "FROM redemption_backstop_run_rows",
+        matchBinds: ["run-invalid-details"],
         rows: [
           makeRealisticRow({
             stablecoin_id: "bad-details",
+            snapshot_run_id: "run-invalid-details",
             score: 65,
             provider: "supply-full-model",
             source_mode: "estimated",
@@ -819,7 +636,7 @@ describe("loadLegacyRedemptionBackstopCurrentMap", () => {
       },
     ]);
 
-    const result = await loadLegacyRedemptionBackstopCurrentMap(db);
+    const { map: result } = await loadRedemptionBackstopSnapshot(db);
     const entry = result["bad-details"];
 
     expect(entry).toBeDefined();

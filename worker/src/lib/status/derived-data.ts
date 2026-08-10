@@ -227,7 +227,7 @@ export async function getMintBurnReconciliation(
   preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<MintBurnReconciliationSummary | null> {
   const stablecoinsCacheResult =
-    preloadedCache ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
+    preloadedCache ?? (await loadStablecoinsCache(db, { mode: "lenient" }));
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
     return null;
   }

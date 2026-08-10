@@ -191,7 +191,7 @@ async function loadCoinGeckoPriceDiff(
   preloadedCache?: StablecoinsCacheLoadResult,
 ): Promise<CoinGeckoPriceDiff> {
   const stablecoinsCache = preloadedCache
-    ?? (await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true }));
+    ?? (await loadStablecoinsCache(db, { mode: "lenient" }));
   if (!hasUsableStablecoinsPayload(stablecoinsCache)) {
     throw new Error(`stablecoins cache ${stablecoinsCache.reason}`);
   }
@@ -273,7 +273,7 @@ export async function loadStatusSupplements(
   // endpoint's partial-failure behavior.
   let stablecoinsCache: StablecoinsCacheLoadResult;
   try {
-    stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+    stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   } catch (err) {
     logStatusSupplementWarning(
       "stablecoins_cache_preload_failed",

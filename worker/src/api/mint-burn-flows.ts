@@ -122,7 +122,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
 
   // Load stablecoins cache for mcap lookup
   const mcapById = new Map<string, number>();
-  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
     const cached = await getCache(db, cacheKey);
     if (cached) {

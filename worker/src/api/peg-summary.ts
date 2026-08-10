@@ -87,7 +87,7 @@ export const __pegSummaryTestHooks = {
 
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 1. Load stablecoins cache (live prices)
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     if (stablecoinsCache.reason === "missing-cache") {
       return errorResponse(503, "Data not yet available");

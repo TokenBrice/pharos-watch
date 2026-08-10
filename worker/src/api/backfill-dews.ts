@@ -75,7 +75,7 @@ function parseRepairMode(raw: string | null): DewsRepairMode | null {
 }
 
 async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview | Response> {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     return errorResponse(503, `DEWS refresh preview unavailable: stablecoins cache ${stablecoinsCache.reason}`);
   }

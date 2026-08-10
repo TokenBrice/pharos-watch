@@ -433,7 +433,6 @@ async function loadStablecoinsPublicationSurface(
     loadStablecoinsCache(db, {
       mode: "strict",
       contract: "published",
-      allowLegacyArray: false,
     }),
     getCacheUpdatedAt(db, responseReadyCacheKey).catch(() => null),
   ]);

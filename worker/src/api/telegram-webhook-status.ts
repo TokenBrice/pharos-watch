@@ -146,7 +146,7 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           pharos_yield_score: number | null;
           updated_at: number;
         }>(),
-      loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true }).catch(() => null),
+      loadStablecoinsCache(db, { mode: "strict" }).catch(() => null),
       isMintBurnTracked ? getCache(db, perCoinFlowCacheKey(stablecoinId, 24)).catch(() => null) : Promise.resolve(null),
     ]);
 

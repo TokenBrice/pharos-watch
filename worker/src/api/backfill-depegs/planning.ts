@@ -62,7 +62,7 @@ export async function buildBackfillPlan(opts: {
   let fxRates: Record<string, number> | undefined;
   const currentSupplyById = new Map<string, number>();
 
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient", allowLegacyArray: true });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCache.kind !== "ok") {
     console.warn(`[backfill-depegs] stablecoins cache ${stablecoinsCache.kind} (${stablecoinsCache.reason})`);
   }

@@ -18,7 +18,7 @@ export const handleStablecoinSummary = async (
   db: D1Database,
   id: string,
 ): Promise<Response> => {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: false });
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   if (stablecoinsCache.kind !== "ok") {
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }

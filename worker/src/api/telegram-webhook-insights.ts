@@ -230,7 +230,7 @@ export async function buildTopMessage(db: D1Database, view: string): Promise<str
     }
     case "chains": {
       const activeSource = await loadActiveSafetyScoreSource(db);
-      const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict", allowLegacyArray: true });
+      const stablecoinsResult = await loadStablecoinsCache(db, { mode: "strict" });
       if (stablecoinsResult.kind !== "ok") return "Chain rankings are temporarily unavailable.";
       const safetyScores: Record<string, number> = {};
       if (activeSource.kind !== "error") {

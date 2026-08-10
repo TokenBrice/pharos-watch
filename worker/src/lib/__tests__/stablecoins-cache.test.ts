@@ -128,40 +128,29 @@ describe("loadStablecoinsCache", () => {
     }
   });
 
-  it("fails closed on legacy array payloads in strict mode", async () => {
+  it("rejects bare array payloads in strict mode", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
-    const result = await loadStablecoinsCache(db, {
-      mode: "strict",
-      allowLegacyArray: true,
-    });
+    const result = await loadStablecoinsCache(db, { mode: "strict" });
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
-      expect(result.reason).toBe("legacy-array-payload");
+      expect(result.reason).toBe("invalid-payload-shape");
     }
   });
 
-  it("marks legacy array payloads as degraded in lenient mode when enabled", async () => {
+  it("rejects bare array payloads in lenient mode", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether", symbol: "USDT" }]));
 
-    const result = await loadStablecoinsCache(db, {
-      mode: "lenient",
-      allowLegacyArray: true,
-    });
+    const result = await loadStablecoinsCache(db, { mode: "lenient" });
 
-    expect(result.kind).toBe("degraded");
-    if (result.kind === "degraded") {
-      expect(result.reason).toBe("legacy-array-payload");
-      expect(result.filteredCount).toBe(0);
-      const payload = result.payload;
-      expect(payload).not.toBeNull();
-      expect(payload?.peggedAssets).toHaveLength(1);
-      expect(payload?.peggedAssets[0]?.id).toBe("usdt-tether");
+    expect(result.kind).toBe("error");
+    if (result.kind === "error") {
+      expect(result.reason).toBe("invalid-payload-shape");
     }
   });
 
-  it("rejects legacy array shape unless explicitly enabled", async () => {
+  it("rejects bare arrays even when their entries are malformed", async () => {
     const db = makeDbWithStablecoinsValue(JSON.stringify([{ id: "usdt-tether" }]));
 
     const result = await loadStablecoinsCache(db, {
@@ -170,7 +159,7 @@ describe("loadStablecoinsCache", () => {
 
     expect(result.kind).toBe("error");
     if (result.kind === "error") {
-      expect(result.reason).toBe("legacy-array-not-allowed");
+      expect(result.reason).toBe("invalid-payload-shape");
     }
   });
 
@@ -185,7 +174,6 @@ describe("loadStablecoinsCache", () => {
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
       contract: "published",
-      allowLegacyArray: false,
     });
 
     expect(result.kind).toBe("ok");
@@ -210,7 +198,6 @@ describe("loadStablecoinsCache", () => {
     const result = await loadStablecoinsCache(db, {
       mode: "strict",
       contract: "published",
-      allowLegacyArray: false,
     });
 
     expect(result.kind).toBe("error");
