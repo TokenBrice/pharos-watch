@@ -217,11 +217,11 @@ describe("persistDewsResults", () => {
       expect(second.freshnessAt).toBe(baseline);
 
       sqlite.exec(`
-        CREATE TRIGGER drop_dews_current_candidate
-        AFTER INSERT ON stress_signals
+        CREATE TRIGGER drop_dews_publication_candidate
+        AFTER INSERT ON stress_signal_publication_rows
         WHEN NEW.computed_at = ${retry}
         BEGIN
-          DELETE FROM stress_signals
+          DELETE FROM stress_signal_publication_rows
            WHERE stablecoin_id = NEW.stablecoin_id AND computed_at = NEW.computed_at;
         END;
       `);
@@ -235,7 +235,7 @@ describe("persistDewsResults", () => {
       expect(interrupted.health).toEqual({ published: `dews:${degraded}`, attempted: `dews:${degraded}` });
       expect(interrupted.freshnessAt).toBe(baseline);
 
-      sqlite.exec("DROP TRIGGER drop_dews_current_candidate");
+      sqlite.exec("DROP TRIGGER drop_dews_publication_candidate");
       await expect(persist(retry, true)).resolves.toMatchObject({ publishedGeneration: retry });
       const recovered = await observeDewsPublication(sqlite, db, nowSec);
       expect(recovered.pointer).toMatchObject({ status: "ok", computedAt: retry, stablecoinIdsDigest: digest });

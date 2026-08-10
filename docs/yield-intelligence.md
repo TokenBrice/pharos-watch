@@ -565,8 +565,8 @@ The methodology above is the durable public contract. Runtime topology, storage 
 ### Persistence And Publication
 
 - `worker/migrations/0000_baseline.sql`, later yield migrations, and `worker/migrations/MANIFEST.md` own the D1 schema.
-- `yield_data` stores the current multi-source snapshot; `yield_history` stores source-aware observations and publish-time scoring evidence.
-- `yield_publication_generations` and `yield_source_decisions` record publication state and bounded source-selection evidence.
+- `yield_data` stores the current multi-source snapshot; `yield_history` stores recent source-aware observations and publish-time scoring evidence, while `yield_history_daily` stores the last published point per stablecoin/source/UTC day for the older public window.
+- `yield_publication_generations` and `yield_source_decisions` record publication state and bounded source-selection evidence. Repeated unchanged anomaly evidence is 30-day audit data; source switches and anomaly-episode boundaries remain durable.
 - Public rankings expose only a validated published generation. Failed validation, stale-writer, or publication attempts leave the previous public snapshot intact.
 - History retention is enforced by the producer. Legacy rows remain explicitly partial rather than receiving invented evidence.
 

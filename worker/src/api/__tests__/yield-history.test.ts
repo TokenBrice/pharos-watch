@@ -92,7 +92,7 @@ describe("handleYieldHistory", () => {
 
   it("falls back to legacy yield_history schema when publish snapshot columns are absent", async () => {
     const db = mockD1([
-      { match: "best-window */", rows: [], throwError: new Error("D1_ERROR: no such column: pys_at_publish") },
+      { match: "best-window-tiered */", rows: [], throwError: new Error("D1_ERROR: no such column: pys_at_publish") },
       { match: "legacy-schema", rows: [row] },
     ]);
 
@@ -435,8 +435,8 @@ describe("handleYieldHistory", () => {
     const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=usdt-tether"));
     expect(res.status).toBe(200);
 
-    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
-    expect(historyQuery?.binds[2]).toBe(latestSuccessfulCronAt);
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
+    expect(historyQuery?.binds).toContain(latestSuccessfulCronAt);
   });
 
   it("uses published generation metadata to cap history and expose row generation IDs", async () => {
@@ -483,9 +483,9 @@ describe("handleYieldHistory", () => {
     });
     expect(body.history[0]?.publicationGenerationId).toBe(SOURCE_RISK_GOLDEN_PUBLICATION_GENERATION_ID);
 
-    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.sql).toContain("publication_state = 'published'");
-    expect(historyQuery?.binds[2]).toBe(publishedAt);
+    expect(historyQuery?.binds).toContain(publishedAt);
   });
 
   it("attaches nested sourceRisk to generation-matched history points from the rankings cache", async () => {
@@ -757,9 +757,9 @@ describe("handleYieldHistory", () => {
     expect(body.publication).toBeUndefined();
     expect(body.history).toHaveLength(1);
 
-    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.sql).toContain("publication_generation_id IS NULL OR publication_state = 'published'");
-    expect(historyQuery?.binds[2]).toBe(publishedAt);
+    expect(historyQuery?.binds).toContain(publishedAt);
   });
 
   it("exposes pysAtPublish / safetyAtPublish / varianceAtPublish snapshot fields on history points", async () => {
@@ -855,7 +855,7 @@ describe("handleYieldHistory", () => {
     expect(body.warning).toContain("freshness lookup failed");
     expect(() => YieldHistoryResponseSchema.parse(body)).not.toThrow();
 
-    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history"));
-    expect(historyQuery?.binds[2]).toBe(nowSec - 60);
+    const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
+    expect(historyQuery?.binds).toContain(nowSec - 60);
   });
 });

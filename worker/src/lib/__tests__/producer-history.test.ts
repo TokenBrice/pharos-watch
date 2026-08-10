@@ -27,6 +27,7 @@ describe("producer history", () => {
       completedAt: 110,
       outcome: "ok",
       itemCount: 364,
+      metadata: JSON.stringify({ reconciledAt: 109, largeDiagnostic: { preview: "x".repeat(8_000) } }),
       productivity: {
         productive: true,
         publications: [
@@ -88,6 +89,24 @@ describe("producer history", () => {
       invocation_id: "invocation-1",
       worker_version: "version-a",
     });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT metadata_json, publications_json
+             FROM worker_producer_history
+            WHERE idempotency_key = 'run-1'`,
+        )
+        .get(),
+    ).toEqual({ metadata_json: JSON.stringify({ reconciledAt: 109 }), publications_json: null });
+    expect(
+      sqlite
+        .prepare(
+          `SELECT last_publications_json IS NOT NULL AS has_publication
+             FROM worker_producer_heads
+            WHERE job = 'sync-stablecoins'`,
+        )
+        .get(),
+    ).toEqual({ has_publication: 1 });
     sqlite.close();
   });
 

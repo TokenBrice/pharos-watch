@@ -2908,12 +2908,24 @@ describe("DDRv2 storage migrations and stores", () => {
       expect(() =>
         db.sqlite
           .prepare(
-            `INSERT INTO depeg_resolver_publication_snapshot_rows
-             (snapshot_token, public_prediction_id, incident_key, first_published)
-             VALUES (?, ?, ?, 0)`,
+            `UPDATE depeg_resolver_publication_snapshots_v2
+             SET validator_version = 'tampered'
+             WHERE snapshot_token = ?`,
           )
-          .run(manifest.snapshotToken, prediction.id, prediction.incidentKey),
-      ).toThrow(/cannot add rows to a finalized publication snapshot/);
+          .run(manifest.snapshotToken),
+      ).toThrow(/compressed publication snapshots are append-only/);
+
+      const storage = db.sqlite
+        .prepare(
+          `SELECT base_payload_bytes, compressed_payload_bytes
+             FROM depeg_resolver_publication_snapshots_v2
+            WHERE snapshot_token = ?`,
+        )
+        .get(manifest.snapshotToken) as { base_payload_bytes: number; compressed_payload_bytes: number };
+      expect(storage.compressed_payload_bytes).toBeLessThan(storage.base_payload_bytes);
+      expect(
+        db.sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_resolver_publication_snapshots").get(),
+      ).toEqual({ count: 0 });
 
       await writePublicationManifest(db, {
         snapshotToken: "ddrpub:test:2",
@@ -2979,10 +2991,10 @@ describe("DDRv2 storage migrations and stores", () => {
         },
       });
 
-      db.sqlite.exec("DROP TRIGGER trg_ddr_publication_snapshots_no_update");
+      db.sqlite.exec("DROP TRIGGER trg_ddr_publication_snapshots_v2_no_update");
       db.sqlite
         .prepare(
-          `UPDATE depeg_resolver_publication_snapshots
+          `UPDATE depeg_resolver_publication_snapshots_v2
            SET public_prediction_ids_json = ?
            WHERE snapshot_token = ?`,
         )

@@ -205,6 +205,12 @@ interface PublicationManifestRow {
   validator_version: string;
 }
 
+interface CompressedPublicationManifestRow extends Omit<PublicationManifestRow, "base_payload_json"> {
+  base_payload_gzip: ArrayBuffer | Uint8Array;
+  base_payload_bytes: number;
+  compressed_payload_bytes: number;
+}
+
 interface FirstPublicationMembershipRow {
   public_prediction_id: number;
   incident_key: string;
@@ -319,6 +325,32 @@ function mapPublicationManifest(row: PublicationManifestRow): DdrPublicationMani
     finalizedAt: row.finalized_at,
     validatorVersion: row.validator_version,
   };
+}
+
+function bytesFromBlob(value: ArrayBuffer | Uint8Array): Uint8Array {
+  return value instanceof Uint8Array ? value : new Uint8Array(value);
+}
+
+async function gzipText(value: string): Promise<Uint8Array> {
+  const input = new TextEncoder().encode(value);
+  const stream = new Response(input).body!.pipeThrough(new CompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
+}
+
+async function gunzipText(value: ArrayBuffer | Uint8Array): Promise<string> {
+  const stream = new Response(bytesFromBlob(value)).body!.pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).text();
+}
+
+async function mapCompressedPublicationManifest(
+  row: CompressedPublicationManifestRow,
+): Promise<DdrPublicationManifest> {
+  const basePayloadJson = await gunzipText(row.base_payload_gzip);
+  if (new TextEncoder().encode(basePayloadJson).byteLength !== row.base_payload_bytes) {
+    throw new Error(`Compressed publication manifest ${row.snapshot_token} payload length mismatch`);
+  }
+  parseJsonObject(basePayloadJson, "basePayloadJson");
+  return mapPublicationManifest({ ...row, base_payload_json: basePayloadJson });
 }
 
 function basePayloadObject(input: unknown): Record<string, unknown> {
@@ -711,6 +743,16 @@ async function loadPublicationManifestByToken(
   db: D1Database,
   snapshotToken: string,
 ): Promise<DdrPublicationManifest | null> {
+  const compressed = await db
+    .prepare(
+      `SELECT *
+       FROM depeg_resolver_publication_snapshots_v2
+       WHERE snapshot_token = ?`,
+    )
+    .bind(snapshotToken)
+    .first<CompressedPublicationManifestRow>();
+  if (compressed) return mapCompressedPublicationManifest(compressed);
+
   const row = await db
     .prepare(
       `SELECT s.*, f.finalized_at, f.validator_version
@@ -730,7 +772,7 @@ export async function writePublicationManifest(
 ): Promise<DdrPublicationManifest> {
   assertPositiveInteger(input.snapshotGeneration, "snapshotGeneration");
   assertPositiveInteger(input.publishedAt, "publishedAt");
-  const validatorVersion = input.validatorVersion ?? "ddr-publication-store-v1";
+  const validatorVersion = input.validatorVersion ?? "ddr-publication-store-v2";
   assertNonEmpty(validatorVersion, "validatorVersion");
 
   const payload = basePayloadObject(input.basePayload);
@@ -784,20 +826,28 @@ export async function writePublicationManifest(
     input.snapshotToken ??
     `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
   const createdAt = input.createdAt ?? input.publishedAt;
+  const basePayloadBytes = new TextEncoder().encode(basePayloadJson).byteLength;
+  const compressedPayload = await gzipText(basePayloadJson);
 
   await db.batch([
     db
       .prepare(
-        `INSERT INTO depeg_resolver_publication_snapshots
+        `INSERT INTO depeg_resolver_publication_snapshots_v2
          (snapshot_token, snapshot_kind, snapshot_sequence, snapshot_generation, published_at,
           base_payload_hash, public_prediction_ids_hash, public_prediction_ids_json,
-          public_prediction_row_hashes_json, base_payload_json, base_row_count,
-          public_prediction_count, created_at)
+          public_prediction_row_hashes_json, base_payload_gzip, base_payload_bytes,
+          compressed_payload_bytes, base_row_count, public_prediction_count, created_at,
+          finalized_at, validator_version)
          VALUES (
            ?,
            'ddr_public',
-           (SELECT COALESCE(MAX(snapshot_sequence), 0) + 1 FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'),
-           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+           (SELECT COALESCE(MAX(snapshot_sequence), 0) + 1
+              FROM (
+                SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots WHERE snapshot_kind = 'ddr_public'
+                UNION ALL
+                SELECT snapshot_sequence FROM depeg_resolver_publication_snapshots_v2 WHERE snapshot_kind = 'ddr_public'
+              )),
+           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
          )`,
       )
       .bind(
@@ -808,50 +858,36 @@ export async function writePublicationManifest(
         publicPredictionIdsHash,
         publicPredictionIdsJson,
         publicPredictionRowHashesJson,
-        basePayloadJson,
+        compressedPayload,
+        basePayloadBytes,
+        compressedPayload.byteLength,
         payloadRows.length,
         ids.length,
         createdAt,
+        input.publishedAt,
+        validatorVersion,
       ),
     db
       .prepare(
-        `INSERT INTO depeg_resolver_publication_snapshot_rows
-         (snapshot_token, public_prediction_id, incident_key, first_published)
-         SELECT ?, p.id, p.incident_key,
-                CASE
-                  WHEN EXISTS (
-                    SELECT 1
-                    FROM depeg_resolver_publication_snapshot_rows existing
-                    WHERE existing.public_prediction_id = p.id
-                      AND existing.first_published = 1
-                  )
-                  THEN 0
-                  ELSE 1
-                END
+        `INSERT OR IGNORE INTO depeg_resolver_first_publications_v2
+         (public_prediction_id, incident_key, snapshot_token, snapshot_sequence,
+          snapshot_generation, published_at, finalized_at)
+         SELECT p.id, p.incident_key, ?, s.snapshot_sequence,
+                s.snapshot_generation, s.published_at, s.finalized_at
          FROM json_each(?) ids
          JOIN depeg_resolver_public_predictions p
            ON p.id = CAST(ids.value AS INTEGER)
+         JOIN depeg_resolver_publication_snapshots_v2 s
+           ON s.snapshot_token = ?
+         WHERE NOT EXISTS (
+           SELECT 1
+           FROM depeg_resolver_publication_snapshot_rows existing
+           WHERE existing.public_prediction_id = p.id
+             AND existing.first_published = 1
+         )
          ORDER BY p.id`,
       )
-      .bind(snapshotToken, publicPredictionIdsJson),
-    db
-      .prepare(
-        `INSERT INTO depeg_resolver_publication_snapshot_finalizations
-         (snapshot_token, finalized_at, validator_version, validated_base_payload_hash,
-          validated_public_prediction_ids_hash, validated_public_prediction_row_hashes_json,
-          validated_base_row_count, validated_public_prediction_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .bind(
-        snapshotToken,
-        input.publishedAt,
-        validatorVersion,
-        basePayloadHash,
-        publicPredictionIdsHash,
-        publicPredictionRowHashesJson,
-        payloadRows.length,
-        ids.length,
-      ),
+      .bind(snapshotToken, publicPredictionIdsJson, snapshotToken),
   ]);
 
   const manifest = await loadPublicationManifestByToken(db, snapshotToken);
@@ -866,23 +902,46 @@ export async function writePublicationManifest(
 }
 
 export async function loadLatestPublicationManifest(db: D1Database): Promise<DdrPublicationManifest | null> {
-  const row = await db
-    .prepare(
-      `SELECT s.*, f.finalized_at, f.validator_version
-       FROM depeg_resolver_publication_snapshots s
-       JOIN depeg_resolver_publication_snapshot_finalizations f
-         ON f.snapshot_token = s.snapshot_token
-       WHERE s.snapshot_kind = 'ddr_public'
-         AND NOT EXISTS (
-           SELECT 1
-           FROM depeg_resolver_publication_snapshot_errata e
-           WHERE e.snapshot_token = s.snapshot_token
-         )
-       ORDER BY s.snapshot_sequence DESC
-       LIMIT 1`,
-    )
-    .first<PublicationManifestRow>();
-  return row ? mapPublicationManifest(row) : null;
+  const [legacyRow, compressedRow] = await Promise.all([
+    db
+      .prepare(
+        `SELECT s.*, f.finalized_at, f.validator_version
+         FROM depeg_resolver_publication_snapshots s
+         JOIN depeg_resolver_publication_snapshot_finalizations f
+           ON f.snapshot_token = s.snapshot_token
+         WHERE s.snapshot_kind = 'ddr_public'
+           AND NOT EXISTS (
+             SELECT 1
+             FROM depeg_resolver_publication_snapshot_errata e
+             WHERE e.snapshot_token = s.snapshot_token
+           )
+         ORDER BY s.snapshot_sequence DESC
+         LIMIT 1`,
+      )
+      .first<PublicationManifestRow>(),
+    db
+      .prepare(
+        `SELECT *
+         FROM depeg_resolver_publication_snapshots_v2 s
+         WHERE s.snapshot_kind = 'ddr_public'
+           AND NOT EXISTS (
+             SELECT 1
+             FROM depeg_resolver_publication_snapshot_errata e
+             WHERE e.snapshot_token = s.snapshot_token
+           )
+         ORDER BY s.published_at DESC, s.snapshot_sequence DESC
+         LIMIT 1`,
+      )
+      .first<CompressedPublicationManifestRow>(),
+  ]);
+  if (!legacyRow && !compressedRow) return null;
+  if (!compressedRow) return mapPublicationManifest(legacyRow!);
+  if (!legacyRow) return mapCompressedPublicationManifest(compressedRow);
+  return compressedRow.published_at > legacyRow.published_at ||
+    (compressedRow.published_at === legacyRow.published_at &&
+      compressedRow.snapshot_sequence > legacyRow.snapshot_sequence)
+    ? mapCompressedPublicationManifest(compressedRow)
+    : mapPublicationManifest(legacyRow);
 }
 
 export async function loadFirstPublicationMembership(
@@ -892,20 +951,25 @@ export async function loadFirstPublicationMembership(
   const readRows = async (filterSql: string, binds: unknown[]) => {
     const result = await db
       .prepare(
-        `SELECT r.public_prediction_id,
-                r.incident_key,
-                r.snapshot_token,
-                s.snapshot_sequence,
-                s.snapshot_generation,
-                s.published_at,
-                f.finalized_at
-         FROM depeg_resolver_publication_snapshot_rows r
-         JOIN depeg_resolver_publication_snapshots s ON s.snapshot_token = r.snapshot_token
-         JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
+        `WITH first_publications AS (
+           SELECT r.public_prediction_id, r.incident_key, r.snapshot_token,
+                  s.snapshot_sequence, s.snapshot_generation, s.published_at,
+                  f.finalized_at
+             FROM depeg_resolver_publication_snapshot_rows r
+             JOIN depeg_resolver_publication_snapshots s ON s.snapshot_token = r.snapshot_token
+             JOIN depeg_resolver_publication_snapshot_finalizations f ON f.snapshot_token = r.snapshot_token
+            WHERE r.first_published = 1
+           UNION ALL
+           SELECT public_prediction_id, incident_key, snapshot_token,
+                  snapshot_sequence, snapshot_generation, published_at, finalized_at
+             FROM depeg_resolver_first_publications_v2
+         )
+         SELECT r.*
+         FROM first_publications r
          JOIN depeg_resolver_public_predictions p ON p.id = r.public_prediction_id
-         WHERE r.first_published = 1
+         WHERE 1 = 1
          ${filterSql}
-         ORDER BY s.snapshot_sequence ASC, r.public_prediction_id ASC`,
+         ORDER BY r.published_at ASC, r.snapshot_sequence ASC, r.public_prediction_id ASC`,
       )
       .bind(...binds)
       .all<FirstPublicationMembershipRow>();

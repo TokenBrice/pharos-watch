@@ -174,12 +174,13 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 | Table                   | Pruning  | Purpose                                |
 | ----------------------- | -------- | -------------------------------------- |
-| `stress_signals`        | 7 days   | 30-minute rolling samples              |
-| `stress_signals_latest` | current  | Latest-row materialization for hot readers |
+| `stress_signals`        | 7 days   | Sparse rolling history: at least hourly, plus band changes and score moves of 1+ point |
+| `stress_signals_latest` | current  | Latest-row materialization for hot readers and smoothing |
+| `stress_signal_publication_rows` | 2 generations | Exact, complete rows for current and previous publication proofs |
 | `stress_signal_history` | 365 days | Daily snapshots (first exact-coverage run of UTC day) |
 | `surface_publication_generations` (`surface = "dews"`) | durable | Successfully published generations consumed by Tape and publication health |
 
-`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after current/latest rows have been written, retention work has completed, and generation row counts match the computed result count. That pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
+`cache["dews:published-generation"]` is the completed-publication pointer for current DEWS readers. The cron writes it only after the exact publication buffer and latest rows have been written and both generation row counts match the computed result count. The two-generation buffer keeps the last proven generation readable if a later run is interrupted. The pointer and its `surface_publication_generations` row commit in one D1 batch, so downstream consumers cannot observe a pointer without durable publication proof or ledger a generation whose pointer lost the race to a newer run. Migration `0182` bootstraps the pre-existing pointer, and the Tape projector reconciles the current validated pointer again at runtime to cover the migration-to-deploy window. `cache["freshness:dews"]` remains the healthy-run freshness sentinel and only advances for non-degraded publications.
 
 ### Cron Schedule
 
@@ -200,12 +201,12 @@ Structured evidence is additive with warning-string evidence and the final Yield
 5. Read `mint_burn_hourly` aggregates, separating 30d baseline coverage from latest-row freshness
 6. Read `yield_data.warning_signals` and structured `sourceRisk` / `rankChangeAttribution` evidence from the published `yield-rankings` cache
 7. Compute DEWS per PSI-eligible coin
-8. Batch write to `stress_signals` and `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
+8. Write sparse history to `stress_signals`, exact candidate rows to `stress_signal_publication_rows`, and full latest state to `stress_signals_latest` (only for coins where `computeDEWS()` returned a score)
 9. Retire current rows for PSI-eligible assets that are explicitly present in the stablecoins cache with zero current circulating supply
 10. Seal the producer-owned daily `stress_signal_history` rows to the exact computed stablecoin ID set in one atomic replacement; frozen historical rows remain outside that ownership boundary
 11. Purge rows for IDs no longer in the current PSI-eligible universe (chunked ID deletes, 90 IDs/chunk, to stay under D1 bind-variable limits)
 12. Prune old data
-13. Validate row counts, then atomically advance `dews:published-generation` and its durable published-generation ledger row; healthy runs also advance `freshness:dews`
+13. Validate exact publication-buffer and latest row counts, atomically advance `dews:published-generation` and its durable ledger row, retain the newest two exact generations, and advance `freshness:dews` for healthy runs
 
 ---
 
@@ -217,7 +218,7 @@ Structured evidence is additive with warning-string evidence and the final Yield
 
 When a coin has insufficient data in a cycle (`computeDEWS() === null`), that run skips writes for the coin, so this endpoint continues serving the last valid cached row.
 
-Current DEWS readers, Telegram alert snapshots, and smoothing inputs apply `computed_at <= dews:published-generation` when the pointer exists. That prevents partially written newer runs from becoming visible while still allowing retained last-valid rows from older completed generations. The PSI stress-breadth read instead requires an exact `computed_at = dews:published-generation` match once the pointer exists, so a coin without a fresh row in that generation drops out of the breadth term for that cycle rather than falling back to a retained older row.
+Current DEWS readers verify the exact pointer generation against `stress_signal_publication_rows`; Telegram snapshots and smoothing continue to use the full latest materialization within the published bound. That prevents partially written newer runs from becoming visible. PSI likewise requires the exact pointed generation, so incomplete coverage fails closed rather than mixing rows from different runs.
 
 ```text
 {

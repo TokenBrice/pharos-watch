@@ -99,12 +99,14 @@ When a lifecycle review date comes due and the adapter stays quarantined or inte
 
 ## Decision Ledger Retention (v8.14)
 
-- Every `yield_source_decisions` row is tagged with a `retention_reason` of `trend` or `audit`.
-- `trend` rows are persisted indefinitely. They cover source switches, evaluated-source anomalies, and decisions that rejected a higher-confidence-tier alternative.
+- Every stored `yield_source_decisions` row is tagged with a final `retention_reason` of `trend` or `audit`.
+- Source switches are permanent `trend` rows. For anomaly or rejected-higher-confidence evidence, only the first row of a new evidence fingerprint is a permanent `trend`; unchanged hourly repetitions are `audit`. A resolved and later recurring fingerprint creates a new boundary row.
 - `audit` rows are pruned after 30 days inside the existing `pruneYieldTables` cleanup pass that runs at the end of each successful publication. There is no new cron trigger.
 - Retained public alternates live in the sibling `yield_source_decision_alternatives` table; they are cascaded out when the referenced decision row is removed.
 - The legacy `alternatives_json` blob continues to be written for one cycle of co-existence. The `/api/yield-source-decisions` read endpoint that could join both shapes in one response was retired on 2026-08-09; operators now read `yield_source_decisions.alternatives_json` and the typed `yield_source_decision_alternatives` rows as two direct D1 queries (see [`runbooks/yield-rankings-stale-or-missing.md`](./runbooks/yield-rankings-stale-or-missing.md)).
 - Modern linked-variant and protocol-specific on-chain source keys are never normalized to `onchain:<stablecoinId>` merely because they carry an exchange rate. Only null/`legacy-best` history and the explicit LUSD `bprotocol-lqty-only` legacy alias normalize. Historical linked-variant false-switch rows are reclassified to `audit` only after two consecutive published generations select the linked identity with `source_switch = 0`; normal audit retention then removes the corrected noise.
+
+Yield history keeps full hourly rows for the newest 30 days and one close-of-day row per stablecoin/source for days 31–365 in `yield_history_daily`. The API merges both tiers without duplicating a day and continues to use raw rows while a historical day has not yet been materialized. Daily materialization precedes any later raw-row cleanup.
 
 ## Failure Semantics
 

@@ -71,7 +71,7 @@ const DEWS_SURFACE: PublicationSurfaceDefinition = {
 
 const DEWS_POINTER_SURFACE: PublicationSurfaceDefinition = {
   ...DEWS_SURFACE,
-  sourceOfTruth: "cache[dews:published-generation]+stress_signals",
+  sourceOfTruth: "cache[dews:published-generation]+stress_signal_publication_rows",
 };
 
 const PSI_SURFACE: PublicationSurfaceDefinition = {

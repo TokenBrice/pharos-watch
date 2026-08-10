@@ -135,7 +135,7 @@ function buildDb(): MockD1Database {
       ],
     },
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
-    { match: "FROM stress_signals", rows: STRESS_ROWS },
+    { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
     { match: "FROM dex_liquidity", rows: DEX_ROWS },
     { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
   ]);
@@ -486,7 +486,7 @@ describe("snapshotPublicDataset", () => {
         ],
       },
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
-      { match: "FROM stress_signals", rows: [] },
+      { match: "FROM stress_signal_publication_rows", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
       { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
     ]);
@@ -542,7 +542,7 @@ describe("snapshotPublicDataset", () => {
         ],
       },
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
-      { match: "FROM stress_signals", rows: [], throwError: new Error("D1 read failed") },
+      { match: "FROM stress_signal_publication_rows", rows: [], throwError: new Error("D1 read failed") },
       { match: "FROM dex_liquidity", rows: DEX_ROWS },
     ]);
 
@@ -568,7 +568,7 @@ describe("snapshotPublicDataset", () => {
         ],
       },
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
-      { match: "FROM stress_signals", rows: STRESS_ROWS },
+      { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
       { match: "FROM dex_liquidity", rows: [], throwError: new Error("D1 liquidity read failed") },
     ]);
 

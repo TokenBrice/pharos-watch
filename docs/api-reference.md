@@ -2861,6 +2861,8 @@ Historical yield data for a single stablecoin. If a stored `warning_signals` pay
 
 History written under methodology v8.31 or later includes the versioned PYS formula inputs captured at publication. `pysReproducibility: "exact"` means the point can be recomputed from `pysInputsAtPublish`; older rows are labeled `legacy-partial` and do not invent missing benchmark, source-risk, or scaling facts.
 
+The newest 30 days use full hourly `yield_history` points. Days 31–365 use the last published point per stablecoin/source/UTC day from `yield_history_daily`. During backfill the handler uses raw rows for any day that does not yet have a daily materialization, so activating the tier does not create a temporary history gap.
+
 For tracked savings-wrapper handoffs (`USDe`, `USDS`, `DAI`, `frxUSD`, `crvUSD`, `avUSD`), legacy parent-owned wrapper rows are filtered immediately at read time and are also purged by the hourly publisher plus the operator cleanup tool. The discontinuity is intentional: those old child-owned series no longer remain queryable through the parent id or through `mode=source&sourceKey=...`. New linked parent rows use `linked-variant:<variantId>:<sourceKey>` source keys when a tracked variant's eligible native/wrapper source is intentionally exposed on the active parent for comparison and coverage context. The same suppression and guarded purge path removes the former `protocol-api:re-protocol-reusde` rows from `reusd-re-protocol`; those rows represented a separate Re Protocol product and are replaced by reUSD's own `protocol-api:re-protocol-reusd` series.
 
 **Cache:** slow — `X-Data-Age` and `Warning` headers included. Freshness threshold: 3600 s (1 hour, aligned to the hourly `sync-yield-data` publisher).
@@ -3178,7 +3180,7 @@ Returns Depeg Early Warning Score (DEWS) data for active tracked stablecoins.
 | `stablecoin` | `string`  | —       | Single coin mode: return latest + daily history |
 | `days`       | `integer` | `30`    | History lookback (max 365)                      |
 
-Current responses are bounded by `cache["dews:published-generation"]`. Version 2 pointers bind the exact generation timestamp, row count, and stablecoin-ID digest; readers use `stress_signals_latest` only when it matches that proof and otherwise read exactly the canonical `stress_signals` rows at the published timestamp. Missing rows, same-count ID drift, and newer failed partial generations fail closed instead of being filled with older per-coin rows. Legacy or absent pointers retain the bounded compatibility path during rollout.
+Current responses are bounded by `cache["dews:published-generation"]`. Version 2 pointers bind the exact generation timestamp, row count, and stablecoin-ID digest; readers verify those rows in the two-generation `stress_signal_publication_rows` buffer. Missing rows, same-count ID drift, and newer failed partial generations fail closed instead of being filled with older per-coin rows. Legacy or absent pointers retain the bounded compatibility path during rollout.
 
 Aggregate responses are filtered to active tracked stablecoin IDs only, even if stale rows for non-active or de-tracked IDs still exist in storage. The aggregate response keeps `updatedAt` as the newest returned current row, and `X-Data-Age` / `Warning` freshness headers use that aggregate generation timestamp. `oldestComputedAt` remains a body-only lag diagnostic for consumers that need per-coin retained-last-valid detection.
 
