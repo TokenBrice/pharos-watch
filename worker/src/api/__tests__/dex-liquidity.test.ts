@@ -128,6 +128,40 @@ describe("handleDexLiquidity", () => {
     expect(body["usdt-tether"]?.priceSources).toBeNull();
   });
 
+  it("treats deployment outcomes as optional when the table is not deployed yet", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [row] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      {
+        match: "dex_deployment_outcomes",
+        rows: [],
+        throwError: new Error("no such table: dex_deployment_outcomes"),
+      },
+    ]);
+
+    const res = await handleDexLiquidity(db);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, Record<string, unknown>>;
+    expect(body["usdt-tether"]?.deploymentCoverage).toBeNull();
+  });
+
+  it("fails closed when deployment outcomes fail unexpectedly", async () => {
+    const db = mockD1([
+      { match: "dex_liquidity", rows: [row] },
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      {
+        match: "dex_deployment_outcomes",
+        rows: [],
+        throwError: new Error("database is locked"),
+      },
+    ]);
+
+    await expect(handleDexLiquidity(db)).rejects.toThrow("database is locked");
+  });
+
   it("falls back to row timestamps when cron freshness lookups fail", async () => {
     const staleRow = makeDexLiquidityRow({ updated_at: 1_700_000_000 });
     const db = mockD1([
