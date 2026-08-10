@@ -5,7 +5,6 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-export const LEGACY_DUPLICATE_PREFIX_ALLOWLIST = Object.freeze(["0056", "0061"]);
 export const ROLLOUT_SAFETY_ENFORCEMENT_PREFIX = "0071";
 export const REQUIRED_ROLLOUT_SAFETY_MODE = "backward-compatible";
 export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
@@ -34,18 +33,6 @@ export function findDuplicatePrefixes(migrationFiles) {
   const sequenceNumbers = migrationFiles.map((file) => file.match(/^(\d+[a-z]?)/)?.[1]).filter(Boolean);
   const duplicates = sequenceNumbers.filter((num, index) => sequenceNumbers.indexOf(num) !== index);
   return [...new Set(duplicates)];
-}
-
-export function parseDuplicatePrefixAllowlist(manifestText) {
-  const match = manifestText.match(/Duplicate-prefix allowlist:\s*(.+)/);
-  if (!match) {
-    throw new Error("worker/migrations/MANIFEST.md is missing the duplicate-prefix allowlist line.");
-  }
-  const prefixes = [...match[1].matchAll(/`([^`]+)`/g)].map(([, prefix]) => prefix);
-  if (prefixes.length === 0) {
-    throw new Error("worker/migrations/MANIFEST.md duplicate-prefix allowlist is empty.");
-  }
-  return new Set(prefixes);
 }
 
 export function parseRolloutSafetyPolicy(manifestText) {
@@ -197,17 +184,6 @@ export function validateManifestMigrationParity(migrationFiles, manifestText) {
   };
 }
 
-export function validateDuplicatePrefixAllowlist(allowlist) {
-  const normalized = [...allowlist].sort();
-  const expected = [...LEGACY_DUPLICATE_PREFIX_ALLOWLIST].sort();
-
-  if (normalized.length !== expected.length || normalized.some((prefix, index) => prefix !== expected[index])) {
-    throw new Error(
-      `worker/migrations/MANIFEST.md duplicate-prefix allowlist must stay frozen at: ${expected.join(", ")}`,
-    );
-  }
-}
-
 export function validateRolloutSafetyPolicy(policy) {
   if (policy.enforcementPrefix !== ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {
     throw new Error(
@@ -222,10 +198,12 @@ export function validateRolloutSafetyPolicy(policy) {
   }
 }
 
-export function validateDuplicatePrefixes(migrationFiles, allowlist) {
+export function validateDuplicatePrefixes(migrationFiles) {
   const uniqueDuplicates = findDuplicatePrefixes(migrationFiles);
-  const newDuplicates = uniqueDuplicates.filter((prefix) => !allowlist.has(prefix));
-  return { uniqueDuplicates, newDuplicates };
+  if (uniqueDuplicates.length > 0) {
+    throw new Error(`Duplicate migration sequence numbers: ${uniqueDuplicates.join(", ")}`);
+  }
+  return uniqueDuplicates;
 }
 
 export function requiresRolloutSafetyValidation(file, enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {
@@ -425,16 +403,10 @@ export async function validateWorkerMigrations({
   }
 
   const manifestText = readFileSync(manifestPath, "utf8");
-  const allowlist = parseDuplicatePrefixAllowlist(manifestText);
   const rolloutSafetyPolicy = parseRolloutSafetyPolicy(manifestText);
-  validateDuplicatePrefixAllowlist(allowlist);
   validateRolloutSafetyPolicy(rolloutSafetyPolicy);
   const manifestParity = validateManifestMigrationParity(migrationFiles, manifestText);
-  const { uniqueDuplicates, newDuplicates } = validateDuplicatePrefixes(migrationFiles, allowlist);
-
-  if (newDuplicates.length > 0) {
-    throw new Error(`Duplicate migration sequence numbers: ${newDuplicates.join(", ")}`);
-  }
+  const uniqueDuplicates = validateDuplicatePrefixes(migrationFiles);
 
   const tempDir = mkdtempSync(join(tmpdir(), "pharos-worker-migrations-"));
   const dbPath = join(tempDir, "migrations.db");
@@ -527,9 +499,6 @@ async function main() {
     const result = await validateWorkerMigrations({
       includeSchemaFingerprint: options.includeSchemaFingerprint,
     });
-    if (result.uniqueDuplicates.length > 0) {
-      console.warn(`⚠️  Known legacy duplicate prefixes: ${result.uniqueDuplicates.join(", ")} (suppressed)`);
-    }
     console.log(
       `Validated ${result.migrationCount} worker migrations with ${result.backend} (manifest rows: ${result.manifestParity.activeManifestCount} active, ${result.manifestParity.retiredManifestCount} retired; rollout safety checked: ${result.rolloutSafetyCheckedCount}).`,
     );
