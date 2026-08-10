@@ -80,7 +80,8 @@
   ],
   "sharedJobPaths": {
     "daily-digest": ["digestTriggerPoll", "daily0805Utc"],
-    "snapshot-supply": ["quarterHourly", "daily0800Utc"]
+    "snapshot-supply": ["quarterHourly", "daily0800Utc"],
+    "sync-cl-exit-depth": ["halfHourlyMeasuredExecution", "daily0810Utc"]
   },
   "conditionalJobPaths": ["digestTriggerPoll:daily-digest"],
   "budgetOnlySurfaces": [

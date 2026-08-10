@@ -64,6 +64,17 @@ const cronMocks = vi.hoisted(() => ({
       persistence: { generationId: "dex-liquidity-1785060960" },
     }),
   })),
+  reuseCurrentDexLiquidityScoringGeneration: vi.fn(async () => ({
+    status: "skipped_neutral",
+    itemCount: 0,
+    metadata: JSON.stringify({
+      persistence: {
+        generationId: "dex-liquidity-1785060960",
+        skipped: false,
+        skippedReason: "liquidity-cadence-reuse",
+      },
+    }),
+  })),
   syncYieldData: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncYieldSupplemental: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
   syncBluechip: vi.fn(async () => ({ status: "ok", itemCount: 1, metadata: "{}" })),
@@ -283,6 +294,7 @@ vi.mock("../cron/sync-kinesis-supply", () => ({ syncKinesisSupply: cronMocks.syn
 vi.mock("../cron/dex-liquidity/orchestrator", () => ({
   stageDexLiquidityScoring: cronMocks.stageDexLiquidityScoring,
   consumeDexLiquidityScoringStage: cronMocks.consumeDexLiquidityScoringStage,
+  reuseCurrentDexLiquidityScoringGeneration: cronMocks.reuseCurrentDexLiquidityScoringGeneration,
 }));
 vi.mock("../cron/sync-yield-data", () => ({ syncYieldData: cronMocks.syncYieldData }));
 vi.mock("../cron/sync-yield-supplemental", () => ({ syncYieldSupplemental: cronMocks.syncYieldSupplemental }));
@@ -741,7 +753,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
   });
 
-  it("runs only DEX source staging on either hourly physical trigger", async () => {
+  it("runs DEX source staging on the hourly :10 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -749,7 +761,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "10 * * * *" } as ScheduledEvent,
+      { cron: "10 * * * *", scheduledTime: Date.parse("2026-08-10T12:10:00Z") } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -763,7 +775,7 @@ describe("worker.scheduled", () => {
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
   });
 
-  it("runs staged DEX scoring before charts on either hourly physical trigger", async () => {
+  it("runs two-hour DEX scoring before charts on an even-hour :16 trigger", async () => {
     const { ctx, waits } = makeCtx();
     const env = {
       DB: {} as D1Database,
@@ -771,7 +783,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "16 * * * *" } as ScheduledEvent,
+      { cron: "16 * * * *", scheduledTime: Date.parse("2026-08-10T12:16:00Z") } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -822,7 +834,7 @@ describe("worker.scheduled", () => {
     } as const;
 
     await worker.scheduled(
-      { cron: "40 * * * *" } as ScheduledEvent,
+      { cron: "10 * * * *", scheduledTime: Date.parse("2026-08-10T12:10:00Z") } as ScheduledEvent,
       env as never,
       ctx,
     );
@@ -833,6 +845,32 @@ describe("worker.scheduled", () => {
     expect(cronMocks.computeAndStoreDEWS).not.toHaveBeenCalled();
     expect(cronMocks.computeAndStoreStabilityIndex).not.toHaveBeenCalled();
     expect(cronMocks.syncYieldData).not.toHaveBeenCalled();
+  });
+
+  it("keeps :40 source staging neutral and reuses the current DEX generation at :46", async () => {
+    const env = {
+      DB: {} as D1Database,
+      CORS_ORIGIN: "https://pharos.watch",
+    } as const;
+    const source = makeCtx();
+    await worker.scheduled(
+      { cron: "40 * * * *", scheduledTime: Date.parse("2026-08-10T12:40:00Z") } as ScheduledEvent,
+      env as never,
+      source.ctx,
+    );
+    await Promise.all(source.waits);
+    expect(cronMocks.stageDexLiquidityScoring).not.toHaveBeenCalled();
+
+    const consumer = makeCtx();
+    await worker.scheduled(
+      { cron: "46 * * * *", scheduledTime: Date.parse("2026-08-10T12:46:00Z") } as ScheduledEvent,
+      env as never,
+      consumer.ctx,
+    );
+    await Promise.all(consumer.waits);
+    expect(cronMocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
+    expect(cronMocks.reuseCurrentDexLiquidityScoringGeneration).toHaveBeenCalledTimes(1);
+    expect(cronMocks.prepareSafetyScoreV9Input).toHaveBeenCalledTimes(1);
   });
 
   it("runs yield publication on the dedicated hourly :20 trigger", async () => {

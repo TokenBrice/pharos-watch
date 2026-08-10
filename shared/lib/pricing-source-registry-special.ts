@@ -52,7 +52,7 @@ export const PRICING_SOURCE_REGISTRY_SPECIAL = [
     label: "Pool TVL-weighted",
     shortLabel: "Pool",
     depegSourceFamily: "dex:pool-tvl-weighted",
-    maxTrustedAgeSec: 35 * 60,
+    maxTrustedAgeSec: 75 * 60,
     defaultWeight: 1,
     bypassesSoftValidationGuardrails: true,
   }),

@@ -21,7 +21,7 @@ import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 
 export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
-  const [result, histResult, priceResult, deploymentResult, latestCron, latestSuccessfulCron] = await Promise.all([
+  const [result, histResult, priceResult, deploymentResult, latestCron] = await Promise.all([
     db
       .prepare(
         `SELECT stablecoin_id, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd, pool_count, pair_count, chain_count, protocol_tvl_json, chain_tvl_json, top_pools_json, liquidity_score, concentration_hhi, depth_stability, updated_at, effective_tvl_usd, avg_pool_stress, weighted_balance_ratio, organic_fraction, durability_score, score_components_json, locked_liquidity_pct, coverage_class, coverage_confidence, source_mix_json, balance_measured_tvl_usd, organic_measured_tvl_usd, methodology_version
@@ -73,15 +73,6 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
          LIMIT 1`,
       )
       .first<DexLiquidityCronRow>()
-      .catch(() => null),
-    db
-      .prepare(
-        `SELECT MAX(started_at) AS started_at
-         FROM cron_runs
-         WHERE job = 'sync-dex-liquidity'
-           AND status = 'ok'`,
-      )
-      .first<{ started_at: number | null }>()
       .catch(() => null),
   ]);
 
@@ -193,7 +184,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
   const rows = result.results ?? [];
   const latestRowUpdate =
     rows.length > 0 ? rows.reduce((m, r) => Math.max(m, r.updated_at), 0) : Math.floor(Date.now() / 1000);
-  const freshnessTs = latestSuccessfulCron?.started_at ?? latestRowUpdate;
+  const freshnessTs = latestRowUpdate;
 
   const headers = addFreshnessHeaders(
     {

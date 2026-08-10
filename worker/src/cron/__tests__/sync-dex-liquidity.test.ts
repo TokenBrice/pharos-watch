@@ -67,6 +67,7 @@ vi.mock("../dex-liquidity/staging-merge", () => ({
 }));
 
 vi.mock("../dex-liquidity/scoring", () => ({
+  loadCurrentDexScoringGenerationId: vi.fn(async () => null),
   computeStablecoinScores: vi.fn(async () => ({
     scores: new Map([["usdt-tether", { coverageClass: "primary", tvl: 0 }]]),
     globalAgg: { totalTvl: 0 },

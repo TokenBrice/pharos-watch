@@ -4,7 +4,8 @@ export function LiquidityOverview() {
   return (
     <>
       <p>
-        Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every 30 minutes. Aggregates
+        Composite 0&ndash;100 score measuring DEX liquidity depth per stablecoin, updated every two hours. DEX-implied
+        prices refresh hourly. The score aggregates
         pool data across all major DEXes and chains.
       </p>
       <p>

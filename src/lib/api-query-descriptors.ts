@@ -141,9 +141,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     (stablecoinId: string, days: number = 90) => ({
       queryKey: ["dex-liquidity-history", stablecoinId, days] as const,
       path: API_PATHS.dexLiquidityHistory(stablecoinId, days),
-      // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity` (30 min)
+      // Same producer as the `dexLiquidity` sibling: `sync-dex-liquidity` (2h)
       // delete-and-replaces today's `dex_liquidity_history` row every run, so the
-      // chart's newest point changes half-hourly even though its granularity is daily.
+      // chart's newest point changes every two hours even though its granularity is daily.
       producerIntervalMs: DATA_SURFACE_PRODUCER_INTERVAL_MS.dexLiquidity,
     }),
   ),

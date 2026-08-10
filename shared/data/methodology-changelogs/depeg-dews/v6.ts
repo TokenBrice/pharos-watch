@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.2",
+    title: "Hourly DEX-price trust window",
+    date: "2026-08-10",
+    effectiveAt: 1786320000,
+    summary:
+      "DEX-implied prices now refresh hourly, with a 75-minute trust window that preserves one bounded delivery delay without admitting older market evidence.",
+    impact: [
+      "Depeg suppression, pending confirmation, challenger-pool checks, and promoted DEX pricing now share the 75-minute maximum trusted age",
+      "The $1M aggregate DEX depth gate, protocol corroboration rules, $250K public Price Check gate, direction logic, and temporal confirmation windows are unchanged",
+      "Rows older than 75 minutes remain excluded rather than being carried forward as current confirmation evidence",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.1",
     title: "One deviation formula for DEWS and the depeg detector",
     date: "2026-08-08",

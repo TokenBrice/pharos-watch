@@ -3260,17 +3260,11 @@ CREATE INDEX IF NOT EXISTS idx_dex_liquidity_scoring_stage_chunks_retention
 CREATE INDEX IF NOT EXISTS idx_dex_liquidity_scoring_stages_slot
   ON dex_liquidity_scoring_stages (source_slot_started_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_dex_measured_quotes_generation_coin
-  ON dex_measured_execution_quotes(generation_id, stablecoin_id, target_id);
-
 CREATE INDEX IF NOT EXISTS idx_dex_measured_quotes_target_generation
   ON dex_measured_execution_quotes(target_generation_id, target_id);
 
 CREATE INDEX IF NOT EXISTS idx_dex_measured_targets_generation_coin
   ON dex_measured_execution_targets(generation_id, stablecoin_id, target_id);
-
-CREATE INDEX IF NOT EXISTS idx_dex_measured_targets_pool
-  ON dex_measured_execution_targets(chain, pool_id, stablecoin_id, captured_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_dex_price_challengers_lookup ON dex_price_challengers(stablecoin_id, snapshot_at);
 

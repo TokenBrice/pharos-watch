@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { CRON_SCHEDULE_CADENCES, V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "../cron-cadences";
+import {
+  CRON_SCHEDULE_CADENCES,
+  V9_EVIDENCE_PRODUCER_INTERVAL_SEC,
+  isDailyDexShadowTargetPublicationSlot,
+  isDexLiquidityPublicationSlot,
+  isHourlyDexPriceSlot,
+  isHourlyDexSourceSlot,
+} from "../cron-cadences";
 import { CRON_INTERVALS, CRON_JOB_DEFINITIONS, CRON_SCHEDULES } from "../cron-jobs";
 
 describe("cron cadence split", () => {
@@ -22,5 +29,18 @@ describe("cron cadence split", () => {
     for (const [job, intervalSec] of Object.entries(V9_EVIDENCE_PRODUCER_INTERVAL_SEC)) {
       expect(CRON_INTERVALS[job], `producer cadence drifted for ${job}`).toBe(intervalSec);
     }
+  });
+
+  it("runs DEX sources and prices hourly, full scoring every two hours, and shadow targets daily", () => {
+    const sec = (iso: string) => Date.parse(iso) / 1_000;
+
+    expect(isHourlyDexSourceSlot(sec("2026-08-10T06:10:00Z"))).toBe(true);
+    expect(isHourlyDexSourceSlot(sec("2026-08-10T06:40:00Z"))).toBe(false);
+    expect(isHourlyDexPriceSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
+    expect(isHourlyDexPriceSlot(sec("2026-08-10T06:46:00Z"))).toBe(false);
+    expect(isDexLiquidityPublicationSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
+    expect(isDexLiquidityPublicationSlot(sec("2026-08-10T07:16:00Z"))).toBe(false);
+    expect(isDailyDexShadowTargetPublicationSlot(sec("2026-08-10T06:16:00Z"))).toBe(true);
+    expect(isDailyDexShadowTargetPublicationSlot(sec("2026-08-10T08:16:00Z"))).toBe(false);
   });
 });

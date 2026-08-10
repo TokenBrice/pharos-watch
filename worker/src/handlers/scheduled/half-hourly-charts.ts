@@ -3,11 +3,20 @@
  *   sync-dex-liquidity (0) → prepare-safety-score-v9-input (0)
  *   sync-stablecoin-charts (1), independently
  *
- * DEX scoring consumes the complete generation written six minutes earlier,
- * then the charts writer uses the same lightweight trigger.
+ * :16 consumes the hourly source generation (prices hourly, score every two
+ * hours); :46 reuses the exact current score generation for V9 preparation.
+ * The charts writer uses the same lightweight trigger.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
-import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
+import {
+  consumeDexLiquidityScoringStage,
+  reuseCurrentDexLiquidityScoringGeneration,
+} from "../../cron/dex-liquidity/orchestrator";
+import {
+  isDailyDexShadowTargetPublicationSlot,
+  isDexLiquidityPublicationSlot,
+  isHourlyDexPriceSlot,
+} from "@shared/lib/cron-cadences";
 import { prepareSafetyScoreV9Input } from "../../cron/prepare-safety-score-v9-input";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import type { CronResult } from "../../lib/cron-logger";
@@ -73,12 +82,18 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
           run: async (signal, reportProgress) => {
             let result: CronResult;
             try {
-              result = await consumeDexLiquidityScoringStage(
-                runtime.db,
-                signal,
-                reportProgress,
-                runtime.slotStartedAt,
-              );
+              result = !isHourlyDexPriceSlot(runtime.slotStartedAt)
+                ? await reuseCurrentDexLiquidityScoringGeneration(runtime.db, signal)
+                : await consumeDexLiquidityScoringStage(
+                    runtime.db,
+                    signal,
+                    reportProgress,
+                    runtime.slotStartedAt,
+                    {
+                      publishLiquidity: isDexLiquidityPublicationSlot(runtime.slotStartedAt),
+                      publishShadowTargets: isDailyDexShadowTargetPublicationSlot(runtime.slotStartedAt),
+                    },
+                  );
             } catch (error) {
               dexPublication = {
                 status: "error",
@@ -96,11 +111,16 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
           job: "prepare-safety-score-v9-input",
           run: (signal) => {
             const publication = dexPublication;
+            const isExactCadenceReuse =
+              publication?.status === "skipped_neutral"
+              && publication.generationId !== null
+              && publication.skipped === false
+              && publication.skippedReason === "liquidity-cadence-reuse";
             if (
               publication == null
               || publication.status === "error"
               || publication.status === "skipped_locked"
-              || publication.status === "skipped_neutral"
+              || (publication.status === "skipped_neutral" && !isExactCadenceReuse)
               || publication.skipped
             ) {
               return Promise.resolve({

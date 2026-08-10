@@ -414,7 +414,7 @@ describe("status cause text", () => {
         makePublicHealth({
           caches: {
             "dex-liquidity": {
-              ageSeconds: 2_101,
+              ageSeconds: 4_501,
               maxAge: 43_200,
               healthy: true,
             },
@@ -427,9 +427,9 @@ describe("status cause text", () => {
       expect.objectContaining({
         code: "dex_pricing_bridge_stale",
         severity: "warning",
-        metric: "dexLiquidityAgeSeconds",
-        value: 2_101,
-        threshold: 2_100,
+        metric: "dexPriceAgeSeconds",
+        value: 4_501,
+        threshold: 4_500,
       }),
     );
   });

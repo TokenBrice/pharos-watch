@@ -229,8 +229,8 @@ export function buildAvailabilityCauses(input: {
       layer: "availability",
       severity: "warning",
       message:
-        "DEX liquidity remains available for public display, but its age exceeds the 35-minute live-pricing admission window; promoted DEX sources and pool challenges are no longer receiving fresh observations.",
-      metric: "dexLiquidityAgeSeconds",
+        "DEX liquidity remains available for public display, but DEX prices exceed the 75-minute live-pricing admission window; promoted DEX sources and pool challenges are no longer receiving fresh observations.",
+      metric: "dexPriceAgeSeconds",
       value: dexLiquidityCache.ageSeconds,
       threshold: DEX_FRESHNESS_SEC,
     });

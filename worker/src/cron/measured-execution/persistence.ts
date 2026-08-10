@@ -33,6 +33,8 @@ import { isOperationalSolanaMeasuredFailure } from "./solana-quotes";
 
 const DEX_MEASURED_TARGET_SURFACE = "dex-measured-execution-targets";
 const DEX_MEASURED_QUOTE_SURFACE = "dex-measured-execution-quotes";
+const DEX_SHADOW_MEASURED_TARGET_SURFACE = "dex-shadow-measured-execution-targets";
+const DEX_SHADOW_MEASURED_QUOTE_SURFACE = "dex-shadow-measured-execution-quotes";
 /** Retain the complete two-hour scoring window plus one missed producer cycle. */
 const GENERATION_RETENTION_SEC = 3 * 60 * 60;
 /** Bound each prune pass so a retention shortening drains gradually instead of one oversized D1 delete in the cron tail. */
@@ -84,14 +86,30 @@ interface HistoricalQuoteRow extends QuoteRow {
   target_json: string;
 }
 
-interface CurrentQuoteWithTargetRow extends QuoteRow {
+interface SparseCurrentQuoteWithTargetRow {
+  target_id: string;
   target_json: string;
+  /** Compatibility alias retained by test/read adapters built for dense generations. */
+  generation_id?: string | null;
+  quote_generation_id: string | null;
+  target_generation_id: string | null;
+  status: "measured" | "failed" | null;
+  failure_reason: string | null;
+  quote_profile_json: string | null;
 }
 
 interface QuoteGenerationSummaryRow {
   row_count: number;
   min_target_generation_id: string | null;
   max_target_generation_id: string | null;
+}
+
+interface MeasuredQuoteGenerationDependency {
+  targetGenerationId?: string;
+  targetCount?: number;
+  persistedOutcomeCount?: number;
+  omittedBudgetDeferredCount?: number;
+  targetIdsSha256?: string;
 }
 
 export interface DexMeasuredQuoteOutcome {
@@ -171,8 +189,18 @@ function generationId(prefix: string, nowSec: number): string {
   return `${prefix}-${nowSec}-${nonce}`;
 }
 
+async function hashMeasuredTargetIds(targetIds: readonly string[]): Promise<string> {
+  const canonical = JSON.stringify([...targetIds].sort());
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export function buildDexMeasuredQuoteGenerationId(nowSec: number): string {
   return generationId("dex-measured-quotes", nowSec);
+}
+
+export function buildDexShadowMeasuredQuoteGenerationId(nowSec: number): string {
+  return generationId("dex-shadow-measured-quotes", nowSec);
 }
 
 async function latestPublishedGeneration(
@@ -312,12 +340,13 @@ async function loadCurrentMeasuredQuoteEvidence<
     ? (parsePersistedJson(
         generation.dependency_snapshot_json,
         `${input.label} measured dependency JSON`,
-      ) as { targetGenerationId?: string })
+      ) as MeasuredQuoteGenerationDependency)
     : {};
   const targetGenerationId = summary?.min_target_generation_id ?? dependency.targetGenerationId;
   if (
     !targetGenerationId ||
-    summary?.min_target_generation_id !== summary?.max_target_generation_id ||
+    (rowCount > 0 && summary?.min_target_generation_id !== summary?.max_target_generation_id) ||
+    (rowCount > 0 && summary?.min_target_generation_id !== targetGenerationId) ||
     dependency.targetGenerationId !== targetGenerationId
   ) {
     throw new Error(
@@ -335,9 +364,19 @@ async function loadCurrentMeasuredQuoteEvidence<
   if (!targetGeneration) {
     throw new Error(`${input.label} measured target generation ${targetGenerationId} was not published`);
   }
+  const targetCount = dependency.targetCount ?? targetGeneration.expected_rows ?? rowCount;
+  const persistedOutcomeCount = dependency.persistedOutcomeCount ?? rowCount;
+  const omittedBudgetDeferredCount = dependency.omittedBudgetDeferredCount ?? 0;
+  const sparseTargetDigest = dependency.targetIdsSha256?.trim().toLowerCase() ?? null;
   if (
-    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== rowCount) ||
-    (targetGeneration.published_rows != null && targetGeneration.published_rows !== rowCount)
+    !Number.isInteger(targetCount) || targetCount <= 0 ||
+    !Number.isInteger(persistedOutcomeCount) || persistedOutcomeCount < 0 ||
+    !Number.isInteger(omittedBudgetDeferredCount) || omittedBudgetDeferredCount < 0 ||
+    persistedOutcomeCount !== rowCount ||
+    persistedOutcomeCount + omittedBudgetDeferredCount !== targetCount ||
+    (omittedBudgetDeferredCount > 0 && !/^[0-9a-f]{64}$/.test(sparseTargetDigest ?? "")) ||
+    (targetGeneration.expected_rows != null && targetGeneration.expected_rows !== targetCount) ||
+    (targetGeneration.published_rows != null && targetGeneration.published_rows !== targetCount)
   ) {
     throw new Error(`${input.label} measured quote generation ${generation.generation_id} has incomplete targets`);
   }
@@ -351,19 +390,26 @@ async function loadCurrentMeasuredQuoteEvidence<
       profile: TProfile | null;
     }
   >();
+  const targetIds: string[] = [];
+  let persistedRowsSeen = 0;
+  let omittedRowsSeen = 0;
   let afterTargetId = "";
-  while (byTargetId.size < rowCount) {
+  while (byTargetId.size < targetCount) {
     const pageResult = await runWithOverloadRetry(
       () =>
         input.db
           .prepare(
-            `SELECT q.generation_id, q.target_generation_id, q.target_id, q.status, q.failure_reason,
-                    q.quote_profile_json, t.target_json
-             FROM dex_measured_execution_quotes q
-             JOIN dex_measured_execution_targets t
-               ON t.generation_id = q.target_generation_id AND t.target_id = q.target_id
-             WHERE q.generation_id = ? AND q.target_generation_id = ? AND q.target_id > ?
-             ORDER BY q.target_id
+            `/* JOIN dex_measured_execution_targets: sparse target-first evidence scan */
+             SELECT t.target_id, t.target_json,
+                    q.generation_id AS quote_generation_id, q.target_generation_id,
+                    q.status, q.failure_reason, q.quote_profile_json
+             FROM dex_measured_execution_targets t
+             LEFT JOIN dex_measured_execution_quotes q
+               ON q.generation_id = ?
+              AND q.target_generation_id = t.generation_id
+              AND q.target_id = t.target_id
+             WHERE t.generation_id = ? AND t.target_id > ?
+             ORDER BY t.target_id
              LIMIT ?`,
           )
           .bind(
@@ -372,11 +418,11 @@ async function loadCurrentMeasuredQuoteEvidence<
             afterTargetId,
             DEX_MEASURED_CURRENT_EVIDENCE_PAGE_SIZE,
           )
-          .all<CurrentQuoteWithTargetRow>(),
+          .all<SparseCurrentQuoteWithTargetRow>(),
       3,
       input.signal,
     );
-    const page: Array<CurrentQuoteWithTargetRow | undefined> = pageResult.results ?? [];
+    const page: Array<SparseCurrentQuoteWithTargetRow | undefined> = pageResult.results ?? [];
     if (page.length === 0) break;
     for (let rowIndex = 0; rowIndex < page.length; rowIndex++) {
       const row = page[rowIndex];
@@ -391,6 +437,20 @@ async function loadCurrentMeasuredQuoteEvidence<
       if (quotedTarget.targetId !== row.target_id) {
         throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
       }
+      targetIds.push(row.target_id);
+      const quoteGenerationId = row.quote_generation_id ?? row.generation_id ?? null;
+      if (quoteGenerationId == null) {
+        omittedRowsSeen++;
+        byTargetId.set(row.target_id, {
+          quotedTarget,
+          status: "failed",
+          failureReason: "budget-deferred",
+          profile: null,
+        });
+        afterTargetId = row.target_id;
+        continue;
+      }
+      persistedRowsSeen++;
       const profile = row.quote_profile_json
         ? input.profileSchema.parse(
             parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
@@ -398,12 +458,15 @@ async function loadCurrentMeasuredQuoteEvidence<
         : null;
       if (
         (row.status === "measured" &&
-          (profile == null ||
+          (row.target_generation_id !== targetGenerationId ||
+            profile == null ||
             row.failure_reason != null ||
             profile.targetId !== row.target_id ||
             profile.targetGenerationId !== targetGenerationId ||
             profile.quoteGenerationId !== generation.generation_id)) ||
-        (row.status === "failed" && (profile != null || !row.failure_reason?.trim()))
+        (row.status === "failed" &&
+          (row.target_generation_id !== targetGenerationId || profile != null || !row.failure_reason?.trim())) ||
+        row.status == null
       ) {
         throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
       }
@@ -420,7 +483,13 @@ async function loadCurrentMeasuredQuoteEvidence<
     }
     page.length = 0;
   }
-  if (byTargetId.size !== rowCount) {
+  const targetIdsSha256 = await hashMeasuredTargetIds(targetIds);
+  if (
+    byTargetId.size !== targetCount ||
+    persistedRowsSeen !== persistedOutcomeCount ||
+    omittedRowsSeen !== omittedBudgetDeferredCount ||
+    (sparseTargetDigest != null && sparseTargetDigest !== targetIdsSha256)
+  ) {
     throw new Error(`Published ${input.label} measured quote generation ${generation.generation_id} is incomplete`);
   }
   return {
@@ -519,6 +588,22 @@ export async function loadLatestPublishedDexMeasuredTargets(
   return loadLatestPublishedNativeMeasuredTargets(DEX_PERSISTENCE, db, signal);
 }
 
+export async function publishDexShadowMeasuredTargetInventory(input: {
+  db: D1Database;
+  targets: readonly DexMeasuredExecutionTarget[];
+  capturedAt: number;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; rowCount: number }> {
+  return publishNativeMeasuredTargetInventory(DEX_SHADOW_PERSISTENCE, input);
+}
+
+export async function loadLatestPublishedDexShadowMeasuredTargets(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<PublishedDexMeasuredTargets | null> {
+  return loadLatestPublishedNativeMeasuredTargets(DEX_SHADOW_PERSISTENCE, db, signal);
+}
+
 export async function publishDexMeasuredQuoteGeneration(input: {
   db: D1Database;
   targetGeneration: PublishedDexMeasuredTargets;
@@ -528,6 +613,17 @@ export async function publishDexMeasuredQuoteGeneration(input: {
   signal?: AbortSignal;
 }): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
   return publishNativeMeasuredQuoteGeneration(DEX_PERSISTENCE, input);
+}
+
+export async function publishDexShadowMeasuredQuoteGeneration(input: {
+  db: D1Database;
+  targetGeneration: PublishedDexMeasuredTargets;
+  outcomes: readonly DexMeasuredQuoteOutcome[];
+  quotedAt: number;
+  generationId?: string;
+  signal?: AbortSignal;
+}): Promise<{ generationId: string; measuredCount: number; failedCount: number }> {
+  return publishNativeMeasuredQuoteGeneration(DEX_SHADOW_PERSISTENCE, input);
 }
 
 export async function loadLatestPublishedDexMeasuredQuoteEvidence(
@@ -883,6 +979,8 @@ interface NativePersistenceConfig<TTarget extends NativeMeasuredTarget, TProfile
   targetSchema: { parse(value: unknown): TTarget };
   profileSchema: { parse(value: unknown): TProfile };
   profileBlockNumber(profile: TProfile): number;
+  targetProducer: { scheduleKey: string; job: string; path: string };
+  quoteProducer: { scheduleKey: string; job: string; path: string };
 }
 
 interface NativePublishedTargets<TTarget> {
@@ -924,11 +1022,27 @@ const DEX_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMe
   targetSchema: DexMeasuredExecutionTargetSchema,
   profileSchema: DexMeasuredExecutionProfileSchema,
   profileBlockNumber: (profile) => profile.blockNumber,
+  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
+  quoteProducer: { scheduleKey: "halfHourlyMeasuredExecution", job: "sync-cl-exit-depth", path: "halfHourlyMeasuredExecution" },
+};
+
+const DEX_SHADOW_PERSISTENCE: NativePersistenceConfig<DexMeasuredExecutionTarget, DexMeasuredExecutionProfile> = {
+  label: "DEX shadow",
+  activation: "shadow",
+  targetSurface: DEX_SHADOW_MEASURED_TARGET_SURFACE,
+  quoteSurface: DEX_SHADOW_MEASURED_QUOTE_SURFACE,
+  targetGenerationPrefix: "dex-shadow-measured-targets",
+  quoteGenerationPrefix: "dex-shadow-measured-quotes",
+  targetSchema: DexMeasuredExecutionTargetSchema,
+  profileSchema: DexMeasuredExecutionProfileSchema,
+  profileBlockNumber: (profile) => profile.blockNumber,
+  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
+  quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
 };
 
 const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget, SolanaMeasuredExecutionProfile> = {
   label: "Solana",
-  activation: "target-ratified",
+  activation: "shadow",
   targetSurface: SOLANA_MEASURED_TARGET_SURFACE,
   quoteSurface: SOLANA_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-solana-measured-targets",
@@ -936,11 +1050,13 @@ const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget,
   targetSchema: SolanaMeasuredExecutionTargetSchema,
   profileSchema: SolanaMeasuredExecutionProfileSchema,
   profileBlockNumber: (profile) => profile.slotWindow.after,
+  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
+  quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
 };
 
 const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, TronMeasuredExecutionProfile> = {
   label: "Tron",
-  activation: "active",
+  activation: "shadow",
   targetSurface: TRON_MEASURED_TARGET_SURFACE,
   quoteSurface: TRON_MEASURED_QUOTE_SURFACE,
   targetGenerationPrefix: "dex-tron-measured-targets",
@@ -948,6 +1064,8 @@ const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, Tro
   targetSchema: TronMeasuredExecutionTargetSchema,
   profileSchema: TronMeasuredExecutionProfileSchema,
   profileBlockNumber: (profile) => Math.max(...profile.quoteProof.map((point) => point.route.blockAfter)),
+  targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
+  quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
 };
 
 async function publishNativeMeasuredTargetInventory<
@@ -979,10 +1097,18 @@ async function publishNativeMeasuredTargetInventory<
             `INSERT INTO surface_publication_generations
        (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
         producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, 'halfHourlyOffset', 'sync-dex-liquidity',
-        'halfHourlyOffset', 'scheduled-job')`,
+       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, 'scheduled-job')`,
           )
-          .bind(config.targetSurface, id, input.capturedAt, targets.length, previous?.generation_id ?? null)
+          .bind(
+            config.targetSurface,
+            id,
+            input.capturedAt,
+            targets.length,
+            previous?.generation_id ?? null,
+            config.targetProducer.scheduleKey,
+            config.targetProducer.job,
+            config.targetProducer.path,
+          )
           .run(),
       3,
       input.signal,
@@ -1108,6 +1234,40 @@ async function publishNativeMeasuredQuoteGeneration<
   const id = input.generationId ?? generationId(config.quoteGenerationPrefix, input.quotedAt);
   const measuredCount = input.outcomes.filter((outcome) => outcome.status === "measured").length;
   const failedCount = input.outcomes.length - measuredCount;
+  const parsedOutcomes = input.outcomes.map((outcome) => {
+    if (
+      (outcome.status === "measured" && (!outcome.profile || outcome.failureReason != null)) ||
+      (outcome.status === "failed" && (outcome.profile != null || !outcome.failureReason?.trim()))
+    ) {
+      throw new Error(
+        `${config.label} measured quote outcome ${outcome.target.targetId} has an invalid terminal state`,
+      );
+    }
+    const profile = outcome.profile ? config.profileSchema.parse(outcome.profile) : null;
+    if (
+      profile &&
+      (profile.targetId !== outcome.target.targetId ||
+        profile.targetGenerationId !== input.targetGeneration.generationId ||
+        profile.quoteGenerationId !== id)
+    ) {
+      throw new Error(
+        `${config.label} measured quote outcome ${outcome.target.targetId} has mismatched generation identity`,
+      );
+    }
+    return { outcome, profile };
+  });
+  const persistedOutcomes = parsedOutcomes.filter(
+    ({ outcome }) => !(outcome.status === "failed" && outcome.failureReason === "budget-deferred"),
+  );
+  const omittedBudgetDeferredCount = parsedOutcomes.length - persistedOutcomes.length;
+  const targetIdsSha256 = await hashMeasuredTargetIds(input.targetGeneration.targets.map((target) => target.targetId));
+  const dependencyManifest: MeasuredQuoteGenerationDependency = {
+    targetGenerationId: input.targetGeneration.generationId,
+    targetCount: input.targetGeneration.targets.length,
+    persistedOutcomeCount: persistedOutcomes.length,
+    omittedBudgetDeferredCount,
+    targetIdsSha256,
+  };
   try {
     await runWithOverloadRetry(
       () =>
@@ -1116,41 +1276,24 @@ async function publishNativeMeasuredQuoteGeneration<
             `INSERT INTO surface_publication_generations
        (surface, generation_id, started_at, state, expected_rows, previous_generation_id,
         dependency_snapshot_json, producer_schedule_key, producer_job, producer_path, producer_kind)
-       VALUES (?, ?, ?, 'candidate', ?, ?, ?, 'halfHourlyMeasuredExecution', 'sync-cl-exit-depth',
-        'halfHourlyMeasuredExecution', 'scheduled-job')`,
+       VALUES (?, ?, ?, 'candidate', ?, ?, ?, ?, ?, ?, 'scheduled-job')`,
           )
           .bind(
             config.quoteSurface,
             id,
             input.quotedAt,
-            input.outcomes.length,
+            persistedOutcomes.length,
             previous?.generation_id ?? null,
-            JSON.stringify({ targetGenerationId: input.targetGeneration.generationId }),
+            JSON.stringify(dependencyManifest),
+            config.quoteProducer.scheduleKey,
+            config.quoteProducer.job,
+            config.quoteProducer.path,
           )
           .run(),
       3,
       input.signal,
     );
-    const rows = input.outcomes.map((outcome) => {
-      if (
-        (outcome.status === "measured" && (!outcome.profile || outcome.failureReason != null)) ||
-        (outcome.status === "failed" && (outcome.profile != null || !outcome.failureReason?.trim()))
-      ) {
-        throw new Error(
-          `${config.label} measured quote outcome ${outcome.target.targetId} has an invalid terminal state`,
-        );
-      }
-      const profile = outcome.profile ? config.profileSchema.parse(outcome.profile) : null;
-      if (
-        profile &&
-        (profile.targetId !== outcome.target.targetId ||
-          profile.targetGenerationId !== input.targetGeneration.generationId ||
-          profile.quoteGenerationId !== id)
-      ) {
-        throw new Error(
-          `${config.label} measured quote outcome ${outcome.target.targetId} has mismatched generation identity`,
-        );
-      }
+    const rows = persistedOutcomes.map(({ outcome, profile }) => {
       return [
         id,
         input.targetGeneration.generationId,
@@ -1170,24 +1313,26 @@ async function publishNativeMeasuredQuoteGeneration<
         outcome.status === "failed" && outcome.rawPayload != null ? JSON.stringify(outcome.rawPayload) : null,
       ] as const;
     });
-    await batchExecute(
-      input.db,
-      prepareMultiRowInsertStatements(
+    if (rows.length > 0) {
+      await batchExecute(
         input.db,
-        `INSERT INTO dex_measured_execution_quotes
+        prepareMultiRowInsertStatements(
+          input.db,
+          `INSERT INTO dex_measured_execution_quotes
        (generation_id, target_generation_id, target_id, stablecoin_id, adapter_profile_id, protocol, chain,
         pool_id, status, failure_reason, quoted_at, block_number, quote_profile_json, raw_quote_payload_json)`,
-        rows,
-      ),
-      { signal: input.signal },
-    );
+          rows,
+        ),
+        { signal: input.signal },
+      );
+    }
     const count = await input.db
       .prepare("SELECT COUNT(*) AS count FROM dex_measured_execution_quotes WHERE generation_id = ?")
       .bind(id)
       .first<{ count: number }>();
-    if (Number(count?.count ?? -1) !== input.outcomes.length) {
+    if (Number(count?.count ?? -1) !== persistedOutcomes.length) {
       throw new Error(
-        `${config.label} measured quote generation row mismatch: expected=${input.outcomes.length} actual=${count?.count ?? -1}`,
+        `${config.label} measured quote generation row mismatch: expected=${persistedOutcomes.length} actual=${count?.count ?? -1}`,
       );
     }
     await publishGenerationPointer({
@@ -1196,10 +1341,12 @@ async function publishNativeMeasuredQuoteGeneration<
       generationId: id,
       previousGenerationId: previous?.generation_id ?? null,
       nowSec: input.quotedAt,
-      rowCount: input.outcomes.length,
+      rowCount: persistedOutcomes.length,
       validationSummary: {
         measuredCount,
         failedCount,
+        persistedOutcomeCount: persistedOutcomes.length,
+        omittedBudgetDeferredCount,
         targetGenerationId: input.targetGeneration.generationId,
         activation: config.activation,
       },
@@ -1461,12 +1608,13 @@ export async function pruneDexMeasuredExecutionGenerations(
           `DELETE FROM dex_measured_execution_quotes
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )`,
         )
         .bind(
           DEX_MEASURED_QUOTE_SURFACE,
+          DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           SOLANA_MEASURED_QUOTE_SURFACE,
           TRON_MEASURED_QUOTE_SURFACE,
           cutoff,
@@ -1484,13 +1632,14 @@ export async function pruneDexMeasuredExecutionGenerations(
           `DELETE FROM dex_measured_execution_targets
        WHERE generation_id IN (
          SELECT generation_id FROM surface_publication_generations
-         WHERE surface IN (?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
+         WHERE surface IN (?, ?, ?, ?) AND state IN ('failed', 'rejected', 'superseded') AND started_at < ?
          ORDER BY started_at ASC LIMIT ?
        )
        AND generation_id NOT IN (SELECT DISTINCT target_generation_id FROM dex_measured_execution_quotes)`,
         )
         .bind(
           DEX_MEASURED_TARGET_SURFACE,
+          DEX_SHADOW_MEASURED_TARGET_SURFACE,
           SOLANA_MEASURED_TARGET_SURFACE,
           TRON_MEASURED_TARGET_SURFACE,
           cutoff,
@@ -1509,7 +1658,7 @@ export async function pruneDexMeasuredExecutionGenerations(
        WHERE rowid IN (
          SELECT candidate.rowid
            FROM surface_publication_generations candidate
-          WHERE candidate.surface IN (?, ?, ?, ?, ?, ?)
+          WHERE candidate.surface IN (?, ?, ?, ?, ?, ?, ?, ?)
             AND candidate.state IN ('failed', 'rejected', 'superseded')
             AND candidate.started_at < ?
             AND NOT EXISTS (
@@ -1528,6 +1677,8 @@ export async function pruneDexMeasuredExecutionGenerations(
         .bind(
           DEX_MEASURED_TARGET_SURFACE,
           DEX_MEASURED_QUOTE_SURFACE,
+          DEX_SHADOW_MEASURED_TARGET_SURFACE,
+          DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           SOLANA_MEASURED_TARGET_SURFACE,
           SOLANA_MEASURED_QUOTE_SURFACE,
           TRON_MEASURED_TARGET_SURFACE,
@@ -1546,7 +1697,7 @@ export async function pruneDexMeasuredExecutionGenerations(
         .prepare(
           `SELECT MIN(candidate.started_at) AS oldest_remaining_at
              FROM surface_publication_generations candidate
-            WHERE candidate.surface IN (?, ?, ?, ?, ?, ?)
+            WHERE candidate.surface IN (?, ?, ?, ?, ?, ?, ?, ?)
               AND (
                 EXISTS (
                   SELECT 1 FROM dex_measured_execution_quotes q
@@ -1562,6 +1713,8 @@ export async function pruneDexMeasuredExecutionGenerations(
         .bind(
           DEX_MEASURED_TARGET_SURFACE,
           DEX_MEASURED_QUOTE_SURFACE,
+          DEX_SHADOW_MEASURED_TARGET_SURFACE,
+          DEX_SHADOW_MEASURED_QUOTE_SURFACE,
           SOLANA_MEASURED_TARGET_SURFACE,
           SOLANA_MEASURED_QUOTE_SURFACE,
           TRON_MEASURED_TARGET_SURFACE,

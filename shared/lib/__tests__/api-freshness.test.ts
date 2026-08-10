@@ -16,7 +16,7 @@ describe("api-freshness", () => {
   });
 
   it("preserves intentional endpoint-vs-availability budget differences", () => {
-    expect(CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec).toBe(3600);
+    expect(CACHE_FRESHNESS_LANES.dexLiquidity.endpointMaxAgeSec).toBe(4 * 3600);
     expect(CACHE_FRESHNESS_LANES.dexLiquidity.availabilityMaxAgeSec).toBe(12 * 3600);
     expect(CACHE_FRESHNESS_LANES.bluechipRatings.endpointMaxAgeSec).toBe(12 * 3600);
     expect(CACHE_FRESHNESS_LANES.bluechipRatings.availabilityMaxAgeSec).toBe(24 * 3600);

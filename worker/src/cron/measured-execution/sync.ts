@@ -32,8 +32,11 @@ import { rotateFromCursor } from "../shared/cursor-rotation";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import {
   buildDexMeasuredQuoteGenerationId,
+  buildDexShadowMeasuredQuoteGenerationId,
   loadLatestPublishedDexMeasuredTargets,
+  loadLatestPublishedDexShadowMeasuredTargets,
   publishDexMeasuredQuoteGeneration,
+  publishDexShadowMeasuredQuoteGeneration,
   pruneDexMeasuredExecutionGenerations,
   type DexMeasuredQuoteOutcome,
 } from "./persistence";
@@ -120,6 +123,7 @@ export const MEASURED_EXECUTION_ADMISSION_RUN_METADATA = {
 const MAX_RUNTIME_MS = 8 * 60 * 1_000;
 const REFINEMENT_ROUNDS = 3;
 const MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:quote-admission";
+const SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY = "measured-execution:shadow-quote-admission";
 
 type TargetDeployment =
   | { kind: "quoter-v2"; config: DexMeasuredExecutionDeployment }
@@ -793,11 +797,12 @@ function applyQuoteOutcome(
   }
 }
 
-export async function syncDexMeasuredExecution(
+async function syncDexMeasuredExecutionLane(
   db: D1Database,
   chainRpcs: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
+  lane: "active" | "shadow" = "active",
 ): Promise<CronResult> {
   const startedAtMs = Date.now();
   const startedAt = Math.floor(startedAtMs / 1_000);
@@ -805,7 +810,9 @@ export async function syncDexMeasuredExecution(
     maxRequests: MAX_RPC_REQUESTS,
     deadlineMs: startedAtMs + MAX_RUNTIME_MS,
   });
-  const targetGeneration = await loadLatestPublishedDexMeasuredTargets(db, signal);
+  const targetGeneration = lane === "shadow"
+    ? await loadLatestPublishedDexShadowMeasuredTargets(db, signal)
+    : await loadLatestPublishedDexMeasuredTargets(db, signal);
   if (!targetGeneration || targetGeneration.targets.length === 0) {
     return {
       status: "degraded",
@@ -815,16 +822,16 @@ export async function syncDexMeasuredExecution(
     };
   }
 
-  const quoteGenerationId = buildDexMeasuredQuoteGenerationId(startedAt);
-  const expiringPriority = await loadExpiringScoreBearingPriorityPacket(
-    db,
-    targetGeneration.targets,
-    signal,
-  );
+  const quoteGenerationId = lane === "shadow"
+    ? buildDexShadowMeasuredQuoteGenerationId(startedAt)
+    : buildDexMeasuredQuoteGenerationId(startedAt);
+  const expiringPriority = lane === "active"
+    ? await loadExpiringScoreBearingPriorityPacket(db, targetGeneration.targets, signal)
+    : null;
   const priorityTargetIds = new Set(expiringPriority?.targetIds ?? []);
   const admissionState = await readDexSourcePaginationState(
     db,
-    MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
+    lane === "shadow" ? SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY : MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
     "sync-cl-exit-depth",
   );
   const admissionCursor = admissionState.cursor?.trim() || null;
@@ -1455,19 +1462,30 @@ export async function syncDexMeasuredExecution(
     itemsTotal: targetGeneration.targets.length,
     metadata: { quoteCallCount, rpcRequestCount: rpcBudget.requestsUsed },
   });
-  const publication = await publishDexMeasuredQuoteGeneration({
-    db,
-    targetGeneration,
-    outcomes,
-    quotedAt: publishedAt,
-    generationId: quoteGenerationId,
-    signal,
-  });
+  const publication = await (lane === "shadow"
+    ? publishDexShadowMeasuredQuoteGeneration({
+        db,
+        targetGeneration,
+        outcomes,
+        quotedAt: publishedAt,
+        generationId: quoteGenerationId,
+        signal,
+      })
+    : publishDexMeasuredQuoteGeneration({
+        db,
+        targetGeneration,
+        outcomes,
+        quotedAt: publishedAt,
+        generationId: quoteGenerationId,
+        signal,
+      }));
   let cursorWriteStatus: "not-needed" | "written" | "missing-table" | "write-failed" = "not-needed";
   if (budgetDeferredCount > 0 && nextCursor) {
     const cursorWrite = await writeDexSourcePaginationState({
       db,
-      sourceKey: MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
+      sourceKey: lane === "shadow"
+        ? SHADOW_MEASURED_EXECUTION_ADMISSION_SOURCE_KEY
+        : MEASURED_EXECUTION_ADMISSION_SOURCE_KEY,
       cursor: nextCursor,
       cycleStartedAt: admissionState.cycleStartedAt ?? startedAt,
       nowSec: publishedAt,
@@ -1498,6 +1516,7 @@ export async function syncDexMeasuredExecution(
     attemptedFailureCount - scoreEligibleAttemptedFailureCount - oversized.size,
   );
   const metadata = {
+    lane,
     targetGenerationId: targetGeneration.generationId,
     quoteGenerationId: publication.generationId,
     targetCount: targetGeneration.targets.length,
@@ -1565,4 +1584,22 @@ export async function syncDexMeasuredExecution(
       reason: publication.measuredCount > 0 ? "published-measured-execution" : "no-measured-execution",
     },
   };
+}
+
+export async function syncDexMeasuredExecution(
+  db: D1Database,
+  chainRpcs: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "active");
+}
+
+export async function syncDexShadowMeasuredExecution(
+  db: D1Database,
+  chainRpcs: Map<string, ChainRpcConfig>,
+  signal?: AbortSignal,
+  reportProgress?: CronProgressReporter,
+): Promise<CronResult> {
+  return syncDexMeasuredExecutionLane(db, chainRpcs, signal, reportProgress, "shadow");
 }

@@ -42,6 +42,24 @@ export const CRON_SCHEDULE_CADENCES = {
 
 export type CronScheduleKey = keyof typeof CRON_SCHEDULE_CADENCES;
 
+export function isHourlyDexSourceSlot(slotStartedAtSec: number): boolean {
+  return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 10;
+}
+
+export function isHourlyDexPriceSlot(slotStartedAtSec: number): boolean {
+  return new Date(slotStartedAtSec * 1_000).getUTCMinutes() === 16;
+}
+
+export function isDexLiquidityPublicationSlot(slotStartedAtSec: number): boolean {
+  const slot = new Date(slotStartedAtSec * 1_000);
+  return slot.getUTCMinutes() === 16 && slot.getUTCHours() % 2 === 0;
+}
+
+export function isDailyDexShadowTargetPublicationSlot(slotStartedAtSec: number): boolean {
+  const slot = new Date(slotStartedAtSec * 1_000);
+  return slot.getUTCMinutes() === 16 && slot.getUTCHours() === 6;
+}
+
 /**
  * Producer cadences the Safety Score v9 fact-set extension binds evidence
  * freshness to. Kept beside the cadence table (rather than reading
@@ -55,6 +73,6 @@ export type CronScheduleKey = keyof typeof CRON_SCHEDULE_CADENCES;
 export const V9_EVIDENCE_PRODUCER_INTERVAL_SEC = {
   "sync-live-reserves": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
   "sync-stablecoins": CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec,
-  "sync-dex-liquidity": CRON_SCHEDULE_CADENCES.halfHourlyChartsOffset.intervalSec,
+  "sync-dex-liquidity": 2 * 3600,
   "sync-redemption-backstops": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 } as const;

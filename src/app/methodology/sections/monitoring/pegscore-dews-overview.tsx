@@ -57,8 +57,8 @@ export function PegScoreDewsOverview() {
             DEWS (Depeg Early Warning System) computes forward-looking stress every 30 minutes from market, liquidity,
             confidence, blacklist, flow, and yield signals, with optional PSI-based amplification during systemic stress.
             Blacklist activity is attributed through the tracker config&apos;s canonical stablecoin ID, so same-symbol
-            siblings do not inherit one issuer&apos;s freeze events. Its divergence input now reuses the live depeg DEX
-            trust floor, so fresh-but-thin DEX rows stay visible for analytics but do not affect the score unless they
+            siblings do not inherit one issuer&apos;s freeze events. Hourly DEX prices remain eligible for 75 minutes, and
+            its divergence input reuses the live depeg DEX trust floor, so fresh-but-thin rows stay visible for analytics but do not affect the score unless they
             pass the same `$1M` aggregate-TVL gate. The Mint/Burn Flow signal separates 30-day baseline coverage from
             source freshness: a fresh zero-volume 24-hour row is calm, while a mature baseline with no fresh 24-hour row
             is unavailable and recorded as stale.

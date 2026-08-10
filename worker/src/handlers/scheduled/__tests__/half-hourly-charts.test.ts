@@ -3,12 +3,14 @@ import type { ScheduledRuntimeContext } from "../context";
 
 const mocks = vi.hoisted(() => ({
   consumeDexLiquidityScoringStage: vi.fn(),
+  reuseCurrentDexLiquidityScoringGeneration: vi.fn(),
   prepareSafetyScoreV9Input: vi.fn(),
   syncStablecoinCharts: vi.fn(),
 }));
 
 vi.mock("../../../cron/dex-liquidity/orchestrator", () => ({
   consumeDexLiquidityScoringStage: mocks.consumeDexLiquidityScoringStage,
+  reuseCurrentDexLiquidityScoringGeneration: mocks.reuseCurrentDexLiquidityScoringGeneration,
 }));
 vi.mock("../../../cron/prepare-safety-score-v9-input", () => ({
   prepareSafetyScoreV9Input: mocks.prepareSafetyScoreV9Input,
@@ -31,8 +33,8 @@ function runtime(): ScheduledRuntimeContext {
     ctx: {} as ExecutionContext,
     cron: "16,46 * * * *",
     scheduleKey: "halfHourlyChartsOffset",
-    scheduledTimeMs: 1_800_000,
-    slotStartedAt: 1_800,
+    scheduledTimeMs: 960_000,
+    slotStartedAt: 960,
     workerVersion: "worker-v1",
     mintBurnDisabledIds: [],
     mintBurnDisabledSymbols: [],
@@ -46,6 +48,17 @@ function runtime(): ScheduledRuntimeContext {
 describe("half-hourly charts scheduling", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.reuseCurrentDexLiquidityScoringGeneration.mockResolvedValue({
+      status: "skipped_neutral",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        persistence: {
+          generationId: "dex-liquidity-current",
+          skipped: false,
+          skippedReason: "liquidity-cadence-reuse",
+        },
+      }),
+    });
     mocks.prepareSafetyScoreV9Input.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.syncStablecoinCharts.mockResolvedValue({ status: "ok", itemCount: 1 });
   });
@@ -218,5 +231,43 @@ describe("half-hourly charts scheduling", () => {
       "dex-liquidity-123",
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+  });
+
+  it("refreshes prices without publishing liquidity on odd-hour :16", async () => {
+    mocks.consumeDexLiquidityScoringStage.mockResolvedValue({
+      status: "ok",
+      itemCount: 1,
+      metadata: JSON.stringify({ persistence: { generationId: "dex-liquidity-current" } }),
+    });
+    const scheduledRuntime = runtime();
+    scheduledRuntime.slotStartedAt = 4_560; // 1970-01-01 01:16 UTC
+
+    await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.consumeDexLiquidityScoringStage).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+      expect.any(Function),
+      scheduledRuntime.slotStartedAt,
+      { publishLiquidity: false, publishShadowTargets: false },
+    );
+  });
+
+  it("reuses the exact current generation at :46 without consuming a source stage", async () => {
+    const scheduledRuntime = runtime();
+    scheduledRuntime.slotStartedAt = 2_760; // 1970-01-01 00:46 UTC
+
+    await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    expect(mocks.consumeDexLiquidityScoringStage).not.toHaveBeenCalled();
+    expect(mocks.reuseCurrentDexLiquidityScoringGeneration).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+    );
+    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledWith(
+      scheduledRuntime.db,
+      expect.any(AbortSignal),
+      "dex-liquidity-current",
+    );
   });
 });

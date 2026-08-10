@@ -890,7 +890,7 @@ describe("syncRedemptionBackstops", () => {
         "cusd-cap": { liquidityScore: 29 },
         "iusd-infinifi": { liquidityScore: 47 },
       },
-      latestUpdatedAt: staleNow - 7201,
+      latestUpdatedAt: staleNow - 14_401,
     });
 
     const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");

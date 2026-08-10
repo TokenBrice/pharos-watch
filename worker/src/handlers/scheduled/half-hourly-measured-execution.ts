@@ -1,14 +1,11 @@
 /**
  * Half-hourly trigger (0,30 * * * *):
- *   sync-cl-exit-depth (5)
+ *   sync-cl-exit-depth (3)
  *
- * Isolated measured-execution lane. Three EVM chain lanes run alongside one
- * serialized Solana stream and one serialized Tron stream.
+ * Isolated score-bearing measured-execution lane. Shadow EVM, Solana, and
+ * Tron evidence runs once daily in the 08:10 UTC slot.
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
-import { syncSolanaDexMeasuredExecution } from "../../cron/measured-execution/solana-sync";
-import { syncTronDexMeasuredExecution } from "../../cron/measured-execution/tron-sync";
-import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "../../lib/error-utils";
 import { tryParseJson } from "../../lib/json-parse";
@@ -43,7 +40,7 @@ function hasActiveNativeFailure(metadata: unknown): boolean {
   );
 }
 
-async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
+export async function settleMeasuredExecutionLane(name: string, run: Promise<CronResult>): Promise<CronResult> {
   try {
     return await run;
   } catch (error) {
@@ -102,24 +99,7 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
 export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "half-hour measured execution slot", {
     job: "sync-cl-exit-depth",
-    run: async (signal, reportProgress) => {
-      const [evm, solana, tron] = await Promise.all([
-        settleMeasuredExecutionLane(
-          "evm",
-          syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
-        ),
-        settleMeasuredExecutionLane(
-          "solana",
-          syncSolanaDexMeasuredExecution(runtime.db, runtime.env.JUPITER_API_KEY, signal, reportProgress),
-        ),
-        settleMeasuredExecutionLane(
-          "tron",
-          syncTronDexMeasuredExecution(runtime.db, runtime.env.TRONGRID_API_KEY, signal, reportProgress),
-        ),
-      ]);
-      // Wait for all lane writes to settle, then preserve lease-loss and timeout semantics.
-      throwIfAborted(signal);
-      return mergeMeasuredExecutionResults(evm, solana, tron);
-    },
+    run: (signal, reportProgress) =>
+      syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
   });
 }

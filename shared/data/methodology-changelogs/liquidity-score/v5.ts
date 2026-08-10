@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.991",
+    title: "Separated DEX price, score, and shadow cadences",
+    date: "2026-08-10",
+    effectiveAt: 1786320000,
+    summary:
+      "DEX prices now refresh hourly, the standalone Liquidity Score publishes every two hours, active exact-route quotes remain half-hourly, and score-ineligible shadow evidence moves to a daily diagnostic run.",
+    impact: [
+      "The Liquidity Score formula, source admission, retained-pool selection, protocol caps, and public row schema are unchanged",
+      "Hourly price generations continue to use the exact retained pool graph and current published liquidity generation, while alternate hours avoid rewriting score, history, depth, and target rows",
+      "Score-bearing EVM exact-route evidence retains its 30-minute quote cadence; score-ineligible EVM, Solana, and Tron evidence is isolated to a daily shadow lane and cannot affect scoring",
+      "Synthetic budget deferrals are reconstructed from a count-and-digest-fenced generation manifest instead of being stored as one D1 row per target; fail-closed identity and last-known-good semantics are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.99",
     title: "Stellar classic-AMM discovery",
     date: "2026-08-08",

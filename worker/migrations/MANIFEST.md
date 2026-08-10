@@ -16,6 +16,7 @@
 | -------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
 | 0228     | `0228_depeg_resolver_incident_closed_pre_lock.sql`           | Add nullable `closed_pre_lock_at` for the derived pre-lock closed lifecycle state.                          |
 | 0229     | `0229_d1_capacity_compaction.sql`                            | Add gzip DDR publication snapshots, daily yield history, and decision-episode fingerprints.                |
+| 0230     | `0230_reduce_measured_execution_write_amplification.sql`     | Drop two redundant measured-execution indexes that multiply target and quote inserts.                      |
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
 
@@ -294,6 +295,7 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - `0225_dex_archive_manifest.sql`: the archive runtime is retired and its manifest, dependency, and family-state tables were dropped from production on 2026-08-10. Do not delete verified R2 objects or restore source rows; schema/data recovery requires operator-directed D1 Time Travel plus an independently verified bounded restore plan.
 - `0226_safety_score_v9_canonical_cache.sql`: roll back by restoring the prior Worker, which continues reading the retained shadow-era cache keys. Keep the additive canonical cache rows; they are inert to the prior Worker and must not be deleted during a normal rollback.
 - `0227_cngn_ddr_events_90718_90738_link.sql`: roll back DDR publication behavior by restoring the prior Worker. Keep the append-only repair authorizations, consumptions, links, and ordered revisions as reviewed provenance; do not recreate the closed tasks or detach events 90718, 90729, and 90738 without a separate corrective migration.
+- `0230_reduce_measured_execution_write_amplification.sql`: Worker rollback needs no schema change. If production query latency regresses, restore only the affected index in a forward migration after confirming its query plan; Worker rollback does not recreate dropped indexes.
 
 ## Rollback Procedure
 
