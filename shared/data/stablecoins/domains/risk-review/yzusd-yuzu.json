@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "Yuzu documents yzUSD as a pooled, overcollateralized product minted and redeemed against USDT0, with yzPP as a first-loss tranche; it does not describe borrower-owned collateral positions with oracle-triggered liquidations.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

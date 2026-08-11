@@ -1,5 +1,5 @@
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
-import type { OracleRiskConfidence, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
+import type { OracleRiskConfidence, OracleRiskRole, OracleRiskTier, StablecoinLink, StablecoinMeta } from "@shared/types";
 
 /**
  * Client-safe projection of the server-only `oracleRisk` review, in the
@@ -42,6 +42,11 @@ export interface OracleBranchClientRow {
 }
 
 export interface OracleRiskClientSummary {
+  role: OracleRiskRole;
+  /** Module heading, so the two roles never share one title. */
+  title: string;
+  /** One line naming what the reviewed price authority is for and who it hurts when it fails. */
+  roleNote: string;
   tier: OracleRiskTier;
   tierLabel: string;
   tierToneClass: string;
@@ -77,6 +82,37 @@ const TIER_TONES: Record<OracleRiskTier, string> = {
   "single-source-or-laggy": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   "opaque-or-unknown": "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
 };
+
+const ROLE_TITLES: Record<OracleRiskRole, string> = {
+  "collateral-pricing": "Collateral pricing & liquidation",
+  "coin-price-feed": "Price feed",
+};
+
+/**
+ * Mirrors the curated backfill rule, so a profile that predates the `role`
+ * field — or a new one that omits it — still titles itself correctly:
+ * reviewed liquidation branches, or an unresolved crypto-backed CDP, price
+ * borrower collateral; everything else prices the coin or its backing.
+ */
+export function resolveOracleRiskRole(coin: StablecoinMeta): OracleRiskRole {
+  const profile = coin.oracleRisk;
+  if (profile?.role) return profile.role;
+  if (profile?.branchApplicability?.disposition === "branches-required") return "collateral-pricing";
+  if (
+    profile?.branchApplicability == null &&
+    coin.mechanismArchetype === "cdp" &&
+    coin.flags.backing === "crypto-backed"
+  ) {
+    return "collateral-pricing";
+  }
+  return "coin-price-feed";
+}
+
+function roleNote(role: OracleRiskRole, symbol: string): string {
+  return role === "collateral-pricing"
+    ? `Prices the collateral behind ${symbol} and drives liquidations. A wrong or stale price leaves debt undercollateralized, so this is core solvency machinery.`
+    : `Covers how ${symbol} and the assets behind it are priced, not borrower collateral in a liquidation engine. Failure here hits whoever consumes the price — including third-party integrators — rather than an internal liquidation path.`;
+}
 
 const CONFIDENCE_LABELS: Record<OracleRiskConfidence, string> = {
   verified: "Verified",
@@ -163,8 +199,12 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
   }
 
   const notApplicable = profile.branchApplicability?.disposition === "not-applicable";
+  const role = resolveOracleRiskRole(coin);
 
   return {
+    role,
+    title: ROLE_TITLES[role],
+    roleNote: roleNote(role, coin.symbol),
     tier: profile.tier,
     tierLabel: notApplicable ? "No liquidation oracle · not scored" : TIER_LABELS[profile.tier] ?? profile.tier,
     tierToneClass: notApplicable

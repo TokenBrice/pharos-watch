@@ -721,6 +721,20 @@ export const ORACLE_RISK_TIER_VALUES = [
 ] as const;
 export type OracleRiskTier = (typeof ORACLE_RISK_TIER_VALUES)[number];
 
+/**
+ * What the reviewed price authority is *for*. Both roles carry the same tier
+ * vocabulary but describe structurally different exposures, so the detail
+ * module titles and frames them separately.
+ *
+ * `collateral-pricing`: the feed values borrower collateral inside a
+ * liquidation engine, so a wrong or stale price leaves the stablecoin's own
+ * debt undercollateralized.
+ * `coin-price-feed`: the feed prices the coin itself or the assets behind it,
+ * with no borrower liquidation engine consuming it.
+ */
+export const ORACLE_RISK_ROLE_VALUES = ["collateral-pricing", "coin-price-feed"] as const;
+export type OracleRiskRole = (typeof ORACLE_RISK_ROLE_VALUES)[number];
+
 export const ORACLE_RISK_CONFIDENCE_VALUES = ["verified", "probable", "limited", "unknown"] as const;
 export type OracleRiskConfidence = (typeof ORACLE_RISK_CONFIDENCE_VALUES)[number];
 export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] as const;
@@ -794,6 +808,7 @@ export interface OracleRiskBranch {
 export interface OracleRiskProfile {
   tier: OracleRiskTier;
   summary: string;
+  role?: OracleRiskRole;
   branchModel?: OracleRiskBranchModel;
   branchApplicability?: OracleRiskBranchApplicabilityReview;
   reviewedAt?: string;

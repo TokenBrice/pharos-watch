@@ -87,6 +87,11 @@ function BranchSummaryRow({ branch, tierLabel }: { branch: OracleBranchClientRow
  * with heartbeat/staleness bounds, LTV/MCR parameters, liquidation and
  * shutdown mechanics). Renders nothing for coins without an oracle review —
  * most fiat-backed issuers.
+ *
+ * The title and lead-in come from the profile's role: a feed that prices
+ * borrower collateral inside a liquidation engine is solvency machinery, while
+ * a feed that prices the coin itself exposes its consumers instead. Both share
+ * the tier vocabulary, so without the split readers read them as one thing.
  */
 export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClientSummary | null }) {
   if (!summary) return null;
@@ -118,17 +123,18 @@ export function OracleLiquidationSection({ summary }: { summary?: OracleRiskClie
   return (
     <Card id="oracle" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
-        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>Oracle & liquidation</DetailSectionTitle>
+        <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>{summary.title}</DetailSectionTitle>
         <Badge variant="outline" className={cn("text-[11px] font-medium", summary.tierToneClass)}>
           {summary.tierLabel}
         </Badge>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
         <div>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">{summary.roleNote}</p>
           {/* 14 of 81 CDP oracle summaries run past 400 characters. */}
           <CollapsibleProse text={summary.summary} className="text-sm" toggleClassName="mt-2" size="md" />
         </div>
-        <FactGrid aria-label="Oracle and liquidation facts" items={facts} />
+        <FactGrid aria-label={`${summary.title} facts`} items={facts} />
         {inlineBranches.length > 0 ? (
           <div>
             <ul aria-label="Oracle branches" className="space-y-3">

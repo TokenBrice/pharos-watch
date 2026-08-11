@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "HLiquity values its sole HBAR Trove market through Pyth HBAR/USD and USD/CHF prices, falls back to Supra, and retains the last good price when both sources are unusable.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

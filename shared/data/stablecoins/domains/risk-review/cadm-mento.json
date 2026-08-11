@@ -32,6 +32,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "CADm's live Celo USDm/CADm Broker exchange uses one SortedOracles reporter with a 360-second report-expiry window and minimumReports set to one; BreakerBox gates the swap but no second feed or failover path is configured.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

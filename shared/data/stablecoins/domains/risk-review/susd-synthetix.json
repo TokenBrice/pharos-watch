@@ -10,6 +10,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Synthetix sUSD historically relies on Chainlink-decentralized price feeds for synth pricing, with no stronger failover tier verified here.",
+    "role": "collateral-pricing",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

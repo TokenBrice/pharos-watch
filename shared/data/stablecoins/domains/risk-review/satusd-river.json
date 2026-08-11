@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Thirty-one callable collateral branches across 11 chains use branch-local single-provider or all-components-required aggregate wrappers. Each wrapper fails closed on non-positive or older-than-configured input and has no cache or automatic provider failover; liquidations are immediate, Stability Pool first, then redistribution.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

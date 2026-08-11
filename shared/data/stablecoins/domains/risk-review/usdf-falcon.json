@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Falcon determines collateral spot prices through its internal offchain system using major-exchange market data and retains discretion over innovative-mint liquidation decisions.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

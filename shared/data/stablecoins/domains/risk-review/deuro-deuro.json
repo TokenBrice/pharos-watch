@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "dEURO's permanent V2 and V3 MintingHub modules use permissionless challenge auctions instead of external price feeds. A V3 price reference can only be another valid same-collateral dEURO position and does not import an oracle provider.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

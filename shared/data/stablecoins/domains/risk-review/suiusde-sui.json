@@ -15,6 +15,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Sui describes suiUSDe as an Ethena-powered synthetic dollar backed by digital assets and corresponding short futures positions, but the reviewed public material does not disclose a suiUSDe-specific oracle implementation or failover path.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

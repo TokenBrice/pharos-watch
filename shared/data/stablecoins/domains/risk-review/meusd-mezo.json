@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Mezo MUSD uses one BTC collateral path whose PriceFeed reads a single Chainlink-compatible BTC/USD oracle, rejects data older than 60 seconds, and supplies the price to Liquity-style trove liquidation.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

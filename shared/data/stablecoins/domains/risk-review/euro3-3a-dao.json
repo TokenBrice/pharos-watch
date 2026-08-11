@@ -43,6 +43,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "EURO3's five residual debt-bearing Polygon collateral branches divide a heartbeat-checked Chainlink token/USD value by a heartbeat-checked Chainlink EUR/USD value. Every leaf enforces a 24-hour staleness bound and reverts on failure; no fallback or last-good cache exists, and all branches share the same EUR/USD Chainlink failure domain.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

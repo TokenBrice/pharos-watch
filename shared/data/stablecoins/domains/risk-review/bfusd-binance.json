@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "BFUSD is a Binance account balance backed by Binance-managed hedging, staking, and reserve-fund strategies rather than an onchain borrower market with a public collateral oracle.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

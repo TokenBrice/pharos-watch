@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "BtcUSD is a BiFi-style multi-handler CDP on Bifrost: market manager 0xd7b21280 prices each collateral handler through oracle proxy 0x6853f777, which maps handlers to Bifrost native Chainlink-compatible USD feeds (WBTC/USD, BTCB/USD, BTC/USD). Borrow limit is 50% LTV and margin-call limits are 95% (99.9% for BTCB); liquidations are third-party partial liquidations with an owner circuit breaker, no liquidation delay or auction window on any handler, and no secondary-feed failover.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -59,6 +59,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Money On Chain's pooled rBTC system consumes the OMoC BTC/USD feed, where up to ten staked operators use off-chain quorum signatures and elected fallback publishers. An April 2026 consensus-bypass flaw prompted a protocol panic pause; the protocol's incident report states the bug was fixed.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

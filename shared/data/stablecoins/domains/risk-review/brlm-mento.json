@@ -55,6 +55,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "BRLm's live Celo USDm/BRLm Broker exchange uses one Mento SortedOracles BRL/USD reporter with a 360-second freshness/reset window. MedianDeltaBreaker and MarketHoursBreaker gate trading; no alternate provider or fallback path is configured.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Inverse FiRM values isolated collateral markets through Pessimistic Price Oracles that choose the conservative value across a primary and fallback path before applying market-specific collateral and liquidation parameters.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "USDM is minted and redeemed 1:1 against USDC while Monetrix deploys backing into a delta-neutral Hyperliquid strategy; it has no user-owned collateral debt or token-level liquidation branch. The reviewed docs do not identify a public strategy price feed or failover path.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "USP's Funding Manager reads Piku's Oracle Module at 0x433471901bA1A8BDE764E8421790C7D9bAB33552. Its verified implementation exposes authorized functions to set issuance and redemption prices, and Piku describes it as a manual price feed. A live Chainlink-compatible adapter at 0xb52eb13139905eb11c472100a1e86cb1961b8ef3 returned the same price at the reviewed block, but Piku does not disclose an independent source, cadence, or enforced failover; a separate documented adapter address reverted on standard reads.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "JPYSC is a trust-bank-issued yen instrument sold and repurchased at a fixed 1 JPYSC = 1 JPY par through SBI VC Trade against segregated trust assets (yen demand deposits, with JGBs permitted up to 50%). The verified StablecoinV1 implementation exposes no oracle or price-feed surface, and no CDP or lending branch prices JPYSC or any collateral against it; the tracked price is peg-derived, not oracle- or market-discovered.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

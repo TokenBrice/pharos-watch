@@ -51,6 +51,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "dUSD's own price is hard-coded at $1 for mint, redeem, and dLEND lending/borrowing to resist manipulation, but the protocol values its yield-bearing reserve stablecoins (e.g. sfrxUSD, sUSDS) and dLEND collateral through external feeds — API3 and Redstone, with Chainlink and issuer feeds — and those feeds drive reserve NAV and mint/redeem ratios. No documented single-primary-with-failover oracle architecture per asset.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

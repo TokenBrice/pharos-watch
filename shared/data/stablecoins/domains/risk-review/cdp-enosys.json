@@ -51,6 +51,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Four debt-bearing Flare branches use a common Enosys PriceFeedFtsoV2Connector path through the hard-coded FlareContractRegistry into FTSOv2. The connector discards the returned feed timestamp, enforces no maximum age, caches no price, and has no alternate provider; successful reads return the oracle-failure-detected flag as false, while registry or FTSO reverts propagate instead of activating branch shutdown.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

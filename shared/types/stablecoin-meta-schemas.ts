@@ -81,6 +81,7 @@ import {
   ORACLE_RISK_CONFIDENCE_VALUES,
   ORACLE_RISK_BRANCH_APPLICABILITY_VALUES,
   ORACLE_RISK_BRANCH_MODEL_VALUES,
+  ORACLE_RISK_ROLE_VALUES,
   ORACLE_RISK_TIER_VALUES,
   RESEARCH_REVIEW_CONFIDENCE_VALUES,
   RESERVE_NON_LINK_DISPOSITION_VALUES,
@@ -365,6 +366,7 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
   .object({
     tier: z.enum(ORACLE_RISK_TIER_VALUES),
     summary: z.string().min(12),
+    role: z.enum(ORACLE_RISK_ROLE_VALUES).optional(),
     branchModel: z.enum(ORACLE_RISK_BRANCH_MODEL_VALUES).optional(),
     branchApplicability: z
       .object({

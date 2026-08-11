@@ -51,6 +51,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Five registered Metronome msUSD Pools span Ethereum, Optimism, Base, and Hemi. Ethereum, Optimism, and Base use Chainlink collateral feeds with no alternate provider; Hemi wires RedStone main/fallback providers but its main path is currently unconfigured, so live collateral prices use RedStone push feeds. Every branch hardcodes msUSD debt at $1, liquidates immediately with no protocol bad-debt backstop, and stops liquidations during reversible shutdown.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

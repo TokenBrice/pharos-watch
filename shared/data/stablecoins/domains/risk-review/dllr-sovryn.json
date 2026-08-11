@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "DLLR/Mynt mints and redeems against constituent BTC-backed stablecoins such as DOC and ZUSD at equivalent amounts, so the aggregator layer uses deterministic internal accounting rather than its own liquidation oracle.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

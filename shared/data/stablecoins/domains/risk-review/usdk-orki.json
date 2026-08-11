@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Orki USDK documents RedStone oracle feeds for its Liquity V2-style collateral markets, with no stronger failover behavior verified.",
+    "role": "collateral-pricing",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

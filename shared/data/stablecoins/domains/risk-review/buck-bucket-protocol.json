@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Bucket v1 has 40 registered Sui collateral branches. Thirty-eight have currently refreshable threshold-one Supra or whitelisted derivative-rule SingleOracles that fail closed after ten seconds; two debt-bearing StakedHouse branches remain registered but their stale, unconfigured oracles make price-dependent actions unavailable.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

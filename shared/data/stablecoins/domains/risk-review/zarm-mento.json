@@ -48,6 +48,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Mento's current Celo oracle-priced stable paths use external rate sources through OracleAdapter/SortedOracles and BreakerBox validity gates. The current reserve inventory has no active ZARm borrower-CDP branch.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

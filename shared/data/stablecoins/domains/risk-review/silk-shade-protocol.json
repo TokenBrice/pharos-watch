@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "ShadeLend runs 19 registered CDP vaults across two registries (14 current, 5 legacy-deprecated), all priced through the Shade Oracle Router Primary with a single default provider (Band Standard Reference Proxy) plus collateral-family derivative oracles; the router's deviation-guard list is empty and no failover provider exists (SupraOracles remains under research). The dominant debt branch (WETH vault, 74.9% of 207,123.4 SILK aggregate elastic debt) is Band-fresh, but the second-largest (WBTC vault, 18.3%) is frozen with its staleness check disabled, near-zero remaining collateral, and a liquidation query that reverts; the Persistence stkATOM vault's oracle has rejected queries as stale since 2025-02-07 and the Stride stINJ rate since 2026-07-29. Per-vault parameters (max_ltv 45-85%, liquidation discounts 5-10%, 600s collateral staleness tolerance), debt figures, and feed freshness were read directly from the registries, router, derivative oracles, Stability Pool, and Silk Index Oracle at Secret Network block 26592283 (2026-08-08); per-position amounts remain private state. Collateral-to-quote-symbol mapping follows the Stability Pool valid-assets registry, the protocol's own mapping.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

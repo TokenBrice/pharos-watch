@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Zephyr documents ZSD as a Djed-style stablecoin backed by one protocol-wide ZEPH reserve with a 400% minimum reserve ratio; current public materials do not identify the production oracle provider set or failure handling.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

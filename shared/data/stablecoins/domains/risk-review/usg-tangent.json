@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Tangent has 12 debt-bearing USG markets and one staged zero-cap msETH/WETH market that remains unpaused, callable, and collateral-holding. Each outer oracle requires Curve LP/component calls, so the end-to-end route is standard-external even where Chainlink leaves have heartbeat-checked fallback and last-good behavior.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

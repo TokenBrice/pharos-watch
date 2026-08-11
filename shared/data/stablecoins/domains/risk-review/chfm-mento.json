@@ -40,6 +40,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "CHFm's sole Celo CDP branch values USDm through one Mento SortedOracles CHF/USD report, inverted by FXPriceFeed. OracleAdapter enforces FX market hours, BreakerBox bidirectional mode, and a 360-second report expiry; there is no alternate provider. An invalid or unavailable rate freezes price-dependent operations until the authorized watchdog permanently shuts the branch and pins the last valid price.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

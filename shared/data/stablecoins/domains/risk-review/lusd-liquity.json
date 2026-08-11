@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Liquity V1 uses a Chainlink primary feed with Tellor fallback and automated switching/last-good-price logic for LUSD collateral pricing.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

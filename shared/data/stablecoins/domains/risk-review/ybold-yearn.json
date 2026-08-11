@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "yBOLD is a tokenized Liquity V2 Stability Pool position with no borrower-owned collateral branches of its own; its underlying BOLD exposure inherits Liquity V2 collateral-feed validation, fallback, and branch shutdown behavior.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

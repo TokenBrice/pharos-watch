@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "USDXL's persistent HypurrFi Market Loans facilitator uses one pooled Aave V3 health-factor engine with sixteen collateral-specific oracle branches. Every branch ultimately depends on Pyth through a direct adapter or a selected wrapper; no path enforces price recency. HyFiOracle can select a fallback for absent or nonpositive answers, but the configured fallback is the zero address. eMode categories 1 and 2 override risk parameters for correlated positions; Market Flash Loans and the USDT0 PSM are separate non-liquidation issuance paths.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

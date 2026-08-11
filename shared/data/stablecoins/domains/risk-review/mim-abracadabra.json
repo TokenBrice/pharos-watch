@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Abracadabra's four currently debt-bearing Ethereum cauldrons each use a single-source oracle behind an owner-swappable ProxyOracle with no timelock; three price collateral off a single Chainlink feed and the largest (yvDAI, 45.7% of tracked collateral) has no external price feed at all, valuing DAI at a hardcoded $1.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Three debt-bearing XDC pools use 15-minute-delayed, one-hour-valid feeds. XDC and psXDC share one XDC/USD path; CGO has a separate aggregator, but both aggregators have exactly one active node, the same reporter, and no secondary feed.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

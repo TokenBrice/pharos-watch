@@ -43,6 +43,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Nine debt-bearing Ethereum controllers use market-specific Curve EMA and aggregate-stable-price routes. Modern Chainlink clamps were disabled at the reviewed block, while legacy sfrxETH requires an unchecked Chainlink answer; tBTC, weETH, cbBTC, and LBTC add single-pool conversion dependencies without alternate feeds. Per-branch debt shares (debtSharePct) were read from the Curve crvUSD markets API at Ethereum block 25584850 (2026-07-22); the current sfrxETH controller's share was not resolved in that read and is treated as material.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

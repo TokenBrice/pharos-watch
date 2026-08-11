@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "USX minting and redemption validate collateral value through Solstice's proprietary oracle (off-chain aggregation from multiple CEX and DEX sources, stored in on-chain PDAs) cross-referenced against Pyth within a defined tolerance, with stablecoin-peg bounds, staleness detection, and automatic halting on validation failure. There is no borrower-CDP or forced-liquidation branch.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

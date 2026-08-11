@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "vCRED is a staking and access token for a market-making and perpetual-vault platform; public product docs do not describe borrower-owned collateral positions or a token-level liquidation oracle.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

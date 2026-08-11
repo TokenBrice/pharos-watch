@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Twelve debt-bearing Liquity v2 branches on Ethereum and Plasma use immutable branch-local Chainlink or RedStone compositions with strict positive-answer and staleness validation. Invalid aggregator data ordinarily shuts only the affected branch onto lastGoodPrice; insufficient-gas catches and two raw wrapper-rate calls instead revert. Ethereum weETH alone has a canonical-rate failover. Six branches condition redemption pricing on a 2% market/reference band, while paused and dust-debt branches remain liquidation-active.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

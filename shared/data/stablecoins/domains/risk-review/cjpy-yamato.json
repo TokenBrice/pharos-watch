@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Yamato's sole ETH pledge branch derives ETH/JPY from Chainlink ETH/USD and JPY/USD feeds and reverts when either component is broken or stale; there is no alternate provider fallback in the live PriceFeedV3 path.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

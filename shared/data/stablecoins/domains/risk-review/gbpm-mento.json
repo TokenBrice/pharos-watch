@@ -43,6 +43,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Mento V3 routes rates through SortedOracles and OracleAdapter, while BreakerBox rejects stale, out-of-bounds, or off-hours feeds before swaps/CDP routes use them. The GBPm Celo CDP branch (Liquity v2 fork) has been reviewed on-chain: USDm-collateralized troves liquidate below a 110% MCR with a 135% system CCR and a 110% shutdown SCR.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

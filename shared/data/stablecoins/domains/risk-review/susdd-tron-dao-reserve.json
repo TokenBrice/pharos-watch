@@ -47,6 +47,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "sUSDD is an ERC-4626 savings wrapper over USDD and has no borrower-owned collateral positions or local liquidation engine. Its required USDD parent carries the separately reviewed governed CDP oracle, auction, deficit, and shutdown branch.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -31,6 +31,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Twelve registry-authorized debt-bearing Ethereum markets use market-local Chainlink compositions, with ERC-4626 or native exchange-rate legs where required. Each oracle reverts on stale, non-positive, incomplete, or reverting input and has no cache or automatic fallback; the affected market therefore fails closed. Wrapper-rate modules cap upward growth from stored checkpoints while accepting decreases. Every market, oracle, and liquidation engine is owned by AltoTimelockController with a contract-enforced 3,600-second minimum delay; administrative replacement is not automatic failover. The separate fixed-price USM/PSM routes do not create borrower debt positions and are excluded from liquidation branches.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

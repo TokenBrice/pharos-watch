@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "Resupply lending pairs value ERC-4626 collateral from its share-to-underlying conversion while treating the crvUSD or frxUSD underlying as one dollar, so liquidations use an internal vault-rate path rather than market-price feeds.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "NUSD is minted 1:1 from admitted liquid assets and backed by a managed delta-neutral portfolio, not by user debt positions subject to oracle-triggered collateral liquidation.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

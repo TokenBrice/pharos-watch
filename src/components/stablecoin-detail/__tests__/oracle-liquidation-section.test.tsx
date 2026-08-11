@@ -5,6 +5,9 @@ import type { OracleBranchClientRow } from "@/lib/stablecoin-detail-oracle-clien
 import type { OracleRiskClientSummary } from "@/lib/stablecoin-detail-oracle-client";
 
 const SUMMARY: OracleRiskClientSummary = {
+  role: "collateral-pricing",
+  title: "Collateral pricing & liquidation",
+  roleNote: "Prices the collateral behind BOLD and drives liquidations.",
   tier: "redundant-with-failover",
   tierLabel: "Redundant + failover",
   tierToneClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -56,7 +59,8 @@ const SUMMARY: OracleRiskClientSummary = {
 describe("OracleLiquidationSection", () => {
   it("renders tier badge, facts, branches, and folded detail", () => {
     const html = renderToStaticMarkup(<OracleLiquidationSection summary={SUMMARY} />);
-    expect(html).toContain("Oracle &amp; liquidation");
+    expect(html).toContain("Collateral pricing &amp; liquidation");
+    expect(html).toContain("Prices the collateral behind BOLD and drives liquidations.");
     expect(html).toContain("Redundant + failover");
     expect(html).toContain("per-branch shutdown");
     expect(html).toContain("WETH branch");
@@ -70,6 +74,19 @@ describe("OracleLiquidationSection", () => {
     // detail disclosure closed by default (native <details> without open attr)
     expect(html).toContain("<details");
     expect(html).not.toContain("<details open");
+  });
+
+  it("titles and frames a coin-price-feed profile apart from a collateral-pricing one", () => {
+    const feedSummary: OracleRiskClientSummary = {
+      ...SUMMARY,
+      role: "coin-price-feed",
+      title: "Price feed",
+      roleNote: "Covers how trUSD and the assets behind it are priced, not borrower collateral.",
+    };
+    const html = renderToStaticMarkup(<OracleLiquidationSection summary={feedSummary} />);
+    expect(html).toContain("Price feed");
+    expect(html).toContain("not borrower collateral");
+    expect(html).not.toContain("Collateral pricing");
   });
 
   it("cuts long profile summaries to a lead behind Read more", () => {

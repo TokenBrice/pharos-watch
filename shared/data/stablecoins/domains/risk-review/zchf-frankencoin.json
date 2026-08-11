@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "Frankencoin positions use challenge auctions to determine collateral market price and liquidate unsuccessful positions, so the liquidation path does not depend on an external price oracle.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

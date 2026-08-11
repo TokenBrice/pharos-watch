@@ -60,6 +60,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "JPYm's sole Celo CDP branch prices its USDm collateral through Mento's onchain SortedOracles median and BreakerBox controls; an invalid rate permanently shuts down borrowing rather than switching to another provider.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
