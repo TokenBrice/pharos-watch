@@ -29,6 +29,19 @@ function FactValue({ item }: { item: FactGridItem }) {
  * The hero passport grammar (field name in small tracked caps above, entry in
  * mono below) extracted for module summary layers. Values come from bounded
  * authored vocabularies or formatted figures — never CSS-truncated prose.
+ *
+ * Two tracks, not the old `sm:grid-cols-3`. A fixed three left every 4-item
+ * set as a 3+1 orphan row (Bridging's `THIRD-PARTY`, Reserve quality's
+ * `SLICES`/`CONFIDENCE`) and squeezed the 22rem rail hard enough that
+ * Custody's `REHYPOTHECATION` label clipped at the card edge. Two columns
+ * wrap 4 items as 2×2 and leave every label room to render in full.
+ *
+ * Deliberately a static `grid-cols-2` and not
+ * `grid-cols-[repeat(auto-fit,minmax(8rem,1fr))]`: that arbitrary value does
+ * not survive this project's Tailwind build (verified absent from the
+ * generated CSS while sibling `grid-cols-[...]` classes are present), so the
+ * element silently loses `grid-template-columns` and collapses to one column.
+ * Cards that genuinely fit three tracks pass `grid-cols-3` explicitly.
  */
 export function FactGrid({
   items,
@@ -45,7 +58,7 @@ export function FactGrid({
     <div
       role="group"
       aria-label={ariaLabel}
-      className={cn("grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3", className)}
+      className={cn("grid grid-cols-2 gap-x-4 gap-y-3", className)}
     >
       {items.map((item) => {
         const isExternal = item.href?.startsWith("http");
