@@ -42,6 +42,13 @@ export const DepegHistory = dynamic(
   { loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" /> },
 );
 
+// No loading fallback: the module renders nothing until the review query
+// resolves and stays absent for coins with no reviewed forecast, so a skeleton
+// would promise content most coins never have.
+export const DdrTrackRecordSection = dynamic(
+  () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DdrTrackRecordSection),
+);
+
 export const FlowsSection = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.FlowsSection),
   { loading: () => <DetailSectionSkeleton className="h-[320px] w-full rounded-xl" /> },

@@ -9,6 +9,7 @@ import { TapeForCoinTeaser } from "@/components/tape-for-coin-teaser";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import {
   BlacklistHistorySection,
+  DdrTrackRecordSection,
   DepegHistory,
   FlowHistorySection,
   SafetyScoreHistorySection,
@@ -60,6 +61,14 @@ export function DetailHistoryExploreSections({
               />
             </LazySection>
           </section>
+        ) : null}
+        {/* Directly after the incident history it grades: DepegHistory is what
+            happened, this is how Pharos's frozen forecasts scored against it.
+            No reserved height — the module is absent for most coins. */}
+        {!viewModel.isNavToken ? (
+          <LazySection>
+            <DdrTrackRecordSection stablecoinId={viewModel.id} />
+          </LazySection>
         ) : null}
         {viewModel.hasFlows ? (
           <LazySection minHeight={320}>
