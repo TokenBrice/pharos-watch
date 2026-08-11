@@ -270,6 +270,18 @@ function getReferenceIssues(coin: StablecoinMeta, knownIds: ReadonlySet<string>)
   return issues;
 }
 
+/**
+ * A review cannot predate the composition it reviewed. The V9 curated-admission
+ * guard silently drops such compositions, so catch the inversion at authoring
+ * time instead of losing the backing evidence at scoring time.
+ */
+function getReserveReviewDateOrderIssue(coin: StablecoinMeta): string | null {
+  const review = coin.reserveReview;
+  if (!review?.reviewedAt || !review.compositionAsOf) return null;
+  if (review.reviewedAt >= review.compositionAsOf) return null;
+  return `reserveReview.reviewedAt (${review.reviewedAt}) predates compositionAsOf (${review.compositionAsOf}); the curated reserve composition would be silently discarded`;
+}
+
 function getContractDeploymentIssues(coin: StablecoinMeta): string[] {
   const issues: string[] = [];
   const seen = new Map<string, string>();
@@ -566,6 +578,11 @@ function runStablecoinDataCheck(): void {
       const pegRuntimeSupportIssue = getPegRuntimeSupportIssue(entry.coin);
       if (pegRuntimeSupportIssue) {
         reportError(`${entry.file} (${entry.coin.id}): ${pegRuntimeSupportIssue}`);
+      }
+
+      const reserveReviewDateOrderIssue = getReserveReviewDateOrderIssue(entry.coin);
+      if (reserveReviewDateOrderIssue) {
+        reportError(`${entry.file} (${entry.coin.id}): ${reserveReviewDateOrderIssue}`);
       }
 
       for (const referenceIssue of getReferenceIssues(entry.coin, knownIds)) {
