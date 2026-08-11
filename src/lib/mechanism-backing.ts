@@ -212,6 +212,14 @@ function formatFactValue(key: string, value: number): string {
     const pct = /Pct$/.test(key) ? value : value * 100;
     return `${pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%`;
   }
+  // Coverage and collateralization ratios read as percentages, matching the
+  // rail Collateralization card. Other ratios (exchange rates, health factors,
+  // per-share conversions) keep their raw magnitude — a percentage would
+  // misdescribe them.
+  if (/(coverage|collateraliz)/i.test(key)) {
+    const pct = value * 100;
+    return `${pct >= 1000 ? Math.round(pct).toLocaleString("en-US") : pct.toFixed(1)}%`;
+  }
   if (/Days$/.test(key)) return `${value < 10 ? value.toFixed(1) : Math.round(value)}d`;
   if (/Count$/.test(key)) return Math.round(value).toLocaleString("en-US");
   const { short, suffix } = abbreviateNumberParts(value);

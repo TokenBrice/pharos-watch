@@ -9,7 +9,9 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { MintingPressureArcGauge } from "@/components/minting-pressure-gauge";
+import { getLiteralMintingPressureScore } from "@shared/lib/mint-burn-signals";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCurrency, getNetColor, getNetPrefix } from "@shared/lib/format";
 import { getPressureShiftDisplay } from "@/lib/flow-intensity";
@@ -55,6 +57,20 @@ function SummarySkeleton() {
   );
 }
 
+/**
+ * The em-dash reading the Safety rail already uses for an unavailable metric.
+ * Deliberately lighter than the measured figure it replaces: an unreported stat
+ * must not read as a value of the same standing.
+ */
+function UnreportedStat() {
+  return (
+    <p className="mt-2 pharos-numeric text-2xl font-normal leading-none text-muted-foreground sm:text-3xl">
+      <span aria-hidden="true">—</span>
+      <span className="sr-only">Not reported</span>
+    </p>
+  );
+}
+
 export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const query = useMintBurnFlows();
   const { data, isLoading } = query;
@@ -89,6 +105,14 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   const pressureDisplay = pressureScore != null ? getPressureShiftDisplay(pressureScore) : null;
   const netSignal = getFlowDirectionUi(netDirection, "summary");
   const pressureSignal = getFlowPressureUi(pressureState, "summary");
+  // A dial with a needle asserts a measurement. When no 24h volume was counted
+  // there is nothing to weigh, so the quadrant takes the same empty-state
+  // treatment the flow-history feed two modules below already uses.
+  const hasMintingPressure =
+    getLiteralMintingPressureScore({
+      mintVolume24hUsd: coin.mintVolume24hUsd,
+      burnVolume24hUsd: coin.burnVolume24hUsd,
+    }) != null;
 
   // Figma coin template: quadrant layout with hairline-divided regions —
   // [Minting Pressure gauge | Net window grid] over [Pressure Shift | Avg
@@ -151,13 +175,24 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
             </span>
           </div>
           <div className="flex flex-1 flex-col items-center justify-center px-4 py-6 sm:px-5">
-            <MintingPressureArcGauge
-              mintVolume24hUsd={coin.mintVolume24hUsd}
-              burnVolume24hUsd={coin.burnVolume24hUsd}
-            />
-            <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
-              The gauge uses raw 24h mint and burn volume balance
-            </p>
+            {hasMintingPressure ? (
+              <>
+                <MintingPressureArcGauge
+                  mintVolume24hUsd={coin.mintVolume24hUsd}
+                  burnVolume24hUsd={coin.burnVolume24hUsd}
+                />
+                <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
+                  The gauge uses raw 24h mint and burn volume balance
+                </p>
+              </>
+            ) : (
+              <EmptyStateIllustration
+                kind="no-data"
+                title="No 24h mint or burn volume"
+                description="There is nothing to weigh, so no minting-pressure reading is published."
+                className="py-2"
+              />
+            )}
           </div>
         </div>
 
@@ -209,14 +244,18 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
               {pressureSignal.label}
             </span>
           </div>
-          <p
-            className={cn(
-              "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
-              pressureSignal.valueClass,
-            )}
-          >
-            {pressureDisplay != null ? `${getNetPrefix(pressureDisplay)}${pressureDisplay}` : "NR"}
-          </p>
+          {pressureDisplay != null ? (
+            <p
+              className={cn(
+                "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+                pressureSignal.valueClass,
+              )}
+            >
+              {`${getNetPrefix(pressureDisplay)}${pressureDisplay}`}
+            </p>
+          ) : (
+            <UnreportedStat />
+          )}
           <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
             {pressureSignal.helper}
           </p>
@@ -227,14 +266,18 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
           <p className="text-sm font-medium text-foreground">
             Average Daily Net <span className="text-muted-foreground">· 30d</span>
           </p>
-          <p
-            className={cn(
-              "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
-              coin.baselineDailyNetUsd != null ? getNetColor(coin.baselineDailyNetUsd) : "text-muted-foreground",
-            )}
-          >
-            {coin.baselineDailyNetUsd != null ? formatSignedCurrency(coin.baselineDailyNetUsd) : "NR"}
-          </p>
+          {coin.baselineDailyNetUsd != null ? (
+            <p
+              className={cn(
+                "mt-2 pharos-numeric text-2xl font-extrabold leading-none sm:text-3xl",
+                getNetColor(coin.baselineDailyNetUsd),
+              )}
+            >
+              {formatSignedCurrency(coin.baselineDailyNetUsd)}
+            </p>
+          ) : (
+            <UnreportedStat />
+          )}
           <p className="mt-2 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-muted-foreground">
             {buildFlowSummaryNarrative(netDirection, pressureState)}
           </p>

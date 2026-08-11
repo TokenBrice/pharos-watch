@@ -58,12 +58,16 @@ function signalBarHex(value: number): string {
   return THREAT_BAND_HEX.DANGER;
 }
 
+/* Only `available` signals reach a bar at all (unavailable ones are named in the
+ * "not applicable" line instead), so every value here is a real reading. A
+ * measured zero therefore keeps a visible cap at the origin rather than an
+ * empty track, which would read as a bar that failed to render. */
 function ProgressBar({ value }: { value: number }) {
   return (
     <div className="h-3 w-full rounded-[3px] border border-border/50 bg-muted/45">
       <div
         className="h-full rounded-[3px] transition-all"
-        style={{ width: `${Math.min(value, 100)}%`, backgroundColor: signalBarHex(value) }}
+        style={{ width: `${Math.min(value, 100)}%`, minWidth: "3px", backgroundColor: signalBarHex(value) }}
       />
     </div>
   );
@@ -336,7 +340,10 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
           );
         })()}
 
-        {unavailableSignalNames.length > 0 && showBreakdown && (
+        {/* The bars render in both chart modes, so the unmeasured signals are
+            named in both — otherwise a signal with no reading is indistinguishable
+            from one that was never listed. */}
+        {unavailableSignalNames.length > 0 && (
           <p className="text-[11px] text-muted-foreground">{unavailableSignalNames.join(", ")} — not applicable</p>
         )}
 
