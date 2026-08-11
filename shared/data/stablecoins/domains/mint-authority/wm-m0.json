@@ -12,7 +12,7 @@
         "0x437cc33344a0B27A429f795ff6B469C72698B291"
       ],
       "implementationAddresses": [
-        "0x813b926b1d096e117721bd1eb017fba122302da0"
+        "0x6d9db63afccf515f393d5e65be69d38bb3b29d13"
       ],
       "adminAddresses": [
         "0x431169728d75bd02f4053435b87d15c8d1fb2c72",
@@ -20,8 +20,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "WrappedMToken EIP-1967 proxy (Migratable)",
-      "observedAt": "2026-07-20",
-      "observedBlock": 25295240,
+      "observedAt": "2026-08-11",
+      "observedBlock": 25734737,
       "sources": [
         {
           "label": "WrappedMToken source (Blockscout ETH)",

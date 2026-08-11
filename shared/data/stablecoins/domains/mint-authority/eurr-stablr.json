@@ -35,7 +35,7 @@
         "authorityType": "multisig",
         "directMintAbility": "direct",
         "threshold": 1,
-        "signerCount": 3,
+        "signerCount": 2,
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
@@ -58,7 +58,7 @@
         "authorityType": "multisig",
         "directMintAbility": "upgrade-only",
         "threshold": 1,
-        "signerCount": 1,
+        "signerCount": 2,
         "modulesOrGuardsStatus": "not-applicable",
         "sources": [
           {
@@ -106,8 +106,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "EURR EIP-1967 proxy admin",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25166592,
+      "observedAt": "2026-08-11",
+      "observedBlock": 25734737,
       "sources": [
         {
           "label": "Ethereum EURR token",
