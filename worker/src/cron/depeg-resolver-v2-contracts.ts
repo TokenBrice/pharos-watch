@@ -99,6 +99,13 @@ export interface DdrSealedPublicPrediction {
   sealedPayload: Record<string, unknown>;
 }
 
+export interface DdrSealIdentity {
+  stablecoinId: string;
+  pegCurrency: string;
+  direction: DdrDirection;
+  startedAt: number;
+}
+
 export interface DdrFirstPublicationMembership {
   publicPredictionId: number;
   incidentKey: string;
@@ -142,6 +149,7 @@ export interface DdrLockOpportunityInput {
 export interface DdrSealInput {
   incidentKey: string;
   eventId: number;
+  identity: DdrSealIdentity;
   runId: string;
   lockedAt: number;
   eligibleAt: number;

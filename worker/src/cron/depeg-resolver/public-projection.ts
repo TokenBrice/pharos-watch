@@ -64,22 +64,23 @@ export function buildSealPayload(
     backstop: DdrForecastReadinessBackstop;
   },
 ): Record<string, unknown> {
+  const eventAgeAtLockSec = lockedAt - incident.startedAt;
   const base = {
     eventId: row.eventId,
     incidentKey: incident.incidentKey,
-    stablecoinId: row.stablecoinId,
+    stablecoinId: incident.stablecoinId,
     symbol: row.symbol,
     name: row.name,
-    pegCurrency: row.pegCurrency,
+    pegCurrency: incident.pegCurrency,
     governance: row.governance,
     status: row.status,
-    direction: row.direction,
-    startedAt: row.startedAt,
+    direction: incident.direction,
+    startedAt: incident.startedAt,
     prediction: {
       incidentKey: incident.incidentKey,
       eligibleAt: lock.eligibleAt,
       lockedAt,
-      eventAgeAtLockSec: lockedAt - row.startedAt,
+      eventAgeAtLockSec,
       lockTiming,
       lockTrigger: lock.lockTrigger,
       readiness: lock.readiness,
@@ -101,7 +102,7 @@ export function buildSealPayload(
       kind: "no_call",
       noCall: {
         lockedAt,
-        eventAgeAtLockSec: lockedAt - row.startedAt,
+        eventAgeAtLockSec,
         missingReasons: row.resolution.insufficientReasons ?? [],
         relatedContext: row.relatedContext,
       },

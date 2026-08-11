@@ -165,13 +165,20 @@ export async function sealEligibleLocks(input: {
 
     const lockTiming = computeLockTiming(incident, input.nowSec, lock.eligibleAt);
     const sealedPayload = buildSealPayload(row, incident, input.nowSec, lockTiming, lock);
+    const eventAgeAtLockSec = input.nowSec - incident.startedAt;
     const sealInput: DdrSealInput = {
       incidentKey: incident.incidentKey,
       eventId: row.eventId,
+      identity: {
+        stablecoinId: incident.stablecoinId,
+        pegCurrency: incident.pegCurrency,
+        direction: incident.direction,
+        startedAt: incident.startedAt,
+      },
       runId: input.ddrRunId,
       lockedAt: input.nowSec,
       eligibleAt: lock.eligibleAt,
-      eventAgeAtLockSec: input.nowSec - row.startedAt,
+      eventAgeAtLockSec,
       lockTiming,
       policyDelaySec: lock.policyDelaySec,
       lockTrigger: lock.lockTrigger,

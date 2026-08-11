@@ -787,6 +787,81 @@ describe("computeDepegResolver", () => {
     expect(result.sealed[0]?.rowHash).toBe(computeDdrPublicRowHash(sealInput!.sealedPayload));
   });
 
+  it("seals public predictions with incident identity when registry peg metadata differs", async () => {
+    const row = resolverRow({
+      stablecoinId: "wbrl-ripio",
+      symbol: "WBRL",
+      name: "Ripio wBRL",
+      pegCurrency: "BRL",
+    });
+    const incident = canonicalIncident({
+      incidentKey: "ddr2:wbrlreal0000000000000000000000",
+      stablecoinId: "wbrl-ripio",
+      pegCurrency: "REAL",
+      startedAt: row.startedAt,
+    });
+    const db = mockD1([]);
+    const stores = {
+      ...storesFor(incident.incidentKey).stores,
+      sealPublicPrediction: vi.fn(async (_db, input) => sealedFromInput(input, "prediction")),
+      sealPublicNoCall: vi.fn(async () => {
+        throw new Error("unexpected no-call seal");
+      }),
+    };
+
+    const result = await sealEligibleLocks({
+      stores,
+      db,
+      rows: [row],
+      activeEventById: new Map([
+        [
+          42,
+          activeEvent({
+            stablecoin_id: "wbrl-ripio",
+            symbol: "WBRL",
+            peg_type: "peggedREAL",
+            started_at: row.startedAt,
+          }),
+        ],
+      ]),
+      incidentsByEventId: new Map([[42, incident]]),
+      existingSealed: [],
+      nowSec: NOW_SEC,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      syncCapabilities: { depegPipeline: true },
+    });
+
+    const sealInput = stores.sealPublicPrediction.mock.calls[0]?.[1];
+    const sealedPayload = sealInput?.sealedPayload ?? {};
+    const frozen = sealedPayload.frozen as { sourceRow?: Record<string, unknown> } | null;
+    expect(sealInput).toMatchObject({
+      identity: {
+        stablecoinId: "wbrl-ripio",
+        pegCurrency: "REAL",
+        direction: "below",
+        startedAt: row.startedAt,
+      },
+      eventAgeAtLockSec: 12 * 3600,
+    });
+    expect(sealedPayload).toMatchObject({
+      eventId: 42,
+      incidentKey: incident.incidentKey,
+      stablecoinId: "wbrl-ripio",
+      pegCurrency: "REAL",
+      direction: "below",
+      startedAt: row.startedAt,
+      prediction: {
+        eventAgeAtLockSec: 12 * 3600,
+      },
+    });
+    expect(frozen?.sourceRow).toMatchObject({
+      stablecoinId: "wbrl-ripio",
+      pegCurrency: "BRL",
+    });
+    expect(computeDdrPublicRowHash(sealedPayload)).toBe(result.sealed[0]?.rowHash);
+  });
+
   it("keeps a below-readiness incident pending when canonical eligibility has not arrived", async () => {
     const startedAt = NOW_SEC - 3600;
     const row = resolverRow({ startedAt, ageSec: 3600 });
