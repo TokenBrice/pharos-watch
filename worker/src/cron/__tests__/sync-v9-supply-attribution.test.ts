@@ -51,7 +51,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     vi.useRealTimers();
   });
 
-  it("publishes one exact degraded generation and retries only after the producer cooldown", async () => {
+  it("publishes one exact diagnostic rejected generation as healthy and retries only after the producer cooldown", async () => {
     const { sqlite, db } = openDb();
     try {
       const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
@@ -110,7 +110,17 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         db,
         new Map(),
       );
-      expect(first.status).toBe("degraded");
+      expect(first.status).toBe("ok");
+      expect(first.productivity?.reason).toBe(
+        "supply-attribution-generation-published-with-diagnostic-rejections",
+      );
+      expect(JSON.parse(first.metadata ?? "{}")).toMatchObject({
+        rejectedAssetIds: ["xaut-tether"],
+        diagnosticRejectedAssetIds: ["xaut-tether"],
+        diagnosticRejectedCount: 1,
+        blockingRejectedAssetIds: [],
+        blockingRejectedCount: 0,
+      });
       expect(mocks.capture).toHaveBeenCalledTimes(1);
       expect(
         sqlite
@@ -139,6 +149,82 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       );
       expect(second.status).toBe("skipped_neutral");
       expect(mocks.capture).toHaveBeenCalledTimes(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps blocking rejected generations degraded", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
+      const nowSec = fixedInput.clockSec + 15 * 60;
+      vi.setSystemTime(nowSec * 1_000);
+      const cacheEntry = await buildNativeV9InputCacheEntry(
+        fixedInput,
+        buildSafetyScoreV9InputIdentity({
+          methodologyVersion: fixedInput.methodologyVersion,
+          baseInputGenerationId: fixedInput.baseInputGenerationId,
+          publicationGenerationId: fixedInput.sourceGeneration,
+        }),
+      );
+      sqlite
+        .prepare(
+          "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+        )
+        .run(
+          NATIVE_V9_INPUT_CACHE_KEY,
+          cacheEntry.value,
+          fixedInput.clockSec,
+        );
+      const journal = createSupplyAttributionJournalV1({
+        schemaVersion: 1,
+        lane: "supply-attribution",
+        assetId: "xaut-tether",
+        attemptId: "supply-attribution:blocking-fixture",
+        sourceId:
+          "xaut.canonical-lock-mint-group-partition.v2",
+        sourceOriginClass: "issuer-disclosure-plus-onchain",
+        baseInputGenerationId: fixedInput.baseInputGenerationId,
+        sourceGeneration: fixedInput.sourceGeneration,
+        registryFingerprint: fixedInput.registryFingerprint,
+        routeInventoryDigest: null,
+        attemptCode: "supply-attribution.collector.attempted",
+        admissionCode:
+          "supply-attribution.admission.rejected-upstream",
+        fallbackCode:
+          "supply-attribution.fallback.aggregate-only",
+        rejectionCode: "transparency-source-unavailable",
+        attemptedAtSec: nowSec - 1,
+        completedAtSec: nowSec,
+        scoringClockSec: nowSec,
+        sourceObservedAtSec: null,
+        failedRouteId: null,
+        contentSha256: null,
+      });
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec,
+        expectedAssetIds: ["xaut-tether"],
+        attributionById: {},
+        journalRecords: [journal],
+      });
+
+      const result = await syncSafetyScoreV9SupplyAttribution(
+        db,
+        new Map(),
+      );
+
+      expect(result.status).toBe("degraded");
+      expect(result.productivity?.reason).toBe(
+        "supply-attribution-generation-published-with-blocking-rejections",
+      );
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        rejectedAssetIds: ["xaut-tether"],
+        diagnosticRejectedAssetIds: [],
+        diagnosticRejectedCount: 0,
+        blockingRejectedAssetIds: ["xaut-tether"],
+        blockingRejectedCount: 1,
+      });
     } finally {
       sqlite.close();
     }

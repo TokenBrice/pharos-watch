@@ -26,6 +26,18 @@ import {
 
 const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
 
+function diagnosticRejectedAssetIds(
+  generation: ReturnType<typeof createSafetyScoreV9SupplyAttributionGeneration>,
+): string[] {
+  return generation.rejectedAssetIds.filter((assetId) => {
+    const outcome = generation.outcomesById[assetId];
+    return (
+      outcome?.status === "rejected" &&
+      outcome.rejectionCode === "transparency-stale"
+    );
+  });
+}
+
 export async function syncSafetyScoreV9SupplyAttribution(
   db: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -195,8 +207,12 @@ export async function syncSafetyScoreV9SupplyAttribution(
     };
   }
 
-  const complete =
-    generation.rejectedAssetIds.length === 0;
+  const diagnosticRejected = diagnosticRejectedAssetIds(generation);
+  const diagnosticRejectedSet = new Set(diagnosticRejected);
+  const blockingRejectedAssetIds = generation.rejectedAssetIds.filter(
+    (assetId) => !diagnosticRejectedSet.has(assetId),
+  );
+  const complete = blockingRejectedAssetIds.length === 0;
   return {
     status: complete ? "ok" : "degraded",
     itemCount: generation.acceptedAssetIds.length,
@@ -213,13 +229,19 @@ export async function syncSafetyScoreV9SupplyAttribution(
       acceptedCount: generation.acceptedAssetIds.length,
       rejectedCount: generation.rejectedAssetIds.length,
       rejectedAssetIds: generation.rejectedAssetIds,
+      diagnosticRejectedCount: diagnosticRejected.length,
+      diagnosticRejectedAssetIds: diagnosticRejected,
+      blockingRejectedCount: blockingRejectedAssetIds.length,
+      blockingRejectedAssetIds,
       priorGenerationStatus,
     }),
     productivity: {
       productive: true,
       reason: complete
-        ? "supply-attribution-generation-published"
-        : "supply-attribution-generation-published-with-rejections",
+        ? generation.rejectedAssetIds.length > 0
+          ? "supply-attribution-generation-published-with-diagnostic-rejections"
+          : "supply-attribution-generation-published"
+        : "supply-attribution-generation-published-with-blocking-rejections",
     },
   };
 }
