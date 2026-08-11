@@ -302,7 +302,7 @@
   {
     "id": "frax-frax",
     "symbol": "FRAX",
-    "name": "Frax",
+    "name": "Legacy Frax Dollar",
     "protocolSlug": "frax",
     "variantOf": null,
     "isYieldBearing": false,

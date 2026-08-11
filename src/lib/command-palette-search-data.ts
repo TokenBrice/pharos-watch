@@ -74,7 +74,7 @@ export const COMMAND_PALETTE_STABLECOINS = [
   ["scrvusd-curve", "Savings crvUSD", "scrvUSD"],
   ["usx-solstice", "Solstice USX", "USX"],
   ["usda-avalon", "Avalon USDa", "USDA"],
-  ["frax-frax", "Frax", "FRAX"],
+  ["frax-frax", "Legacy Frax Dollar", "FRAX"],
   ["dola-inverse-finance", "Dola", "DOLA"],
   ["sdola-inverse-finance", "Inverse Staked DOLA", "sDOLA"],
   ["ausd-agora", "Agora Dollar", "AUSD"],
