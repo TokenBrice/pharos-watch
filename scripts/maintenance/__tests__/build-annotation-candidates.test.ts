@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCoinIdResolver } from "../build-annotation-candidates";
+import {
+  buildCoinIdResolver,
+  filterAgainstExisting,
+  type Candidate,
+} from "../build-annotation-candidates";
 import type { StablecoinMeta } from "../../../shared/types";
 
 function coin(id: string, symbol: string, name = symbol): StablecoinMeta {
@@ -23,5 +27,31 @@ describe("buildCoinIdResolver", () => {
 
     expect(resolveCoinId(" uusd ")).toBe("unique-usd");
     expect(resolveCoinId("Unique USD")).toBe("unique-usd");
+  });
+});
+
+describe("filterAgainstExisting", () => {
+  const candidate = (date: string, kind = "launch"): Candidate => ({
+    coinId: "example-usd",
+    date,
+    kind,
+    description: "Example candidate",
+    source: "https://example.com",
+  });
+
+  it("does not requeue events covered by the last editorial sweep", () => {
+    expect(
+      filterAgainstExisting(
+        [candidate("2026-08-10"), candidate("2026-08-11"), candidate("2026-08-12")],
+        "",
+        "2026-08-11",
+      ),
+    ).toEqual([candidate("2026-08-12")]);
+  });
+
+  it("still rejects duplicate rows newer than the last sweep", () => {
+    const queued = "## 2026-08-12\n- example-usd | launch | Example candidate | source: https://example.com\n";
+
+    expect(filterAgainstExisting([candidate("2026-08-12")], queued, "2026-08-11")).toEqual([]);
   });
 });

@@ -124,7 +124,9 @@ After all per-row decisions, rewrite `agents/annotation-candidates.md`:
 1. Remove promoted rows (they are now in the curated file).
 2. Remove dropped rows.
 3. Keep deferred rows, with the `defer:` annotation visible.
-4. Update the footer to today: `<!-- last_swept_at: YYYY-MM-DD -->`.
+4. Update the footer to today: `<!-- last_swept_at: YYYY-MM-DD -->`. The
+   producer uses this date as an inclusive cutoff, preventing promoted and
+   dropped events from reappearing on the next run.
 5. Prepend a short header noting the sweep (e.g. `<!-- swept 2026-05-23:
    12 promoted, 8 dropped, 3 deferred -->`).
 

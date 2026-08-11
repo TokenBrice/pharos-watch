@@ -237,7 +237,7 @@ These have real entrypoints and are expected to be run by a person, a Git hook, 
 
 These scripts are intentionally not CI guardrails. Keep their reports under `agents/` unless a source or methodology change needs durable documentation.
 
-- `npm run candidates:annotations` and `npm run candidates:ai-summaries` build the scheduled editorial review queues from the authenticated public API. Live runs require `PHAROS_API_KEY`; `PHAROS_API_BASE` can override the production API base. The AI-summary queue validates the current Safety Score V9 contract, compares current backing/exit/control pillars, and flags cited V8-only dimension claims as retired rather than mapping them to unrelated V9 pillars.
+- `npm run candidates:annotations` and `npm run candidates:ai-summaries` build the scheduled editorial review queues from the authenticated public API. Live runs require `PHAROS_API_KEY`; `PHAROS_API_BASE` can override the production API base. The annotation producer treats the queue's `last_swept_at` date as an inclusive editorial cutoff, so promoted and dropped events do not reappear after a sweep. The AI-summary queue validates the current Safety Score V9 contract, compares current backing/exit/control pillars, and flags cited V8-only dimension claims as retired rather than mapping them to unrelated V9 pillars.
 - `npm run audit:price-source-depth -- --prod` for source-depth baseline research
 - `npm run audit:price-source-depth -- --input scripts/__tests__/fixtures/audit-price-source-depth --json` for deterministic fixture validation
 - `npm run audit:dia-provider -- --input agents/source-depth-baseline-YYYY-MM-DD.json` for DIA exact-address provider research
