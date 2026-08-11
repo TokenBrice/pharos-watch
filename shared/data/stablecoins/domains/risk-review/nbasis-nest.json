@@ -1,6 +1,5 @@
 {
   "id": "nbasis-nest",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

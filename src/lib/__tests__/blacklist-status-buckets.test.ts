@@ -1,6 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinData } from "@shared/types";
 import {
   BLACKLIST_STATUS_BUCKET_ORDER,
@@ -41,34 +39,16 @@ describe("blacklist status buckets", () => {
     expect(resolveBlacklistStatusBucket(false)).toBe("no");
   });
 
-  it("uses reviewed registry status before V9 freeze exposure", () => {
-    const response = makeReportCardsV9Response({
-      cards: [makeV9Card({
-        id: "usdp-parallel",
-        accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "possible" },
-      })],
-    });
-    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const reportCard = projection.status === "available" ? projection.value["usdp-parallel"] : undefined;
-
-    expect(getBlacklistStatusBucketForStablecoin("usdp-parallel", reportCard)).toBe("upstream");
+  it("uses reviewed registry status", () => {
+    expect(getBlacklistStatusBucketForStablecoin("usdp-parallel")).toBe("upstream");
   });
 
-  it("falls back to V9 freeze exposure when no reviewed registry status exists", () => {
-    const response = makeReportCardsV9Response({
-      cards: [makeV9Card({
-        id: "runtime-only",
-        accessPosture: { ...makeV9Card().accessPosture, freezeExposure: "direct" },
-      })],
-    });
-    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const reportCard = projection.status === "available" ? projection.value["runtime-only"] : undefined;
-
-    expect(getBlacklistStatusBucketForStablecoin("runtime-only", reportCard)).toBe("yes");
+  it("returns no status when the reviewed registry status is missing", () => {
+    expect(getBlacklistStatusBucketForStablecoin("runtime-only")).toBeNull();
   });
 
   it("always returns all four buckets, including zero market-cap rows", () => {
-    const buckets = buildBlacklistStatusBuckets([], {});
+    const buckets = buildBlacklistStatusBuckets([]);
 
     expect(buckets.map((bucket) => bucket.key)).toEqual(BLACKLIST_STATUS_BUCKET_ORDER);
     expect(buckets).toHaveLength(4);
@@ -82,24 +62,13 @@ describe("blacklist status buckets", () => {
       { id: "usdp-parallel", name: "USD+", symbol: "USDP" },
       { id: "lusd-liquity", name: "Liquity USD", symbol: "LUSD" },
     ] as StablecoinData[];
-    const baseAccess = makeV9Card().accessPosture;
-    const response = makeReportCardsV9Response({
-      cards: [
-        makeV9Card({ id: "lusd-liquity", accessPosture: { ...baseAccess, freezeExposure: "none-known" } }),
-        makeV9Card({ id: "usdp-parallel", accessPosture: { ...baseAccess, freezeExposure: "possible" } }),
-        makeV9Card({ id: "usdt-tether", accessPosture: { ...baseAccess, freezeExposure: "direct" } }),
-      ],
-    });
-    const projection = buildV9SafetyTableMap(response, response.safetyScoreIdentity);
-    const reportCards = projection.status === "available" ? projection.value : {};
-
-    expect(filterStablecoinsByBlacklistStatus(stablecoins, "yes", reportCards).map((coin) => coin.id)).toEqual([
+    expect(filterStablecoinsByBlacklistStatus(stablecoins, "yes").map((coin) => coin.id)).toEqual([
       "usdt-tether",
     ]);
-    expect(filterStablecoinsByBlacklistStatus(stablecoins, "upstream", reportCards).map((coin) => coin.id)).toEqual([
+    expect(filterStablecoinsByBlacklistStatus(stablecoins, "upstream").map((coin) => coin.id)).toEqual([
       "usdp-parallel",
     ]);
-    expect(filterStablecoinsByBlacklistStatus(stablecoins, "no", reportCards).map((coin) => coin.id)).toEqual([
+    expect(filterStablecoinsByBlacklistStatus(stablecoins, "no").map((coin) => coin.id)).toEqual([
       "lusd-liquity",
     ]);
   });

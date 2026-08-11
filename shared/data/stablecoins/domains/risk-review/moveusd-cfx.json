@@ -1,6 +1,5 @@
 {
   "id": "moveusd-cfx",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

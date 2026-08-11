@@ -1,6 +1,5 @@
 {
   "id": "susde-ethena",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

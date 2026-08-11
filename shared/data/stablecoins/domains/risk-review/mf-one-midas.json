@@ -1,6 +1,5 @@
 {
   "id": "mf-one-midas",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

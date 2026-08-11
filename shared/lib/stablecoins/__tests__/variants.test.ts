@@ -3,9 +3,9 @@ import initiaIusdAsset from "../../../data/stablecoins/coins/iusd-initia.json";
 import initiaIusdReserves from "../../../data/stablecoins/domains/reserves/iusd-initia.json";
 import { StablecoinMetaSourceAssetSchema } from "../schema";
 import { deriveEffectiveDependencies } from "../../dependency-derivation";
-import { resolveBlacklistStatuses, type BlacklistStatus } from "../../report-card-blacklist-matchers";
+import { resolveBlacklistStatuses } from "../../report-card-blacklist-matchers";
 import type { StablecoinMeta, VariantKind } from "../../../types";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "../registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../registry";
 import { isActiveStablecoinMeta } from "../status";
 import { createVariantRelationshipHelpers } from "../variant-relationships";
 
@@ -21,7 +21,7 @@ const { getVariantParent, getVariantRelationship, getVariants, isTrackedVariant 
   hasTrackedVariantMeta,
 });
 
-const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS, { trackedMetaById: TRACKED_META_BY_ID });
+const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
 describe("stablecoin variants", () => {
   it("resolves a tracked variant parent", () => {
@@ -50,22 +50,6 @@ describe("stablecoin variants", () => {
     expect(isTrackedVariant("syrupusdt-maple")).toBe(true);
     expect(isTrackedVariant("yusd-yieldfi")).toBe(true);
     expect(isTrackedVariant("usde-ethena")).toBe(false);
-  });
-
-  it("never resolves an unauthored tracked variant to a weaker blacklistable status than its parent", () => {
-    // Strength: false < possible < confirmed exposure. Direct and upstream
-    // exposure are equivalent for this invariant: a variant without an explicit
-    // `canBeBlacklisted` override must not downgrade below the parent's freeze
-    // exposure, while stronger governance may still elevate it further.
-    const strength = (status: BlacklistStatus | null) =>
-      status === true || status === "inherited" ? 3 : status === "possible" ? 1 : 0;
-
-    for (const variant of TRACKED_STABLECOINS.filter((meta) => meta.variantOf)) {
-      if (variant.canBeBlacklisted !== undefined) continue;
-      const parentStatus = trackedBlacklistStatuses.get(variant.variantOf!) ?? null;
-      const variantStatus = trackedBlacklistStatuses.get(variant.id) ?? null;
-      expect(strength(variantStatus)).toBeGreaterThanOrEqual(strength(parentStatus));
-    }
   });
 
   it("keeps stkgho's direct pause authority above gho-aave's upstream status", () => {

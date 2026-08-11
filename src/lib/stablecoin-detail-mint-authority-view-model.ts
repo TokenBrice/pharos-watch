@@ -22,6 +22,10 @@ import {
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
 import {
+  projectBlacklistabilityClientSummary,
+  type BlacklistabilityClientSummary,
+} from "@/lib/stablecoin-detail-blacklistability-client";
+import {
   projectBridgeRouteRiskClientSummary,
   type BridgeRouteRiskClientSummary,
 } from "@/lib/stablecoin-detail-bridge-client";
@@ -34,6 +38,10 @@ import {
   projectOracleRiskClientSummary,
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
+import {
+  projectReserveQualityClientSummary,
+  type ReserveQualityClientSummary,
+} from "@/lib/stablecoin-detail-reserve-quality-client";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -141,9 +149,11 @@ type StablecoinDetailServerOnlyField =
   | "reserveReview";
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServerOnlyField> & {
+  blacklistabilitySummary?: BlacklistabilityClientSummary | null;
   bridgeRouteRiskSummary?: BridgeRouteRiskClientSummary | null;
   custodyProfileSummary?: CustodyClientSummary | null;
   oracleRiskSummary?: OracleRiskClientSummary | null;
+  reserveQualitySummary?: ReserveQualityClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -201,11 +211,15 @@ export function buildStablecoinDetailClientCoin(
     ? projectCustodyClientSummary(coin)
     : null;
   const oracleRiskSummary = resolvedArchetype === "cdp" ? projectOracleRiskClientSummary(coin) : null;
+  const reserveQualitySummary = projectReserveQualityClientSummary(coin);
+  const blacklistabilitySummary = projectBlacklistabilityClientSummary(coin, options.parentById);
   return {
     ...clientCoin,
+    ...(blacklistabilitySummary ? { blacklistabilitySummary } : {}),
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
     ...(custodyProfileSummary ? { custodyProfileSummary } : {}),
     ...(oracleRiskSummary ? { oracleRiskSummary } : {}),
+    ...(reserveQualitySummary ? { reserveQualitySummary } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
     ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };

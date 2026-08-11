@@ -4,7 +4,7 @@ Multi-chain blacklist/freeze event tracker for stablecoins. Every six hours, the
 
 ## Methodology And Ownership
 
-- **Current methodology version:** `v3.9973`
+- **Current methodology version:** `v4.0`
 - **Version source:** `shared/lib/methodology-versions/blacklist-tracker.ts`
 - **Public changelog:** `/methodology/blacklist-tracker-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/blacklist-tracker/`
@@ -28,25 +28,23 @@ The `/freezewatch/` exposure summary uses `buildBlacklistStatusBuckets()` and th
 - `possible`: a curated direct pause, blacklist, freeze, or mutable holder-facing control exists but is not confirmed as an active direct blacklist control.
 - `no`: no exposure resolves under the current model.
 
-The public buckets read the reviewed client-registry blacklistability status first. V9
-`accessPosture.freezeExposure` is only a fallback when no reviewed registry status is available,
-because the V9 scoring branch can publish bounded `possible` exposure while the product exposure
-tier remains the reviewed registry result, such as `upstream` or `no`.
+The public buckets read `blacklistabilityReview.reviewedStatus` through the generated client-registry
+`blacklistStatus`. That reviewed registry value is the sole product-level status authority. Safety
+Score V9 consumes the same review for evidence freshness, scoring gaps, and failure-domain attribution,
+but its `accessPosture.freezeExposure` is not a fallback status source.
 
 ### Upstream Exposure And The Safety Score V9 Access Branch
 
-`upstream` needs no parent asset: `resolveBlacklistStatusWithoutExplicitOverride()` in
-`shared/lib/report-card-blacklist-matchers.ts` resolves it when strictly more than 50% of the
-available reserve composition is marked by `coinId`, explicit reserve-slice exposure, or reserve-label
-heuristics as `yes`, `upstream`, or `possible` blacklistability exposure. A direct `Possible` token
-review stays in the `possible` tier even when its reserves also exceed the upstream threshold.
-The Safety Score V9 access branch honours the same edge. `adaptAccessReview()` in
+An `upstream` review needs no parent asset. It may come from a tracked parent or wrapper, full CEX
+custody, or reserve exposure that strictly exceeds the 50% threshold under the policy above. A direct
+`Possible` token review stays in the `possible` tier even when it also carries upstream exposure. The
+Safety Score V9 access branch consumes that same reviewed verdict. `adaptAccessReview()` in
 `worker/src/lib/safety-score-v9-extension.ts` grants `structuralDisposition: "inherited-upstream"` —
 which reclassifies the access gap from `missing-access-review` to the measured
 `inherited-access-exposure` — when the reviewed status is `inherited` and an upstream asset can be
 **named**, either by `variantOf`/`mintAuthority.inheritedFrom` or by a curated reserve slice.
 
-The reserve-slice path is deliberately narrower than the report card's inference: the slice must
+The reserve-slice attribution path is deliberately strict: the slice must
 carry an explicit `coinId`, that id must be in the fact set's active asset set, and the named asset's
 own review must resolve to a direct holder freeze. A declared parent takes precedence and keeps its
 `mint-control` failure domain; a reserve-slice upstream carries `reserve-issuer` instead. Scoring is
@@ -70,11 +68,6 @@ the supported chain registry, the curated review is the complete deployment scop
 fact publishes as known with `structuralDisposition: "non-contract-native"` recording that
 applicability basis. Every leg is fail-closed: one supported-chain deployment, or a missing curated
 review, and the asset keeps gapping as `missing-access-review`.
-
-Curators must not write `canBeBlacklisted: false` to suppress an honest `inherited` verdict. The
-`upstreamSuppressionRationale` escape hatch exists for false-positive inferences (a same-symbol
-collision, for example), not for "the upstream actor cannot freeze our holder balances" — that
-sentence *is* the definition of the `upstream` tier.
 
 Observed tracker history is evidence, not policy probability. Event counts describe supported observed history and are symbol-level in the current summary payload; the UI must not label them as contract-level totals.
 

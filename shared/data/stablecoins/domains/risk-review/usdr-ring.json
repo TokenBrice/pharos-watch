@@ -1,6 +1,5 @@
 {
   "id": "usdr-ring",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

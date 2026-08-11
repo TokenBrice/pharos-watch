@@ -1,6 +1,5 @@
 {
   "id": "gynusd-gyndore",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

@@ -115,8 +115,11 @@ import { HttpUrlSchema } from "./validators";
 
 const ContractDecimalsSchema = z.number().finite().int().min(0).max(255);
 const DependencyWeightNumberSchema = z.number().finite().positive().max(1);
-const BlacklistabilityStatusSchema = z.union([z.boolean(), z.literal("possible")]);
-const BlacklistabilityReviewStatusSchema = z.union([BlacklistabilityStatusSchema, z.literal("inherited")]);
+const BlacklistabilityReviewStatusSchema = z.union([
+  z.boolean(),
+  z.literal("possible"),
+  z.literal("inherited"),
+]);
 const PositiveIntegerSchema = z.number().finite().int().positive();
 
 function isValidIsoDate(value: string): boolean {
@@ -580,7 +583,6 @@ export const BlacklistabilityReviewSchema: z.ZodType<BlacklistabilityReview> = z
     evidence: z.string().min(12),
     reviewer: z.string().min(1),
     reviewedAt: ReviewDateSchema,
-    upstreamSuppressionRationale: z.string().min(1).optional(),
   })
   .strict()
   .superRefine((review, ctx) => {

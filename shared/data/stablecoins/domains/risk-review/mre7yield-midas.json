@@ -1,6 +1,5 @@
 {
   "id": "mre7yield-midas",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

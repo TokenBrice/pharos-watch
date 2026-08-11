@@ -1,6 +1,5 @@
 {
   "id": "spkcc-spiko",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

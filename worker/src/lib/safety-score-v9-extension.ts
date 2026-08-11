@@ -658,25 +658,11 @@ function transferMaterialScope(
   };
 }
 
-// FreezeWatch resolves an "inherited" freeze verdict from ANY positive freezable
-// reserve share, with no parent required
-// (`resolveBlacklistStatusWithoutExplicitOverride` in
-// `shared/lib/report-card-blacklist-matchers.ts`). The V9 access branch used to
-// name an upstream only from `variantOf` / `mintAuthority.inheritedFrom`, so a
-// reserve-side inherited verdict fell through to `missing-access-review` — "we
-// never looked" — even though the review HAD looked and found the exposure
-// upstream. That mismatch is what pushed wave-1 curators to write
-// `canBeBlacklisted: false` over 29 honest `"inherited"` verdicts (restored in
-// `1134ab32f`), deleting real reserve-side freeze exposure from the product.
-//
-// This resolver closes it at the source by reading the same curated `coinId`
-// edge the report card already reads. It is deliberately narrower than the
-// report card's inference: only an explicit `coinId` counts (a text-pattern or
-// `blacklistable: true` slice names no asset, so there is nothing to attribute
-// the failure domain to), the id must resolve to a tracked asset, and that
-// asset's OWN review must say it can freeze holder balances directly. An
-// upstream that is merely itself "inherited" does not qualify — naming it would
-// assert a chain this branch does not verify.
+// A reviewed inherited verdict may have no parent declaration. The V9 branch
+// still needs a named upstream to attribute a failure domain, so it checks
+// explicit reserve `coinId` edges. The id must resolve to an active tracked
+// asset whose own review confirms a direct holder freeze; an upstream that is
+// itself inherited does not establish the chain this branch needs to verify.
 function resolveReserveSliceUpstreamAssetId(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,

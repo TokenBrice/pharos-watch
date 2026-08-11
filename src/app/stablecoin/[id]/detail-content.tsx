@@ -181,11 +181,11 @@ function DetailSummaryRail({
         {sharedModules.backingMechanics}
         {sharedModules.custody}
         {sharedModules.controlPosture}
-        <TapeForCoinTeaser coinId={viewModel.id} />
-        {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
-          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
-        ) : null}
+        {sharedModules.freezeSeizure}
         {sharedModules.failureDomains}
+        <MechanismReviewPanel review={mechanismReview} compact />
+        {sharedModules.bridging}
+        {sharedModules.regulatoryStanding}
         {hasPriceTransparency ? (
           <PriceTransparencyCard
             coinData={viewModel.coinData}
@@ -195,9 +195,10 @@ function DetailSummaryRail({
             compact
           />
         ) : null}
-        <MechanismReviewPanel review={mechanismReview} compact />
-        {sharedModules.bridging}
-        {sharedModules.regulatoryStanding}
+        {(viewModel.coin.contracts?.length ?? 0) > 0 ? (
+          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} compact />
+        ) : null}
+        <TapeForCoinTeaser coinId={viewModel.id} />
       </div>
     </aside>
   );

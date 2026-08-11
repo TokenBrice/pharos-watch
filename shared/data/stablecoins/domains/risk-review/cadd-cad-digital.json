@@ -1,6 +1,5 @@
 {
   "id": "cadd-cad-digital",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

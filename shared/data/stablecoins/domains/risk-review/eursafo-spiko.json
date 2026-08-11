@@ -1,6 +1,5 @@
 {
   "id": "eursafo-spiko",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

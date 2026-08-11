@@ -21,10 +21,7 @@ import {
 } from "../blacklist-contracts";
 import { shouldPreferRpcLogScan } from "../../cron/blacklist/evm-source";
 
-const trackedBlacklistStatuses = resolveBlacklistStatuses(
-  TRACKED_STABLECOINS,
-  { trackedMetaById: TRACKED_META_BY_ID },
-);
+const trackedBlacklistStatuses = resolveBlacklistStatuses(TRACKED_STABLECOINS);
 
 describe("blacklist-contracts shared metadata alignment", () => {
   it("marks every blacklist-tracked stablecoin as directly freezable", () => {

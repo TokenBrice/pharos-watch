@@ -1,6 +1,5 @@
 {
   "id": "inalpha-nest",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

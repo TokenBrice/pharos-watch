@@ -1,6 +1,5 @@
 {
   "id": "reusd-re-protocol",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

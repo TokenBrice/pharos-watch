@@ -1,9 +1,7 @@
 {
   "id": "fusd-freedom-dollar",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
-    "upstreamSuppressionRationale": "The text-based resolver can infer upstream exposure from ZANO reserve language, but ZANO reserve volatility is collateral risk, not an issuer or upstream stablecoin freeze surface under FreezeWatch semantics.",
     "sources": [
       {
         "label": "Zano Confidential Asset deployment semantics",

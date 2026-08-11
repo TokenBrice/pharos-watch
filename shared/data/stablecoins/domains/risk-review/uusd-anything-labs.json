@@ -1,6 +1,5 @@
 {
   "id": "uusd-anything-labs",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

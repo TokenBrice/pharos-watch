@@ -1,6 +1,5 @@
 {
   "id": "tgld-tenbin",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

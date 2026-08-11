@@ -13,7 +13,14 @@ import {
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
 export type { V9DependencyEconomicRole } from "./dependency-types";
-export type { ReserveBlacklistabilityExposure, ReserveRisk, ReserveSlice } from "./reserves";
+export type {
+  ReserveAssetClass,
+  ReserveBlacklistabilityExposure,
+  ReserveLiquidityHorizon,
+  ReserveRisk,
+  ReserveRiskFactor,
+  ReserveSlice,
+} from "./reserves";
 export {
   GOVERNANCE_TYPE_VALUES,
   MECHANISM_ARCHETYPE_VALUES,
@@ -505,8 +512,7 @@ export interface MintAuthorityProfile {
   review: MintAuthorityReview;
 }
 
-export type BlacklistabilityStatus = boolean | "possible";
-export type BlacklistabilityReviewStatus = BlacklistabilityStatus | "inherited";
+export type BlacklistabilityReviewStatus = boolean | "possible" | "inherited";
 
 export interface BlacklistabilityReview {
   reviewedStatus: BlacklistabilityReviewStatus;
@@ -515,7 +521,6 @@ export interface BlacklistabilityReview {
   evidence: string;
   reviewer: string;
   reviewedAt: string;
-  upstreamSuppressionRationale?: string;
 }
 
 export interface Jurisdiction {
@@ -1060,7 +1065,6 @@ export interface StablecoinMeta {
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
   dependencyReview?: DependencyReview;
-  canBeBlacklisted?: BlacklistabilityStatus;
   blacklistabilityReview?: BlacklistabilityReview;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;

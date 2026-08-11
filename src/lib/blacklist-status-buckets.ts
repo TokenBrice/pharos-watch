@@ -1,5 +1,4 @@
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
-import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   CLIENT_ACTIVE_STABLECOINS as ACTIVE_STABLECOINS,
@@ -45,8 +44,6 @@ export const BLACKLIST_STATUS_BUCKET_DESCRIPTIONS: Record<BlacklistStatusBucketK
   no: "No direct, upstream, or possible freeze exposure is resolved in the current model.",
 };
 
-type ReportCardMap = Record<string, V9SafetyTableRow>;
-
 export function resolveBlacklistStatusBucket(
   value: boolean | "possible" | "inherited",
 ): BlacklistStatusBucketKey {
@@ -58,15 +55,13 @@ export function resolveBlacklistStatusBucket(
 
 export function getBlacklistStatusBucketForStablecoin(
   stablecoinId: string,
-  reportCard?: V9SafetyTableRow | null,
 ): BlacklistStatusBucketKey | null {
-  const resolved = getResolvedBlacklistStatus(stablecoinId, reportCard);
+  const resolved = getResolvedBlacklistStatus(stablecoinId);
   return resolved === null ? null : resolveBlacklistStatusBucket(resolved);
 }
 
 export function buildBlacklistStatusBuckets(
   stablecoins: StablecoinData[] | undefined,
-  reportCards?: ReportCardMap,
 ): BlacklistStatusBucket[] {
   const supplyById = new Map((stablecoins ?? []).map((coin) => [coin.id, getCirculatingRaw(coin)]));
   const counts: Record<BlacklistStatusBucketKey, { count: number; marketCap: number }> = {
@@ -78,7 +73,7 @@ export function buildBlacklistStatusBuckets(
 
   for (const coin of ACTIVE_STABLECOINS) {
     if (!TRACKED_META_BY_ID.has(coin.id)) continue;
-    const bucket = getBlacklistStatusBucketForStablecoin(coin.id, reportCards?.[coin.id]);
+    const bucket = getBlacklistStatusBucketForStablecoin(coin.id);
     if (bucket === null) continue;
     counts[bucket].count += 1;
     counts[bucket].marketCap += supplyById.get(coin.id) ?? 0;
@@ -95,12 +90,11 @@ export function buildBlacklistStatusBuckets(
 export function filterStablecoinsByBlacklistStatus(
   stablecoins: StablecoinData[] | undefined,
   status: BlacklistStatusBucketKey,
-  reportCards?: ReportCardMap,
 ): StablecoinData[] {
   if (!stablecoins) return [];
 
   return stablecoins.filter((coin) => {
     if (!TRACKED_META_BY_ID.has(coin.id)) return false;
-    return getBlacklistStatusBucketForStablecoin(coin.id, reportCards?.[coin.id]) === status;
+    return getBlacklistStatusBucketForStablecoin(coin.id) === status;
   });
 }

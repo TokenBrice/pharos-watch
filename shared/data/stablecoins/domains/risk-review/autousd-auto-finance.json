@@ -1,6 +1,5 @@
 {
   "id": "autousd-auto-finance",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "nwisdom-nest",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

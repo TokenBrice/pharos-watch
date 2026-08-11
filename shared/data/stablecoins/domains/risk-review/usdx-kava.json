@@ -1,6 +1,5 @@
 {
   "id": "usdx-kava",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

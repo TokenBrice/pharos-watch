@@ -1,6 +1,5 @@
 {
   "id": "xmd-metal-dollar",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

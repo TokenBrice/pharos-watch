@@ -1,6 +1,5 @@
 {
   "id": "busd0-usual",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

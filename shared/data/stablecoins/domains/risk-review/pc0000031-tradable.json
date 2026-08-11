@@ -1,6 +1,5 @@
 {
   "id": "pc0000031-tradable",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

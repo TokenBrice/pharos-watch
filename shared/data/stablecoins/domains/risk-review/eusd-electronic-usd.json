@@ -1,6 +1,5 @@
 {
   "id": "eusd-electronic-usd",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

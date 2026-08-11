@@ -1,6 +1,5 @@
 {
   "id": "fxusd-f-x-protocol",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

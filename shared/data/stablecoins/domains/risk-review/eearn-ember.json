@@ -1,6 +1,5 @@
 {
   "id": "eearn-ember",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

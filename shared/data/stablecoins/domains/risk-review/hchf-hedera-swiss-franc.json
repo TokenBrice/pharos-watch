@@ -1,6 +1,5 @@
 {
   "id": "hchf-hedera-swiss-franc",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sources": [

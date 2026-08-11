@@ -155,7 +155,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       hasYieldCoverage: yieldIds.has(coin.id),
       flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
       dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
-      blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCard),
+      blacklistStatus: getResolvedBlacklistStatus(coin.id),
       publishedMint: reportCard ? readV9CardMintComponent(reportCard) : null,
       liveReserveFresh: null,
       dataAvailability: queryAvailability,

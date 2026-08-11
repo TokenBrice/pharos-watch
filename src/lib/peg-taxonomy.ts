@@ -90,7 +90,7 @@ function buildPegRiskSummary({
 }): string {
   const backingEntry = getLargestEntry(buildCountMap(coins, (coin) => coin.flags.backing));
   const governanceEntry = getLargestEntry(buildCountMap(coins, (coin) => coin.flags.governance));
-  const blacklistableCount = coins.filter((coin) => coin.canBeBlacklisted === true).length;
+  const blacklistableCount = coins.filter((coin) => coin.blacklistStatus === true).length;
   const backingLabel = backingEntry ? BACKING_LABELS_SHORT[backingEntry[0]] ?? backingEntry[0] : "mixed backing";
   const governanceLabel = governanceEntry
     ? GOVERNANCE_LABELS_SHORT[governanceEntry[0]] ?? governanceEntry[0]

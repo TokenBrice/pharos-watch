@@ -99,8 +99,8 @@ export function useFreezeWatchPageController() {
     [reportCardsData],
   );
   const blacklistStatusBuckets = useMemo<BlacklistStatusBucket[] | null>(
-    () => (stablecoinData ? buildBlacklistStatusBuckets(stablecoinData.peggedAssets, reportCardMap) : null),
-    [reportCardMap, stablecoinData],
+    () => (stablecoinData ? buildBlacklistStatusBuckets(stablecoinData.peggedAssets) : null),
+    [stablecoinData],
   );
 
   const { stablecoinFilter, chainFilter, eventTypeFilter, sortKey, sortDirection, page, searchQuery, statusBucket } =

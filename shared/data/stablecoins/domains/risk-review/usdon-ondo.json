@@ -1,6 +1,5 @@
 {
   "id": "usdon-ondo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

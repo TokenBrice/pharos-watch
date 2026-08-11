@@ -250,7 +250,7 @@ export function ScreenerClient() {
         safetyBackingScore: safety?.backing ?? null,
         safetyExitScore: safety?.exit ?? null,
         safetyControlScore: safety?.control ?? null,
-        blacklistable: projectBlacklistable(meta.canBeBlacklisted),
+        blacklistable: projectBlacklistable(meta.blacklistStatus),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
         mintAuthorityScore: mintAuthorityScore.score,
         mintAuthorityScoreBand: mintAuthorityScore.bandKey,

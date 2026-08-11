@@ -82,7 +82,6 @@ describe("client registry field contract", () => {
       launchPhase: "live",
       milestones: [],
       dateHistory: [],
-      canBeBlacklisted: true,
       commodityOunces: null,
       infrastructures: ["circle"],
       mica: null,

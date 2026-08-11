@@ -8,7 +8,7 @@ function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function buildDelimitedSymbolPattern(
+function buildDelimitedSymbolPattern(
   symbol: string,
   options: SymbolPatternOptions = {},
 ): RegExp {

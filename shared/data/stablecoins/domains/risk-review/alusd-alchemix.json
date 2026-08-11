@@ -1,6 +1,5 @@
 {
   "id": "alusd-alchemix",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

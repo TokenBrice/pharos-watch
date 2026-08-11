@@ -52,7 +52,7 @@ export function buildStablecoinTableRowModel({
     liquidityScore,
     variantDisplay: meta?.variantKind ? getVariantDisplay(meta.variantKind) : null,
     variantContext: meta?.variantKind ? getVariantAccessibleLabel(meta.variantKind) : null,
-    blacklistStatus: getResolvedBlacklistStatus(coin.id, reportCards?.[coin.id]),
+    blacklistStatus: getResolvedBlacklistStatus(coin.id),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
     change24h: prevDay > 0 ? ((circulating - prevDay) / prevDay) * 100 : 0,

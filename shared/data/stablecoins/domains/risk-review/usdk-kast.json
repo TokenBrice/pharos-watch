@@ -1,6 +1,5 @@
 {
   "id": "usdk-kast",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

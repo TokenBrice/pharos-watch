@@ -1,6 +1,5 @@
 {
   "id": "stkgho-umbrella-aave",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

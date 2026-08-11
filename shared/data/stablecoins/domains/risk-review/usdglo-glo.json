@@ -1,6 +1,5 @@
 {
   "id": "usdglo-glo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

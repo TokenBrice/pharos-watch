@@ -32,7 +32,7 @@ function makeMeta(id: string, overrides: Partial<StablecoinMeta> = {}): Stableco
 }
 
 describe("blacklistability review data checks", () => {
-  it("requires inferred review coverage and matches resolved statuses", () => {
+  it("requires review coverage", () => {
     const direct = makeMeta("direct", {
       flags: {
         ...baseFlags,
@@ -45,25 +45,12 @@ describe("blacklistability review data checks", () => {
       blacklistabilityReview: makeReview("inherited"),
     });
     const missing = makeMeta("missing");
-    const mismatch = makeMeta("mismatch", {
-      flags: {
-        ...baseFlags,
-        governance: "centralized",
-      },
-      canBeBlacklisted: true,
-      blacklistabilityReview: makeReview(false),
-    });
-
-    const issues = findBlacklistabilityReviewIssues([direct, inherited, missing, mismatch]);
+    const issues = findBlacklistabilityReviewIssues([direct, inherited, missing]);
 
     expect(issues).toEqual([
       {
         id: "missing",
         message: "stablecoin requires blacklistabilityReview",
-      },
-      {
-        id: "mismatch",
-        message: "blacklistabilityReview.reviewedStatus must match resolved canBeBlacklisted status",
       },
     ]);
   });

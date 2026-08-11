@@ -1,6 +1,5 @@
 {
   "id": "nopal-nest",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

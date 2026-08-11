@@ -7,6 +7,7 @@ import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snap
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { OracleLiquidationSection } from "@/components/stablecoin-detail/oracle-liquidation-section";
+import { ReserveQualitySection } from "@/components/stablecoin-detail/reserve-quality-section";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
 import { SectionErrorBoundary } from "@/components/section-error-boundary";
@@ -155,7 +156,11 @@ export function DetailRiskContextSections({
           <div className="xl:hidden">{sharedModules.regulatoryStanding}</div>
         ) : null}
         {sharedModules.controlPosture ? <div className="xl:hidden">{sharedModules.controlPosture}</div> : null}
+        {sharedModules.freezeSeizure ? <div className="xl:hidden">{sharedModules.freezeSeizure}</div> : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
+        {viewModel.coin.reserveQualitySummary ? (
+          <ReserveQualitySection summary={viewModel.coin.reserveQualitySummary} />
+        ) : null}
         {viewModel.coin.oracleRiskSummary ? (
           <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />
         ) : null}

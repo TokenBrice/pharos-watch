@@ -1,6 +1,5 @@
 {
   "id": "wtgxx-wisdomtree",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

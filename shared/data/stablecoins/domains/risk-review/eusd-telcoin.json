@@ -1,6 +1,5 @@
 {
   "id": "eusd-telcoin",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

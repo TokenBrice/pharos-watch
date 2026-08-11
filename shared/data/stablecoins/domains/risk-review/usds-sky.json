@@ -1,6 +1,5 @@
 {
   "id": "usds-sky",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

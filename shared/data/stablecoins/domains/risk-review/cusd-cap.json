@@ -1,6 +1,5 @@
 {
   "id": "cusd-cap",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

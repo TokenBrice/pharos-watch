@@ -1,6 +1,5 @@
 {
   "id": "aa-falconx-mev-capital",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

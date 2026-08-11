@@ -1,6 +1,5 @@
 {
   "id": "spusd-soulpeg",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

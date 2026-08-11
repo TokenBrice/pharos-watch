@@ -1,6 +1,5 @@
 {
   "id": "usdp-parallel",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -26,7 +25,6 @@
       }
     ],
     "evidence": "Write-time review 2026-07-31: the verified TokenP implementation used by the material Ethereum proxy 0x9b3a8f7cec208e247d97dee13313690977e24459 (implementation slot 0x83de446e5076877263828e9120b0ea8b0bc0d0e4, block 25648895) and Base proxy 0x76a9a0062ec6712b99b4f63bd2b4270185759dd5 (implementation 0x0003f636a8d50d15ccb7ff243cafb0026f82ad9f, block 49332031) exposes ordinary ERC-20 transfers but restricted burnSelf(uint256,address), which calls _burn on the supplied burner without an allowance check, plus restricted _authorizeUpgrade. The Avalanche proxy 0x9ee1963f05553ef838604dd39403be21cef26aa4 resolves to the verified TokenP implementation 0xd561e7d133c78f8e28072a5a4b5fd7704331fb3b at block 91634232; authority() reads return ParallelAccessManager 0x94ea8800444017695345156319e96bdb1e355f7a (Ethereum), 0x0e4e7ca9d7b1e6293d0713efefb4bca010debf46 (Base), and 0xfd28f108e95f4d41daae9dbfff707d677985998e (Avalanche and HyperEVM at block 41884121). An authorized manager role can therefore destroy an arbitrary holder balance, establishing direct individual-holder seizure/blacklistability on the material deployments; the same manager-controlled upgrade path can change that logic. Parallel's own source inventory confirms the HyperEVM USDp deployment, while the current transparency inventory identifies the upstream frxUSD, sfrxUSD, USDe, sUSDe, sUSDS, USDS, USDC, and ygamiUSDC reserve dependencies whose issuer/custody controls remain an inherited backing exposure.",
-    "upstreamSuppressionRationale": "Upstream reserve issuers can freeze or restrict reserve assets and thereby impair USDp backing or redemption, but the direct TokenP seizure path is independently sufficient for the asset-level true verdict.",
     "reviewer": "Codex T07 safety-v9 unknown-reduction w2 access review",
     "reviewedAt": "2026-07-31"
   },

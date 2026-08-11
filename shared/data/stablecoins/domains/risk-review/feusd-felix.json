@@ -1,6 +1,5 @@
 {
   "id": "feusd-felix",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

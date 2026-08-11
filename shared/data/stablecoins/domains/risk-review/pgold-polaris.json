@@ -1,6 +1,5 @@
 {
   "id": "pgold-polaris",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sources": [
@@ -15,7 +14,6 @@
     ],
     "evidence": "Reviewed No: pGOLD is pre-launch/testnet-only, and Polaris describes it as CDP-minted synthetic gold backed by pETH collateral rather than an issuer-managed token or custodial bullion claim with a holder freeze/blacklist surface.",
     "reviewer": "Codex stablecoin audit",
-    "reviewedAt": "2026-05-13",
-    "upstreamSuppressionRationale": "Suppresses a resolver same-symbol/text false positive. This Polaris entry is scoped to the holder-facing pre-launch pGOLD asset; pETH is documented as immutable ETH-wrapper collateral, and no live upstream freezable token is identified."
+    "reviewedAt": "2026-05-13"
   }
 }

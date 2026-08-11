@@ -1,6 +1,5 @@
 {
   "id": "usda-alpha-partner",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "cngn-compliant-naira",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

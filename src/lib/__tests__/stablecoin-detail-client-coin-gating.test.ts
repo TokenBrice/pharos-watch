@@ -20,6 +20,23 @@ const ORACLE_RISK = {
   summary: "External feeds with response validation.",
 };
 
+const RESERVES_WITH_QUALITY = [
+  { name: "U.S. Treasury bills", pct: 80, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
+  { name: "Bank deposits", pct: 20, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "immediate" },
+];
+
+const RESERVE_REVIEW = {
+  reviewedAt: "2026-07-18",
+  reviewer: "Kimi RESERVE shard-3",
+  confidence: "verified",
+  sources: [],
+  rationale: "Server-only rationale.",
+  compositionBasis: "Monthly attestation composition table.",
+  scope: "full-composition",
+  knownUnknownExposure: "No undisclosed obligors.",
+  knownUnknownExposurePct: 0,
+};
+
 function coinWith(overrides: Record<string, unknown>): StablecoinMeta {
   return {
     id: "test-coin",
@@ -55,5 +72,22 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
       coinWith({ mechanismArchetype: "cdp", custodyModel: "institutional-regulated" }),
     );
     expect(clientCoin.custodyProfileSummary).toBeDefined();
+  });
+
+  it("attaches the reserve quality summary while stripping the server-only reserve review", () => {
+    const clientCoin = buildStablecoinDetailClientCoin(
+      coinWith({ reserves: RESERVES_WITH_QUALITY, reserveReview: RESERVE_REVIEW }),
+    );
+    expect(clientCoin.reserveQualitySummary).toBeDefined();
+    expect(clientCoin.reserveQualitySummary!.chipLabel).toBe("Highly liquid");
+    expect("reserveReview" in clientCoin).toBe(false);
+  });
+
+  it("hides reserve quality for reserve slices with no quality attributes", () => {
+    const clientCoin = buildStablecoinDetailClientCoin(
+      coinWith({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }], reserveReview: RESERVE_REVIEW }),
+    );
+    expect("reserveQualitySummary" in clientCoin).toBe(false);
+    expect("reserveReview" in clientCoin).toBe(false);
   });
 });

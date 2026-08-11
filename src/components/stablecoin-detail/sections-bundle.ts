@@ -22,6 +22,7 @@ export { DEWSDetail } from "@/components/dews-detail";
 export { StablecoinSafetyScoreV9Card } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 export { ReservePanel } from "@/components/stablecoin-detail/reserve-panel";
 export { DepegHistory } from "@/components/depeg-history";
+export { DdrTrackRecordSection } from "@/components/stablecoin-detail/ddr-track-record-section";
 export { FlowsSection, FlowHistorySection } from "@/components/stablecoin-detail/flows-section";
 export { BlacklistSection, BlacklistHistorySection } from "@/components/stablecoin-detail/blacklist-section";
 export { KeyInfoCard } from "@/components/key-info-card-root";

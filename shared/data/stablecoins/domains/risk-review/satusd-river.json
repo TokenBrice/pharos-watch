@@ -1,6 +1,5 @@
 {
   "id": "satusd-river",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

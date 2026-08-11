@@ -1,6 +1,5 @@
 {
   "id": "isc-international-stable-currency",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

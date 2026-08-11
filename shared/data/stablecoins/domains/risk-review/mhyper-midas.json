@@ -1,6 +1,5 @@
 {
   "id": "mhyper-midas",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

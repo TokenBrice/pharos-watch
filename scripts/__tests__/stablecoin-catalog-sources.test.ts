@@ -267,7 +267,6 @@ describe("stablecoin catalog source helpers", () => {
     });
     writeJson(rootDir, "shared/data/stablecoins/domains/risk-review/sidecar-usd.json", {
       id: "sidecar-usd",
-      canBeBlacklisted: true,
       blacklistabilityReview,
       oracleRisk,
       bridgeRouteRisk,
@@ -278,7 +277,6 @@ describe("stablecoin catalog source helpers", () => {
       mintAuthority,
       mica: { status: "out-of-scope" },
       genius,
-      canBeBlacklisted: true,
       blacklistabilityReview,
       oracleRisk,
       bridgeRouteRisk,
@@ -312,14 +310,12 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/coin id "other-usd" must match file id "base-usd"/);
   });
 
-  it("still rejects invalid sidecar-free base files through post-merge validation", () => {
+  it("rejects the retired blacklistability override in base files", () => {
     const rootDir = makeTempRoot();
 
     writeJson(rootDir, "shared/data/stablecoins/coins/base-usd.json", makeCoin("base-usd", { canBeBlacklisted: true }));
 
-    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(
-      /blacklistabilityReview: explicit canBeBlacklisted overrides require blacklistabilityReview/,
-    );
+    expect(() => loadPerCoinStablecoinEntries(rootDir)).toThrow(/Unrecognized key: "canBeBlacklisted"/);
   });
 
   it("rejects sidecars that duplicate a field still present in the base coin", () => {

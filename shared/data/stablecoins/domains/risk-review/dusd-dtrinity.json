@@ -1,6 +1,5 @@
 {
   "id": "dusd-dtrinity",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

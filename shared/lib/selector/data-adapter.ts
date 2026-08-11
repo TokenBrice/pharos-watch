@@ -24,8 +24,6 @@ import type {
 } from "../../types";
 import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 
-type V9ReportCard = ReportCardsV9CurrentResponse["cards"][number];
-
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
   pegCurrency?: SelectorInput["pegCurrency"] | null;
@@ -101,7 +99,7 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       pegCurrency: meta.flags.pegCurrency,
       lifecycle,
       governance: meta.flags.governance,
-      canBeBlacklisted: resolveBlacklistability(safety, meta),
+      canBeBlacklisted: resolveBlacklistability(meta),
       mechanismArchetype: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
 
       supplyUsd: supplyById.get(id) ?? 0,
@@ -257,23 +255,8 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
   };
 }
 
-function resolveBlacklistability(
-  card: V9ReportCard | undefined,
-  meta: StablecoinClientMeta,
-): MergedRow["canBeBlacklisted"] {
-  switch (card?.accessPosture.freezeExposure) {
-    case "direct":
-      return true;
-    case "upstream":
-      return "inherited";
-    case "possible":
-      return "possible";
-    case "none-known":
-      return false;
-    case "unknown":
-    case undefined:
-      return meta.canBeBlacklisted ?? null;
-  }
+function resolveBlacklistability(meta: StablecoinClientMeta): MergedRow["canBeBlacklisted"] {
+  return meta.blacklistStatus ?? null;
 }
 
 /**

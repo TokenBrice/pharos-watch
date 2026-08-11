@@ -1,6 +1,5 @@
 {
   "id": "scusd-rings",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

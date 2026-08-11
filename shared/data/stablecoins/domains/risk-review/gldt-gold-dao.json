@@ -1,6 +1,5 @@
 {
   "id": "gldt-gold-dao",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

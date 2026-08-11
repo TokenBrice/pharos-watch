@@ -1,6 +1,5 @@
 {
   "id": "uktbl-spiko",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "wars-argentine-peso",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

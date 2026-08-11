@@ -19,6 +19,7 @@ import {
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinData } from "@shared/types";
 import type { ColumnId } from "@/hooks/use-preferences";
+import type { CsvColumn } from "@/lib/exports/csv";
 
 const { downloadCsvMock } = vi.hoisted(() => ({
   downloadCsvMock: vi.fn(),
@@ -559,7 +560,11 @@ describe("exportStablecoinsCsv — blacklistable", () => {
 
     exportStablecoinsCsv([lisusd], undefined, undefined, reportCards);
 
-    const [, columns] = downloadCsvMock.mock.calls[0]!;
+    const [, columns] = downloadCsvMock.mock.calls[0]! as [
+      StablecoinData[],
+      CsvColumn<StablecoinData>[],
+      string,
+    ];
     const blacklistColumn = columns.find((column) => column.header === "Blacklistable");
     expect(blacklistColumn?.accessor(lisusd, 0)).toBe("No");
   });

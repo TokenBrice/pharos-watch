@@ -1,6 +1,5 @@
 {
   "id": "usdsc-startale",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

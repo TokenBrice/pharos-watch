@@ -7,6 +7,7 @@ import { CollateralizationCard } from "@/components/stablecoin-detail/collateral
 import { ControlPostureCard } from "@/components/stablecoin-detail/control-posture-card";
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
+import { FreezeSeizureCard } from "@/components/stablecoin-detail/freeze-seizure-card";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildControlPostureView } from "@/lib/control-posture";
@@ -18,7 +19,7 @@ import { buildRegulatoryStandingView } from "@/lib/regulatory-standing";
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
 /**
- * The seven detail modules that appear both in the `xl+` summary rail and, on
+ * The eight detail modules that appear both in the `xl+` summary rail and, on
  * narrower viewports, in the main column — built once here and rendered by both
  * mount sites.
  *
@@ -41,6 +42,7 @@ export interface DetailSharedModules {
   bridging: ReactNode;
   regulatoryStanding: ReactNode;
   controlPosture: ReactNode;
+  freezeSeizure: ReactNode;
   /** True when the collateralization/failure-domain pair has anything to render. */
   hasStructureCards: boolean;
 }
@@ -61,6 +63,7 @@ export function buildDetailSharedModules({
   const controlPosture = buildControlPostureView(viewModel.coin, viewModel.variantParent);
   const custodySummary = viewModel.coin.custodyProfileSummary ?? null;
   const bridgeSummary = viewModel.coin.bridgeRouteRiskSummary ?? null;
+  const blacklistabilitySummary = viewModel.coin.blacklistabilitySummary ?? null;
 
   return {
     collateralization: (
@@ -77,6 +80,7 @@ export function buildDetailSharedModules({
     bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} /> : null,
     regulatoryStanding: regulatoryStanding ? <RegulatoryStandingCard view={regulatoryStanding} /> : null,
     controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} /> : null,
+    freezeSeizure: blacklistabilitySummary ? <FreezeSeizureCard summary={blacklistabilitySummary} /> : null,
     hasStructureCards:
       mechanismCollateralization != null
       || liveCollateralizationRatio != null

@@ -1,6 +1,5 @@
 {
   "id": "usbd-bima",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

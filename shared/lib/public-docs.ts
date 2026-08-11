@@ -222,8 +222,18 @@ function rewritePublicDocLinks(markdown: string, { absolute = false }: { absolut
   });
 }
 
+function redactRunbookText(text: string): string {
+  return text.replace(/\brunbooks?\b/gi, (match) =>
+    match.toLowerCase().endsWith("s") ? "operator procedures" : "operator procedure",
+  );
+}
+
 function redactPublicDocSource(markdown: string, source?: string): string {
-  const withoutAgentPaths = markdown
+  const withoutRunbookLinks = markdown.replace(
+    /\[([^\]]+)\]\((?:\.\/)?runbooks\/[^)]+\)/gi,
+    (_full, label: string) => redactRunbookText(label),
+  );
+  const withoutAgentPaths = redactRunbookText(withoutRunbookLinks)
     .replace(/agents\/[^\s)`]+/g, "internal working notes")
     .replace(/AGENTS\.md/g, "agent instructions");
   if (source !== "api-reference.md") return withoutAgentPaths;

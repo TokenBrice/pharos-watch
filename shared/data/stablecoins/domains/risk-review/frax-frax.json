@@ -30,11 +30,23 @@
       {
         "label": "Frax balance sheet API",
         "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
+      },
+      {
+        "label": "frxUSD verified implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000048d2c8baf31742f6765383278bada4d5"
+      },
+      {
+        "label": "frxUSD AccountFrozen log query through review block",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x4f2a367e694e71282f29ab5eaa04c4c0be45ac5bf2ca74fb67068b98bdc2887d"
+      },
+      {
+        "label": "frxUSD AccountThawed log query through review block",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4"
       }
     ],
-    "evidence": "Re-reviewed 2026-08-08 at Ethereum block 25712115. Material Ethereum and Polygon zkEVM FRAX deployments expose no holder blacklist, transfer pause, seizure, or allowance-free arbitrary burn. Ethereum remained a direct non-proxy deployment (EIP-1967 implementation slot zero); pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. The live balance sheet contains issuer-freezable reserve assets, but those are collateral impairment dependencies rather than a direct FRAX holder-control mechanism. The direct blacklist verdict is therefore false, with reserve and bridge risks preserved in their owning reviews.",
+    "evidence": "Re-reviewed 2026-08-11 at Ethereum block 25730449 and Fraxtal block 39812404. Canonical Ethereum FRAX 0x853d955acef822db058eb8505911ed77f175b99e remained a direct non-proxy FRAXStablecoin deployment with no holder blacklist, freeze/thaw, pause, seize, or allowance-free arbitrary-burn selectors; current eth_call probes for isFrozen(address) and paused() reverted. pool_burn_from is onlyPools but delegates to allowance-checking ERC20Custom._burnFrom. Frax CrossChainCanonical-style FRAX deployments expose exchange, bridge-token, minter, and mint-cap controls but no holder blacklist/freeze/pause path. The Fraxtal contract currently listed under FRAX is Wrapped Frax (WFRAX) at 0xfc00000000000000000000000000000000000002, a ProxyAdmin-upgradeable native gas-token wrapper treated in the route review as sub-material for the legacy FRAX stablecoin rather than as the canonical L1 FRAX token. The explicit freeze/freezeMany/thaw/pause surface is on frxUSD implementation 0x0000000048d2c8baf31742f6765383278bada4d5 behind proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29; Blockscout log queries from the frxUSD start block through 25730449 returned no AccountFrozen or AccountThawed events. Legacy FRAX therefore remains Upstream through freezable reserve/frxUSD exposure, not Direct.",
     "reviewer": "OpenAI Codex unfreezable-cohort audit",
-    "reviewedAt": "2026-08-08"
+    "reviewedAt": "2026-08-11"
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",

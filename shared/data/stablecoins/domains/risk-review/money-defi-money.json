@@ -1,6 +1,5 @@
 {
   "id": "money-defi-money",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

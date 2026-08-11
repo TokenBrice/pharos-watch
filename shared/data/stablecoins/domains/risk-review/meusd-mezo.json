@@ -1,6 +1,5 @@
 {
   "id": "meusd-mezo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -125,7 +125,6 @@ describe("stablecoin sidecar migration workflow", () => {
     {
       domain: "risk-review" as const,
       fields: {
-        canBeBlacklisted: true,
         blacklistabilityReview,
         oracleRisk: {
           tier: "opaque-or-unknown",
@@ -140,7 +139,7 @@ describe("stablecoin sidecar migration workflow", () => {
           sourceFreeRationale: "Workflow fixture without external research.",
         },
       },
-      expectedFields: ["canBeBlacklisted", "blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
+      expectedFields: ["blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
     },
   ];
 

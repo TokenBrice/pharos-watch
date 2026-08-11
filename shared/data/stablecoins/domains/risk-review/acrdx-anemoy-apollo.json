@@ -1,6 +1,5 @@
 {
   "id": "acrdx-anemoy-apollo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

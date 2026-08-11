@@ -1,6 +1,5 @@
 {
   "id": "usdnr-nerona",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

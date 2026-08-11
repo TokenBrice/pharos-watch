@@ -1,6 +1,5 @@
 {
   "id": "suiusde-sui",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

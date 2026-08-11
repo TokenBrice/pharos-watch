@@ -1,6 +1,5 @@
 {
   "id": "stac-securitize",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

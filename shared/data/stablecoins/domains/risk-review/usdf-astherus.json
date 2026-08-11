@@ -1,6 +1,5 @@
 {
   "id": "usdf-astherus",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

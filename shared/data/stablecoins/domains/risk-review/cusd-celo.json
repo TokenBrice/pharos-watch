@@ -1,6 +1,5 @@
 {
   "id": "cusd-celo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
