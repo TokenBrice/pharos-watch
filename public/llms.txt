@@ -211,7 +211,7 @@ Docs support `Accept: text/markdown` content negotiation for agent consumption.
 - [Savings crvUSD (scrvUSD)](https://pharos.watch/stablecoin/scrvusd-curve/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Solstice USX (USX)](https://pharos.watch/stablecoin/usx-solstice/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Avalon USDa (USDA)](https://pharos.watch/stablecoin/usda-avalon/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
-- [Frax (FRAX)](https://pharos.watch/stablecoin/frax-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
+- [Legacy Frax Dollar (FRAX)](https://pharos.watch/stablecoin/frax-frax/): CeFi-dependent stablecoin backed by real-world assets pegged to US Dollar.
 - [Dola (DOLA)](https://pharos.watch/stablecoin/dola-inverse-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Inverse Staked DOLA (sDOLA)](https://pharos.watch/stablecoin/sdola-inverse-finance/): CeFi-dependent stablecoin collateralized by crypto assets pegged to US Dollar.
 - [Agora Dollar (AUSD)](https://pharos.watch/stablecoin/ausd-agora/): centralized stablecoin backed by real-world assets pegged to US Dollar.
