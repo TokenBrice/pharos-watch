@@ -9,7 +9,9 @@ function DetailSectionSkeleton({ className }: { className: string }) {
 
 export const FeedbackModal = dynamic(
   () => import("@/components/feedback-modal").then((mod) => mod.FeedbackModal),
-  { ssr: false },
+  // The null fallback keeps the chunk-load suspension out of the page-level
+  // Suspense boundary (see DdrTrackRecordSection below).
+  { ssr: false, loading: () => null },
 );
 
 export const McapChart = dynamic(
@@ -42,11 +44,16 @@ export const DepegHistory = dynamic(
   { loading: () => <DetailSectionSkeleton className="h-[360px] w-full rounded-xl" /> },
 );
 
-// No loading fallback: the module renders nothing until the review query
-// resolves and stays absent for coins with no reviewed forecast, so a skeleton
-// would promise content most coins never have.
+// Explicit null fallback, not a skeleton: the module renders nothing until the
+// review query resolves and stays absent for coins with no reviewed forecast,
+// so a skeleton would promise content most coins never have. The fallback
+// option itself is load-bearing — without one, `dynamic()` adds no local
+// Suspense boundary, the chunk-load suspension bubbles to the page-level
+// boundary, and the whole detail island collapses to the dossier shell
+// mid-scroll (the scroll position then clamps ~11k px up the page).
 export const DdrTrackRecordSection = dynamic(
   () => import("@/components/stablecoin-detail/sections-bundle").then((mod) => mod.DdrTrackRecordSection),
+  { loading: () => null },
 );
 
 export const FlowsSection = dynamic(
