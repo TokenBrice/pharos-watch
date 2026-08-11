@@ -71,17 +71,11 @@ const RAIL_STAMP_CLASS =
   "inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground";
 
 /**
- * The header stamp chip — the muted mono pill that carries a review date, a
- * count, or a live-freshness label. Prefer `ReviewedStamp` for dated reviews;
- * use this directly for counts and icon-prefixed labels (`gap-1.5`).
+ * The header stamp chip — the muted mono pill for a status or icon-prefixed
+ * label. Counts belong beside the title through `titleAdornment`.
  */
 export function RailStamp({ className, children }: { className?: string; children: ReactNode }) {
   return <span className={cn(RAIL_STAMP_CLASS, className)}>{children}</span>;
-}
-
-/** `Reviewed 2026-07-15` in the header stamp chip — one spelling for every module. */
-export function ReviewedStamp({ date }: { date: string }) {
-  return <RailStamp>{`Reviewed ${date}`}</RailStamp>;
 }
 
 /**

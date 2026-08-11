@@ -22,10 +22,6 @@ vi.mock("@/components/bluechip-header-badge", () => ({
   BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>Bluechip: B ({stablecoinId})</span>,
 }));
 
-vi.mock("@/components/peg-gauge", () => ({
-  PegGauge: ({ deviationBps }: { deviationBps: number }) => <span>peg-gauge:{deviationBps}</span>,
-}));
-
 vi.mock("@/components/share-button", () => ({
   ShareButton: ({ label }: { label?: string }) => <button type="button">{label ?? "Share"}</button>,
 }));
