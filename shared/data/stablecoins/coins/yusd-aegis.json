@@ -93,7 +93,7 @@
   },
   "yieldConfig": {
     "yieldSource": "Aegis delta-neutral strategy",
-    "yieldType": "governance-set"
+    "yieldType": "fee-sharing"
   },
   "launchDate": "2025-01-23"
 }

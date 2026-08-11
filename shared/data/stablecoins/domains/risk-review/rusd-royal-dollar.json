@@ -1,7 +1,7 @@
 {
   "id": "rusd-royal-dollar",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Docs",

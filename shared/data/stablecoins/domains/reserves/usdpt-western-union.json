@@ -16,11 +16,11 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+      "name": "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119)",
       "pct": 97.45102,
       "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "BlackRock and United States Treasury",
+      "issuerOrObligor": "JPMorgan Trust IV and United States Treasury",
       "riskFactors": [
         "credit",
         "duration",
@@ -61,10 +61,10 @@
       },
       {
         "reserveIndex": 1,
-        "reserveName": "BlackRock Select Treasury Based Liquidity Fund (TFFXX; CUSIP 09248U874)",
+        "reserveName": "JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX; CUSIP 46655R119)",
         "pct": 97.45102,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "TFFXX is an identified regulated money market fund rather than another tracked stablecoin."
+        "rationale": "JLTXX is an identified regulated money market fund rather than another tracked stablecoin."
       }
     ]
   },
@@ -76,7 +76,7 @@
         "jurisdiction": "United States"
       },
       {
-        "name": "Custodian or subcustodian for TFFXX fund shares (not disclosed)",
+        "name": "Custodian or subcustodian for JLTXX fund shares (not disclosed)",
         "role": "custodian",
         "jurisdiction": "United States"
       }
@@ -97,7 +97,7 @@
         "url": "https://www.blackrock.com/cash/en-us/products/282772/fed-trust-%28institutional%29-fund"
       }
     ],
-    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of TFFXX shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
+    "uncertainty": "Deloitte states that the assets were unencumbered and held in segregated fiduciary accounts for USDPT holders at the examination date, but does not name the depository institutions or the custodian/subcustodian of JLTXX shares. The point-in-time unencumbered finding does not establish a contractual prohibition on reuse or bankruptcy-remoteness terms.",
     "knownUnknownExposurePct": 100
   }
 }
