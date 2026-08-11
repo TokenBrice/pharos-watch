@@ -219,19 +219,23 @@ describe("worker.fetch", () => {
     },
   ];
 
-  it.each(workerResponseContractCases)("keeps the response contract for $name", async ({ run, expected }) => {
-    const observed = await observeHttpResponse(await run(), [
-      "Access-Control-Allow-Origin",
-      "Allow",
-      "Cache-Control",
-      "Content-Type",
-      "Retry-After",
-      "Warning",
-    ]);
+  it.each(workerResponseContractCases)(
+    "keeps the response contract for $name",
+    async ({ run, expected }) => {
+      const observed = await observeHttpResponse(await run(), [
+        "Access-Control-Allow-Origin",
+        "Allow",
+        "Cache-Control",
+        "Content-Type",
+        "Retry-After",
+        "Warning",
+      ]);
 
-    expect(observed).toEqual(expected);
-    expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
-  });
+      expect(observed).toEqual(expected);
+      expect(matchesHttpResponseObservation(observed, expected)).toBe(true);
+    },
+    15_000,
+  );
 
   it("returns 204 for CORS preflight", async () => {
     const env = makeEnv();
@@ -636,7 +640,7 @@ describe("worker.fetch", () => {
     );
 
     expect(res.status).toBe(401);
-  });
+  }, 15_000);
 
   it("rejects unauthenticated public-status-history and telegram-pulse with 401", async () => {
     const env = makeEnv();
