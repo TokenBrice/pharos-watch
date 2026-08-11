@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { describe, expect, it } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9-extension";
 import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9-native-input";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
@@ -12,6 +13,8 @@ import {
   createReportCardsFixedInput,
 } from "../../src/lib/report-cards-fixed-input";
 import {
+  findFutureDatedCuratedReviews,
+  formatFutureDatedReviewError,
   buildSafetyScoreV9ReplayArtifact,
   parseSafetyScoreV9PublishedAtSec,
   parseSafetyScoreV9ReplayFixedInput,
@@ -200,7 +203,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       writeTestFile(envelopePath, cacheEntry.value);
       writeTestFile(extensionPath, JSON.stringify(buildSafetyScoreV9BaselineExtension(fixedInput)));
 
-      const commonArgs = ["--published-at", PUBLISHED_AT_ISO];
+      const commonArgs = ["--published-at", PUBLISHED_AT_ISO, "--allow-future-reviews"];
       await runSafetyScoreV9ReplayCli([
         "--input",
         rawPath,
@@ -232,7 +235,15 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       const input = resolve(dir, "stale-registry.json");
       const output = resolve(dir, "output.json");
       writeTestFile(input, JSON.stringify(staleCapture));
-      const args = ["--input", input, "--output", output, "--published-at", String(PUBLISHED_AT_SEC)];
+      const args = [
+        "--input",
+        input,
+        "--output",
+        output,
+        "--published-at",
+        String(PUBLISHED_AT_SEC),
+        "--allow-future-reviews",
+      ];
 
       await expect(runSafetyScoreV9ReplayCli(args)).rejects.toThrow(
         /registry fingerprint .* does not match fixed input/,
@@ -273,6 +284,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         output,
         "--published-at",
         String(PUBLISHED_AT_SEC),
+        "--allow-future-reviews",
         "--release-candidate-id",
         "v9-rc-2",
       ]);
@@ -293,5 +305,40 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("future-dated curated review guard", () => {
+  function anyReviewedAtSec(): { assetId: string; sec: number } {
+    for (const [assetId, meta] of ACTIVE_META_BY_ID) {
+      const at = (meta as { reserveReview?: { reviewedAt?: string } }).reserveReview?.reviewedAt;
+      if (typeof at === "string" && at.length > 0) {
+        const sec = Date.parse(`${at}T00:00:00.000Z`) / 1_000;
+        if (Number.isFinite(sec)) return { assetId, sec };
+      }
+    }
+    throw new Error("no curated reserve review in the registry");
+  }
+
+  it("finds nothing when the clock is after every curated review", () => {
+    const far = Date.parse("2999-01-01T00:00:00.000Z") / 1_000;
+    expect(findFutureDatedCuratedReviews(far)).toEqual([]);
+  });
+
+  it("flags a review dated after the capture clock", () => {
+    const { assetId, sec } = anyReviewedAtSec();
+    const rows = findFutureDatedCuratedReviews(sec - 86_400);
+    expect(rows.some((row) => row.assetId === assetId && row.field === "reviewedAt")).toBe(true);
+  });
+
+  it("explains that the movers are artifacts and names the escape hatch", () => {
+    const message = formatFutureDatedReviewError(
+      [{ assetId: "usdt-tether", field: "reviewedAt", date: "2026-08-12" }],
+      Date.parse("2026-08-11T11:46:57.000Z") / 1_000,
+    );
+    expect(message).toContain("usdt-tether: reviewedAt 2026-08-12");
+    expect(message).toContain("2026-08-11T11:46:57.000Z");
+    expect(message).toContain("not a regression");
+    expect(message).toContain("--allow-future-reviews");
   });
 });

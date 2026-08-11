@@ -20,6 +20,56 @@ import {
   buildSafetyScoreV9Candidate,
   type SafetyScoreV9CandidatePipelineResult,
 } from "../src/lib/safety-score-v9-candidate";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+
+export interface SafetyScoreV9FutureDatedReview {
+  assetId: string;
+  field: "reviewedAt" | "compositionAsOf";
+  date: string;
+}
+
+/**
+ * A replay compiles against the CURRENT registry at the CAPTURE's clock. A
+ * curated reserve review dated after that clock is rejected by
+ * `reviewedReserveMatches`, which drops the asset's whole curated composition
+ * and collapses its backing pillar — silently, unlike the transfer overlay,
+ * which throws on the same condition. Replaying yesterday's capture against
+ * data reviewed today therefore manufactures large phantom score drops that
+ * read exactly like a regression. Surface them before the operator diffs.
+ */
+export function findFutureDatedCuratedReviews(clockSec: number): SafetyScoreV9FutureDatedReview[] {
+  const found: SafetyScoreV9FutureDatedReview[] = [];
+  for (const [assetId, meta] of ACTIVE_META_BY_ID) {
+    const review = (meta as { reserveReview?: { reviewedAt?: string; compositionAsOf?: string } }).reserveReview;
+    if (!review) continue;
+    for (const field of ["reviewedAt", "compositionAsOf"] as const) {
+      const date = review[field];
+      if (typeof date !== "string" || date.length === 0) continue;
+      const sec = Date.parse(`${date}T00:00:00.000Z`) / 1_000;
+      if (Number.isFinite(sec) && sec > clockSec) found.push({ assetId, field, date });
+    }
+  }
+  return found.sort((a, b) => a.assetId.localeCompare(b.assetId) || a.field.localeCompare(b.field));
+}
+
+export function formatFutureDatedReviewError(
+  rows: readonly SafetyScoreV9FutureDatedReview[],
+  clockSec: number,
+): string {
+  const clockIso = new Date(clockSec * 1_000).toISOString();
+  const lines = rows.map((row) => `  ${row.assetId}: ${row.field} ${row.date}`);
+  return [
+    `${rows.length} curated review date(s) postdate the capture clock ${clockIso}:`,
+    ...lines,
+    "",
+    "Those reviews are rejected at this clock, which drops each asset's curated",
+    "reserve composition and collapses its backing pillar. Any score drop you see",
+    "for them is an artifact of replaying an old capture against newer curation,",
+    "not a regression. Take a newer capture instead: --published-at does not move",
+    "the fact-set clock, which comes from the capture.",
+    "Pass --allow-future-reviews to replay anyway and read those movers as invalid.",
+  ].join("\n");
+}
 
 const USAGE = `Usage: npm run safety-score-v9:replay -- --input <path> --output <path> [options]
 
@@ -32,6 +82,10 @@ Options:
   --published-at <time>           Fixed ISO timestamp or Unix seconds (required)
   --extension <path>              Optional reviewed V9 fact-extension JSON
   --release-candidate-id <id>     Optional v9-rc-N publication identity override
+  --allow-future-reviews          Replay even when curated review dates postdate the capture
+                                  clock. Those reviews are rejected at that clock, silently
+                                  dropping the asset's curated reserve composition, so their
+                                  movers are artifacts and must not be read as regressions.
   --allow-registry-mismatch       Replay a capture whose registry fingerprint does not match
                                   the local registry. Needed when carrying a frozen capture
                                   across a registry-changing curation commit. The resulting
@@ -165,6 +219,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
       extension: { type: "string" },
       "release-candidate-id": { type: "string" },
       "allow-registry-mismatch": { type: "boolean" },
+      "allow-future-reviews": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -181,6 +236,10 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   const fixedInput = rederiveUndisclosedFeeObservations(
     await parseSafetyScoreV9ReplayFixedInput(readJson(values.input)),
   );
+  if (values["allow-future-reviews"] !== true) {
+    const futureDated = findFutureDatedCuratedReviews(fixedInput.clockSec);
+    assertCliUsage(futureDated.length === 0, formatFutureDatedReviewError(futureDated, fixedInput.clockSec));
+  }
   const extension = typeof values.extension === "string" ? readJson(values.extension) : undefined;
   const artifact = buildSafetyScoreV9ReplayArtifact({
     fixedInput,
