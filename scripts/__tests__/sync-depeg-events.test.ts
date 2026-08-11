@@ -4,6 +4,7 @@ import {
   assertStaticDepegArchivePreserved,
   assignSlugs,
   findMissingStaticDepegArchiveSlugs,
+  preserveStaticDepegArchiveEntries,
   type DepegEventEntry,
 } from "../maintenance/sync-depeg-events";
 
@@ -68,5 +69,26 @@ describe("sync-depeg-events", () => {
 
     expect(() => assertStaticDepegArchivePreserved([subthreshold] as DepegEventEntry[], [])).not.toThrow();
     expect(() => assertStaticDepegArchivePreserved([published] as DepegEventEntry[], [], true)).not.toThrow();
+  });
+
+  it("carries a published row forward when the live record becomes subthreshold", () => {
+    const published = { ...event({ id: 1, peakDeviationBps: -800 }), slug: "usdc-2026-05-15" };
+    const reclassified = { ...event({ id: 2, peakDeviationBps: -129 }), slug: "usdc-2026-05-15" };
+    const replacement = {
+      ...event({ id: 3, peakDeviationBps: -600, startedAt: Date.UTC(2026, 4, 16) / 1000 }),
+      slug: "usdc-2026-05-16",
+    };
+
+    const merged = preserveStaticDepegArchiveEntries(
+      [published] as DepegEventEntry[],
+      [reclassified, replacement] as DepegEventEntry[],
+    );
+
+    expect(merged.find((entry) => entry.slug === published.slug)).toMatchObject({
+      id: published.id,
+      peakDeviationBps: published.peakDeviationBps,
+    });
+    expect(findMissingStaticDepegArchiveSlugs([published] as DepegEventEntry[], merged)).toEqual([]);
+    expect(() => assertStaticDepegArchivePreserved([published] as DepegEventEntry[], merged)).not.toThrow();
   });
 });
