@@ -34,6 +34,12 @@ interface StaticComparisonEntry {
   counterpartName: string;
 }
 
+/**
+ * Below `lg` only the first cards render; the rest stay in the DOM behind
+ * `hidden lg:flex` so the internal links remain crawlable.
+ */
+const COMPARISON_MOBILE_CARD_CAP = 4;
+
 interface ExploreNextSectionProps {
   coin: StablecoinMeta;
   related: StablecoinMeta[];
@@ -113,6 +119,8 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
 
   const caseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
+  const peersHref = pegSlug ? `/stablecoins/${pegSlug}/` : "/screener/";
+  const hiddenComparisonCount = Math.max(0, staticComparisonPages.length - COMPARISON_MOBILE_CARD_CAP);
 
   return (
     <section
@@ -179,11 +187,13 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">Static comparison briefs with structural context.</p>
               <div className="grid gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 sm:grid-cols-2 xl:grid-cols-3">
-                {staticComparisonPages.map((page) => (
+                {staticComparisonPages.map((page, index) => (
                   <Link
                     key={page.href}
                     href={page.href}
-                    className="pharos-focus-ring group flex min-h-12 items-center gap-2.5 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent"
+                    className={`pharos-focus-ring group ${
+                      index < COMPARISON_MOBILE_CARD_CAP ? "flex" : "hidden lg:flex"
+                    } min-h-12 items-center gap-2.5 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent`}
                     aria-label={`Open static comparison brief: ${page.shortTitle}`}
                     title={page.counterpartName}
                   >
@@ -199,6 +209,15 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                   </Link>
                 ))}
               </div>
+              {hiddenComparisonCount > 0 ? (
+                <Link
+                  href={peersHref}
+                  className="pharos-focus-ring inline-flex min-h-9 items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground lg:hidden"
+                >
+                  +{hiddenComparisonCount} more comparison briefs
+                  <ArrowRight aria-hidden="true" className="h-3 w-3" />
+                </Link>
+              ) : null}
             </div>
           ) : null}
         </div>

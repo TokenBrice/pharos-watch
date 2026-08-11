@@ -7,6 +7,7 @@ import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snap
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
 import { OracleLiquidationSection } from "@/components/stablecoin-detail/oracle-liquidation-section";
+import { RailCopyFold } from "@/components/stablecoin-detail/rail-copy-fold";
 import { ReserveQualitySection } from "@/components/stablecoin-detail/reserve-quality-section";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
@@ -123,7 +124,13 @@ export function DetailRiskContextSections({
             {sharedModules.failureDomains}
           </div>
         ) : null}
-        {sharedModules.custody ? <div className="xl:hidden">{sharedModules.custody}</div> : null}
+        {sharedModules.custody ? (
+          <div className="xl:hidden">
+            <RailCopyFold title="Custody" chip={sharedModules.foldChips.custody}>
+              {sharedModules.custody}
+            </RailCopyFold>
+          </div>
+        ) : null}
         {showDepegResolver ? (
           <StablecoinDepegResolverCard stablecoinId={viewModel.id} logoSrc={viewModel.logoSrc} />
         ) : null}
@@ -149,14 +156,38 @@ export function DetailRiskContextSections({
         />
         <MechanismReviewPanel review={mechanismReview} />
         {sharedModules.backingMechanics ? (
-          <div className="xl:hidden">{sharedModules.backingMechanics}</div>
+          <div className="xl:hidden">
+            <RailCopyFold title="Backing mechanics">{sharedModules.backingMechanics}</RailCopyFold>
+          </div>
         ) : null}
-        {sharedModules.bridging ? <div className="xl:hidden">{sharedModules.bridging}</div> : null}
+        {sharedModules.bridging ? (
+          <div className="xl:hidden">
+            <RailCopyFold title="Bridging" chip={sharedModules.foldChips.bridging}>
+              {sharedModules.bridging}
+            </RailCopyFold>
+          </div>
+        ) : null}
         {sharedModules.regulatoryStanding ? (
-          <div className="xl:hidden">{sharedModules.regulatoryStanding}</div>
+          <div className="xl:hidden">
+            <RailCopyFold title="Regulatory standing" chip={sharedModules.foldChips.regulatoryStanding}>
+              {sharedModules.regulatoryStanding}
+            </RailCopyFold>
+          </div>
         ) : null}
-        {sharedModules.controlPosture ? <div className="xl:hidden">{sharedModules.controlPosture}</div> : null}
-        {sharedModules.freezeSeizure ? <div className="xl:hidden">{sharedModules.freezeSeizure}</div> : null}
+        {sharedModules.controlPosture ? (
+          <div className="xl:hidden">
+            <RailCopyFold title="Control posture" chip={sharedModules.foldChips.controlPosture}>
+              {sharedModules.controlPosture}
+            </RailCopyFold>
+          </div>
+        ) : null}
+        {sharedModules.freezeSeizure ? (
+          <div className="xl:hidden">
+            <RailCopyFold title="Freeze & seizure" chip={sharedModules.foldChips.freezeSeizure}>
+              {sharedModules.freezeSeizure}
+            </RailCopyFold>
+          </div>
+        ) : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {viewModel.coin.reserveQualitySummary ? (
           <ReserveQualitySection summary={viewModel.coin.reserveQualitySummary} />
