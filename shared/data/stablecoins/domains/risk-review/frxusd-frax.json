@@ -10,11 +10,23 @@
       {
         "label": "Website",
         "url": "https://frax.com/"
+      },
+      {
+        "label": "frxUSD verified implementation (Blockscout)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0000000048d2c8baf31742f6765383278bada4d5"
+      },
+      {
+        "label": "frxUSD AccountFrozen log query through review block",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x4f2a367e694e71282f29ab5eaa04c4c0be45ac5bf2ca74fb67068b98bdc2887d"
+      },
+      {
+        "label": "frxUSD AccountThawed log query through review block",
+        "url": "https://eth.blockscout.com/api?module=logs&action=getLogs&fromBlock=21543360&toBlock=25730449&address=0xcacd6fd266af91b8aed52accc382b4e165586e29&topic0=0x74bb8c2778db9c683c274e7bfdcb56dba4f1c737411c8182363097eec281eea4"
       }
     ],
-    "evidence": "Explicit Yes retained: reviewed metadata indicates a direct issuer, admin, proxy, pause, burn, or upgrade control surface beyond reserve-only exposure.",
-    "reviewer": "Codex status/data pass",
-    "reviewedAt": "2026-05-12"
+    "evidence": "Re-reviewed 2026-08-11 at Ethereum block 25730449. Ethereum frxUSD proxy 0xcacd6fd266af91b8aed52accc382b4e165586e29 resolves as Frax USD / frxUSD and delegates to verified FrxUSD implementation 0x0000000048d2c8baf31742f6765383278bada4d5. The implementation ABI exposes freeze, freezeMany, thaw, thawMany, pause/unpause, isFrozen, and freezer-role administration. Current reads returned isPaused() = false and isFrozen(0x0000000000000000000000000000000000000001) = false, while Blockscout log queries from start block 21543360 through 25730449 returned no AccountFrozen or AccountThawed events. The direct freeze capability is present even though no freeze/thaw event has been observed yet.",
+    "reviewer": "OpenAI Codex frax freeze posture review",
+    "reviewedAt": "2026-08-11"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
