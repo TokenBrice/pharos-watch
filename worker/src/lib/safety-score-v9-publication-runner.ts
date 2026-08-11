@@ -23,6 +23,7 @@ import {
 } from "./safety-score-v9-publication-store";
 import type { V9AssetQuarantine } from "./safety-score-v9-fact-set";
 import { logWorkerEvent } from "./structured-log";
+import type { SafetyScoreV9TransferMaterialityGeneration } from "./safety-score-v9-transfer-materiality";
 
 export const SAFETY_SCORE_V9_PUBLICATION_TIMEOUT_MS = 2 * 60_000;
 export const SAFETY_SCORE_V9_PUBLICATION_ATTEMPT_PREFIX =
@@ -45,6 +46,7 @@ export interface RunSafetyScoreV9PublicationInput {
   ) => Promise<unknown>;
   signal?: AbortSignal;
   nowSec?: number;
+  transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
 
 export type SafetyScoreV9PublicationRunResult =
@@ -387,6 +389,7 @@ export async function runSafetyScoreV9Publication(
     const pipeline = buildSafetyScoreV9PublicationFromNormalizedInput({
       fixedInput,
       publishedAtSec: fixedInput.clockSec,
+      transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
     });
     const publication = pipeline.candidate;
     const coverageFloors = observationCoverageFloors(

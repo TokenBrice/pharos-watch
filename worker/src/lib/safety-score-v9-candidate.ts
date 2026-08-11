@@ -17,6 +17,7 @@ import {
   type V9AssetQuarantine,
 } from "./safety-score-v9-fact-set";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "./safety-score-v9-extension";
+import type { SafetyScoreV9TransferMaterialityGeneration } from "./safety-score-v9-transfer-materiality";
 import {
   normalizeSafetyScoreV9CompilerInput,
   type SafetyScoreV9CompilerInput,
@@ -125,6 +126,7 @@ export interface BuildSafetyScoreV9CandidateInput {
   extension?: unknown;
   policy?: V9ValidatedPolicyEnvelope;
   releaseCandidateId?: string;
+  transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
    * Replay-only: accept a capture whose registry fingerprint does not match the
    * local registry. Only reaches the baseline extension builder, so it is inert
@@ -493,7 +495,10 @@ function buildSafetyScoreV9CandidatePipeline(
     input.extension ??
       buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         fixedInput,
-        input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {},
+        {
+          ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
+          transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+        },
       ),
   );
   const compilation =

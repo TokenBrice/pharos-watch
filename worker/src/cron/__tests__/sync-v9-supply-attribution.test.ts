@@ -14,9 +14,11 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
 } from "../../lib/safety-score-v9-supply-attribution-generation";
 import { createNativeSafetyScoreV9FullRegistryInput } from "../../lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import { createSafetyScoreV9TransferMaterialityGeneration } from "../../lib/safety-score-v9-transfer-materiality";
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
+  observeTransferMateriality: vi.fn(),
 }));
 
 vi.mock(
@@ -33,6 +35,14 @@ vi.mock(
   },
 );
 
+vi.mock(
+  "../../lib/safety-score-v9-transfer-materiality-observer",
+  () => ({
+    observeSafetyScoreV9TransferMaterialityGeneration:
+      mocks.observeTransferMateriality,
+  }),
+);
+
 const { syncSafetyScoreV9SupplyAttribution } =
   await import("../sync-v9-supply-attribution");
 
@@ -44,6 +54,17 @@ function openDb(): { sqlite: DatabaseSync; db: D1Database } {
 describe("syncSafetyScoreV9SupplyAttribution", () => {
   beforeEach(() => {
     mocks.capture.mockReset();
+    mocks.observeTransferMateriality.mockReset();
+    mocks.observeTransferMateriality.mockImplementation((input) =>
+      createSafetyScoreV9TransferMaterialityGeneration({
+        schemaVersion: 1,
+        kind: "safety-score-v9-transfer-materiality-generation",
+        sourceBaseInputGenerationId: input.baseInputGenerationId,
+        registryFingerprint: input.registryFingerprint,
+        capturedAtSec: input.scoringClockSec,
+        observationsByAssetId: {},
+      }),
+    );
     vi.useFakeTimers();
   });
 

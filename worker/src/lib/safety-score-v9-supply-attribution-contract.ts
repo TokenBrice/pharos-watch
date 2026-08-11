@@ -481,7 +481,15 @@ function reviewedDeploymentInventoryValidationError(
 export function reviewedDeploymentIdentityValidationError(
   row: ReviewedDeploymentSupplyObservation,
   assetId = "wm-m0",
+  expectedDeployment?: { chainId: string; contractAddress: string },
 ): string | null {
+  if (expectedDeployment) {
+    return row.chainId === expectedDeployment.chainId &&
+      normalizeReviewedDeploymentAddress(row.chainId, row.contractAddress) ===
+        normalizeReviewedDeploymentAddress(expectedDeployment.chainId, expectedDeployment.contractAddress)
+      ? null
+      : `reviewed deployment identity mismatch for ${row.routeId}`;
+  }
   const expected = expectedReviewedDeploymentIdentity(assetId, row.routeId);
   if (!expected) return `unsupported reviewed deployment ${assetId}:${row.routeId}`;
   if (expected.runtime === "evm") {

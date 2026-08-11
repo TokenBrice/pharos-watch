@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "f580f7b3dd79ef38f8db2d7e4a7ac444aaf2374b014ed4ed8b94d626f2eb2eb4"
+      "sha256": "06a89b0bd05f4f172b3f0526c8b4fa2acd381cfa1b295a11d1c0e4ce6c98e446"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -62,7 +62,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "2157910a183a9ebfd40a0d04be5c75194c6f9953002db41c83a2a168c9782ed9"
+      "sha256": "f3711cf8ac8dd6fea26e76ef1f20f414edc061660fca2fd1423abc9fa02055da"
     },
     {
       "path": "shared/lib/methodology-versions/liquidity-score.ts",
@@ -470,7 +470,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension.ts",
-      "sha256": "3470bf79eb2ed1a097349a2e475fe53c52f89f5244f71adc5d4d7736c2008f89"
+      "sha256": "25453896392e11cd38a399abcf2a3e09c003e979a0d1aab965a69a7c57c0406f"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-backing.ts",
@@ -514,7 +514,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution-contract.ts",
-      "sha256": "02c95411c6d9a6cdb87c127d7bec919f05c16664459d71c851ab1513feae831e"
+      "sha256": "36c7e0f932053b37d7b027451a82a77b7e810be4ec0a22922bcdf407420b20a6"
     },
     {
       "path": "worker/src/lib/safety-score-v9-supply-attribution.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "4eba69c5caa0adf279cc8693483927585e3eac81b2c84d231ef0310eb6c59790"
+  "digest": "1988f56ec7677860890832f139a5be3eaecb0c7ad783d4ec5e5f92f8e63c2cae"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

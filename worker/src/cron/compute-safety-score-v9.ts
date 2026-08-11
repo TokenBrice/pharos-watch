@@ -32,6 +32,11 @@ import {
 } from "../lib/safety-score-v9-supply-attribution-generation";
 import { loadSupplyAttributionJournalByIdV1 } from "../lib/safety-score-v9-supply-attribution-journal-store";
 import { loadExactDexPublicationGeneration } from "../lib/report-cards-snapshot";
+import {
+  parseSafetyScoreV9TransferMaterialityGeneration,
+  SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+  type SafetyScoreV9TransferMaterialityGeneration,
+} from "../lib/safety-score-v9-transfer-materiality";
 
 function unavailable(
   reason: string,
@@ -66,6 +71,7 @@ export async function computeSafetyScoreV9(
     NATIVE_V9_INPUT_CACHE_KEY,
     SAFETY_SCORE_V9_PEG_PROVENANCE_SEED_CACHE_KEY,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
+    SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
   ]);
   throwIfAborted(signal);
 
@@ -192,6 +198,17 @@ export async function computeSafetyScoreV9(
       generationParseError = true;
     }
   }
+  let transferMaterialityGeneration: SafetyScoreV9TransferMaterialityGeneration | null = null;
+  const transferMaterialityCache = caches.get(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY);
+  if (transferMaterialityCache) {
+    try {
+      transferMaterialityGeneration = parseSafetyScoreV9TransferMaterialityGeneration(
+        transferMaterialityCache.value,
+      );
+    } catch {
+      transferMaterialityGeneration = null;
+    }
+  }
   if (
     parsedSupplyAttributionGeneration &&
     isSafetyScoreV9SupplyAttributionGenerationCadenceDeferred(
@@ -234,6 +251,7 @@ export async function computeSafetyScoreV9(
   const publication = await runSafetyScoreV9Publication({
     db,
     fixedInput: v9SeedInput,
+    transferMaterialityGeneration,
     prepareFixedInput: async (seedInput, publicationSignal) => {
       await reportProgress?.({
         stage: "supply-generation",

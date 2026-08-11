@@ -49,6 +49,10 @@ import {
 } from "./safety-score-v9-extension-transfer";
 import { SAME_NOTIONAL_EXIT_OBSERVATION_FRESHNESS_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import {
+  transferMaterialScopeFromOnchainGeneration,
+  type SafetyScoreV9TransferMaterialityGeneration,
+} from "./safety-score-v9-transfer-materiality";
+import {
   buildSafetyScoreV9RetainedRoutes,
   buildSafetyScoreV9RouteReviews,
 } from "./safety-score-v9-extension-routes";
@@ -104,6 +108,7 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   metaById?: ReadonlyMap<string, V9ExtensionRegistryMeta>;
   registryFingerprint?: string;
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
+  transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   /**
    * Replay-only operator override. The registry fingerprint check exists so a
    * production publication can never score a capture against a registry it was
@@ -598,6 +603,7 @@ function transferMaterialScope(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   meta: V9ExtensionRegistryMeta,
+  generation: SafetyScoreV9TransferMaterialityGeneration | null,
 ): SafetyScoreV9TransferMaterialScope {
   const rows = safetyScoreV9ChainRows(fixedInput, assetId);
   const totalSupplyUsd = Object.values(rows).reduce((sum, row) => sum + row.current, 0);
@@ -607,7 +613,7 @@ function transferMaterialScope(
   });
   const authoritativeDeploymentKeys = [...new Set(authoritativeDeployments.map(({ key }) => key))].sort(compareText);
   if (totalSupplyUsd <= 0) {
-    return {
+    const baseScope: SafetyScoreV9TransferMaterialScope = {
       authoritativeDeploymentKeys,
       materialDeploymentKeys: [],
       materialDeploymentScopeComplete: false,
@@ -615,6 +621,15 @@ function transferMaterialScope(
       // make this asset addressable by the contract-scope machinery.
       deploymentModel: authoritativeDeploymentKeys.length > 0 ? "contract-addressable" : "non-contract-native",
     };
+    return transferMaterialScopeFromOnchainGeneration({
+      assetId,
+      meta,
+      baseScope,
+      generation,
+      registryFingerprint: fixedInput.registryFingerprint,
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      clockSec: fixedInput.clockSec,
+    });
   }
 
   const supplyByChainId = new Map<string, number>();
@@ -1255,7 +1270,12 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
         activeIds,
         reviewEvidence,
         reviewedTransferFacts.get(assetId),
-        transferMaterialScope(fixedInput, assetId, meta),
+        transferMaterialScope(
+          fixedInput,
+          assetId,
+          meta,
+          options.transferMaterialityGeneration ?? null,
+        ),
         clockSec,
       );
       const reviewedEvidence = reviewEvidence.finish();
