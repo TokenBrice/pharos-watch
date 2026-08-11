@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useId, useMemo } from "react";
 import { X, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -31,6 +31,8 @@ export function CoinSelector({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const listboxId = useId();
+  const optionIdPrefix = `${listboxId}-option`;
 
   // Close on click outside
   useEffect(() => {
@@ -111,11 +113,11 @@ export function CoinSelector({
   useEffect(() => {
     if (focusedIndex >= 0 && filtered[focusedIndex]) {
       const el = document.getElementById(
-        `coin-option-${filtered[focusedIndex].id}`,
+        `${optionIdPrefix}-${filtered[focusedIndex].id}`,
       );
       el?.scrollIntoView({ block: "nearest" });
     }
-  }, [focusedIndex, filtered]);
+  }, [focusedIndex, filtered, optionIdPrefix]);
 
   // Focus input when dropdown opens
   useEffect(() => {
@@ -173,11 +175,11 @@ export function CoinSelector({
               role="combobox"
               aria-label="Search coins"
               aria-expanded={open}
-              aria-controls="coin-selector-listbox"
+              aria-controls={listboxId}
               aria-autocomplete="list"
               aria-activedescendant={
                 focusedIndex >= 0
-                  ? `coin-option-${filtered[focusedIndex]?.id}`
+                  ? `${optionIdPrefix}-${filtered[focusedIndex]?.id}`
                   : undefined
               }
               placeholder="Search by name or symbol..."
@@ -191,7 +193,7 @@ export function CoinSelector({
             />
           </div>
           <ul
-            id="coin-selector-listbox"
+            id={listboxId}
             role="listbox"
             className="max-h-56 overflow-y-auto px-1 pb-1"
           >
@@ -206,7 +208,7 @@ export function CoinSelector({
               return (
                 <li
                   key={coin.id}
-                  id={`coin-option-${coin.id}`}
+                  id={`${optionIdPrefix}-${coin.id}`}
                   role="option"
                   aria-selected={false}
                   aria-disabled={coinDisabled}

@@ -139,6 +139,9 @@ Compare combines multiple query sources:
 - `/api/bluechip-ratings` (`useBluechipRatings`)
 - `/api/dex-liquidity` (`useDexLiquidity`)
 - `/api/report-cards/v9` (`useReportCardsV9`)
+- `/api/redemption-backstops` (`useRedemptionBackstops`)
+- `/api/yield-rankings` (`useYieldRankings`)
+- `/api/stress-signals` (`useStressSignals`)
 - `/api/mint-burn-flows` (`useMintBurnFlows`) for the shared flow dataset
 - per-coin `/api/supply-history?stablecoin=<id>&days=1825` (via `useQueries`) for long-range supply charts
 - per-coin `/api/mint-burn-flows?stablecoin=<id>&hours=<window>` (via `useQueries`) for comparison-specific flow panels
@@ -155,17 +158,20 @@ Compare includes client-side share/export rendering:
 
 ### Compare table context
 
-`src/components/comparison-table.tsx` now applies the shared contextual methodology pattern to the comparison metrics that most often need interpretation help in a side-by-side view:
+`src/components/comparison-table.tsx` presents one horizontally scrollable, sectioned matrix at every viewport size. It groups comparable fields into:
 
-- `Peg Score`
-- `Liquidity Score`
-- `Safety Rating`
+- overview
+- peg track record
+- Safety Score V9 construction
+- exit and DEX liquidity
+- issuance activity and yield
+- structure, controls, reserves, and regulatory status
 
-That pattern is used in both the stacked mobile cards and the desktop comparison table so cross-asset comparison no longer assumes the user already remembers every Pharos-specific metric definition.
+The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. Directional fields such as issuance flow, supply change, and yield are not styled as universal winners because their desirability depends on the comparison task.
 
 ## Operational notes
 
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare reliability depends on six independent API datasets plus per-coin supply-history and flow queries. The global stale/error UI covers stablecoins, peg summary, bluechip ratings, DEX liquidity, and report cards. The shared mint/burn dataset is consumed as data-only in the compare model; per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.
+- Compare reliability depends on the eight global datasets listed above plus the shared mint/burn dataset and per-coin supply-history and flow queries. The global stale/error UI covers every global comparison source. Per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.

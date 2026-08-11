@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
-import type { StablecoinData, StablecoinMeta } from "@shared/types";
+import type { StablecoinData } from "@shared/types";
 import { makeStablecoin } from "@/test/fixtures/stablecoins";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
@@ -10,131 +10,136 @@ vi.mock("next/link", async () => {
   return createNextLinkMock();
 });
 
-// Minimal StablecoinData factory — only fields ComparisonTable cares about
-function makeData(circulating: number, circulatingPrevWeek?: number): StablecoinData {
+function makeData(circulating: number): StablecoinData {
   return makeStablecoin({
     id: "test",
     name: "Test",
     symbol: "TST",
-    geckoId: null,
     pegType: "peggedUSD",
     pegMechanism: "fiat-backed",
-    price: 1.0,
-    priceSource: "defillama",
-    priceConfidence: null,
-    priceUpdatedAt: null,
-    consensusSources: [],
-    agreeSources: [],
-    supplySource: undefined,
+    price: 1,
     circulating: { peggedUSD: circulating },
-    circulatingPrevDay: {},
-    circulatingPrevWeek: circulatingPrevWeek != null ? { peggedUSD: circulatingPrevWeek } : {},
-    circulatingPrevMonth: {},
-    chainCirculating: {},
-    chains: ["ethereum"],
+    circulatingPrevWeek: { peggedUSD: circulating * 0.98 },
   });
 }
 
-// Minimal StablecoinMeta factory
-function makeMeta(id: string, symbol: string): StablecoinMeta {
+function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
   return {
     id,
-    name: symbol,
     symbol,
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
+    name: symbol,
+    data: makeData(100_000_000_000),
+    meta: {
+      id,
+      name: symbol,
+      symbol,
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "USD",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+      blacklistStatus: true,
+      launchDate: "2018-01-01",
+      reserves: [{ name: "Treasury bills", pct: 80, risk: "very-low" }],
     },
-  };
-}
-
-function makeCoin(id: string, symbol: string, circulating: number, netFlow30d: number | null): ComparisonCoinEntry {
-  return {
-    id,
-    symbol,
-    name: symbol,
-    data: makeData(circulating),
-    meta: makeMeta(id, symbol),
     pegScore: 95,
     liquidityScore: 80,
     safetyGrade: "A",
-    netFlow30d,
-  };
+    netFlow30d: 1_240_000_000,
+    pegDetails: {
+      currentDeviationBps: 2,
+      activeDepeg: false,
+      recent90d: { pegPct: 99.8, incidentCount: 1 },
+      eventCount: 3,
+      trackingSpanDays: 900,
+      worstDeviationBps: 42,
+      priceConfidence: "high",
+      consensusSources: ["source-a", "source-b"],
+    },
+    liquidity: {
+      effectiveTvlUsd: 1_000_000_000,
+      totalVolume24hUsd: 250_000_000,
+      poolCount: 12,
+      chainCount: 4,
+      liquidityEvidenceClass: "measured",
+      concentrationHhi: 0.4,
+    },
+    redemption: {
+      score: 88,
+      routeFamily: "offchain-issuer",
+      routeStatus: "operational",
+      holderEligibility: "verified-customer",
+      settlementModel: "same-day",
+      immediateCapacityUsd: 500_000_000,
+      feeBps: 10,
+    },
+    flow: {
+      netFlow24hUsd: 1_000_000,
+      netFlow7dUsd: 20_000_000,
+      netFlow30dUsd: 1_240_000_000,
+      netFlow90dUsd: 2_000_000_000,
+      pressureShiftState: "stable",
+      pressureShiftScore: 8,
+    },
+    yield: {
+      apy30d: 4.5,
+      excessYield: 0.8,
+      pharosYieldScore: 72,
+      yieldStability: 0.9,
+      yieldSource: "Issuer yield",
+      sourceTvlUsd: 900_000_000,
+    },
+    stress: { band: "LOW", score: 12 },
+  } as unknown as ComparisonCoinEntry;
 }
 
 const PEG_RATES: Record<string, number> = { USD: 1 };
 
-describe("ComparisonTable – Net Flow 30D row", () => {
-  it("renders formatted positive net flow value", () => {
-    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 1_240_000_000)];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-    // getNetPrefix(1_240_000_000) = "+" and formatCurrency(1_240_000_000) = "$1.24B"
+describe("ComparisonTable", () => {
+  it("renders the complete grouped comparison matrix", () => {
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={[makeCoin("usdt", "USDT")]} pegRates={PEG_RATES} logos={{}} />,
+    );
+
+    for (const section of [
+      "Overview",
+      "Peg Track Record",
+      "Safety Construction",
+      "Exit &amp; Liquidity",
+      "Activity &amp; Yield",
+      "Structure &amp; Controls",
+    ]) {
+      expect(html).toContain(section);
+    }
     expect(html).toContain("+$1.24B");
+    expect(html).toContain("Issuer yield");
+    expect(html).toContain("Treasury bills 80%");
+    expect(html).toContain("Direct freeze power");
   });
 
-  it("renders formatted negative net flow value", () => {
-    const coins: ComparisonCoinEntry[] = [makeCoin("usdc", "USDC", 50e9, -340_000_000)];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-    // getNetPrefix(-340_000_000) = "" and formatCurrency(-340_000_000) = "-$340.00M"
-    expect(html).toContain("-$340.00M");
-  });
-
-  it("renders em-dash for coin with netFlow30d: null", () => {
-    const coins: ComparisonCoinEntry[] = [makeCoin("dai", "DAI", 5e9, null)];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-    expect(html).toContain("—");
-  });
-
-  it("applies font-semibold (BEST_CLASS) to the highest net flow coin", () => {
-    const coins: ComparisonCoinEntry[] = [
-      makeCoin("usdt", "USDT", 100e9, 1_240_000_000),
-      makeCoin("usdc", "USDC", 50e9, 500_000_000),
-    ];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-
-    // Both values must be present in the rendered output
-    expect(html).toContain("+$1.24B");
-    expect(html).toContain("+$500.00M");
-
-    // BEST_CLASS = "text-green-600 dark:text-green-400 font-semibold"
-    // The best (highest) coin's cell should carry font-semibold immediately before its value.
-    // renderToStaticMarkup produces raw HTML: the class attribute closes with `">` then the value.
-    expect(html).toContain('font-semibold">+$1.24B');
-  });
-
-  it("does not render em-dash when both coins have numeric net flows", () => {
-    const coins: ComparisonCoinEntry[] = [
-      makeCoin("usdt", "USDT", 100e9, 1_240_000_000),
-      makeCoin("usdc", "USDC", 50e9, -340_000_000),
-    ];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-    // Both values are non-null, so no em-dash should appear in the net flow row
-    // (the "—" em-dash is only rendered when netFlow30d is null)
-    expect(html).toContain("+$1.24B");
-    expect(html).toContain("-$340.00M");
-  });
-
-  it("renders Net Flow 30D label", () => {
-    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 0)];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
-    expect(html).toContain("Net Flow 30D");
-    expect(html).toContain('<th scope="row"');
-  });
-
-  it("renders the desktop matrix inside the shared table foundation", () => {
-    const coins: ComparisonCoinEntry[] = [makeCoin("usdt", "USDT", 100e9, 0)];
-    const html = renderToStaticMarkup(<ComparisonTable coins={coins} pegRates={PEG_RATES} logos={{}} />);
+  it("uses the shared horizontally scrollable table foundation", () => {
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={[makeCoin("usdt", "USDT")]} pegRates={PEG_RATES} logos={{}} />,
+    );
 
     expect(html).toContain('data-table-id="live-comparison-matrix"');
     expect(html).toContain('data-testid="live-comparison-matrix-table"');
     expect(html).toContain('role="region"');
-    expect(html).toContain('aria-label="Comparison table"');
+    expect(html).toContain('aria-label="Stablecoin comparison matrix"');
     expect(html).toContain('tabindex="0"');
     expect(html).toContain('data-slot="table-viewport"');
     expect(html).toContain('data-slot="table"');
+  });
+
+  it("does not frame directional activity as a universal best value", () => {
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={[makeCoin("usdt", "USDT"), makeCoin("usdc", "USDC")]} pegRates={PEG_RATES} logos={{}} />,
+    );
+
+    expect(html).not.toContain("text-green-600");
+    expect(html).not.toContain("BEST_CLASS");
   });
 });

@@ -20,7 +20,6 @@ export interface ShareCoinData {
   marketCap: string;
   pegScore: string;
   weeklyChange: string;
-  weeklyChangePositive: boolean;
   liquidityScore: string;
   governance: string;
   backing: string;
@@ -35,8 +34,6 @@ const BG = "#0d1628";
 const CARD_BG = "#1a2744";
 const CREAM = "#E8DCC4";
 const WHITE = "#ffffff";
-const GREEN = "#4ade80";
-const RED = "#f87171";
 const MUTED = "#94a3b8";
 const CARD_RADIUS = 16;
 const CARD_PAD = 16;
@@ -145,7 +142,7 @@ function drawCoinCard(
     ["Price", coin.price, WHITE],
     ["Market Cap", coin.marketCap, WHITE],
     ["Peg Score", coin.pegScore, CREAM],
-    ["7d Change", coin.weeklyChange, coin.weeklyChangePositive ? GREEN : RED],
+    ["7d Change", coin.weeklyChange, WHITE],
     ["Liquidity", coin.liquidityScore, CREAM],
     ["Governance", coin.governance, WHITE],
     ["Backing", coin.backing, WHITE],
