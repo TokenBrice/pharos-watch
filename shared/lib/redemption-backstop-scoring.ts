@@ -328,9 +328,10 @@ export const REDEMPTION_ACCESS_LABELS: Record<RedemptionAccessModel, string> = {
 };
 
 /**
- * Hero passport-strip projection of the access labels — authored-short for
- * the strip's one-line width budget. Every other surface (RedemptionBackstopCard
- * and friends) keeps the full `REDEMPTION_ACCESS_LABELS` vocabulary.
+ * Authored-short projection of the access labels, for the fixed-width slots
+ * that cannot take the full string: the hero passport strip's one-line budget
+ * and the redemption route rail's ACCESS node. Prose surfaces keep the full
+ * `REDEMPTION_ACCESS_LABELS` vocabulary.
  */
 export const REDEMPTION_ACCESS_PASSPORT_LABELS: Record<RedemptionAccessModel, string> = {
   "permissionless-onchain": "Permissionless",

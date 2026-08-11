@@ -358,6 +358,16 @@ function feeBpsBreakdownSuffix(entry: RedemptionBackstopEntry): string {
   return ` (${entry.feeBps} bps)`;
 }
 
+/**
+ * `entry.sourceMode` is a raw enum value; rendering it straight put lowercase
+ * chips (`estimated`) next to Title Case ones on the same row.
+ */
+const SOURCE_MODE_LABELS: Record<RedemptionBackstopEntry["sourceMode"], string> = {
+  dynamic: "Dynamic",
+  estimated: "Estimated",
+  static: "Static",
+};
+
 export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEntry) {
   const docs = entry.docs ?? null;
   return {
@@ -365,12 +375,13 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     scoreToneClass: scoreToneClass(entry.score),
     heroScoreLabel: entry.score != null ? `${entry.score}/100` : "NR",
     routeFamilyLabel: formatRedemptionRouteFamily(entry.routeFamily),
-    sourceModeLabel: entry.sourceMode,
+    sourceModeLabel: SOURCE_MODE_LABELS[entry.sourceMode],
     showResolutionStateBadge: entry.resolutionState !== "resolved",
     resolutionStateLabel: formatRedemptionResolutionState(entry.resolutionState),
     showRouteStatusBadge: entry.routeStatus !== "open",
     routeStatusLabel: formatRedemptionRouteStatus(entry.routeStatus),
     modelConfidenceLabel: formatRedemptionModelConfidence(entry.modelConfidence),
+    isLowConfidence: entry.modelConfidence === "low",
     resolutionSummary: getResolutionSummary(entry),
     score: entry.score,
     accessModel: entry.accessModel,

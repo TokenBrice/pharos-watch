@@ -71,18 +71,37 @@ interface TreemapCellProps {
   depth?: number;
 }
 
+/* Label geometry. Text is inset from the tile edge rather than run to it, and a
+ * tile too small to hold a legible line drops its label entirely — the slice
+ * stays reachable by tooltip, which beats a word cut in half. `CHAR_WIDTH_EM`
+ * is the mono advance (0.6em) plus the 0.06em tracking below, rounded up so the
+ * estimate errs toward wrapping instead of overflowing the tile. */
+const LABEL_INSET = 6;
+const CHAR_WIDTH_EM = 0.68;
+const MIN_LABEL_WIDTH = 68;
+const MIN_LABEL_HEIGHT = 32;
+const MIN_LABEL_AREA = 3400;
+const MIN_LABEL_CHARS = 6;
+
 function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCellProps) {
   // Recharts renders the synthetic root node (depth=0) via content too — skip it
   if (depth === 0) return <g />;
 
   const fill = RISK_COLORS[risk];
+  // White on the dark end of the ramp, dark ink on the bright medium tier. The
+  // ramp hue itself (red on maroon) does not clear 4.5:1 against its own fill.
   const labelFill = risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RESERVE_TREEMAP_INVERSE_LABEL_COLOR;
-  const pctFill = risk === "medium" ? RESERVE_TREEMAP_LABEL_COLOR : RISK_ACCENT_COLORS[risk];
-  const showLabel = width > 50 && height > 30;
-  const showPct = showLabel && width > 40 && height > 40;
+  const fontSize = Math.min(11, Math.max(9, width / 9));
+  const maxChars = Math.floor((width - LABEL_INSET * 2) / (fontSize * CHAR_WIDTH_EM));
+  const showLabel =
+    width >= MIN_LABEL_WIDTH &&
+    height >= MIN_LABEL_HEIGHT &&
+    width * height >= MIN_LABEL_AREA &&
+    maxChars >= MIN_LABEL_CHARS;
+  const showPct = showLabel && height >= 48;
 
-  const maxChars = Math.max(3, Math.floor(width / 7));
-  const lines = showLabel ? wrapTreemapLabel(name, maxChars, height > 56 ? 2 : 1) : [];
+  const maxLines = height >= 88 ? 3 : height >= 60 ? 2 : 1;
+  const lines = showLabel ? wrapTreemapLabel(name, maxChars, maxLines) : [];
   const rowHeight = 13;
   const totalRows = lines.length + (showPct ? 1 : 0);
   const topY = y + height / 2 - ((totalRows - 1) * rowHeight) / 2;
@@ -95,7 +114,7 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
           textAnchor="middle"
           dominantBaseline="central"
           fill={labelFill}
-          fontSize={Math.min(11, width / 9)}
+          fontSize={fontSize}
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
           letterSpacing="0.06em"
@@ -113,7 +132,8 @@ function TreemapCell({ x, y, width, height, name, risk, pct, depth }: TreemapCel
           y={topY + lines.length * rowHeight}
           textAnchor="middle"
           dominantBaseline="central"
-          fill={pctFill}
+          fill={labelFill}
+          fillOpacity={0.8}
           fontSize={10}
           fontWeight={600}
           fontFamily="var(--font-mono, monospace)"
@@ -142,10 +162,59 @@ function ReserveTooltip({
   );
 }
 
+/* One or two slices do not need a treemap: a 100% block half a screen tall
+ * states one fact. The compact bar carries the same fills with the labels beside
+ * them, so nothing moves into a tooltip. */
+function CompactComposition({ data }: { data: Array<{ name: string; pct: number; risk: ReserveRisk }> }) {
+  return (
+    <div className="mt-3 min-w-0">
+      <div
+        className="flex h-8 w-full overflow-hidden rounded-md"
+        role="figure"
+        aria-label={`Reserve composition: ${data.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
+      >
+        {data.map((r) => (
+          <div
+            key={r.name}
+            className="h-full"
+            style={{ width: `${r.pct}%`, minWidth: "4px", backgroundColor: RISK_COLORS[r.risk] }}
+          />
+        ))}
+      </div>
+      <ul className="mt-2.5 space-y-1.5">
+        {data.map((r) => (
+          <li key={r.name} className="flex items-center gap-2">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-[2px]"
+              style={{ backgroundColor: RISK_ACCENT_COLORS[r.risk] }}
+              aria-hidden="true"
+            />
+            <span className="min-w-0 flex-1 font-mono text-[11px] uppercase leading-tight tracking-[0.08em] text-foreground">
+              {r.name}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">{r.pct}%</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Below this slice count the treemap degenerates, so the compact bar takes over. */
+const TREEMAP_MIN_SLICES = 3;
+
 export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   const data = useMemo(
     () => reserves.filter((r) => Number.isFinite(r.pct) && r.pct > 0).map((r) => ({ ...r, size: r.pct })),
     [reserves],
+  );
+  const isCompact = data.length > 0 && data.length < TREEMAP_MIN_SLICES;
+  // Only the tiers actually in the basket are keyed; a single-tier basket needs
+  // no key at all, and a fixed five-tier row would describe colors that appear
+  // nowhere on the chart.
+  const presentRisks = useMemo(
+    () => (Object.keys(RISK_LABELS) as ReserveRisk[]).filter((risk) => data.some((r) => r.risk === risk)),
+    [data],
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
 
@@ -165,47 +234,54 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
           )}
         </DetailSectionTitle>
       </div>
-      <div
-        className="mt-3 min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:max-h-[520px]"
-        style={{ aspectRatio: "6 / 5" }}
-      >
+      {isCompact ? (
+        <CompactComposition data={data} />
+      ) : (
         <div
-          ref={chartContainerRef}
-          className="h-full min-w-0 overflow-hidden"
-          role="figure"
-          aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
+          className="mt-3 min-h-[200px] w-full min-w-0 shrink-0 overflow-hidden lg:max-h-[520px]"
+          style={{ aspectRatio: "6 / 5" }}
         >
-          {isChartReady ? (
-            <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">
-              <Treemap
-                width={width}
-                height={height}
-                data={data}
-                dataKey="size"
-                nameKey="name"
-                content={(props) => <TreemapCell {...(props as unknown as TreemapCellProps)} />}
-                isAnimationActive={false}
-              >
-                <Tooltip content={<ReserveTooltip />} />
-              </Treemap>
-            </SectionErrorBoundary>
-          ) : (
-            <ChartSkeleton className="h-full w-full" />
-          )}
-        </div>
-      </div>
-      {/* Risk-tier legend beneath the map (Figma coin template): square
-          swatches + mono uppercase labels, centered. */}
-      <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-center gap-x-3 gap-y-1">
-        {(Object.entries(RISK_LABELS) as [ReserveRisk, string][]).map(([risk, label]) => (
-          <div key={risk} className="flex min-w-0 items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
-            <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              {label}
-            </span>
+          <div
+            ref={chartContainerRef}
+            className="h-full min-w-0 overflow-hidden"
+            role="figure"
+            aria-label={`Reserve composition treemap: ${reserves.map((r) => `${r.name} ${r.pct}%`).join(", ")}`}
+          >
+            {isChartReady ? (
+              <SectionErrorBoundary name="reserve-treemap" supportingText="Reserve composition chart unavailable">
+                <Treemap
+                  width={width}
+                  height={height}
+                  data={data}
+                  dataKey="size"
+                  nameKey="name"
+                  content={(props) => <TreemapCell {...(props as unknown as TreemapCellProps)} />}
+                  isAnimationActive={false}
+                >
+                  <Tooltip content={<ReserveTooltip />} />
+                </Treemap>
+              </SectionErrorBoundary>
+            ) : (
+              <ChartSkeleton className="h-full w-full" />
+            )}
           </div>
-        ))}
-      </div>
+        </div>
+      )}
+      {/* Risk-tier legend beneath the map (Figma coin template): square
+          swatches + mono uppercase labels, left-aligned so it holds the same
+          position from coin to coin. */}
+      {presentRisks.length > 1 && (
+        <div className="mt-2.5 flex min-w-0 flex-wrap items-center justify-start gap-x-3 gap-y-1">
+          {presentRisks.map((risk) => (
+            <div key={risk} className="flex min-w-0 items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
+              <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {RISK_LABELS[risk]}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

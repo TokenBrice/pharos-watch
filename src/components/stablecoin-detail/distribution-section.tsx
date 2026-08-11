@@ -88,8 +88,53 @@ function buildDonutData(
 function CenterOverlay({ total, subtitle }: { total: number; subtitle: string }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none animate-in fade-in duration-[220ms] motion-reduce:animate-none">
-      <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
+      {/* Semibold, not medium: at 11px with 0.08em tracking the eyebrow reads
+          far lighter than its measured contrast against the donut hole. */}
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
       <span className="text-base font-semibold font-mono tabular-nums text-foreground">{formatCurrency(total)}</span>
+    </div>
+  );
+}
+
+function DonutSwatch({ datum }: { datum: DonutDatum }) {
+  if (datum.logoPath) {
+    return (
+      <img
+        src={datum.logoPath}
+        alt=""
+        width={14}
+        height={14}
+        className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${datum.darkInvert ? " dark:invert" : ""}`}
+      />
+    );
+  }
+  return <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: datum.hex }} />;
+}
+
+/* A ring of one segment encodes nothing the number does not already say, so a
+ * concentrated distribution states the figure instead of drawing a circle. */
+function SingleCategoryFigure({
+  datum,
+  total,
+  subtitle,
+  ariaLabel,
+}: {
+  datum: DonutDatum;
+  total: number;
+  subtitle: string;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5 py-1" role="figure" aria-label={ariaLabel}>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{subtitle}</span>
+      <span className="font-mono text-2xl font-semibold tabular-nums leading-none text-foreground">
+        {formatCurrency(total)}
+      </span>
+      <span className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+        <DonutSwatch datum={datum} />
+        <span className="text-foreground">{datum.name}</span>
+        <span className="font-mono tabular-nums">100%</span>
+      </span>
     </div>
   );
 }
@@ -140,68 +185,64 @@ function DonutCard({
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-3")}>
         {notice}
-        <div ref={ref} className="relative h-[200px] sm:h-[250px]" role="figure" aria-label={ariaLabel}>
-          {ready ? (
-            <>
-              <PieChart width={width} height={height} className="cursor-pointer">
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={DONUT_INNER}
-                  outerRadius={DONUT_OUTER}
-                  dataKey="value"
-                  nameKey="name"
-                  paddingAngle={3}
-                  strokeWidth={0}
-                  activeShape={renderActiveShape}
-                  isAnimationActive={false}
-                >
-                  {data.map((d) => (
-                    <Cell key={d.name} fill={d.hex} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.[0]) return null;
-                    const d = payload[0].payload as DonutDatum;
-                    const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
-                    return (
-                      <PharosChartTooltip active={active}>
-                        <TooltipRow color={d.hex} label={d.name} value={`${formatCurrency(d.value)} (${pct}%)`} />
-                      </PharosChartTooltip>
-                    );
-                  }}
-                />
-              </PieChart>
-              <CenterOverlay total={total} subtitle={subtitle} />
-            </>
-          ) : null}
-        </div>
+        {data.length === 1 ? (
+          <SingleCategoryFigure datum={data[0]!} total={total} subtitle={subtitle} ariaLabel={ariaLabel} />
+        ) : (
+          <>
+            <div ref={ref} className="relative h-[200px] sm:h-[250px]" role="figure" aria-label={ariaLabel}>
+              {ready ? (
+                <>
+                  <PieChart width={width} height={height} className="cursor-pointer">
+                    <Pie
+                      data={data}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={DONUT_INNER}
+                      outerRadius={DONUT_OUTER}
+                      dataKey="value"
+                      nameKey="name"
+                      paddingAngle={3}
+                      strokeWidth={0}
+                      activeShape={renderActiveShape}
+                      isAnimationActive={false}
+                    >
+                      {data.map((d) => (
+                        <Cell key={d.name} fill={d.hex} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.[0]) return null;
+                        const d = payload[0].payload as DonutDatum;
+                        const pct = total > 0 ? ((d.value / total) * 100).toFixed(1) : "0";
+                        return (
+                          <PharosChartTooltip active={active}>
+                            <TooltipRow color={d.hex} label={d.name} value={`${formatCurrency(d.value)} (${pct}%)`} />
+                          </PharosChartTooltip>
+                        );
+                      }}
+                    />
+                  </PieChart>
+                  <CenterOverlay total={total} subtitle={subtitle} />
+                </>
+              ) : null}
+            </div>
 
-        {/* Legend */}
-        <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
-          {data.map((d) => {
-            const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
-            return (
-              <span key={d.name} className="inline-flex items-center gap-1.5">
-                {d.logoPath ? (
-                  <img
-                    src={d.logoPath}
-                    alt=""
-                    width={14}
-                    height={14}
-                    className={`h-3.5 w-3.5 rounded-full object-contain shrink-0${d.darkInvert ? " dark:invert" : ""}`}
-                  />
-                ) : (
-                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.hex }} />
-                )}
-                <span>{d.name}</span>
-                <span className="font-mono tabular-nums">{pct}%</span>
-              </span>
-            );
-          })}
-        </div>
+            {/* Legend */}
+            <div className="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-muted-foreground">
+              {data.map((d) => {
+                const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : "0";
+                return (
+                  <span key={d.name} className="inline-flex items-center gap-1.5">
+                    <DonutSwatch datum={d} />
+                    <span>{d.name}</span>
+                    <span className="font-mono tabular-nums">{pct}%</span>
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
@@ -298,7 +339,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         />
       }
       subtitle="Circulating"
-      ariaLabel={`Circulating supply distribution across ${data.length} chains`}
+      ariaLabel={`Circulating supply distribution across ${data.length} ${data.length === 1 ? "chain" : "chains"}`}
       data={data}
       total={total}
       notice={
@@ -376,7 +417,7 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
         />
       }
       subtitle="DEX TVL"
-      ariaLabel={`DEX liquidity TVL distribution across ${data.length} protocols`}
+      ariaLabel={`DEX liquidity TVL distribution across ${data.length} ${data.length === 1 ? "protocol" : "protocols"}`}
       data={data}
       total={total}
       notice={

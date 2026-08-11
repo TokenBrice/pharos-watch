@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Link2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { RailCard, RailStamp } from "@/components/stablecoin-detail/rail-card";
+import { RailCard, RailCount } from "@/components/stablecoin-detail/rail-card";
 import type { FailureDomainRow, FailureDomainsView } from "@/lib/failure-domains";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,9 @@ function DomainRow({ row, open }: { row: FailureDomainRow; open: boolean }) {
           {row.adjustmentPoints > 0 ? (
             <Badge
               variant="outline"
-              className={cn("h-5 rounded-full px-2 text-[10px] font-medium", SEVERITY_TONE_CLASS.rose.pill)}
+              // A point cost is a quantity, not a risk band: a tenth of a point
+              // in the alarm ramp reads far louder than it measures.
+              className={cn("h-5 rounded-full px-2 text-[10px] font-medium", SEVERITY_TONE_CLASS.neutral.pill)}
             >
               −{row.adjustmentPoints.toFixed(1)}
             </Badge>
@@ -53,9 +55,9 @@ export function FailureDomainsCard({ view }: { view: FailureDomainsView | null }
   return (
     <RailCard
       title="Shared failure domains"
+      titleAdornment={<RailCount>{view.rows.length}</RailCount>}
       ariaLabel="Shared failure domains"
       icon={Link2}
-      trailing={<RailStamp className="shrink-0">{view.rows.length}</RailStamp>}
     >
       <div className="px-4 pb-4">
         <p className="text-[11px] leading-snug text-muted-foreground">

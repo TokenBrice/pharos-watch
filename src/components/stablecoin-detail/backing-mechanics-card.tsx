@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink } from "lucide-react";
+import { CircleDashed, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
-import { RailCard, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismBackingMetric, MechanismBackingNote, MechanismBackingView } from "@/lib/mechanism-backing";
 
 const STATE_LABELS: Record<MechanismBackingNote["state"], string> = {
@@ -14,9 +15,12 @@ const STATE_LABELS: Record<MechanismBackingNote["state"], string> = {
   unavailable: "Not disclosed",
 };
 
+// Both states are the absence of a reading, not a measured hazard, so both stay
+// neutral; `unavailable` carries the dashed-circle glyph so the two remain
+// distinguishable at a glance rather than by hue.
 const STATE_BADGE_CLASSES: Record<MechanismBackingNote["state"], string> = {
   "not-applicable": "border-border/60 bg-muted/40 text-muted-foreground",
-  unavailable: "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+  unavailable: SEVERITY_TONE_CLASS.neutral.pill,
 };
 
 function formatMetric(metric: MechanismBackingMetric): string {
@@ -38,10 +42,11 @@ function NoteRow({ note, open }: { note: MechanismBackingNote; open: boolean }) 
         <Badge
           variant="outline"
           className={cn(
-            "h-5 shrink-0 rounded-full px-2 text-[10px] font-medium",
+            "h-5 shrink-0 gap-1 rounded-full px-2 text-[10px] font-medium",
             STATE_BADGE_CLASSES[note.state],
           )}
         >
+          {note.state === "unavailable" ? <CircleDashed className="h-3 w-3" aria-hidden="true" /> : null}
           {STATE_LABELS[note.state]}
         </Badge>
       </div>
@@ -82,13 +87,10 @@ export function BackingMechanicsCard({ view, frameless }: { view: MechanismBacki
 
   const [headline, ...rest] = view.metrics;
 
+  // No header `trailing`: the slot carries status only, and this card has no
+  // status to state. The review date lives in the footer meta row.
   return (
-    <RailCard
-      frameless={frameless}
-      title="Backing mechanics"
-      ariaLabel="Backing mechanics"
-      trailing={<ReviewedStamp date={view.reviewedAt} />}
-    >
+    <RailCard frameless={frameless} title="Backing mechanics" ariaLabel="Backing mechanics">
       {headline ? (
         <div className="px-4 pb-4">
           <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
@@ -151,7 +153,10 @@ export function BackingMechanicsCard({ view, frameless }: { view: MechanismBacki
       ) : null}
 
       <div className="px-4 pb-4">
-        <EvidenceFooter sources={[{ label: view.sourceLabel, url: view.sourceUrl }]} />
+        <EvidenceFooter
+          sources={[{ label: view.sourceLabel, url: view.sourceUrl }]}
+          trailing={`Reviewed ${view.reviewedAt}`}
+        />
       </div>
     </RailCard>
   );

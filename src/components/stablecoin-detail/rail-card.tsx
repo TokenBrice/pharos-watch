@@ -15,6 +15,7 @@ import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/sectio
  */
 export function RailCard({
   title,
+  titleAdornment,
   ariaLabel,
   icon: Icon,
   trailing,
@@ -22,11 +23,25 @@ export function RailCard({
   children,
 }: {
   title: string;
+  /**
+   * Rendered immediately after the title — the home for counts (`RailCount`).
+   * Counts are a property of the thing named, not a status, so they sit with
+   * the name rather than competing for the `trailing` slot.
+   */
+  titleAdornment?: ReactNode;
   /** Accessible name for the section landmark, e.g. "Backing mechanics". */
   ariaLabel: string;
   /** Optional muted glyph rendered before the title. */
   icon?: LucideIcon;
-  /** Right-aligned header slot: a `ReviewedStamp`, a badge, or a muted glyph. */
+  /**
+   * Right-aligned header slot: **status only** (owner ruling 2026-08-11).
+   *
+   * Not freshness, not counts, not a toggle. A reviewed date or a live stamp
+   * belongs in the module footer (`EvidenceFooter`'s own `trailing`); a count
+   * belongs in `titleAdornment`. Before this rule the corner carried nine
+   * different things and changed meaning between coins on the same card, so a
+   * reader could never learn what it meant.
+   */
   trailing?: ReactNode;
   /**
    * Body-only render for mounting inside a `RailCopyFold` band, which already
@@ -40,14 +55,11 @@ export function RailCard({
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label={ariaLabel}>
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        {Icon ? (
-          <div className="flex min-w-0 items-center gap-2">
-            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <h2 className={DETAIL_MODULE_TITLE_CLASS}>{title}</h2>
-          </div>
-        ) : (
+        <div className="flex min-w-0 items-center gap-2">
+          {Icon ? <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" /> : null}
           <h2 className={DETAIL_MODULE_TITLE_CLASS}>{title}</h2>
-        )}
+          {titleAdornment}
+        </div>
         {trailing}
       </div>
       {children}
@@ -59,15 +71,18 @@ const RAIL_STAMP_CLASS =
   "inline-flex h-6 items-center rounded-full bg-muted/70 px-2 font-mono text-xs font-medium text-muted-foreground";
 
 /**
- * The header stamp chip — the muted mono pill that carries a review date, a
- * count, or a live-freshness label. Prefer `ReviewedStamp` for dated reviews;
- * use this directly for counts and icon-prefixed labels (`gap-1.5`).
+ * The header stamp chip — the muted mono pill for a status or icon-prefixed
+ * label. Counts belong beside the title through `titleAdornment`.
  */
 export function RailStamp({ className, children }: { className?: string; children: ReactNode }) {
   return <span className={cn(RAIL_STAMP_CLASS, className)}>{children}</span>;
 }
 
-/** `Reviewed 2026-07-15` in the header stamp chip — one spelling for every module. */
-export function ReviewedStamp({ date }: { date: string }) {
-  return <RailStamp>{`Reviewed ${date}`}</RailStamp>;
+/**
+ * A row count rendered beside its module title (`titleAdornment`). Muted and
+ * unboxed so it reads as part of the name rather than as a status chip — the
+ * `trailing` slot is reserved for status.
+ */
+export function RailCount({ children }: { children: ReactNode }) {
+  return <span className="pharos-numeric shrink-0 text-xs text-muted-foreground">{children}</span>;
 }

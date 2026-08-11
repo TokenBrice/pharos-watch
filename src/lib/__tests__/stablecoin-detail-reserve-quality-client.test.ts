@@ -80,12 +80,12 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary!.chipToneClass).toContain("emerald");
     expect(summary!.lede).toBe("2 reviewed reserve slices — 100% convertible within one day.");
     expect(summary!.mix).toEqual([
-      { key: "treasury-bill", label: "Treasury bills", pct: 80, barClass: "bg-foreground/80" },
-      { key: "bank-deposit", label: "Bank deposits", pct: 20, barClass: "bg-foreground/60" },
+      { key: "treasury-bill", label: "Treasury bills", pct: 80, barClass: "bg-blue-500" },
+      { key: "bank-deposit", label: "Bank deposits", pct: 20, barClass: "bg-cyan-500" },
     ]);
     expect(summary!.ladder).toEqual([
-      { key: "immediate", label: "Immediate", pct: 20 },
-      { key: "one-day", label: "≤ 1 day", pct: 80 },
+      { key: "immediate", tone: "ok", label: "Immediate", pct: 20 },
+      { key: "one-day", tone: "info", label: "≤ 1 day", pct: 80 },
     ]);
     expect(summary!.liquidWithinOneDayPct).toBe(100);
     expect(summary!.unknownHorizonPct).toBe(0);
@@ -121,9 +121,9 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.ladder).toEqual([
-      { key: "immediate", label: "Immediate", pct: 25 },
-      { key: "over-seven-days", label: "> 7 days", pct: 30 },
-      { key: "unknown", label: "Unknown", pct: 45 },
+      { key: "immediate", tone: "ok", label: "Immediate", pct: 25 },
+      { key: "over-seven-days", tone: "alert", label: "> 7 days", pct: 30 },
+      { key: "unknown", tone: "neutral", label: "Unknown", pct: 45 },
     ]);
     expect(summary!.unknownHorizonPct).toBe(45);
     expect(summary!.liquidWithinOneDayPct).toBe(25);
@@ -139,8 +139,8 @@ describe("projectReserveQualityClientSummary", () => {
       ]),
     );
     expect(summary!.mix).toEqual([
-      { key: "treasury-bill", label: "Treasury bills", pct: 70.1, barClass: "bg-foreground/80" },
-      { key: "cash", label: "Cash", pct: 29.9, barClass: "bg-foreground/60" },
+      { key: "treasury-bill", label: "Treasury bills", pct: 70.1, barClass: "bg-blue-500" },
+      { key: "cash", label: "Cash", pct: 29.9, barClass: "bg-cyan-500" },
     ]);
   });
 
@@ -155,7 +155,7 @@ describe("projectReserveQualityClientSummary", () => {
       key: "unclassified",
       label: "Unclassified",
       pct: 40,
-      barClass: "bg-foreground/60",
+      barClass: "bg-cyan-500",
     });
   });
 
@@ -175,7 +175,7 @@ describe("projectReserveQualityClientSummary", () => {
       key: "mix-tail",
       label: "Allocated commodities",
       pct: 3,
-      barClass: "bg-foreground/10",
+      barClass: "bg-muted-foreground/40",
     });
   });
 
@@ -193,12 +193,12 @@ describe("projectReserveQualityClientSummary", () => {
     );
     expect(summary!.mix).toHaveLength(6);
     expect(summary!.mix.map((row) => row.barClass)).toEqual([
-      "bg-foreground/80",
-      "bg-foreground/60",
-      "bg-foreground/45",
-      "bg-foreground/30",
+      "bg-blue-500",
+      "bg-cyan-500",
+      "bg-violet-500",
+      "bg-amber-500",
+      "bg-teal-500",
       "bg-muted-foreground/40",
-      "bg-foreground/10",
     ]);
     expect(summary!.mix[5]).toMatchObject({ key: "mix-tail", label: "2 smaller classes", pct: 5 });
   });

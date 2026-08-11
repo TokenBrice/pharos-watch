@@ -1,6 +1,7 @@
 import { Banknote, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
+import { REDEMPTION_ACCESS_PASSPORT_LABELS } from "@shared/lib/redemption-backstop-scoring";
 import type { RedemptionAccessModel } from "@shared/types/redemption";
 
 function StationLabel({ children }: { children: string }) {
@@ -31,28 +32,43 @@ function RailArrow({ label }: { label?: string }) {
  * The access gate, drawn: restriction is geometry, not adjectives. A
  * permissionless route renders an open (dashed) gate; whitelisted, issuer,
  * and manual routes render it closed, with the bounded access label beneath.
+ *
+ * It carries the authored-short access vocabulary rather than the full label,
+ * which truncated on every bounded route (`ISSUER / INSTITUTIO…`); the full
+ * string stays available on hover and in the diagram's `aria-label`.
+ *
+ * The gate sits inside the same bordered chip the other three stations use.
+ * Drawn bare it was the only unboxed station on the rail, and two thin
+ * unlabelled bars floating between boxed neighbours read as a rendering
+ * artifact rather than as a closed gate (owner feedback 2026-08-11).
  */
 function AccessGate({ accessModel, accessLabel }: { accessModel: RedemptionAccessModel; accessLabel: string }) {
   const open = accessModel === "permissionless-onchain";
+  const shortLabel = REDEMPTION_ACCESS_PASSPORT_LABELS[accessModel];
   const barClass = open
     ? "border-l border-dashed border-emerald-600/70 dark:border-emerald-400/70"
     : "w-0.5 rounded-full bg-foreground/60";
   return (
-    <div className="flex min-w-0 flex-col items-center gap-0.5">
-      <div aria-hidden="true" className={cn("flex h-6 items-center", open ? "gap-3" : "gap-1")}>
+    <span
+      className={cn(
+        "inline-flex w-fit items-center gap-1.5 rounded-md border px-2.5 py-1.5",
+        open ? "border-emerald-600/40 bg-emerald-500/5" : "border-border/60",
+      )}
+      title={accessLabel}
+    >
+      <span aria-hidden="true" className={cn("flex h-3 items-center", open ? "gap-1.5" : "gap-0.5")}>
         <span className={cn("h-full", barClass)} />
         <span className={cn("h-full", barClass)} />
-      </div>
+      </span>
       <span
         className={cn(
-          "max-w-28 truncate text-center text-[9px] font-medium uppercase leading-tight tracking-[0.08em]",
-          open ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground",
+          "font-mono text-[11px] font-semibold uppercase tracking-wide",
+          open ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
         )}
-        title={accessLabel}
       >
-        {accessLabel}
+        {shortLabel}
       </span>
-    </div>
+    </span>
   );
 }
 

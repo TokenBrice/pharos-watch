@@ -170,7 +170,7 @@ describe("RedemptionBackstopCard", () => {
     );
 
     expect(html).toContain("missing capacity");
-    expect(html).toContain("confidence: low");
+    expect(html).toContain("Confidence: low");
     expect(html).toContain("configured, but the current snapshot could not resolve enough capacity data");
   });
 

@@ -76,8 +76,13 @@ function newsDateLabel(tsMs: number, nowMs: number): string {
 }
 
 function newsDeltaClass(event: TapeEvent): string {
-  if (WORSENING_TYPES.has(baseEventType(event.type))) return SEVERITY_TONE_CLASS.alert.text;
-  if (IMPROVING_TYPES.has(baseEventType(event.type))) return SEVERITY_TONE_CLASS.ok.text;
+  const type = baseEventType(event.type);
+  // Freeze deltas are a bare dollar amount, not a direction of travel — a
+  // quantity in the risk ramp reads as a severity claim it does not make. The
+  // entry's own severity chip above still carries the risk reading.
+  if (type.startsWith("freeze.")) return SEVERITY_TONE_CLASS.neutral.text;
+  if (WORSENING_TYPES.has(type)) return SEVERITY_TONE_CLASS.alert.text;
+  if (IMPROVING_TYPES.has(type)) return SEVERITY_TONE_CLASS.ok.text;
   return SEVERITY_TONE_CLASS.neutral.text;
 }
 

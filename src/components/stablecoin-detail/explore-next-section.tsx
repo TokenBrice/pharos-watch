@@ -186,14 +186,20 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
           {staticComparisonPages.length > 0 ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">Static comparison briefs with structural context.</p>
-              <div className="grid gap-px overflow-hidden rounded-xl border border-border/60 bg-border/60 sm:grid-cols-2 xl:grid-cols-3">
+              {/* Hairlines are drawn per cell, not by a gap over a tinted
+                  container: a peer count that is not a multiple of the column
+                  count left the unfilled tracks showing that tint as a blank
+                  gray cell. The negative margins push the trailing borders
+                  under the frame, which `overflow-hidden` then clips. */}
+              <div className="overflow-hidden rounded-xl border border-border/60">
+                <div className="-mb-px -mr-px grid sm:grid-cols-2 xl:grid-cols-3">
                 {staticComparisonPages.map((page, index) => (
                   <Link
                     key={page.href}
                     href={page.href}
                     className={`pharos-focus-ring group ${
                       index < COMPARISON_MOBILE_CARD_CAP ? "flex" : "hidden lg:flex"
-                    } min-h-12 items-center gap-2.5 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent`}
+                    } min-h-12 items-center gap-2.5 border-b border-r border-border/60 bg-background/70 px-3 py-2.5 text-sm text-foreground transition-colors hover:bg-accent`}
                     aria-label={`Open static comparison brief: ${page.shortTitle}`}
                     title={page.counterpartName}
                   >
@@ -208,6 +214,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
                     />
                   </Link>
                 ))}
+                </div>
               </div>
               {hiddenComparisonCount > 0 ? (
                 <Link

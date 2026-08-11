@@ -13,6 +13,7 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   formatReserveQualityPct,
   type ReserveQualityClientSummary,
@@ -22,30 +23,27 @@ import { cn } from "@/lib/utils";
 
 const AMBER_VALUE_CLASS = "text-amber-600 dark:text-amber-400";
 
+/**
+ * How fast this share of the basket converts to cash — an ordinal risk ramp,
+ * so the bar and the figure both carry the horizon's severity tone. The row
+ * label stays muted so the colour reads as one signal per row rather than
+ * three. `minWidth` keeps a fractional share (0.1%) visible instead of
+ * collapsing to an empty track.
+ */
 function LadderRow({ row }: { row: ReserveQualityLadderClientRow }) {
-  const isUnknown = row.key === "unknown";
+  const tone = SEVERITY_TONE_CLASS[row.tone];
   return (
     <li className="flex items-center gap-3">
-      <span
-        className={cn(
-          "w-20 shrink-0 text-[10px] font-medium uppercase leading-tight tracking-[0.14em]",
-          isUnknown ? AMBER_VALUE_CLASS : "text-muted-foreground",
-        )}
-      >
+      <span className="w-20 shrink-0 text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
         {row.label}
       </span>
       <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
         <div
-          className={cn("h-full rounded-full", isUnknown ? "bg-amber-500/50" : "bg-foreground/40")}
-          style={{ width: `${Math.max(0, Math.min(100, row.pct))}%` }}
+          className={cn("h-full rounded-full", tone.bar)}
+          style={{ width: `${Math.max(0, Math.min(100, row.pct))}%`, minWidth: "3px" }}
         />
       </div>
-      <span
-        className={cn(
-          "w-12 shrink-0 text-right font-mono text-xs tabular-nums",
-          isUnknown ? AMBER_VALUE_CLASS : "text-muted-foreground",
-        )}
-      >
+      <span className={cn("w-12 shrink-0 text-right font-mono text-xs tabular-nums", tone.text)}>
         {formatReserveQualityPct(row.pct)}
       </span>
     </li>
@@ -130,15 +128,20 @@ export function ReserveQualitySection({ summary }: { summary?: ReserveQualityCli
                 />
               ))}
             </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground" aria-hidden="true">
-              {summary.mix.map((row, index) => (
-                <span key={row.key}>
-                  {index > 0 ? " · " : ""}
+            {/* Swatches, not a run-on sentence: the mix bar is categorical now,
+                so each name needs its colour to be readable against the bar. */}
+            <ul
+              className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-relaxed text-muted-foreground"
+              aria-hidden="true"
+            >
+              {summary.mix.map((row) => (
+                <li key={row.key} className="flex items-center gap-1.5">
+                  <span className={cn("size-2 shrink-0 rounded-full", row.barClass)} />
                   {row.label}{" "}
                   <span className="font-mono tabular-nums text-foreground">{formatReserveQualityPct(row.pct)}</span>
-                </span>
+                </li>
               ))}
-            </p>
+            </ul>
           </div>
         ) : null}
         {summary.ladder.length > 0 ? (

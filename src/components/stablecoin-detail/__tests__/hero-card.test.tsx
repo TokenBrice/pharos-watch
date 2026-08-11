@@ -22,10 +22,6 @@ vi.mock("@/components/bluechip-header-badge", () => ({
   BluechipHeaderBadge: ({ stablecoinId }: { stablecoinId: string }) => <span>Bluechip: B ({stablecoinId})</span>,
 }));
 
-vi.mock("@/components/peg-gauge", () => ({
-  PegGauge: ({ deviationBps }: { deviationBps: number }) => <span>peg-gauge:{deviationBps}</span>,
-}));
-
 vi.mock("@/components/share-button", () => ({
   ShareButton: ({ label }: { label?: string }) => <button type="button">{label ?? "Share"}</button>,
 }));
@@ -309,7 +305,9 @@ describe("HeroCard", () => {
     expect(html).toContain("Infrastructure");
     expect(html).toContain("Liquity v2");
     expect(html).toContain("Bluechip: B");
-    expect(html).toContain("peg-gauge:2");
+    // The mobile-only peg gauge and freeze-summary chip were dropped: the hero
+    // renders the same vocabulary at every breakpoint.
+    expect(html).not.toContain("peg-gauge:");
     expect(html).toContain("Report issue");
     expect(html).toContain("Active depeg");
     expect(html).toContain("USD-Pegged");

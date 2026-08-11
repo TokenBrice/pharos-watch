@@ -23,6 +23,9 @@
  * - `banner` — bordered callout block; the block sets its own text color, so the
  *              token carries border + tint only (it is `pill` minus the text pair).
  * - `text`   — text-only accent (arrows, deltas, inline numbers).
+ * - `bar`    — solid fill for a progress/ladder bar. Only for bars that encode a
+ *              *graded* value; a bar showing a share of a basket is a composition,
+ *              not a risk level, and stays neutral (owner ruling 2026-08-11).
  *
  * `alert` is red, not rose: rose and sky are two further hues the product uses
  * as *named palette* slots rather than as severity steps, so they get their own
@@ -52,6 +55,8 @@ export interface SeverityToneClasses {
   banner: string;
   /** Text-only accent. */
   text: string;
+  /** Solid fill for a graded progress/ladder bar. */
+  bar: string;
 }
 
 export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
@@ -59,35 +64,42 @@ export const SEVERITY_TONE_CLASS: Record<SeverityTone, SeverityToneClasses> = {
     pill: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
     banner: "border-emerald-500/30 bg-emerald-500/10",
     text: "text-emerald-700 dark:text-emerald-400",
+    bar: "bg-emerald-500",
   },
   watch: {
     pill: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
     banner: "border-amber-500/30 bg-amber-500/10",
     text: "text-amber-700 dark:text-amber-400",
+    bar: "bg-amber-500",
   },
   alert: {
     pill: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
     banner: "border-red-500/30 bg-red-500/10",
     text: "text-red-700 dark:text-red-400",
+    bar: "bg-red-500",
   },
   neutral: {
     pill: "border-border/60 bg-muted/30 text-muted-foreground",
     banner: "border-border/60 bg-muted/30",
     text: "text-muted-foreground",
+    bar: "bg-muted-foreground/40",
   },
   info: {
     pill: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
     banner: "border-blue-500/30 bg-blue-500/10",
     text: "text-blue-700 dark:text-blue-400",
+    bar: "bg-blue-500",
   },
   sky: {
     pill: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300",
     banner: "border-sky-500/25 bg-sky-500/10",
     text: "text-sky-700 dark:text-sky-300",
+    bar: "bg-sky-500",
   },
   rose: {
     pill: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400",
     banner: "border-rose-500/30 bg-rose-500/10",
     text: "text-rose-700 dark:text-rose-400",
+    bar: "bg-rose-500",
   },
 };

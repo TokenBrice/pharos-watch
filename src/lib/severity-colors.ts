@@ -12,6 +12,7 @@
  */
 
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 
 const THRESHOLDS = { GREEN: 50, AMBER: 200, ORANGE: 500 } as const;
 
@@ -64,6 +65,19 @@ export const TIER_TEXT: Record<ScoreTier, string> = {
   blue: "text-blue-700 dark:text-blue-400",
   amber: "text-amber-700 dark:text-amber-400",
   red: "text-red-700 dark:text-red-400",
+};
+
+/**
+ * Outlined-pill twin of `TIER_TEXT`, for score tiers rendered through
+ * `ScorePill` rather than as bare tinted text. Composed from
+ * `SEVERITY_TONE_CLASS` instead of respelling the hues — this engine picks a
+ * tier, the token module owns what the tier looks like.
+ */
+export const TIER_PILL: Record<ScoreTier, string> = {
+  green: SEVERITY_TONE_CLASS.ok.pill,
+  blue: SEVERITY_TONE_CLASS.info.pill,
+  amber: SEVERITY_TONE_CLASS.watch.pill,
+  red: SEVERITY_TONE_CLASS.alert.pill,
 };
 
 interface ScoreColorThreshold {

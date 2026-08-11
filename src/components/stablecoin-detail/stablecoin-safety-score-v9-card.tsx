@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Table2,
 } from "lucide-react";
+import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
@@ -458,15 +459,12 @@ function PillarRow({
           <span className="whitespace-nowrap font-mono text-sm font-semibold tabular-nums text-foreground">
             {pillar.score === null ? "NR" : `${pillar.score.toFixed(0)} / 100`}
           </span>
-          <span
-            className={cn(
-              "inline-flex min-w-9 items-center justify-center rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold",
-              gradeMetadata.pillClassName,
-            )}
+          <ScorePill
+            label={scoreGrade}
+            toneClass={gradeMetadata.pillClassName}
             title="Pillar score band"
-          >
-            {scoreGrade}
-          </span>
+            className="min-w-9 justify-center text-[10px] font-semibold"
+          />
           <ChevronDown
             className={cn(
               "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
@@ -480,8 +478,11 @@ function PillarRow({
           className="mt-2 block h-2.5 overflow-hidden rounded-[3px] border border-neutral-300 bg-neutral-200 dark:border-[#2a2a2d] dark:bg-[#1f1f21]"
           aria-hidden="true"
         >
+          {/* A score bar carries its band color so bar and grade pill state the
+              same thing (owner ruling 2026-08-11); both read `gradeMetadata`,
+              so they cannot drift apart. Composition bars stay neutral. */}
           <span
-            className={cn("block h-full rounded-[2px]", pillar.score === null ? "bg-muted-foreground/25" : "bg-neutral-500 dark:bg-[#858585]")}
+            className={cn("block h-full rounded-[2px]", pillar.score === null ? "bg-muted-foreground/25" : gradeMetadata.barClassName)}
             style={{ width: `${pillar.score ?? 0}%` }}
           />
         </span>

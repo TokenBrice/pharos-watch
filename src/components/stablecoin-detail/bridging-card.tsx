@@ -39,8 +39,10 @@ export function BridgingCard({ summary, frameless }: { summary?: BridgeRouteRisk
     >
       <div className="space-y-3 px-4 pb-4">
         {/* 63 of 272 reviewed bridge summaries run past 400 characters (DAI ~2,000). */}
-        <CollapsibleProse text={summary.summary} className="text-xs" />
-        <FactGrid aria-label="Bridge route facts" items={facts} className="grid-cols-3" />
+        <CollapsibleProse text={summary.summary} className="text-xs" variant="rail" />
+        {/* No `grid-cols-3` override: it stranded the fourth fact
+            (`Third-party`) alone on a second row. Auto-fit wraps 4 as 2×2. */}
+        <FactGrid aria-label="Bridge route facts" items={facts} />
         <EvidenceFooter
           sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
           trailing={summary.reviewedAt ? `Reviewed ${summary.reviewedAt}` : undefined}

@@ -2,6 +2,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { RAIL_PROSE_LEAD_CHARS } from "@/components/stablecoin-detail/prose-lead";
 import { MechanismReviewPanel } from "../mechanism-review-panel";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
 
@@ -15,6 +16,12 @@ const review: MechanismReviewView = {
   ],
 };
 
+/** Long enough to exceed the rail fold threshold, as production notes are. */
+const longReview: MechanismReviewView = {
+  ...review,
+  notes: `Reserves are held in Segregated Accounts apart from corporate funds. ${"Reviewed evidence continues at length. ".repeat(12)}`,
+};
+
 function getSourcesToggle() {
   return screen.getByRole("button", { name: /Sources/ });
 }
@@ -26,6 +33,12 @@ function getSourcesContainer(container: HTMLElement) {
 
 describe("MechanismReviewPanel", () => {
   afterEach(() => cleanup());
+
+  it("shows no fold affordance when the rail copy is short enough to render whole", () => {
+    render(<MechanismReviewPanel review={review} compact />);
+    expect(screen.getByText(/Segregated Accounts/).textContent).toBe(review.notes);
+    expect(screen.queryByRole("button", { name: /Read more/ })).toBeNull();
+  });
 
   it("renders nothing without a review", () => {
     const { container } = render(<MechanismReviewPanel review={null} />);
@@ -84,17 +97,20 @@ describe("MechanismReviewPanel", () => {
     expect(screen.getByText(/Segregated Accounts/).textContent).toBe(review.notes);
   });
 
-  it("clamps the compact rail copy until it is expanded", () => {
-    const { container } = render(<MechanismReviewPanel review={review} compact />);
+  it("folds the compact rail copy to a lead until it is expanded", () => {
+    const { container } = render(<MechanismReviewPanel review={longReview} compact />);
     // Reviewed notes run past 6,000 characters on the longest assets, which
-    // cannot render unclamped in a 22rem rail.
-    const notes = screen.getByText(/Segregated Accounts/);
-    expect(notes.className).toContain("line-clamp-3");
+    // cannot render whole in a 22rem rail. The fold is a cut in the string
+    // (`prose-lead`), not `line-clamp`, so it does not move with the viewport.
+    const collapsed = screen.getByText(/Segregated Accounts/).textContent ?? "";
+    expect(collapsed.length).toBeLessThanOrEqual(RAIL_PROSE_LEAD_CHARS + 1);
+    expect(collapsed.endsWith("\u2026")).toBe(true);
     expect(getSourcesContainer(container)?.hasAttribute("hidden")).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: /Read more/ }));
 
-    expect(screen.getByText(/Segregated Accounts/).className).not.toContain("line-clamp-3");
+    const expanded = screen.getByText(/Segregated Accounts/).textContent ?? "";
+    expect(expanded.length).toBeGreaterThan(collapsed.length);
     expect(screen.getByRole("button", { name: /Show less/ })).toBeTruthy();
 
     // Sources open independently through the evidence footer.

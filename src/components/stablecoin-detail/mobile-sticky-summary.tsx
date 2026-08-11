@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
-import { formatNativePrice } from "@shared/lib/format";
+import { formatHeroNativePrice } from "@/components/stablecoin-detail/hero-card-metrics";
 import { isMobileStickySummaryEnabled } from "@/lib/feature-flags";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
@@ -84,7 +84,7 @@ export function MobileStickySummary({
       <StablecoinLogo src={logoSrc} name={coin.name} size={20} />
       <span className="text-sm font-semibold">{coin.symbol}</span>
       <span className="ml-auto font-mono text-sm tabular-nums">
-        {formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef, 4)}
+        {formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef, 4)}
       </span>
       {reportCard ? (
         <SafetyGradeBadge

@@ -14,8 +14,8 @@ const SUMMARY: ReserveQualityClientSummary = {
     { key: "bank-deposit", label: "Bank deposits", pct: 20, barClass: "bg-foreground/60" },
   ],
   ladder: [
-    { key: "immediate", label: "Immediate", pct: 20 },
-    { key: "one-day", label: "≤ 1 day", pct: 80 },
+    { key: "immediate", tone: "ok", label: "Immediate", pct: 20 },
+    { key: "one-day", tone: "info", label: "≤ 1 day", pct: 80 },
   ],
   liquidWithinOneDayPct: 100,
   unknownHorizonPct: 0,
@@ -87,25 +87,36 @@ describe("ReserveQualitySection", () => {
     expect(html).toContain("Bank deposits");
   });
 
-  it("labels the ladder and tones only the unknown row amber", () => {
+  it("keeps the ladder neutral, including the unknown horizon", () => {
     const html = renderToStaticMarkup(<ReserveQualitySection summary={SUMMARY} />);
     expect(html).toContain('aria-label="Liquidity horizon ladder"');
     expect(html).not.toContain(AMBER_VALUE_CLASS);
     expect(html).not.toContain("bg-amber-500/50");
 
+    // A share of the basket is not a risk level: the unknown row reads as a
+    // label, not as a severity tone (design polish F4 / §5.3, §5.4).
     const opaque = renderToStaticMarkup(
       <ReserveQualitySection
         summary={{
           ...SUMMARY,
-          ladder: [...SUMMARY.ladder, { key: "unknown", label: "Unknown", pct: 45 }],
+          ladder: [...SUMMARY.ladder, { key: "unknown", tone: "neutral", label: "Unknown", pct: 45 }],
           unknownHorizonPct: 45,
         }}
       />,
     );
     expect(opaque).toContain("Unknown");
-    expect(opaque).toContain(AMBER_VALUE_CLASS);
-    expect(opaque).toContain("bg-amber-500/50");
     expect(opaque).toContain("45%");
+    expect(opaque).not.toContain("bg-amber-500/50");
+    expect(opaque).not.toContain(AMBER_VALUE_CLASS);
+  });
+
+  it("keeps a fractional ladder share visible instead of an empty track", () => {
+    const html = renderToStaticMarkup(
+      <ReserveQualitySection
+        summary={{ ...SUMMARY, ladder: [{ key: "immediate", tone: "ok", label: "Immediate", pct: 0.1 }] }}
+      />,
+    );
+    expect(html).toContain("min-width:3px");
   });
 
   it("omits review-derived facts the summary does not carry", () => {

@@ -82,7 +82,10 @@ export function CustodyCard({ summary, frameless }: { summary?: CustodyClientSum
             ) : null}
           </ul>
         ) : null}
-        <FactGrid aria-label="Custody facts" items={facts} className="grid-cols-3" />
+        {/* No `grid-cols-3` override: forcing three tracks into the 22rem rail
+            clipped the `Rehypothecation` label at the card edge. FactGrid's
+            auto-fit resolves to two columns here. */}
+        <FactGrid aria-label="Custody facts" items={facts} />
         <EvidenceFooter
           sources={summary.sources.map((source) => ({ label: source.label, url: source.url }))}
           sourcesFootnote={

@@ -210,7 +210,7 @@ export function buildStablecoinDetailClientCoin(
   const custodyProfileSummary = shouldDisplayCustodyModule(coin, resolvedArchetype)
     ? projectCustodyClientSummary(coin)
     : null;
-  const oracleRiskSummary = resolvedArchetype === "cdp" ? projectOracleRiskClientSummary(coin) : null;
+  const oracleRiskSummary = projectOracleRiskClientSummary(coin);
   const reserveQualitySummary = projectReserveQualityClientSummary(coin);
   const blacklistabilitySummary = projectBlacklistabilityClientSummary(coin, options.parentById);
   return {

@@ -1,12 +1,11 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@shared/lib/format";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
-import { RailCard, RailStamp, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 
 interface CollateralizationCardProps {
@@ -63,18 +62,31 @@ export function CollateralizationCard({
   const hasLiveMetrics = live != null || liveBackstop != null;
   const coverage = headlineRatio != null ? coverageLabel(headlineRatio) : null;
 
+  // Header slot carries status only (owner ruling 2026-08-11): the coverage
+  // chip moves up from the body, and freshness — the live stamp or the
+  // reviewed date — moves down to the footer. Before this the corner changed
+  // meaning between coins, reading `Live · 3h ago` on USDT and BOLD but
+  // `Reviewed <date>` on ZCHF for the same card.
+  const freshness = hasLiveMetrics
+    ? liveAtSec != null
+      ? `Live · ${timeAgo(liveAtSec)}`
+      : "Live"
+    : reviewed != null
+      ? `Reviewed ${reviewed.reviewedAt}`
+      : undefined;
+
   return (
     <RailCard
       title="Collateralization"
       ariaLabel="Collateralization"
       trailing={
-        hasLiveMetrics ? (
-          <RailStamp className="gap-1.5">
-            <RefreshCw className="h-3 w-3" aria-hidden="true" />
-            {liveAtSec != null ? `Live · ${timeAgo(liveAtSec)}` : "Live"}
-          </RailStamp>
-        ) : reviewed != null ? (
-          <ReviewedStamp date={reviewed.reviewedAt} />
+        coverage != null ? (
+          <Badge
+            variant="outline"
+            className={cn("h-5 rounded-full px-2 text-[10px] font-medium normal-case tracking-normal", TONE_BADGE_CLASSES[coverage.tone])}
+          >
+            {coverage.label}
+          </Badge>
         ) : null
       }
     >
@@ -83,14 +95,6 @@ export function CollateralizationCard({
           <>
             <p className="font-mono text-[2rem] font-semibold leading-none tracking-normal tabular-nums text-foreground">
               {formatRatioPct(headlineRatio)}
-            </p>
-            <p className="mt-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-              <Badge
-                variant="outline"
-                className={cn("h-5 rounded-full px-2 text-[11px] font-medium normal-case tracking-normal", TONE_BADGE_CLASSES[coverage.tone])}
-              >
-                {coverage.label}
-              </Badge>
             </p>
           </>
         ) : (
@@ -117,12 +121,12 @@ export function CollateralizationCard({
         </div>
       ) : null}
 
-      {reviewed != null ? (
+      {reviewed != null || freshness != null ? (
         <div className="px-4 pb-4">
-          {/* No `trailing` stamp: the reviewed date already has exactly one
-              home on this card — the header `ReviewedStamp` — and the live
-              headline deliberately suppresses it. */}
-          <EvidenceFooter sources={[{ label: reviewed.sourceLabel, url: reviewed.sourceUrl }]} />
+          <EvidenceFooter
+            sources={reviewed != null ? [{ label: reviewed.sourceLabel, url: reviewed.sourceUrl }] : undefined}
+            trailing={freshness}
+          />
         </div>
       ) : null}
     </RailCard>

@@ -35,6 +35,12 @@ import { MICA_STATUS_BADGE_STYLES, MICA_STATUS_DESCRIPTIONS } from "@shared/lib/
 import type { MechanismArchetype, StablecoinMeta, VariantKind } from "@shared/types";
 import { AttestorTierBadge, BadgePill, ClassificationBadgeLink } from "./badges";
 
+/** Key Information classification chips are categorical facts, not risk bands,
+ *  so they carry the hero's neutral gray rather than a per-category hue; tint
+ *  stays reserved for chips that encode a band. Spelling matches the hero chip
+ *  (`hero-card-identity.tsx`) and the infrastructure chip below. */
+const NEUTRAL_CHIP_CLASS = "border-border/60 bg-muted/40 text-muted-foreground";
+
 export function getKeyInfoSentenceLabels(meta: StablecoinMeta) {
   return {
     governanceFullLabel: GOVERNANCE_LABELS[meta.flags.governance] ?? meta.flags.governance,
@@ -62,7 +68,7 @@ export function ClassificationAndLinks({ meta }: { meta: StablecoinMeta }) {
           <ClassificationBadgeLink
             href={governanceHref}
             ariaLabel={`Browse ${governanceFullLabel} stablecoins`}
-            cls={gov.cls}
+            cls={NEUTRAL_CHIP_CLASS}
           >
             {gov.label}
           </ClassificationBadgeLink>
@@ -71,18 +77,22 @@ export function ClassificationAndLinks({ meta }: { meta: StablecoinMeta }) {
           <ClassificationBadgeLink
             href={backingHref}
             ariaLabel={`Browse ${backingFullLabel} stablecoins`}
-            cls={backing.cls}
+            cls={NEUTRAL_CHIP_CLASS}
           >
             {backing.label}
           </ClassificationBadgeLink>
         )}
         {peg &&
           (pegHref ? (
-            <ClassificationBadgeLink href={pegHref} ariaLabel={`Browse ${pegFullLabel} stablecoins`} cls={peg.cls}>
+            <ClassificationBadgeLink
+              href={pegHref}
+              ariaLabel={`Browse ${pegFullLabel} stablecoins`}
+              cls={NEUTRAL_CHIP_CLASS}
+            >
               {peg.label}
             </ClassificationBadgeLink>
           ) : (
-            <BadgePill cls={peg.cls}>{peg.label}</BadgePill>
+            <BadgePill cls={NEUTRAL_CHIP_CLASS}>{peg.label}</BadgePill>
           ))}
         {infrastructureSummaries.map(({ value, label, href }) => (
           <Link
@@ -94,25 +104,17 @@ export function ClassificationAndLinks({ meta }: { meta: StablecoinMeta }) {
             {label}
           </Link>
         ))}
-        {meta.flags.yieldBearing && (
-          <BadgePill cls="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20">
-            Yield-Bearing
-          </BadgePill>
-        )}
-        {meta.flags.rwa && (
-          <BadgePill cls="bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20">RWA</BadgePill>
-        )}
+        {meta.flags.yieldBearing && <BadgePill cls={NEUTRAL_CHIP_CLASS}>Yield-Bearing</BadgePill>}
+        {meta.flags.rwa && <BadgePill cls={NEUTRAL_CHIP_CLASS}>RWA</BadgePill>}
         {!isDecentralized &&
           (meta.proofOfReserves ? (
             meta.proofOfReserves.attestorTier ? (
               <AttestorTierBadge proofOfReserves={meta.proofOfReserves} />
             ) : (
-              <BadgePill cls={POR_BADGE_STYLES[meta.proofOfReserves.type].cls}>
-                {POR_BADGE_STYLES[meta.proofOfReserves.type].label}
-              </BadgePill>
+              <BadgePill cls={NEUTRAL_CHIP_CLASS}>{POR_BADGE_STYLES[meta.proofOfReserves.type].label}</BadgePill>
             )
           ) : (
-            <BadgePill cls="bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20">No PoR</BadgePill>
+            <BadgePill cls={NEUTRAL_CHIP_CLASS}>No PoR</BadgePill>
           ))}
       </div>
       {hasLinks && (
@@ -335,15 +337,9 @@ export function ProofAndJurisdictionSection({ meta }: { meta: StablecoinMeta }) 
           <div className="flex flex-wrap items-center gap-2">
             {meta.jurisdiction && <span className="text-sm font-medium">{meta.jurisdiction.country}</span>}
             {meta.jurisdiction?.regulator && (
-              <BadgePill cls="bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20">
-                {meta.jurisdiction.regulator}
-              </BadgePill>
+              <BadgePill cls={NEUTRAL_CHIP_CLASS}>{meta.jurisdiction.regulator}</BadgePill>
             )}
-            {meta.jurisdiction?.license && (
-              <BadgePill cls="bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/20">
-                {meta.jurisdiction.license}
-              </BadgePill>
-            )}
+            {meta.jurisdiction?.license && <BadgePill cls={NEUTRAL_CHIP_CLASS}>{meta.jurisdiction.license}</BadgePill>}
             {meta.mica && micaStatus && (
               <ClassificationBadgeLink
                 href="/compliance/?regime=mica"

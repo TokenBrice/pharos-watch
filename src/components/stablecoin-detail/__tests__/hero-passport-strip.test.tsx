@@ -118,8 +118,21 @@ describe("HeroPassportStrip", () => {
 
     const desktopGrid = container.querySelector(".hidden.lg\\:grid") as HTMLDivElement | null;
     expect(desktopGrid).not.toBeNull();
-    expect(desktopGrid?.style.gridTemplateColumns).toBe("repeat(6, minmax(0, 1fr))");
+    expect(desktopGrid?.style.gridTemplateColumns).toBe("repeat(6, minmax(min-content, 1fr))");
     expect(desktopGrid?.className).not.toContain("grid-cols-[repeat");
     expect(getAllByRole("link")).toHaveLength(13);
+  });
+
+  it("tightens desktop cell padding once the strip carries nine or more fields", () => {
+    const dense = [...ITEMS, ...ITEMS.slice(1, 5).map((item) => ({ ...item, key: `${item.key}-2` }))];
+    const { container: sparse } = render(<HeroPassportStrip items={ITEMS} compactDesktop />);
+    const sparseCell = sparse.querySelector(".hidden.lg\\:grid > a");
+    expect(sparseCell?.className).toContain("px-4");
+
+    const { container: crowded } = render(
+      <HeroPassportStrip items={dense as typeof ITEMS} compactDesktop />,
+    );
+    const crowdedCell = crowded.querySelector(".hidden.lg\\:grid > a");
+    expect(crowdedCell?.className).toContain("px-2.5");
   });
 });

@@ -1,18 +1,37 @@
 "use client";
 
-import type { ReactNode } from "react";
 import {
   formatCurrency,
   formatNativePrice,
   formatPegDeviation,
   formatPercentChange,
   formatSupply,
+  pegCurrencySymbol,
 } from "@shared/lib/format";
 import type { StablecoinData, StablecoinMeta } from "@shared/types";
 import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
-import { PegGauge } from "@/components/peg-gauge";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
+
+/** Label class shared by every hero metric cell — one casing across breakpoints. */
+const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
+
+/**
+ * Hero price string. Several peg symbols have no glyph in the mono face — CHF's
+ * `₣` renders as a broken box — so any non-dollar peg carries its ISO code as a
+ * prefix instead of its symbol. Dollar-denominated pegs keep `$`.
+ */
+export function formatHeroNativePrice(
+  usdPrice: number | null | undefined,
+  pegCurrency: string,
+  pegRef: number,
+  decimals?: number,
+): string {
+  const formatted = formatNativePrice(usdPrice, pegCurrency, pegRef, decimals);
+  const symbol = pegCurrencySymbol(pegCurrency);
+  if (symbol === "$" || !formatted.startsWith(symbol)) return formatted;
+  return `${pegCurrency} ${formatted.slice(symbol.length)}`;
+}
 
 export interface HeroTertiaryMetricConfig {
   key: string;
@@ -64,7 +83,7 @@ function CompactMetricCell({
 }) {
   return (
     <div className="min-h-[8.25rem] border-b border-border/40 px-5 py-5 last:border-b-0 sm:px-6 lg:border-b-0 lg:border-r lg:last:border-r-0">
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+      <p className={HERO_METRIC_LABEL_CLASS}>{label}</p>
       <div className="mt-3">{children}</div>
       {subline ? <div className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">{subline}</div> : null}
     </div>
@@ -92,7 +111,7 @@ export function HeroCompactPriceCell({
   coinData,
   price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceCardProps) {
-  const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
+  const price = formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
   const deviationLabel = formatPriceReferenceLine({
     coinData,
     pegRef,
@@ -264,11 +283,9 @@ function MetricChip({
 export function HeroTertiaryMetrics({
   metrics,
   activeDepeg,
-  trailing,
 }: {
   metrics: HeroTertiaryMetricConfig[];
   activeDepeg: boolean;
-  trailing?: ReactNode;
 }) {
   const regularMetrics = metrics.filter((metric) => metric.key !== "performance-vs-usd");
   const performanceMetric = metrics.find((metric) => metric.key === "performance-vs-usd");
@@ -300,7 +317,6 @@ export function HeroTertiaryMetrics({
           />
         </div>
       ) : null}
-      {trailing ? <div className="mt-2 flex flex-wrap items-center gap-2">{trailing}</div> : null}
 
       {activeDepeg && (
         <div className="mt-3 rounded-lg border border-red-500/20 bg-red-500/8 px-3 py-2 text-xs text-red-700 dark:text-red-400">
@@ -320,40 +336,34 @@ interface HeroPriceCardProps {
 export function HeroPriceCard({
   coin,
   coinData,
-  price: { pegRef, gaugeDeviationBps, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
+  price: { pegRef, deviationBps, pegReferenceUnavailable, isNavToken, limitedDepegCoverageNote },
 }: HeroPriceCardProps) {
-  const showGauge = coinData.price != null && pegRef > 0 && !pegReferenceUnavailable && !isNavToken;
   // Full 4-decimal precision on every tier: at 3 decimals a stablecoin price
   // reads as a ~10bps deviation that the peg line right below contradicts.
-  const price = formatNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
+  const price = formatHeroNativePrice(coinData.price, coin.flags.pegCurrency ?? "USD", pegRef);
 
   return (
     <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
-      <div className="flex items-center gap-2">
-        {showGauge && <PegGauge deviationBps={gaugeDeviationBps} className="w-12" />}
-        <div>
-          <p className="pharos-kicker">Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}</p>
-          <p
-            className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} text-xl`}
-          >
-            {price}
-          </p>
-          <p
-            className={`pharos-numeric mt-1 text-xs ${
-              pegReferenceUnavailable
-                ? "text-muted-foreground"
-                : isNavToken
-                  ? "text-green-700 dark:text-green-400"
-                  : deviationColorClass(Math.abs(deviationBps))
-            }`}
-          >
-            {formatPriceReferenceLine({ coinData, pegRef, pegReferenceUnavailable, isNavToken })}
-          </p>
-          {limitedDepegCoverageNote ? (
-            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
-          ) : null}
-        </div>
-      </div>
+      <p className={HERO_METRIC_LABEL_CLASS}>
+        Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
+      </p>
+      <p className={`font-extrabold pharos-numeric tracking-tight ${confidenceClass(coinData.priceConfidence)} text-xl`}>
+        {price}
+      </p>
+      <p
+        className={`pharos-numeric mt-1 text-xs ${
+          pegReferenceUnavailable
+            ? "text-muted-foreground"
+            : isNavToken
+              ? "text-green-700 dark:text-green-400"
+              : deviationColorClass(Math.abs(deviationBps))
+        }`}
+      >
+        {formatPriceReferenceLine({ coinData, pegRef, pegReferenceUnavailable, isNavToken })}
+      </p>
+      {limitedDepegCoverageNote ? (
+        <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">{limitedDepegCoverageNote}</p>
+      ) : null}
     </div>
   );
 }
@@ -373,7 +383,7 @@ export function HeroMarketCapCard({
 }) {
   return (
     <div className="rounded-xl border border-border/60 bg-background/45 px-3 py-2.5">
-      <p className="pharos-kicker">Market Cap</p>
+      <p className={HERO_METRIC_LABEL_CLASS}>Market Cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{formatCurrency(mcap)}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-[11px] text-muted-foreground">USD-normalized</p>}
       <SupplyRestoredNotice coinData={coinData} className="mt-0.5 text-[11px] text-amber-700 dark:text-amber-400" />
@@ -407,7 +417,7 @@ export function HeroSupplyCard({
     <div className="mt-3 rounded-lg border border-border/40 bg-background/30 px-3 py-2">
       <div className="flex items-center justify-between">
         <div>
-          <p className="pharos-kicker">Supply</p>
+          <p className={HERO_METRIC_LABEL_CLASS}>Supply</p>
           <p className="text-base font-bold pharos-numeric">
             {supply != null ? formatSupply(supply) : "—"}{" "}
             <span className="text-xs text-muted-foreground">{coinSymbol}</span>
