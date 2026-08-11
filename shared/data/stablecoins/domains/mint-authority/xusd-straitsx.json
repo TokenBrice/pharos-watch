@@ -8,12 +8,15 @@
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
+        "0xc08e7e23c235073c6807c2efe7021304cb7c2815",
         "0xf81ac2e1a0373dde1bce01e2fe694a9b7e3bfcb9"
       ],
       "implementationAddresses": [
+        "0x671ac667a0a7677fe3fd5768a66f788d093203e8",
         "0xCD6c1A317222F51FD406D84c31B921Df7F49A599"
       ],
       "adminAddresses": [
+        "0x5daab87246b8f8556e159a54f1b21832e1376951",
         "0xf4c8B80ff929b15A21A89B0cA754D176D88F5a14"
       ],
       "canChangeMintLogic": true,
@@ -32,6 +35,10 @@
         {
           "label": "Solana XUSD mint",
           "url": "https://explorer.solana.com/address/4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z"
+        },
+        {
+          "label": "Ethereum XUSD legacy proxy admin (5-owner Safe)",
+          "url": "https://etherscan.io/address/0x5daab87246b8f8556e159a54f1b21832e1376951"
         }
       ]
     },

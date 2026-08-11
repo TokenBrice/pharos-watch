@@ -89,7 +89,7 @@
         "observedBlock": 25712278
       },
       {
-        "label": "Alchemix AlchemistV2 proxy-admin Safe",
+        "label": "Alchemix AlchemistV2 proxy-admin Safe (via ProxyAdmin 0xe0fc5cb7)",
         "role": "proxy-admin",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
@@ -99,13 +99,13 @@
         "modulesOrGuardsStatus": "none-detected",
         "safe": {
           "owners": [
-            "0xc0cdb2ff3699de3c90beb7ec9f312a4b0dd9dbc1",
             "0xf0daaa720286868c8c7b235f450429c197cd579b",
-            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
             "0x22d77fc3b7e87bfd6d8ca57071cbfc71e8da5213",
             "0xf2a980f072b14cf1b9b464f37fd5a95390f1064d",
-            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e",
-            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8"
+            "0x5788f90196954a272347aee78c3b3f86f548d0a9",
+            "0xb9f256128aef64459ce9558826f6466bc010b687",
+            "0xf872703f1c8f93fa186869bac83bac5a0c87c3c8",
+            "0xffaa3cda4f169d33291dd9ddbea8578d1398430e"
           ],
           "threshold": 3,
           "enabledModules": [],
@@ -119,7 +119,7 @@
           "source": "safe-api"
         },
         "chain": "ethereum",
-        "address": "0xf56d660138815fc5d7a06cd0e1630225e788293d",
+        "address": "0x9e2b6378ee8ad2a4a95fe481d63caba8fb0ebbf9",
         "observedAt": "2026-08-08",
         "observedBlock": 25712278,
         "sources": [
@@ -243,14 +243,14 @@
         "0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6"
       ],
       "adminAddresses": [
-        "0xf56d660138815fc5d7a06cd0e1630225e788293d",
+        "0xe0fc5cb7665041cda26969a2d1ceb5cd5046347d",
         "0xa44f69aeac480e23c0abfa9a55d99c9f098beac6",
         "0xc224bf25dcc99236f00843c7d8c4194abe8aa94a"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "Alchemix AlchemistV2 proxy-admin Safe",
-      "observedAt": "2026-08-08",
-      "observedBlock": 25712278,
+      "controlRef": "Alchemix AlchemistV2 proxy-admin Safe (via ProxyAdmin 0xe0fc5cb7)",
+      "observedAt": "2026-08-11",
+      "observedBlock": 25734856,
       "sources": [
         {
           "label": "Alchemix Safe on Etherscan",
