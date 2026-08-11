@@ -1841,7 +1841,7 @@
   },
   "usdsc-startale": {
     "title": "Sony's Dollar, M0's Plumbing",
-    "text": "USDSC is a Soneium-exclusive 1:1 wrapper around M0's M, carrying the same short-term {{term:treasury}}Treasury-bill backing, Validator {{term:attestation}}attestations{{/term}}, and bankruptcy-remote SPV structure into Startale's app ecosystem. It is less a fresh reserve design than a distribution wager: give Sony's L2 a branded dollar, add freeze authority and local integrations, and hope chain gravity supplies the demand. The wrapper inherits M0's backing quality while adding Startale's operator and single-chain dependencies, a reminder that institutional plumbing can still acquire a new control surface at every layer. Whether Soneium needs its own M0 wrapper is unresolved; the lineage is credible, but logos are easier to multiply than liquidity.",
+    "text": "USDSC is a Soneium-exclusive 1:1 wrapper around M0's M, carrying the same short-term {{term:treasury}}Treasury-bill backing{{/term}}, Validator {{term:attestation}}attestations{{/term}}, and bankruptcy-remote SPV structure into Startale's app ecosystem. It is less a fresh reserve design than a distribution wager: give Sony's L2 a branded dollar, add freeze authority and local integrations, and hope chain gravity supplies the demand. The wrapper inherits M0's backing quality while adding Startale's operator and single-chain dependencies, a reminder that institutional plumbing can still acquire a new control surface at every layer. Whether Soneium needs its own M0 wrapper is unresolved; the lineage is credible, but logos are easier to multiply than liquidity.",
     "updatedAt": "2026-08-11",
     "authoredBy": "ai",
     "model": "gpt-5-codex",

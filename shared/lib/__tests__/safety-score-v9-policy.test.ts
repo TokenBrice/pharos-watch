@@ -63,8 +63,11 @@ describe("Safety Score v9 methodology policy", () => {
     // physical-redemption 0.07). Vocabulary only — no existing archetype rubric,
     // signal, weight, or ceiling changes, and no asset resolves to the new
     // archetype until the phase-2 migration, so no score or grade moves.
+    // 9.17 (2026-08-11): oracle applicability separates genuinely oracleless
+    // mechanisms (95) from privileged internal pricing (45); reviewed
+    // not-applicable paths emit no scored component.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "1f90b1c1bc0cdc3ee6919f3758ff003d26fb88ebb9c61b3d197f03e094bbd54c",
+      "dfbb5ba7b967dac28970578b7b15c7bdc19483c4f354f58d8ba5fc572bfe5cb5",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
