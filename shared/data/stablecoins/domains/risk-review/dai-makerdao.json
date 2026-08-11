@@ -723,7 +723,7 @@
           },
           {
             "label": "zkSync Era bridge documentation",
-            "url": "https://docs.zksync.io/zksync-protocol/rollup/bridges"
+            "url": "https://docs.zksync.io/zksync-protocol/rollup/bridging-assets"
           }
         ]
       },
@@ -957,7 +957,7 @@
           },
           {
             "label": "Taiko mainnet contract addresses",
-            "url": "https://docs.taiko.xyz/network-reference/mainnet-addresses"
+            "url": "https://docs.taiko.xyz/network/contract-addresses"
           }
         ]
       },

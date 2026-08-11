@@ -1714,7 +1714,7 @@
           },
           {
             "label": "L2BEAT Manta Pacific",
-            "url": "https://l2beat.com/scaling/projects/manta"
+            "url": "https://l2beat.com/scaling/projects/mantapacific"
           }
         ]
       },
@@ -2027,7 +2027,7 @@
         "sources": [
           {
             "label": "Taiko Alethia contract addresses (L2 BridgedUSDCToken (Native) = this token; L2 ERC20Vault = 0x1670000000000000000000000000000000000002)",
-            "url": "https://docs.taiko.xyz/network-reference/contract-addresses"
+            "url": "https://docs.taiko.xyz/network/contract-addresses"
           },
           {
             "label": "DefiLlama pegged-assets USDC config (taiko bridgedFromETH entry)",
@@ -2433,7 +2433,7 @@
           },
           {
             "label": "Zircuit USDC.e token on explorer (name Bridged USDC (VIA Labs), 6 decimals; masterMinter() = controller proxy contract, observed 2026-07-19)",
-            "url": "https://explorer.zircuit.com/token/0x3b952c8C9C44e8Fe201e2b26F6B2200203214cfF"
+            "url": "https://explorer.zircuit.com/address/0x3b952c8C9C44e8Fe201e2b26F6B2200203214cfF"
           }
         ]
       },

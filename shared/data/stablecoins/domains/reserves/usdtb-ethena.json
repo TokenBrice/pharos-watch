@@ -35,7 +35,7 @@
     "sources": [
       {
         "label": "USDtb current backing and supply",
-        "url": "https://usdtb.money/api/backing"
+        "url": "https://usdtb.money/api/transparency/backing-and-supply/current"
       },
       {
         "label": "USDtb Reserve Report - June 2026 (Deloitte via Anchorage)",

@@ -58,15 +58,15 @@
           },
           {
             "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "MToken technical specification",
-            "url": "https://docs.m0.org/home/technical-specifications/m-token"
+            "url": "https://docs.m0.org/protocol/m-token"
           },
           {
             "label": "MinterGateway on Blockscout",
@@ -94,7 +94,7 @@
         "sources": [
           {
             "label": "M0 Two Token Governance specification",
-            "url": "https://docs.m0.org/home/technical-specifications/two-token-governance"
+            "url": "https://docs.m0.org/protocol/roles#power-token-holders"
           },
           {
             "label": "M0 protocol roles",
@@ -175,11 +175,11 @@
       "sources": [
         {
           "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minting and collateral verification",

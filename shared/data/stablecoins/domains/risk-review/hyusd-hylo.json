@@ -37,7 +37,7 @@
       "sources": [
         {
           "label": "Hylo hyUSD and xSOL design",
-          "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+          "url": "https://docs.hylo.so/protocol-overview/xassets"
         },
         {
           "label": "Hylo V2 multi-asset architecture",
@@ -59,7 +59,7 @@
     "sources": [
       {
         "label": "Hylo V1 hyUSD and xSOL design",
-        "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+        "url": "https://docs.hylo.so/protocol-overview/xassets"
       },
       {
         "label": "Hylo V2 multi-asset architecture",

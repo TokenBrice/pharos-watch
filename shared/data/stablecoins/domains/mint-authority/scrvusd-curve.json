@@ -25,7 +25,7 @@
           },
           {
             "label": "Curve crvUSD resources",
-            "url": "https://resources.curve.finance/crvusd/"
+            "url": "https://docs.curve.finance/developer/crvusd/overview"
           }
         ],
         "evidence": "At Ethereum block 25573289, asset() returned crvUSD 0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E. EIP-1967 implementation, admin, and beacon slots were all zero and owner() reverted, leaving no local upgrade-admin or privileged share-mint surface. Wrapper accounting cannot mint crvUSD; durable base authority remains inherited from the reviewed parent."

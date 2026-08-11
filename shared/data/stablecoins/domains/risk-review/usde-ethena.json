@@ -785,7 +785,7 @@
           },
           {
             "label": "USDe OFT on hyperevm explorer (verified 2026-07-20)",
-            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "url": "https://hyperevmscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ],
         "observedBlock": 40924298
@@ -1282,7 +1282,7 @@
           },
           {
             "label": "USDe OFT on HyperEVM explorer (verified 2026-07-20)",
-            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "url": "https://hyperevmscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ]
       },

@@ -27,7 +27,7 @@
         "source": "docs",
         "name": "Polygon PoS Bridge",
         "slug": "polygon-pos",
-        "url": "https://docs.polygon.technology/pos/concepts/bridge/",
+        "url": "https://docs.polygon.technology/pos/how-to/bridging/ethereum-polygon/portal-ui",
         "bridgeTypes": [
           "lockAndMint"
         ]

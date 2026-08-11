@@ -37,7 +37,7 @@
         },
         {
           "label": "Curve crvUSD risk documentation",
-          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+          "url": "https://docs.curve.finance/user/security/risks/crvusd"
         }
       ]
     },
@@ -47,7 +47,7 @@
     "sources": [
       {
         "label": "Curve crvUSD risk docs",
-        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        "url": "https://docs.curve.finance/user/security/risks/crvusd"
       },
       {
         "label": "Savings crvUSD repository",

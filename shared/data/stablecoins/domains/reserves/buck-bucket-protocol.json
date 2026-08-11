@@ -41,7 +41,7 @@
       },
       {
         "label": "Archived Bucket V1 Peg Stability Module documentation",
-        "url": "https://web.archive.org/web/20250210142416/https://docs.bucketprotocol.io/mechanisms/peg-stability-module"
+        "url": "https://web.archive.org/web/20250210142416/https://docs.bucketprotocol.io/mechanism/usdb-peg"
       }
     ],
     "rationale": "BUCK is issued through dynamic Bucket V1 collateral positions and Peg Stability Module exchanges. The pinned V1 interface exposes per-asset collateral vaults and CDP borrow, repay, redemption, and liquidation functions; the current branch review identifies 40 registered collateral branches at Sui checkpoint 298434520. At Sui checkpoint 298655668, the shared BucketProtocol object still held the BUCK TreasuryCap with raw total supply 25967024785770812. Neither issuer documentation, legal terms, archived PSM documentation, nor public Sui state publishes a current USD-value cross-basket allocation. The previous five static percentage rows are therefore not defensible.",

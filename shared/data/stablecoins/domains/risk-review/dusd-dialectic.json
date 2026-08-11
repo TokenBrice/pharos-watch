@@ -5,11 +5,11 @@
     "sources": [
       {
         "label": "Makina deposits and whitelisting",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/deposits"
       },
       {
         "label": "Makina redemptions and whitelisting",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/redemptions"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/redemptions"
       },
       {
         "label": "DUSD Machine Terms",
@@ -49,7 +49,7 @@
       },
       {
         "label": "Makina machine token cross-chain transfer",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/machine-token"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/machine-token"
       },
       {
         "label": "Ethereum PublicNode RPC",

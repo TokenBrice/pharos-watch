@@ -101,7 +101,7 @@
           },
           {
             "label": "Reserve Protocol docs",
-            "url": "https://reserve.org/protocol/"
+            "url": "https://docs.reserve.org/"
           }
         ]
       },
@@ -133,7 +133,7 @@
           },
           {
             "label": "Base bridge docs",
-            "url": "https://docs.base.org/docs/base-chain/network-information/base-contracts"
+            "url": "https://docs.base.org/base-chain/network-information/base-contracts"
           }
         ]
       },
@@ -165,7 +165,7 @@
           },
           {
             "label": "Arbitrum token bridge docs",
-            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+            "url": "https://docs.arbitrum.io/arbitrum-essentials/bridging/overview"
           }
         ]
       }

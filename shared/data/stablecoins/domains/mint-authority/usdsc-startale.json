@@ -28,7 +28,7 @@
         },
         {
           "label": "M0 SwapFacility docs",
-          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
         }
       ]
     },
@@ -57,11 +57,11 @@
           },
           {
             "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "MinterGateway on Blockscout",
@@ -93,7 +93,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           }
         ],
         "evidence": "At Soneium block 24028800: SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 confirmed TransparentUpgradeableProxy (code=3060 bytes, impl=0xc435b33c017da7ef313bf2d3132c99c7673a194b). EIP-1967 admin slot=0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin). ProxyAdmin owner=0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1, a 2/3 EOA multisig with 3 EOA owners (verified eth_getCode=0x for all three), no modules (getModules() empty), guard=0x0. ProxyAdmin code confirmed present (2724 bytes). No upgrade path accessible without 2/3 Safe signers."
@@ -103,11 +103,11 @@
       "sources": [
         {
           "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "MinterGateway on Blockscout",

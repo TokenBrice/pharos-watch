@@ -41,7 +41,7 @@
         "source": "l2beat",
         "name": "World Chain",
         "slug": "world",
-        "url": "https://l2beat.com/scaling/projects/worldchain"
+        "url": "https://l2beat.com/scaling/projects/world"
       }
     ],
     "sources": [
@@ -55,7 +55,7 @@
       },
       {
         "label": "L2BEAT World Chain",
-        "url": "https://l2beat.com/scaling/projects/worldchain"
+        "url": "https://l2beat.com/scaling/projects/world"
       }
     ],
     "routes": [

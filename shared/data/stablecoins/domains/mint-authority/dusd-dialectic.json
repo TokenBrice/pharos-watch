@@ -52,7 +52,7 @@
         "sources": [
           {
             "label": "Makina deposits",
-            "url": "https://docs.makina.finance/concepts/architecture/machine/deposits"
+            "url": "https://docs.makina.finance/concepts/architecture/machine/overview/deposits"
           },
           {
             "label": "Dialectic USD Machine on Etherscan",
@@ -76,7 +76,7 @@
         "sources": [
           {
             "label": "Makina fees",
-            "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
+            "url": "https://docs.makina.finance/concepts/architecture/machine/overview/fees"
           },
           {
             "label": "Watermark Fee Manager on Etherscan",
@@ -245,7 +245,7 @@
       "sources": [
         {
           "label": "Makina fees",
-          "url": "https://docs.makina.finance/concepts/architecture/machine/fees"
+          "url": "https://docs.makina.finance/concepts/architecture/machine/overview/fees"
         },
         {
           "label": "Makina protocol upgrades",

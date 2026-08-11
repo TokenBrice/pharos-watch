@@ -31,7 +31,7 @@
       },
       {
         "label": "Avant Protocol docs - The Role of avUSD",
-        "url": "https://docs.avantprotocol.com/avusd/the-role-of-avusd"
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
       },
       {
         "label": "RWA.xyz avUSD asset page",
@@ -93,7 +93,7 @@
       },
       {
         "label": "Avant Protocol docs - The Role of avUSD",
-        "url": "https://docs.avantprotocol.com/avusd/the-role-of-avusd"
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
       }
     ],
     "uncertainty": "The live API shows assets deployed across Aave, Morpho, Kamino, Curvance, Jupiter, Ethena, Euler, Silo and other DeFi protocols, plus bridges/exchanges and treasury wallets. Avant docs state strategies are executed on-chain and with partners such as 0xPartners, but do not disclose legal segregation, bankruptcy remoteness, or rehypothecation terms.",

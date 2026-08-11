@@ -143,7 +143,7 @@
         },
         {
           "label": "Hiro API — hq-v1 contract",
-          "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.hq-v1"
+          "url": "https://api.hiro.so/v2/contracts/source/SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG/hq-v1"
         }
       ]
     }

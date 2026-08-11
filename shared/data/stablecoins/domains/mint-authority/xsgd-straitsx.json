@@ -292,7 +292,7 @@
           },
           {
             "label": "SPL Token multisig account layout",
-            "url": "https://github.com/solana-program/token/blob/08a08157471f8e2c6e85c17e638d04007c761357/program/src/state.rs#L177-L205"
+            "url": "https://github.com/solana-program/token/blob/c58d674b4280f4d1a6246b43685fc7fa428a51c3/interface/src/state.rs#L182-L209"
           }
         ],
         "evidence": "At finalized Solana slot 438047701, the XSGD mint 71S9cppWipeUEQDFngYwxjoxB6Sz1MUqX72byLsVYJqy had this address as both mint and freeze authority. The initialized SPL Token multisig decoded as 3-of-10."

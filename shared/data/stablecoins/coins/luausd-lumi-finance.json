@@ -35,7 +35,7 @@
   "links": [
     {
       "label": "Website",
-      "url": "https://lumi.finance/"
+      "url": "https://app.lumi.finance/"
     },
     {
       "label": "Twitter",
@@ -60,7 +60,7 @@
     "semantics": "single-asset",
     "breakerScope": "luausd-lumi-finance",
     "display": {
-      "url": "https://lumi.finance/",
+      "url": "https://app.lumi.finance/",
       "label": "Lumi Finance"
     },
     "inputs": {

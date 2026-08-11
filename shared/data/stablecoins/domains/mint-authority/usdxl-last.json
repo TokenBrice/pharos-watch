@@ -23,15 +23,15 @@
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
-          "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+          "url": "https://hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
         },
         {
           "label": "USDXL implementation on HyperEVM Blockscout",
-          "url": "https://hyperliquid.blockscout.com/address/0xce23355599cdbe5dca05186c5d9d5b37d959b27f"
+          "url": "https://hyperevmscan.io/address/0xce23355599cdbe5dca05186c5d9d5b37d959b27f#code"
         },
         {
           "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
-          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
+          "url": "https://hyperevmscan.io/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
         },
         {
           "label": "HyperEVM JSON-RPC",
@@ -117,11 +117,11 @@
       "sources": [
         {
           "label": "USDXL token proxy on HyperEVM Blockscout",
-          "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+          "url": "https://hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
         },
         {
           "label": "USDXL proxy admin Safe on HyperEVM Blockscout",
-          "url": "https://hyperliquid.blockscout.com/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
+          "url": "https://hyperevmscan.io/address/0xf050623d497be7ea6653fd205a537d10300b4c6e"
         },
         {
           "label": "HypurrFi USDXL docs",

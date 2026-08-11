@@ -23,7 +23,7 @@
       "sources": [
         {
           "label": "M0 SwapFacility docs",
-          "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+          "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
         }
       ]
     },
@@ -52,11 +52,11 @@
           },
           {
             "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "MinterGateway on Blockscout",
@@ -88,7 +88,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           }
         ],
         "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment."
@@ -98,11 +98,11 @@
       "sources": [
         {
           "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "MinterGateway on Blockscout",

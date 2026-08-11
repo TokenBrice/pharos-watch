@@ -68,7 +68,7 @@
     "sources": [
       {
         "label": "USD.AI technical protocol overview",
-        "url": "https://docs.usd.ai/technical-protocol-overview"
+        "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
       },
       {
         "label": "Arbitrum sUSDai ERC-4626 implementation",

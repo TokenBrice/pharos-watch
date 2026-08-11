@@ -33,7 +33,7 @@
       },
       {
         "label": "Curve crvUSD documentation",
-        "url": "https://resources.curve.finance/crvusd/"
+        "url": "https://docs.curve.finance/developer/crvusd/overview"
       }
     ],
     "rationale": "scrvUSD is a vault-share claim on crvUSD managed by Curve's savings vault. The exact direct reserve is one protocol position; the parent crvUSD collateral and controller risks remain inherited through the tracked wrapper dependency.",

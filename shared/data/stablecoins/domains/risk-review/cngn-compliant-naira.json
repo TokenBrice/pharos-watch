@@ -5,7 +5,7 @@
     "sources": [
       {
         "label": "Docs",
-        "url": "https://docs.cngn.co/integrations/contract-addresses"
+        "url": "https://docs.cngn.co/guides/contract-addresses"
       },
       {
         "label": "Website",
@@ -26,7 +26,7 @@
       {
         "source": "issuer",
         "name": "cNGN issuer-native multichain issuance",
-        "url": "https://docs.cngn.co/integrations/contract-addresses",
+        "url": "https://docs.cngn.co/guides/contract-addresses",
         "bridgeTypes": [
           "issuer-native"
         ]
@@ -35,7 +35,7 @@
     "sources": [
       {
         "label": "cNGN contract addresses",
-        "url": "https://docs.cngn.co/integrations/contract-addresses"
+        "url": "https://docs.cngn.co/guides/contract-addresses"
       },
       {
         "label": "cNGN transparency",
@@ -62,7 +62,7 @@
         "sources": [
           {
             "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/integrations/contract-addresses"
+            "url": "https://docs.cngn.co/guides/contract-addresses"
           },
           {
             "label": "cNGN on ethereum explorer (owner/Safe probed 2026-07-20)",
@@ -89,7 +89,7 @@
         "sources": [
           {
             "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/integrations/contract-addresses"
+            "url": "https://docs.cngn.co/guides/contract-addresses"
           },
           {
             "label": "cNGN on base explorer (owner/Safe probed 2026-07-20)",
@@ -116,7 +116,7 @@
         "sources": [
           {
             "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/integrations/contract-addresses"
+            "url": "https://docs.cngn.co/guides/contract-addresses"
           },
           {
             "label": "cNGN on bsc explorer (owner/Safe probed 2026-07-20)",
@@ -143,7 +143,7 @@
         "sources": [
           {
             "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/integrations/contract-addresses"
+            "url": "https://docs.cngn.co/guides/contract-addresses"
           },
           {
             "label": "cNGN on polygon explorer (owner/Safe probed 2026-07-20)",
@@ -169,7 +169,7 @@
         "sources": [
           {
             "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/integrations/contract-addresses"
+            "url": "https://docs.cngn.co/guides/contract-addresses"
           },
           {
             "label": "cNGN Solana mint (probed 2026-07-20)",

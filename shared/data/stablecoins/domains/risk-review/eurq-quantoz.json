@@ -43,7 +43,7 @@
         "sources": [
           {
             "label": "Quantoz EURQ (official issuance list)",
-            "url": "https://quantoz.com/eurq"
+            "url": "https://www.quantoz.com/products/eurq-usdq"
           },
           {
             "label": "EURQ on Etherscan (verified 2026-07-20)",
@@ -71,7 +71,7 @@
         "sources": [
           {
             "label": "Quantoz EURQ (official issuance list)",
-            "url": "https://quantoz.com/eurq"
+            "url": "https://www.quantoz.com/products/eurq-usdq"
           },
           {
             "label": "EURQ on Polygonscan (verified 2026-07-20)",
@@ -99,7 +99,7 @@
         "sources": [
           {
             "label": "Quantoz EURQ (official issuance list)",
-            "url": "https://quantoz.com/eurq"
+            "url": "https://www.quantoz.com/products/eurq-usdq"
           },
           {
             "label": "EURQ issuer account on XRP Ledger explorer",
@@ -126,7 +126,7 @@
         "sources": [
           {
             "label": "Quantoz EURQ (official issuance list)",
-            "url": "https://quantoz.com/eurq"
+            "url": "https://www.quantoz.com/products/eurq-usdq"
           },
           {
             "label": "EURQ ASA on Algorand indexer",

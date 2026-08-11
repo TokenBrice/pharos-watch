@@ -61,11 +61,11 @@
           },
           {
             "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "MinterGateway on Blockscout",
@@ -139,7 +139,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           },
           {
             "label": "SwapFacility on Blockscout",
@@ -171,7 +171,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           }
         ],
         "evidence": "At Linea block 31369840, SwapFacility was a TransparentUpgradeableProxy using implementation 0x9e0fdb26954bc8998158c0c921c8254bd6dfe5ec. Its canonical EIP-1967 admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 and its runtime embedded the same immutable admin address. ProxyAdmin owner() returned TimelockController 0xa7BDf17aF97D06d674D03086e90A18C2D90732b6; getMinDelay() returned 259,200 seconds and the M0 3-of-5 Safe held PROPOSER_ROLE."
@@ -201,7 +201,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           },
           {
             "label": "Monad public RPC",
@@ -215,11 +215,11 @@
       "sources": [
         {
           "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "MinterGateway on Blockscout",

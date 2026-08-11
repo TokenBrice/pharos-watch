@@ -46,7 +46,7 @@
       },
       {
         "label": "xscscan token API (XTUSD 0x1a6131ea… supply/holders, accessed 2026-08-08)",
-        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
       },
       {
         "label": "XT.COM TAI to XTUSD announcement",

@@ -29,7 +29,7 @@
         },
         {
           "label": "M0 Migratable GitHub",
-          "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/Migratable.sol"
+          "url": "https://github.com/m0-platform/common/blob/489fae6daecd227616155e4f8cacfd17aeb3e2a1/src/Migratable.sol"
         }
       ]
     },
@@ -69,7 +69,7 @@
           },
           {
             "label": "M0 Migratable GitHub",
-            "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/Migratable.sol"
+            "url": "https://github.com/m0-platform/common/blob/489fae6daecd227616155e4f8cacfd17aeb3e2a1/src/Migratable.sol"
           }
         ],
         "evidence": "At Ethereum block 25295240: EIP-1967 impl slot = 0x813b926b1d096e117721bd1eb017fba122302da0 (WrappedMToken, verified); no EIP-1967 admin slot (0x0); proxy code is a pure EIP-1967 minimal forwarder with no upgrade functions. migrationAdmin() selector 0x74df2558 returned 0x431169728d75bd02f4053435b87d15c8d1fb2c72; that address getOwners()=[0xdcf79c..., 0xe0c6ac...], threshold=2, masterCopy=0xd9db270c (v1.3.0), getModulesPaginated sentinel only (no modules), guard slot=0x0. vault()=0xd7298f... confirmed via 0xfbfa77cf. Migration additionally requires TTG Registrar key wm_migrator_v1 to be populated."
@@ -92,7 +92,7 @@
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 MinterGateway (ttgRegistrar/minterRate reads 2026-07-20)",
@@ -121,7 +121,7 @@
           },
           {
             "label": "M0 on Solana technical deep dive",
-            "url": "https://docs.m0.org/home/technical-documentations/solana/"
+            "url": "https://docs.m0.org/protocol/solana"
           }
         ],
         "evidence": "Official M0 deployments list Solana Wrapped M Token at mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp; Solana wrapper does not mint base M."
@@ -139,7 +139,7 @@
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         }
       ],
       "evidence": "Wrapper surface verified at Ethereum block 25295240: EIP-1967 minimal proxy, no admin slot. migrationAdmin confirmed as 2/2 Safe (v1.3.0, no modules); migration also requires TTG Registrar to have wm_migrator_v1 key populated (governance-gated). vault() and totalSupply() confirmed functional. Base M mint authority reviewed under m-m0.",
