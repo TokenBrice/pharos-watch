@@ -1,6 +1,7 @@
 import { BLACKLIST_TRACKER_V1 } from "../../data/methodology-changelogs/blacklist-tracker/v1";
 import { BLACKLIST_TRACKER_V2 } from "../../data/methodology-changelogs/blacklist-tracker/v2";
 import { BLACKLIST_TRACKER_V3 } from "../../data/methodology-changelogs/blacklist-tracker/v3";
+import { BLACKLIST_TRACKER_V4 } from "../../data/methodology-changelogs/blacklist-tracker/v4";
 import { createMethodologyVersion } from "./base";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
@@ -11,6 +12,7 @@ const blacklistTracker = createMethodologyVersion({
   currentVersion: BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
+    ...BLACKLIST_TRACKER_V4,
     ...BLACKLIST_TRACKER_V3,
     ...BLACKLIST_TRACKER_V2,
     ...BLACKLIST_TRACKER_V1,

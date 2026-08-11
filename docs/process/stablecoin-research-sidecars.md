@@ -9,7 +9,7 @@ Research-heavy metadata can move independently from a coin's scalar identity and
 | Reserves       | `shared/data/stablecoins/domains/reserves/<id>.json`       | `reserves`, `reserveReview`, `custodyProfile`                                 |
 | Mint authority | `shared/data/stablecoins/domains/mint-authority/<id>.json` | `mintAuthority`                                                               |
 | Compliance     | `shared/data/stablecoins/domains/compliance/<id>.json`     | `mica`, `genius`                                                              |
-| Risk review    | `shared/data/stablecoins/domains/risk-review/<id>.json`    | `canBeBlacklisted`, `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk` |
+| Risk review    | `shared/data/stablecoins/domains/risk-review/<id>.json`    | `blacklistabilityReview`, `oracleRisk`, `bridgeRouteRisk`                     |
 
 Sidecars are selective. Fields such as identity, flags, contracts, links, jurisdiction, classification overrides, notices, launch metadata, and other scalar catalog metadata remain in `coins/<id>.json`.
 
@@ -25,7 +25,7 @@ Reserve slices may carry only review-useful structured backing facts: `assetClas
 
 `dependencyReview` remains base metadata. It is required only for authored `dependencies` relationships that are not already represented by a linked reserve slice. Its relationship list must exactly match those manual-only edges, including an explicit dependency type. Reserve-derived dependencies use the reserve composition and `reserveReview` provenance instead of duplicating evidence per edge.
 
-Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. In particular, an explicit `canBeBlacklisted` value moves with `blacklistabilityReview`.
+Once a coin has a sidecar for a domain, all fields owned by that domain must stay out of its base file. This keeps the evidence and its coupled decision fields together. `blacklistabilityReview.reviewedStatus` is the sole authored freeze/blacklist verdict.
 
 Research review envelopes, including `reserveReview` and `custodyProfile`, remain server/repository evidence and are intentionally omitted from `coins.client.generated.json`. Structured reserve-slice facts travel with the already client-visible `reserves` field. The global client registry does not project `proofOfReserves`, so `latestReport` remains on full/server paths. The full generated registry retains all P5 evidence for audits and report-card compilation.
 

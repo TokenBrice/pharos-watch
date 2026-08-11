@@ -16,7 +16,7 @@ export function BlacklistTrackerMethodologySection() {
             title={BLACKLIST_SECTION_CONTENT.title}
             versionBadge={{ label: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL }}
             changelogPath={BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH}
-            versionNote="Version increments when tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change."
+            versionNote="Version increments when classification ownership, tracked contracts, event parsing rules, cursor semantics, or amount-enrichment logic change."
             changelogClassName="hover:text-rose-700 dark:hover:text-rose-400"
           >
               <p>
@@ -40,7 +40,9 @@ export function BlacklistTrackerMethodologySection() {
                 fallback until remediation catches them up.
               </p>
               <p>
-                Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No.
+                Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced
+                `blacklistabilityReview.reviewedStatus` is the sole status authority; the generated client status is a
+                direct projection, while Safety Score V9 consumes the review as evidence rather than a fallback verdict.
                 Upstream applies when a token has no direct Yes or Possible holder-facing freeze control and strictly
                 more than half of its reserves are exposed to Yes, Upstream, or Possible upstream assets or rails.
                 Possible is reserved for curated direct token or vault controls that are not confirmed direct blacklist
