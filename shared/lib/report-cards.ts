@@ -19,7 +19,5 @@ export {
 } from "./report-card-resilience";
 export {
   getBlacklistStatusLabel,
-  resolveBlacklistStatus,
-  resolveBlacklistStatuses,
   type BlacklistStatus,
 } from "./report-card-blacklist-matchers";
