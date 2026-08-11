@@ -93,6 +93,56 @@ describe("Safety Score v9 evidence responsibility", () => {
     );
   });
 
+  it("counts one gap emitted through pillar and unresolved-evidence paths once without moving the score", () => {
+    const pillarGap = reason({
+      path: "exit:route:cause:asset:gap:route",
+      sourceGapId: "asset:gap:route",
+    });
+    const baseline = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95),
+          exit: pillar(35, { evidenceLevel: "limited", reasons: [pillarGap] }),
+          control: pillar(95),
+        },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+    const duplicated = scoreV9EvaluatedAsset(
+      input({
+        pillars: {
+          backing: pillar(95),
+          exit: pillar(35, { evidenceLevel: "limited", reasons: [pillarGap] }),
+          control: pillar(95),
+        },
+        unresolvedEvidence: [reason({
+          path: "gap:exit:optional-exit:asset:gap:route",
+          sourceGapId: "asset:gap:route",
+        })],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(duplicated.unresolvedFacts.filter((fact) => fact.sourceGapId === "asset:gap:route")).toHaveLength(1);
+    expect(duplicated.finalScore).toBe(baseline.finalScore);
+    expect(duplicated.finalGrade).toBe(baseline.finalGrade);
+  });
+
+  it("retains distinct gaps that share a reason code", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({
+        unresolvedEvidence: [
+          reason({ path: "exit:route-a", sourceGapId: "asset:gap:route-a" }),
+          reason({ path: "exit:route-b", sourceGapId: "asset:gap:route-b" }),
+        ],
+      }),
+      V9_CANDIDATE_POLICY_V1,
+    );
+
+    expect(trace.unresolvedFacts.filter((fact) => fact.code === "missing-runtime-route-evidence"))
+      .toHaveLength(2);
+  });
+
   it("withholds a policy-critical gap even when it enters through supplemental unresolved evidence", () => {
     const criticalGap = reason({
       code: "missing-pillar-evidence",

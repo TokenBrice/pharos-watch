@@ -1,5 +1,24 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_EVIDENCE_ATTRIBUTION: MethodologyChangelogEntry = {
+  version: "9.19",
+  title: "Open facts are counted once and carry the path that produced them",
+  date: "2026-08-12",
+  effectiveAt: 1786838400,
+  summary:
+    "An asset's open-fact mass double-counted every mechanism gap: once through its pillar reason and again through a generic re-emission under a different path, which no consumer could reconcile back to a single gap. The duplicate entries also carried no usable fact path, so a reader could not tell what to disclose to clear them. Separately, a DEX surface on a chain with no registered discovery provider stops being reported as a method floor.",
+  impact: [
+    "Each gap is now published once. Deduplication is by gap identity only, so two distinct gaps that share a reason code both survive; entries that carry no gap identity keep their previous behaviour exactly",
+    "Published facts carry the `exactFactPath` the gap constructor already held, so an open fact can be traced to the component that produced it and answered. Three assets whose residual mass was previously unattributable — nopal-nest, ntbill-nest and xusd-babelfish — resolve to their real gaps: for example nopal-nest's seven facts were five real paths plus two re-emissions",
+    "No score, pillar, cap or grade moves: this removes duplicate reporting entries, not scored inputs, and a fixed-input replay confirms score equality",
+    "A DEX exit surface whose deployment census carries no registered discovery provider is attributed `integration-missing` rather than `method-unsupported`, in both the portfolio-coverage and zero-route branches so one condition cannot publish two responsibilities. The chain has deployments and markets; Pharos has not wired a provider for it. `no-exact-capable-venue` remains the genuine method limit and is unchanged",
+    "This supersedes in part the 2026-07-29 ruling that classified the no-provider census condition as a method limit",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_OBSERVATION: MethodologyChangelogEntry = {
   version: "9.18",
   title: "A reviewed transfer scope no longer depends on third-party chain supply",

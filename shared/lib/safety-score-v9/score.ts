@@ -30,6 +30,7 @@ export interface V9PillarReason {
   path: string;
   message: string;
   responsibility: V9EvidenceResponsibility;
+  sourceGapId?: string | null;
 }
 
 export interface V9PillarEvaluation {
@@ -270,7 +271,12 @@ function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9Val
     ).values(),
   ];
   const byPublicIdentity = new Map<string, V9PillarReason>();
+  const sourceGapIds = new Set<string>();
   for (const reason of canonical) {
+    if (reason.sourceGapId != null) {
+      if (sourceGapIds.has(reason.sourceGapId)) continue;
+      sourceGapIds.add(reason.sourceGapId);
+    }
     const key = `${reason.code}\u0000${reason.path}`;
     const existing = byPublicIdentity.get(key);
     if (existing !== undefined && existing.responsibility !== reason.responsibility) {
@@ -294,6 +300,7 @@ function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9Val
       reason: reason.message,
       critical: resolveV9ReasonPolicy(envelope, reason.code).critical,
       responsibility: reason.responsibility,
+      ...(reason.sourceGapId == null ? {} : { sourceGapId: reason.sourceGapId }),
     }));
 }
 

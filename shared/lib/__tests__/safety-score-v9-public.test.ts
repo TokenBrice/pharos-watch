@@ -501,6 +501,7 @@ describe("Safety Score v9 public projection", () => {
         reason: "Governance is unresolved.",
         critical: false,
         responsibility: "issuer-undisclosed",
+        sourceGapId: "asset:gap:governance",
       },
     ];
 
@@ -564,6 +565,13 @@ describe("Safety Score v9 public projection", () => {
         reasonCodes: ["historical-critical-input"],
       },
     ]);
+    expect(card.scoreTrace.evidenceResponsibility.facts).toContainEqual({
+      reasonCode: "unresolved-control-identity",
+      exactFactPath: "access:governance",
+      sourceGapId: "asset:gap:governance",
+      responsibility: "issuer-undisclosed",
+      critical: false,
+    });
     expect(card.reasonCodes).toEqual(["historical-critical-input", "unresolved-control-identity"]);
   });
 

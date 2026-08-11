@@ -19,7 +19,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-08-12",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [
@@ -30,12 +30,25 @@
       {
         "label": "Nest nTBILL integration guide",
         "url": "https://docs.nest.credit/developers/integration-guides/ntbill/"
+      },
+      {
+        "label": "Nest available vaults documentation (live nTBILL redemption and composition)",
+        "url": "https://docs.nest.credit/about/available-vaults/"
+      },
+      {
+        "label": "Anemoy JTRSY fund disclosure (daily redemption, six-month maximum, and near-real-time holdings)",
+        "url": "https://www.anemoy.io/funds/jtrsy"
+      },
+      {
+        "label": "Superstate USTB fund page (short-duration Treasury Bills, market-day liquidity, and dated holdings)",
+        "url": "https://superstate.com/assets/ustb"
       }
     ],
-    "rationale": "Nest's current asset directory identifies JTRSY and USTB as assets used in nTBILL, while the nTBILL guide identifies the Nest Treasury Vault and its USDC/pUSD deposit and redemption rails. The reviewed public pages do not publish current weights for the fund positions or the stablecoin liquidity sleeve, so the former 82.2% / 17% / 0.8% split was not retained.",
-    "compositionBasis": "Nest underlying-asset directory and nTBILL integration disclosures",
+    "rationale": "Nest's live Available Vaults page reports server data loaded 2026-08-11, lists nTBILL's T+1 redemption estimate and current constituent categories (liquid assets, Janus Henderson Fund, and Superstate USTB), and renders mutable live weights that are intentionally not pinned here. Constituent-level look-through is admitted at limited quality only: Anemoy's JTRSY disclosure documents daily redemptions, a maximum six-month Treasury-bill maturity, and near-real-time holdings, while Superstate's USTB page documents short-duration Treasury Bills, market-day liquidity, and dated holdings as of 2026-07-24. Nest publishes no vault-level WAM, duration, or maturity aggregate, so no synthesized WAM/duration is recorded.",
+    "compositionBasis": "Nest live nTBILL vault disclosure and constituent fund disclosures",
+    "compositionAsOf": "2026-08-11",
     "scope": "full-composition",
-    "knownUnknownExposure": "The portfolio categories and named fund positions are identified, but current allocation weights, stablecoin-buffer composition, and custody-provider shares are not published in the reviewed sources.",
+    "knownUnknownExposure": "The live page identifies the portfolio categories and named fund positions, but no durable allocation weights, stablecoin-buffer composition, custody-provider shares, vault-level WAM/duration, or maturity aggregate are retained in the reviewed sources.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
       {
@@ -43,7 +56,7 @@
         "reserveName": "nTBILL Treasury-vault portfolio (JTRSY, USTB, and stablecoin liquidity)",
         "pct": 100,
         "disposition": "basket-needs-split",
-        "rationale": "Nest names JTRSY and USTB as nTBILL assets but does not expose a current percentage breakdown or the buffer split.",
+        "rationale": "Nest's live page renders mutable current weights, but no durable reviewed split or stablecoin-buffer breakdown is retained, so this basket records the qualitative look-through basis without pinning percentages.",
         "candidateCoinIds": ["jtrsy-anemoy", "ustb-superstate", "usdc-circle", "pusd-plume"]
       }
     ]

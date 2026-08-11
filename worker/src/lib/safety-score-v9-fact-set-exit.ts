@@ -605,7 +605,12 @@ export function buildRoutes(context: AssetBuildContext): {
     }
     // R4 scope (owner ruling 2026-07-29): a zero-route surface whose census
     // could not certify the footprint for lack of any registered discovery
-    // provider is a method limit, not a producer failure.
+    // provider is not a producer failure.
+    // SUPERSEDED in part 2026-08-12: that condition is an integration gap, not a
+    // method limit. The chain has deployments and markets; Pharos has no
+    // provider wired for it, which is our gap and is tractable. Same attribution
+    // as the portfolio-coverage branch so one condition cannot publish two
+    // different responsibilities.
     // The reason code stays `missing-runtime-route-evidence` because it is the
     // only registered exit code whose policy `pathKinds` admit a
     // `local-component` path; `unsupported-same-notional-route` is registered
@@ -619,7 +624,7 @@ export function buildRoutes(context: AssetBuildContext): {
           componentKey: "exit-routes",
           reasonCode: "missing-runtime-route-evidence",
           ownerDomain: "exit",
-          responsibility: "method-unsupported",
+          responsibility: "integration-missing",
           policyRuleId: "v9.exit.same-notional-route",
           message:
             "The deployment census carries no registered discovery provider for at least one deployment chain, so no same-notional exit route can be observed.",
@@ -685,7 +690,18 @@ export function buildRoutes(context: AssetBuildContext): {
           ownerDomain: "exit",
           policyRuleId: "v9.exit.same-notional-route",
           observationState: "bounded-unknown",
-          responsibility: unsupportedSurface === null ? "producer-failed" : "method-unsupported",
+          // RULED 2026-08-12. A chain the census carries no registered discovery
+          // provider for is a Pharos integration gap, not a method floor: the
+          // deployments and markets exist, we have not wired a provider for them.
+          // Publishing `method-unsupported` there told readers the data cannot
+          // exist when it demonstrably does. `no-exact-capable-venue` is the
+          // genuine method limit and keeps its attribution.
+          responsibility:
+            unsupportedSurface === null
+              ? "producer-failed"
+              : unsupportedSurface === "census-unsupported"
+                ? "integration-missing"
+                : "method-unsupported",
           path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
           message:
             unsupportedSurface === "census-unsupported"
