@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research",
+    "reviewedAt": "2026-08-11",
+    "reviewer": "Pharos reserve research (Kimi P0 re-verification)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,15 +35,19 @@
         "url": "https://pleasing.gitbook.io/docs/legal/terms-of-sale-and-service"
       },
       {
+        "label": "VISTO CPA PGOLD independent assurance report - 2026-06-25",
+        "url": "https://217962626-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FtBZ74QEzHbSbwx0W0nBo%2Fuploads%2FfLypB8MTfIw1Jrd2LT65%2FPleaseing%20Gold%20Assurance%20Report%2025%20June%202026.pdf?alt=media&token=df75631f-9b3c-4524-81e4-f69b6baaf1e5"
+      },
+      {
         "label": "GlobeNewswire Pleasing Golden launch release - 2025-10-29 (re-opened 2026-08-08)",
         "url": "https://www.globenewswire.com/news-release/2025/10/29/3176301/0/en/pleasing-international-launches-rwa-platform-pleasing-golden-introducing-tokenized-gold-pgold-and-synthetic-dollar-pusd.html"
       }
     ],
-    "rationale": "Re-verified on 2026-08-08. Issuer product, token-feature, and legal materials consistently state that each PGOLD represents 1 troy ounce of 99.99% purity physical gold meeting LBMA standards, with KYC-gated physical redemption. The reserve is therefore a single 100% commodity-allocated position.",
+    "rationale": "Re-verified on 2026-08-11. Issuer product, token-feature, and legal materials consistently state that each PGOLD represents 1 troy ounce of 99.99% purity physical gold meeting LBMA standards, with KYC-gated physical redemption. VISTO CPA's June 25, 2026 report independently confirms the Arbitrum 19,505-token liability figure and part of the bullion inventory, but physically counts only 50.86% of the claimed bullion, relies on shipping and issuer/insider assertions for the rest, excludes weight, purity, authenticity, and valuation, and does not cover the separate Ethereum native supply. The reserve category remains a single 100% commodity-allocated position; the report does not justify a stronger assurance or custody conclusion.",
     "compositionBasis": "Pleasing Gold product, token-feature, and legal disclosures",
-    "compositionAsOf": "2026-08-08",
+    "compositionAsOf": "2026-08-11",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve category is fully identified. Current reserve quantities, independent assurance, custody provider identity, segregation, rehypothecation, insurance, and redemption liquidity are not independently evidenced and are tracked in the custody profile.",
+    "knownUnknownExposure": "The reserve category is fully identified. A single independent report covers only the Arbitrum liability and a partly observed bullion inventory; recurring assurance, complete multi-chain liabilities, custody provider identity, segregation, rehypothecation, insurance, and redemption liquidity remain unresolved and are tracked in the mechanism and custody reviews.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
