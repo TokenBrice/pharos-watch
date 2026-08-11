@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * tracked coin but never surfaced. The `BlacklistSection` below covers observed
  * freeze *usage*; this module covers the *power*.
  */
-export function FreezeSeizureCard({ summary }: { summary?: BlacklistabilityClientSummary | null }) {
+export function FreezeSeizureCard({ summary, frameless }: { summary?: BlacklistabilityClientSummary | null; frameless?: boolean }) {
   if (!summary) return null;
 
   const facts = [
@@ -25,6 +25,7 @@ export function FreezeSeizureCard({ summary }: { summary?: BlacklistabilityClien
 
   return (
     <RailCard
+      frameless={frameless}
       title="Freeze & seizure"
       ariaLabel="Freeze and seizure"
       trailing={

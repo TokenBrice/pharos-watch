@@ -62,6 +62,11 @@ describe("makina-strategy adapter", () => {
     expect(result.metadata?.totalDebtUsd).toBe(500);
     expect(result.metadata?.totalAssetsUsd).toBe(11500);
     expect(result.metadata?.referenceNavUsd).toBe(1.035);
+    expect(result.metadata?.currentAumUsd).toBe(11000);
+    expect(result.metadata?.reportedAumUsd).toBe(11000);
+    expect(result.metadata?.lastReportedAumUsd).toBe(11000);
+    expect(result.metadata?.details?.reconciliationKind).toBe("allocation-net-value-equals-current-aum");
+    expect(result.metadata?.details?.reconciliationAumUsd).toBe(11000);
     expect(result.metadata?.shareSupply).toBeCloseTo(9661835.74879227);
     expect(result.metadata?.unknownExposurePct).toBeCloseTo(2.727272727);
     expect(result.metadata?.details?.chainTotalsUsd).toEqual({
@@ -72,12 +77,26 @@ describe("makina-strategy adapter", () => {
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["makina-unknown-exposure"]);
   });
 
-  it("rejects allocation totals that do not reconcile to reported AUM", () => {
+  it("reconciles allocations to current AUM when last reported AUM lags", () => {
     const strategy = structuredClone(STRATEGY_FIXTURE);
     strategy.data.lastReportedAum = "12000000000";
 
+    const result = adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS);
+
+    expect(result.metadata?.totalReserveUsd).toBe(11000);
+    expect(result.metadata?.currentAumUsd).toBe(11000);
+    expect(result.metadata?.reportedAumUsd).toBe(12000);
+    expect(result.metadata?.lastReportedAumUsd).toBe(12000);
+    expect(result.metadata?.details?.reconciliationAumUsd).toBe(11000);
+    expect(result.metadata?.details?.lastReportedAumDiffPct).toBeCloseTo(8.333333333);
+  });
+
+  it("rejects allocation totals that do not reconcile to current AUM", () => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    strategy.data.aum = "12000000000";
+
     expect(() => adaptMakinaStrategyReserves(strategy, ALLOCATIONS_FIXTURE, PARAMS)).toThrow(
-      /differs from reported AUM/,
+      /differs from current AUM/,
     );
   });
 

@@ -596,16 +596,14 @@ export function adaptMakinaStrategyReserves(
   // The result combines accounting state with allocation-driven reserve slices, so
   // its freshness cannot be newer than either source.
   const sourceTimestamp = Math.min(strategyTimestamp, allocationsTimestamp);
-  const reportedAumUsd = readNonNegativeAccountingValue(
-    strategyData.lastReportedAum ?? strategyData.aum,
-    accountingDecimals,
-    "reported AUM",
-  );
   const currentAumUsd = readNonNegativeAccountingValue(strategyData.aum, accountingDecimals, "current AUM");
+  const lastReportedAumUsd = strategyData.lastReportedAum == null
+    ? null
+    : readNonNegativeAccountingValue(strategyData.lastReportedAum, accountingDecimals, "last reported AUM");
   const shareSupply = readNonNegativeAccountingValue(strategyData.shareSupply, 18, "share supply");
   const shareLimit = readNonNegativeAccountingValue(strategyData.shareLimit, 18, "share limit");
   const sharePrice = readPositiveNumber(strategyData.sharePrice, "share price");
-  if (reportedAumUsd <= 0 || shareSupply <= 0 || sharePrice <= 0) {
+  if (currentAumUsd <= 0 || shareSupply <= 0 || sharePrice <= 0) {
     throw new Error("makina-strategy non-positive accounting state");
   }
 
@@ -698,12 +696,12 @@ export function adaptMakinaStrategyReserves(
   if (!Number.isFinite(netReserveUsd) || netReserveUsd <= 0) {
     throw new Error("makina-strategy produced zero net reserve value");
   }
-  const reconciliationDiffPct = Math.abs(netReserveUsd - reportedAumUsd) / reportedAumUsd * 100;
+  const reconciliationDiffPct = Math.abs(netReserveUsd - currentAumUsd) / currentAumUsd * 100;
   const reconciliationTolerancePct =
     params.reconciliationTolerancePct ?? DEFAULT_RECONCILIATION_TOLERANCE_PCT;
   if (reconciliationDiffPct > reconciliationTolerancePct) {
     throw new Error(
-      `makina-strategy allocation net value differs from reported AUM by ${reconciliationDiffPct.toFixed(3)}%`,
+      `makina-strategy allocation net value differs from current AUM by ${reconciliationDiffPct.toFixed(3)}%`,
     );
   }
 
@@ -762,15 +760,20 @@ export function adaptMakinaStrategyReserves(
       referenceNavUsd: sharePrice,
       sharePrice,
       currentAumUsd,
-      reportedAumUsd,
+      reportedAumUsd: lastReportedAumUsd ?? currentAumUsd,
+      ...(lastReportedAumUsd != null ? { lastReportedAumUsd } : {}),
       apy7d: typeof strategyData.apy7d === "number" ? strategyData.apy7d : undefined,
       apy30d: typeof strategyData.apy30d === "number" ? strategyData.apy30d : undefined,
       unknownExposurePct,
       ...(redemptionState ? buildMakinaRedemptionMetadata(redemptionState) : {}),
       details: {
         proofKind: "makina-strategy-accounting-api",
-        reconciliationKind: "allocation-net-value-equals-last-reported-aum",
+        reconciliationKind: "allocation-net-value-equals-current-aum",
         reconciliationDiffPct,
+        reconciliationAumUsd: currentAumUsd,
+        ...(lastReportedAumUsd != null && lastReportedAumUsd > 0
+          ? { lastReportedAumDiffPct: Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100 }
+          : {}),
         oldestMaterialPositionUpdatedAt,
         positionCount,
         debtPositionCount,

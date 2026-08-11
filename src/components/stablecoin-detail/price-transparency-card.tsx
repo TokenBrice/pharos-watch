@@ -77,6 +77,9 @@ const SOURCE_DOT_CLASSES: Record<RenderedSourceStatus, string> = {
   "no-data": "bg-muted-foreground/40",
 };
 
+/** Source chips shown before the "Show N more sources" toggle in the full card. */
+const INLINE_SOURCE_CAP = 5;
+
 const INTERNAL_SOURCE_LOGO = "/icons/icon-maskable-source.svg";
 
 const SOURCE_LOGO_PATHS: Record<string, string> = {
@@ -342,6 +345,17 @@ export function PriceTransparencyCard({
   const availableSources = sources.filter((s): s is SourceInfo & { status: "available" } => s.status === "available");
   const noDataSources = sources.filter((s): s is SourceInfo & { status: "no-data" } => s.status === "no-data");
   const sourceDepthCount = effectiveConsensusSources.length;
+  // Full-card source grid opens capped: used + available chips beyond the cap
+  // join the no-data sources behind the "Show N more sources" toggle.
+  const inlineSources = [
+    ...(isProtocolRedeem
+      ? [{ key: "protocol-redeem", label: "Protocol Redemption", status: "used" as const }]
+      : []),
+    ...usedSources,
+    ...availableSources,
+  ];
+  const visibleInlineSources = showAll ? inlineSources : inlineSources.slice(0, INLINE_SOURCE_CAP);
+  const hiddenSourceCount = Math.max(0, inlineSources.length - INLINE_SOURCE_CAP) + noDataSources.length;
 
   // --- Derived once; both shells read the same locals ----------------------
   // The two trees used to spell these independently, which is exactly how the
@@ -525,20 +539,13 @@ export function PriceTransparencyCard({
           </div>
         ) : null}
 
-        {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width */}
+        {/* Source Grid - Grouped by Status, 3-up on desktop to use the full width.
+            Widely-listed coins carry 15+ used sources, so the grid opens capped
+            at INLINE_SOURCE_CAP chips; the toggle reveals the rest plus the
+            no-data sources it always owned. */}
         <div className="space-y-2">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {isProtocolRedeem ? (
-              <SourceChip sourceKey="protocol-redeem" label="Protocol Redemption" status="used" />
-            ) : null}
-
-            {/* Used Sources */}
-            {usedSources.map((source) => (
-              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
-            ))}
-
-            {/* Available Sources */}
-            {availableSources.map((source) => (
+            {visibleInlineSources.map((source) => (
               <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
             ))}
 
@@ -550,7 +557,7 @@ export function PriceTransparencyCard({
               ))}
           </div>
 
-          {noDataSources.length > 0 && (
+          {hiddenSourceCount > 0 && (
             <button
               type="button"
               onClick={() => setShowAll(!showAll)}
@@ -560,7 +567,7 @@ export function PriceTransparencyCard({
                 aria-hidden="true"
                 className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")}
               />
-              {showAll ? "Show fewer sources" : `Show ${noDataSources.length} more sources`}
+              {showAll ? "Show fewer sources" : `Show ${hiddenSourceCount} more sources`}
             </button>
           )}
         </div>

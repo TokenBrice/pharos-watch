@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { DepegHistory } from "@/components/depeg-history";
 import type { DepegEvent } from "@shared/types";
 
@@ -98,5 +98,40 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.getByTestId("event-source").textContent).toContain("live");
     expect(screen.queryByTestId("event-pending-reason")).toBeNull();
     expect(screen.queryByTestId("event-confirmed-by")).toBeNull();
+  });
+});
+
+function tableRowCount(): number {
+  return screen.getByTestId("stablecoin-depeg-history-table").querySelectorAll("tbody tr").length;
+}
+
+describe("DepegHistory incident fold", () => {
+  it("opens truncated to six incidents and hides pagination while folded", () => {
+    mockEvents(Array.from({ length: 9 }, (_, i) => makeEvent({ id: i + 1, startedAt: 1_700_000_000 - i * 86_400 })));
+
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    expect(tableRowCount()).toBe(6);
+    expect(screen.getByRole("button", { name: "Show all 9 incidents" })).toBeTruthy();
+    expect(screen.queryByLabelText("Go to next page")).toBeNull();
+  });
+
+  it("reveals the paginated remainder when the fold is opened", () => {
+    mockEvents(Array.from({ length: 9 }, (_, i) => makeEvent({ id: i + 1, startedAt: 1_700_000_000 - i * 86_400 })));
+
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+    fireEvent.click(screen.getByRole("button", { name: "Show all 9 incidents" }));
+
+    expect(tableRowCount()).toBe(9);
+    expect(screen.getByRole("button", { name: "Show less" })).toBeTruthy();
+  });
+
+  it("keeps short histories unfolded", () => {
+    mockEvents(Array.from({ length: 4 }, (_, i) => makeEvent({ id: i + 1, startedAt: 1_700_000_000 - i * 86_400 })));
+
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    expect(tableRowCount()).toBe(4);
+    expect(screen.queryByRole("button", { name: /Show all/ })).toBeNull();
   });
 });

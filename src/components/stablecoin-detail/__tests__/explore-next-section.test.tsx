@@ -62,4 +62,53 @@ describe("ExploreNextSection", () => {
       screen.getByRole("link", { name: "Open static comparison brief: TCDP vs USDC" }).getAttribute("href"),
     ).toBe("/compare/test-cdp-dollar-vs-usdc-circle/");
   });
+
+  it("keeps comparison briefs past the fourth in the DOM, hidden below lg", () => {
+    const pages = Array.from({ length: 6 }, (_, i) => ({
+      href: `/compare/test-cdp-dollar-vs-peer-${i}/`,
+      shortTitle: `TCDP vs P${i}`,
+      leftId: "test-cdp-dollar",
+      rightId: `peer-${i}`,
+      counterpartId: `peer-${i}`,
+      counterpartSymbol: `P${i}`,
+      counterpartName: `Peer ${i}`,
+    }));
+
+    render(<ExploreNextSection coin={coin} related={[]} staticComparisonPages={pages} logos={{}} />);
+
+    const tiles = pages.map((page) =>
+      screen.getByRole("link", { name: `Open static comparison brief: ${page.shortTitle}` }),
+    );
+
+    expect(tiles).toHaveLength(6);
+    expect(tiles.slice(0, 4).every((tile) => tile.className.includes("hidden"))).toBe(false);
+    expect(tiles.slice(4).every((tile) => tile.className.includes("hidden lg:flex"))).toBe(true);
+
+    const more = screen.getByRole("link", { name: /\+2 more comparison briefs/ });
+    expect(more.getAttribute("href")).toBe("/stablecoins/usd/");
+    expect(more.className).toContain("lg:hidden");
+  });
+
+  it("omits the mobile overflow line when every brief fits the cap", () => {
+    render(
+      <ExploreNextSection
+        coin={coin}
+        related={[]}
+        staticComparisonPages={[
+          {
+            href: "/compare/test-cdp-dollar-vs-usdc-circle/",
+            shortTitle: "TCDP vs USDC",
+            leftId: "test-cdp-dollar",
+            rightId: "usdc-circle",
+            counterpartId: "usdc-circle",
+            counterpartSymbol: "USDC",
+            counterpartName: "USD Coin",
+          },
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.queryByText(/more comparison briefs/)).toBeNull();
+  });
 });

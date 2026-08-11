@@ -166,8 +166,9 @@ describe("StablecoinSafetyScoreV9Card", () => {
       />,
     );
 
-    // jsdom has no matchMedia, so the hook reports desktop and the weakest
-    // pillar (Exit) auto-opens — its routes are visible without a click.
+    // Pillars start folded on every viewport; open Exit to inspect its route
+    // breakdown before asserting the selected-route details.
+    fireEvent.click(screen.getByRole("button", { name: /Exit/ }));
     expect(screen.getByText("Primary route components — Direct redemption")).toBeTruthy();
     expect(screen.getByText(/Primary V9 route: Direct redemption 84\.0/)).toBeTruthy();
     expect(screen.getByRole("img", { name: "Access: 90 out of 100, 20% weight" })).toBeTruthy();
@@ -207,6 +208,7 @@ describe("StablecoinSafetyScoreV9Card", () => {
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: /Exit/ }));
     expect(screen.getByRole("img", {
       name: "Capacity score — selected route: <1 out of 100, 25% weight",
     })).toBeTruthy();

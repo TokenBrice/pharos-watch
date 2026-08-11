@@ -11,6 +11,9 @@ import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-vi
 import {
   BlacklistSection,
   DexLiquidityCard,
+  DistributionSection,
+  MarketDataSection,
+  McapChart,
   YieldDetailSection,
 } from "./detail-lazy-sections";
 
@@ -30,11 +33,41 @@ export function DetailLiquidityActivitySections({
   viewModel,
 }: DetailLiquidityActivitySectionsProps) {
   const hasPriceTransparency = viewModel.coinData.price != null || Boolean(viewModel.dexPriceCheck);
+  const showPegChart =
+    viewModel.coin.flags.pegCurrency === "USD"
+    && !viewModel.isNavToken
+    && viewModel.coin.flags.yieldBearing !== true
+    && viewModel.supplyHistory.length > 0;
 
   return (
     <>
       <div className="space-y-6">
-        <SectionBanner id="liquidity" label="Liquidity" icon={Droplet} active={activeBannerId === "liquidity"} />
+        {/* Zone id stays `liquidity` (stable anchor); the label reads "Market"
+            because supply history and holder distribution moved here from the
+            Context zone, where a market chart went unfound. */}
+        <SectionBanner id="liquidity" label="Market" icon={Droplet} active={activeBannerId === "liquidity"} />
+        {showPegChart ? (
+          <MarketDataSection
+            stablecoinId={viewModel.id}
+            supplyHistory={viewModel.supplyHistory}
+            pegCurrency={viewModel.coin.flags.pegCurrency}
+            updatedAtMs={viewModel.supplyUpdatedAt}
+            frozenNote={frozenNote}
+          />
+        ) : (
+          <section id="chart">
+            {frozenNote}
+            <LazySection minHeight={420}>
+              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
+            </LazySection>
+          </section>
+        )}
+        <section id="distribution">
+          {frozenNote}
+          <SectionErrorBoundary name="distribution">
+            <DistributionSection stablecoinId={viewModel.id} />
+          </SectionErrorBoundary>
+        </section>
         <section id="dex-liquidity">
           {frozenNote}
           <SectionErrorBoundary name="liquidity">

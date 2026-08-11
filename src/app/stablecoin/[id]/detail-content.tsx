@@ -47,7 +47,7 @@ type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready"
 const DETAIL_SECTIONS = [
   { id: "overview", label: "Risk", icon: Scale },
   { id: "context", label: "Context", icon: ChartPie },
-  { id: "liquidity", label: "Liquidity", icon: Droplet },
+  { id: "liquidity", label: "Market", icon: Droplet },
   { id: "activity", label: "Activity", icon: HeartPulse },
   { id: "history", label: "History", icon: Hourglass },
   { id: "explore", label: "Explore", icon: Sparkles },

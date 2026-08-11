@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * summary, and the route/chain facts, in the rail-card grammar. Renders
  * nothing when no bridge review exists (most single-chain coins).
  */
-export function BridgingCard({ summary }: { summary?: BridgeRouteRiskClientSummary | null }) {
+export function BridgingCard({ summary, frameless }: { summary?: BridgeRouteRiskClientSummary | null; frameless?: boolean }) {
   if (!summary) return null;
 
   const facts = [
@@ -28,6 +28,7 @@ export function BridgingCard({ summary }: { summary?: BridgeRouteRiskClientSumma
 
   return (
     <RailCard
+      frameless={frameless}
       title="Bridging"
       ariaLabel="Bridging"
       trailing={

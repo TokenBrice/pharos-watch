@@ -11,6 +11,7 @@ import { TablePagination } from "@/components/table-pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, ArrowDownUp } from "lucide-react";
 import { useMintBurnEvents } from "@/hooks/use-mint-burn-flows";
+import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import {
   formatCurrency,
   formatAddress,
@@ -36,6 +37,8 @@ interface FlowEventFeedProps {
 // ---------------------------------------------------------------------------
 
 const DEFAULT_PAGE_SIZE = 25;
+// The fetched page opens truncated so the history module stays glanceable.
+const COLLAPSED_EVENT_COUNT = 6;
 const FLOW_EVENT_COLUMNS: readonly DataTableColumn[] = [
   { id: "time", label: "Time" },
   { id: "direction", label: "Direction" },
@@ -145,6 +148,7 @@ function FeedError({ message }: { message: string }) {
 export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventFeedProps) {
   const pageSize = limit ?? DEFAULT_PAGE_SIZE;
   const [page, setPage] = useState(0);
+  const [showAllEvents, setShowAllEvents] = useState(false);
 
   const { data, isLoading, isError } = useMintBurnEvents(stablecoinId, {
     scope,
@@ -161,10 +165,12 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
 
   const events = data?.events ?? [];
   const total = data?.total ?? 0;
+  const isCollapsible = events.length > COLLAPSED_EVENT_COUNT;
+  const visibleEvents = showAllEvents || !isCollapsible ? events : events.slice(0, COLLAPSED_EVENT_COUNT);
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const showingStart = Math.min(page * pageSize + 1, total);
   const showingEnd = Math.min((page + 1) * pageSize, total);
-  const pagination = total > 0 ? {
+  const pagination = total > 0 && (showAllEvents || !isCollapsible) ? {
     page,
     totalPages,
     rangeStart: showingStart,
@@ -178,7 +184,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
   return (
     <>
       <ol className="space-y-2 md:hidden" aria-label="Compact mint and burn events">
-        {events.map((evt) => (
+        {visibleEvents.map((evt) => (
           <FlowEventCard key={evt.id} event={evt} />
         ))}
         {events.length === 0 ? (
@@ -201,7 +207,7 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
         tableClassName="min-w-[420px]"
         pagination={pagination}
       >
-        {events.map((evt) => {
+        {visibleEvents.map((evt) => {
           const badge = getEventBadge(evt);
           return (
             <TableRow key={evt.id}>
@@ -244,6 +250,14 @@ export function FlowEventFeed({ stablecoinId, limit, scope = "all" }: FlowEventF
           <DataTableEmptyRow colSpan={FLOW_EVENT_COLUMNS.length}>No more events.</DataTableEmptyRow>
         )}
       </DataTableShell>
+      {isCollapsible ? (
+        <ShowAllToggle
+          open={showAllEvents}
+          onToggle={() => setShowAllEvents((prev) => !prev)}
+          total={total}
+          noun="events"
+        />
+      ) : null}
     </>
   );
 }

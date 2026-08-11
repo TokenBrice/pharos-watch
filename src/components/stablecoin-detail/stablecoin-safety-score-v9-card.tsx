@@ -2,7 +2,6 @@
 
 import { useId, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   Award,
   ChevronDown,
@@ -413,13 +412,12 @@ function PillarRow({
   cardId: string;
   pillar: StablecoinSafetyScoreV9Presentation["pillars"][number];
 }) {
-  // The weakest pillar auto-opens on desktop only (owner decision 2026-08-08):
-  // the "why the score isn't higher" story earns the room at lg+, while phones
-  // start fully folded. Server snapshot is "below desktop" so SSR ships closed
-  // and desktop opens after hydration; a user toggle always wins.
-  const isBelowDesktop = useIsMobile(1024, true);
+  // All pillars start folded on every viewport (owner decision 2026-08-11,
+  // superseding the 2026-08-08 desktop weakest-pillar auto-open): an expanded
+  // dimension left the card's left column far taller than the Reserve
+  // Composition right column at xl+.
   const [userOpen, setUserOpen] = useState<boolean | null>(null);
-  const open = userOpen ?? (pillar.isWeakest && !isBelowDesktop);
+  const open = userOpen ?? false;
   const detailsId = useId();
   const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
   const scoreGrade = scoreToV9Grade(pillar.score);

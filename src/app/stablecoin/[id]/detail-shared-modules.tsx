@@ -8,6 +8,7 @@ import { ControlPostureCard } from "@/components/stablecoin-detail/control-postu
 import { CustodyCard } from "@/components/stablecoin-detail/custody-card";
 import { FailureDomainsCard } from "@/components/stablecoin-detail/failure-domains-card";
 import { FreezeSeizureCard } from "@/components/stablecoin-detail/freeze-seizure-card";
+import type { RailCopyFoldChip } from "@/components/stablecoin-detail/rail-copy-fold";
 import { RegulatoryStandingCard } from "@/components/stablecoin-detail/regulatory-standing-card";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import { buildControlPostureView } from "@/lib/control-posture";
@@ -45,6 +46,27 @@ export interface DetailSharedModules {
   freezeSeizure: ReactNode;
   /** True when the collateralization/failure-domain pair has anything to render. */
   hasStructureCards: boolean;
+  /**
+   * Scan-level chips for the below-`xl` `RailCopyFold` bands, mirrored from
+   * each card's own header badge. Backing mechanics has no status chip and is
+   * deliberately absent.
+   */
+  foldChips: Partial<
+    Record<"custody" | "bridging" | "regulatoryStanding" | "controlPosture" | "freezeSeizure", RailCopyFoldChip>
+  >;
+  /**
+   * Frameless (body-only) renders of the same six modules for mounting inside
+   * `RailCopyFold`, which owns the shell, title, and chip — the chromed nodes
+   * above stay rail-only. Both variants read the views built once here.
+   */
+  foldBodies: {
+    custody: ReactNode;
+    backingMechanics: ReactNode;
+    bridging: ReactNode;
+    regulatoryStanding: ReactNode;
+    controlPosture: ReactNode;
+    freezeSeizure: ReactNode;
+  };
 }
 
 export function buildDetailSharedModules({
@@ -81,6 +103,45 @@ export function buildDetailSharedModules({
     regulatoryStanding: regulatoryStanding ? <RegulatoryStandingCard view={regulatoryStanding} /> : null,
     controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} /> : null,
     freezeSeizure: blacklistabilitySummary ? <FreezeSeizureCard summary={blacklistabilitySummary} /> : null,
+    foldBodies: {
+      custody: custodySummary ? <CustodyCard summary={custodySummary} frameless /> : null,
+      backingMechanics: mechanismBacking ? <BackingMechanicsCard view={mechanismBacking} frameless /> : null,
+      bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} frameless /> : null,
+      regulatoryStanding: regulatoryStanding ? (
+        <RegulatoryStandingCard view={regulatoryStanding} frameless />
+      ) : null,
+      controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} frameless /> : null,
+      freezeSeizure: blacklistabilitySummary ? (
+        <FreezeSeizureCard summary={blacklistabilitySummary} frameless />
+      ) : null,
+    },
+    foldChips: {
+      ...(custodySummary
+        ? { custody: { label: custodySummary.postureLabel, toneClass: custodySummary.postureToneClass } }
+        : {}),
+      ...(bridgeSummary
+        ? { bridging: { label: bridgeSummary.tierLabel, toneClass: bridgeSummary.tierToneClass } }
+        : {}),
+      ...(regulatoryStanding
+        ? {
+            regulatoryStanding: {
+              label: regulatoryStanding.badgeLabel,
+              toneClass: regulatoryStanding.badgeToneClass,
+            },
+          }
+        : {}),
+      ...(controlPosture
+        ? { controlPosture: { label: controlPosture.label, toneClass: controlPosture.badgeClassName } }
+        : {}),
+      ...(blacklistabilitySummary
+        ? {
+            freezeSeizure: {
+              label: blacklistabilitySummary.statusLabel,
+              toneClass: blacklistabilitySummary.statusToneClass,
+            },
+          }
+        : {}),
+    },
     hasStructureCards:
       mechanismCollateralization != null
       || liveCollateralizationRatio != null

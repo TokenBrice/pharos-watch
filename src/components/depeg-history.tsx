@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
@@ -19,6 +19,7 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
 } from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
+import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency } from "@shared/lib/format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
@@ -38,6 +39,8 @@ function sortEvents(events: DepegEvent[]): DepegEvent[] {
 }
 
 const DEPEG_HISTORY_PAGE_SIZE = 25;
+// Incident-heavy coins otherwise open with a 25-row wall; the rest stays one tap away.
+const DEPEG_HISTORY_COLLAPSED_COUNT = 6;
 const EMPTY_EVENTS: DepegEvent[] = [];
 const DEPEG_HISTORY_DESCRIPTION =
   "Recorded depeg incidents for this stablecoin, sorted newest first. One incident can contain multiple threshold crossings.";
@@ -94,9 +97,15 @@ export function DepegHistory({
   const sorted = useMemo(() => sortEvents(events), [events]);
   const metrics = isFullyLoaded ? computePegStability(sorted, earliestTrackingDate ?? null) : null;
   const worstDeviationBps = metrics?.worstDeviationBps ?? null;
+  const [showAllIncidents, setShowAllIncidents] = useState(false);
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
     useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
   const isHydratingFullHistory = totalIncidents > loadedCount;
+  const isCollapsible = sorted.length > DEPEG_HISTORY_COLLAPSED_COUNT;
+  const isFolded = isCollapsible && !showAllIncidents;
+  // Folded always shows the newest incidents, whichever page the reader left open.
+  const visibleRows = isFolded ? sorted.slice(0, DEPEG_HISTORY_COLLAPSED_COUNT) : paginatedRows;
+  const showPagination = isFullyLoaded && totalIncidents > 0 && !isFolded;
 
   if (isLoading) {
     return (
@@ -217,11 +226,11 @@ export function DepegHistory({
         </p>
       ) : null}
       <ol className="space-y-2 md:hidden" aria-label="Compact depeg event history">
-        {paginatedRows.map((event) => (
+        {visibleRows.map((event) => (
           <DepegEventCard key={event.id} event={event} pegCurrency={pegCurrency} />
         ))}
       </ol>
-      {isFullyLoaded && totalIncidents > 0 ? (
+      {showPagination ? (
         <TablePagination
           page={effectivePage}
           totalPages={totalPages}
@@ -241,7 +250,7 @@ export function DepegHistory({
         containerClassName="hidden rounded-xl border overflow-hidden md:block"
         tableClassName="min-w-[420px]"
         pagination={
-          isFullyLoaded && totalIncidents > 0
+          showPagination
             ? {
                 page: effectivePage,
                 totalPages,
@@ -255,10 +264,18 @@ export function DepegHistory({
             : undefined
         }
       >
-        {paginatedRows.map((event) => (
+        {visibleRows.map((event) => (
           <DepegRow key={event.id} event={event} pegCurrency={pegCurrency} />
         ))}
       </DataTableShell>
+      {isCollapsible ? (
+        <ShowAllToggle
+          open={showAllIncidents}
+          onToggle={() => setShowAllIncidents((prev) => !prev)}
+          total={totalIncidents}
+          noun="incidents"
+        />
+      ) : null}
       <RelatedIncidentsRail pegCurrency={pegCurrency} riskArchetype={meta?.mechanismArchetype} className="mt-5" />
     </DepegHistoryShell>
   );

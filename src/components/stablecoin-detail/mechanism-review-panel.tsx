@@ -15,7 +15,6 @@ import {
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
-  SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
 import {
   getMechanismArchetypeLabel,
@@ -60,7 +59,9 @@ function ClampedRailProse({ text }: { text: string }) {
  *
  * Lives in the summary rail at `xl+` (`compact`) and in the Context zone below
  * `xl`, the same split `#price` and `#coin-timeline` use, so narrow viewports
- * still get the review.
+ * still get the review. Neither treatment carries an anchor id or a breakpoint
+ * class: the in-flow copy mounts inside the `xl:hidden` `RailCopyFold` band
+ * that owns `#mechanism-review` and the visibility gate.
  *
  * Both treatments are built from one set of locals and branch only on the
  * shell (`RailCard` vs `Card`), so the archetype badge, explainer link, review
@@ -69,9 +70,12 @@ function ClampedRailProse({ text }: { text: string }) {
 export function MechanismReviewPanel({
   review,
   compact = false,
+  embedded = false,
 }: {
   review: MechanismReviewView | null;
   compact?: boolean;
+  /** Body-only render inside the `RailCopyFold` band (no shell, no title). */
+  embedded?: boolean;
 }) {
   if (review === null) return null;
 
@@ -112,8 +116,30 @@ export function MechanismReviewPanel({
     );
   }
 
+  // Body-only render for the `RailCopyFold` band, which already owns the
+  // shell and the "Mechanism review" title; the archetype badge and reviewed
+  // date move from the dropped header into the first body row.
+  if (embedded) {
+    return (
+      <div className="px-4 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {archetypeBadge}
+          <span className="font-mono text-[11px] text-muted-foreground">Reviewed {review.reviewedAt}</span>
+        </div>
+        <CollapsibleProse
+          text={review.notes}
+          className="mt-3 whitespace-pre-line text-sm"
+          collapsedLabel="Read the full review"
+          toggleClassName="mt-3"
+          size="md"
+        />
+        <EvidenceFooter className="mt-5" sources={review.sources} trailing={explainerLink} />
+      </div>
+    );
+  }
+
   return (
-    <Card id="mechanism-review" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT, "xl:hidden")}>
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex min-w-0 items-center gap-2">
           <FlaskConical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

@@ -23,7 +23,7 @@ function ShareBar({ pct, barClassName }: { pct: number; barClassName?: string })
  * bankruptcy-remoteness / rehypothecation facts) in the rail-card grammar.
  * Renders nothing when no custody review exists.
  */
-export function CustodyCard({ summary }: { summary?: CustodyClientSummary | null }) {
+export function CustodyCard({ summary, frameless }: { summary?: CustodyClientSummary | null; frameless?: boolean }) {
   if (!summary) return null;
 
   const facts: FactGridItem[] = [
@@ -41,6 +41,7 @@ export function CustodyCard({ summary }: { summary?: CustodyClientSummary | null
 
   return (
     <RailCard
+      frameless={frameless}
       title="Custody"
       ariaLabel="Custody"
       trailing={

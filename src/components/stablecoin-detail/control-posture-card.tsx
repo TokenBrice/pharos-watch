@@ -51,11 +51,12 @@ function ControlPostureMap({ activeKey }: { activeKey: GovernanceQuality }) {
   );
 }
 
-export function ControlPostureCard({ view }: { view?: ControlPostureView | null }) {
+export function ControlPostureCard({ view, frameless }: { view?: ControlPostureView | null; frameless?: boolean }) {
   if (!view) return null;
 
   return (
     <RailCard
+      frameless={frameless}
       title="Control posture"
       ariaLabel="Control posture"
       trailing={
