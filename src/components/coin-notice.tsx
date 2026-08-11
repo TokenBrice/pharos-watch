@@ -1,22 +1,20 @@
 import React from "react";
+import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import type { CoinNotice as CoinNoticeType } from "@shared/types";
 
-const STYLES: Record<CoinNoticeType["type"], { border: string; bg: string; icon: string; title: string }> = {
+const STYLES: Record<CoinNoticeType["type"], { banner: string; icon: string; title: string }> = {
   danger: {
-    border: "border-red-500/40",
-    bg: "bg-red-500/5",
+    banner: SEVERITY_TONE_CLASS.alert.banner,
     icon: "text-red-700 dark:text-red-400",
     title: "text-red-600 dark:text-red-400",
   },
   warning: {
-    border: "border-amber-500/40",
-    bg: "bg-amber-500/5",
+    banner: SEVERITY_TONE_CLASS.watch.banner,
     icon: "text-amber-700 dark:text-amber-400",
     title: "text-amber-600 dark:text-amber-400",
   },
   info: {
-    border: "border-blue-500/40",
-    bg: "bg-blue-500/5",
+    banner: SEVERITY_TONE_CLASS.info.banner,
     icon: "text-blue-700 dark:text-blue-400",
     title: "text-blue-600 dark:text-blue-400",
   },
@@ -52,12 +50,12 @@ export function CoinNotices({ notices }: CoinNoticesProps) {
       {notices.map((notice) => {
         const s = STYLES[notice.type];
         return (
-          /* Severity-keyed left stripe: a data-driven indicator (allowed
-             carve-out per design-language.md), at the documented 3px weight —
-             not the retired decorative card chrome. */
+          /* Flat callout: full hairline border + severity tint + leading icon.
+             The left stripe is retired (design-language.md); border-l accent is
+             reserved for data-driven indicators, which a notice is not. */
           <div
             key={`${notice.type}-${notice.title}`}
-            className={`flex items-start gap-3 rounded-lg border-l-[3px] ${s.border} ${s.bg} px-4 py-3`}
+            className={`flex items-start gap-3 rounded-lg border ${s.banner} px-4 py-3`}
           >
             <span className={s.icon}>{ICONS[notice.type]}</span>
             <div className="min-w-0">
