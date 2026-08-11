@@ -61,10 +61,10 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     expect("custodyProfileSummary" in clientCoin).toBe(false);
   });
 
-  it("shows custody but hides oracle for a fiat-cash archetype with no explicit custodyModel", () => {
+  it("shows custody and available oracle data for a fiat-cash archetype with no explicit custodyModel", () => {
     const clientCoin = buildStablecoinDetailClientCoin(coinWith({ mechanismArchetype: "fiat-cash" }));
     expect(clientCoin.custodyProfileSummary).toBeDefined();
-    expect("oracleRiskSummary" in clientCoin).toBe(false);
+    expect(clientCoin.oracleRiskSummary).toBeDefined();
   });
 
   it("shows custody for a cdp archetype when an explicit centralized custodyModel is set", () => {
