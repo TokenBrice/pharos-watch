@@ -14,7 +14,7 @@ import { useDexLiquidity } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
 import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
-import { getScoreTier, TIER_TEXT, ratioQualityColor } from "@/lib/severity-colors";
+import { getScoreTier, TIER_PILL, ratioQualityColor } from "@/lib/severity-colors";
 import { BalanceBar } from "@/components/balance-bar";
 import {
   buildLiquidityVerdictLine,
@@ -24,6 +24,7 @@ import {
 import { MethodologyCardActions, MethodologyLabel } from "@/components/methodology-hint";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
+import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import {
   ChainBar,
@@ -139,13 +140,13 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <div className="flex flex-wrap items-center justify-end gap-2">
             {isRated ? (
               <ScoreBadgeWrapper topic="liquidityScore" variant="tooltip-only">
-                <span className={cn("pharos-numeric text-sm font-semibold", TIER_TEXT[tier])}>
-                  {score}
-                  <span className="text-muted-foreground">/100</span>
-                </span>
+                {/* `ScorePill`, not bare tinted text: this module and Mint
+                    Authority were rendering the same "N/100" fact in two
+                    different formats. */}
+                <ScorePill label={`${score}/100`} toneClass={TIER_PILL[tier]} />
               </ScoreBadgeWrapper>
             ) : (
-              <div className="pharos-numeric text-sm font-semibold text-muted-foreground">NR</div>
+              <ScorePill label="NR" />
             )}
             <FreshnessIndicator
               compact

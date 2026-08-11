@@ -14,6 +14,22 @@ interface FreshnessIndicatorProps {
   compact?: boolean;
 }
 
+/**
+ * Content-surface headroom on the staleness threshold.
+ *
+ * The compact chip in a module header is handed its endpoint's revalidation
+ * budget (`API_FRESHNESS_MAX_AGE_SEC`), which is the producer's own cadence — so
+ * with no headroom the chip turned amber the instant one normal cycle elapsed,
+ * and a routine refresh read as a warning (amber at 15m, neutral at 14m). The
+ * compact chips get the same 2x producer headroom the cron-backed hooks already
+ * use for `refetchInterval`, so amber now means a producer run was missed.
+ *
+ * The operations surfaces (status dashboard, public status hero) render the
+ * non-compact variant and pass their own deliberate UI thresholds; those stay
+ * exact.
+ */
+const CONTENT_STALE_GRACE_FACTOR = 2;
+
 function formatAge(ageMs: number): string {
   if (ageMs < 5000) return "just now";
   if (ageMs < 60_000) return `${Math.floor(ageMs / 1000)}s ago`;
@@ -30,11 +46,12 @@ function nextFreshnessUpdateDelay(ageMs: number, staleAfterMs: number): number {
 
 export function FreshnessIndicator({
   updatedAtMs,
-  staleAfterMs,
+  staleAfterMs: staleAfterMsProp,
   labelPrefix,
   className,
   compact = false,
 }: FreshnessIndicatorProps) {
+  const staleAfterMs = compact ? staleAfterMsProp * CONTENT_STALE_GRACE_FACTOR : staleAfterMsProp;
   const isUnavailable = updatedAtMs <= 0;
   const [label, setLabel] = useState(() =>
     isUnavailable ? "not loaded" : formatAge(Math.max(0, Date.now() - updatedAtMs)),
