@@ -54,6 +54,19 @@ export interface DetailSharedModules {
   foldChips: Partial<
     Record<"custody" | "bridging" | "regulatoryStanding" | "controlPosture" | "freezeSeizure", RailCopyFoldChip>
   >;
+  /**
+   * Frameless (body-only) renders of the same six modules for mounting inside
+   * `RailCopyFold`, which owns the shell, title, and chip — the chromed nodes
+   * above stay rail-only. Both variants read the views built once here.
+   */
+  foldBodies: {
+    custody: ReactNode;
+    backingMechanics: ReactNode;
+    bridging: ReactNode;
+    regulatoryStanding: ReactNode;
+    controlPosture: ReactNode;
+    freezeSeizure: ReactNode;
+  };
 }
 
 export function buildDetailSharedModules({
@@ -90,6 +103,18 @@ export function buildDetailSharedModules({
     regulatoryStanding: regulatoryStanding ? <RegulatoryStandingCard view={regulatoryStanding} /> : null,
     controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} /> : null,
     freezeSeizure: blacklistabilitySummary ? <FreezeSeizureCard summary={blacklistabilitySummary} /> : null,
+    foldBodies: {
+      custody: custodySummary ? <CustodyCard summary={custodySummary} frameless /> : null,
+      backingMechanics: mechanismBacking ? <BackingMechanicsCard view={mechanismBacking} frameless /> : null,
+      bridging: bridgeSummary ? <BridgingCard summary={bridgeSummary} frameless /> : null,
+      regulatoryStanding: regulatoryStanding ? (
+        <RegulatoryStandingCard view={regulatoryStanding} frameless />
+      ) : null,
+      controlPosture: controlPosture ? <ControlPostureCard view={controlPosture} frameless /> : null,
+      freezeSeizure: blacklistabilitySummary ? (
+        <FreezeSeizureCard summary={blacklistabilitySummary} frameless />
+      ) : null,
+    },
     foldChips: {
       ...(custodySummary
         ? { custody: { label: custodySummary.postureLabel, toneClass: custodySummary.postureToneClass } }

@@ -70,9 +70,12 @@ function ClampedRailProse({ text }: { text: string }) {
 export function MechanismReviewPanel({
   review,
   compact = false,
+  embedded = false,
 }: {
   review: MechanismReviewView | null;
   compact?: boolean;
+  /** Body-only render inside the `RailCopyFold` band (no shell, no title). */
+  embedded?: boolean;
 }) {
   if (review === null) return null;
 
@@ -110,6 +113,28 @@ export function MechanismReviewPanel({
           <EvidenceFooter sources={review.sources} trailing={explainerLink} />
         </div>
       </RailCard>
+    );
+  }
+
+  // Body-only render for the `RailCopyFold` band, which already owns the
+  // shell and the "Mechanism review" title; the archetype badge and reviewed
+  // date move from the dropped header into the first body row.
+  if (embedded) {
+    return (
+      <div className="px-4 pb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {archetypeBadge}
+          <span className="font-mono text-[11px] text-muted-foreground">Reviewed {review.reviewedAt}</span>
+        </div>
+        <CollapsibleProse
+          text={review.notes}
+          className="mt-3 whitespace-pre-line text-sm"
+          collapsedLabel="Read the full review"
+          toggleClassName="mt-3"
+          size="md"
+        />
+        <EvidenceFooter className="mt-5" sources={review.sources} trailing={explainerLink} />
+      </div>
     );
   }
 

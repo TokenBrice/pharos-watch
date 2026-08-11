@@ -18,6 +18,7 @@ export function RailCard({
   ariaLabel,
   icon: Icon,
   trailing,
+  frameless = false,
   children,
 }: {
   title: string;
@@ -27,8 +28,15 @@ export function RailCard({
   icon?: LucideIcon;
   /** Right-aligned header slot: a `ReviewedStamp`, a badge, or a muted glyph. */
   trailing?: ReactNode;
+  /**
+   * Body-only render for mounting inside a `RailCopyFold` band, which already
+   * owns the card shell, the title, and the status chip — a second header
+   * inside the fold would duplicate all three.
+   */
+  frameless?: boolean;
   children: ReactNode;
 }) {
+  if (frameless) return <>{children}</>;
   return (
     <section className="pharos-card-shell overflow-hidden" aria-label={ariaLabel}>
       <div className="flex items-center justify-between gap-3 px-4 py-3.5">

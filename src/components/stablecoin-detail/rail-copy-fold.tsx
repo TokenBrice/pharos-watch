@@ -57,11 +57,18 @@ export function RailCopyFold({
     window.addEventListener("hashchange", openOnHashMatch);
     return () => window.removeEventListener("hashchange", openOnHashMatch);
   }, [id]);
+  // The band IS the card shell: children mount frameless (body-only, no second
+  // shell/header) so opening extends the same box instead of revealing a
+  // nested card that repeats the title and chip.
   return (
-    <details ref={detailsRef} id={id} className={cn("group", id ? SECTION_SCROLL_MT : undefined)}>
+    <details
+      ref={detailsRef}
+      id={id}
+      className={cn("group pharos-card-shell overflow-hidden", id ? SECTION_SCROLL_MT : undefined)}
+    >
       <summary
         className={cn(
-          "pharos-card-shell pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-3",
+          "pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-3",
           "px-4 py-3.5 [&::-webkit-details-marker]:hidden",
         )}
       >
@@ -78,7 +85,7 @@ export function RailCopyFold({
           />
         </span>
       </summary>
-      <div className="mt-3">{children}</div>
+      {children}
     </details>
   );
 }

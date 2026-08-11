@@ -76,7 +76,7 @@ function NoteRow({ note, open }: { note: MechanismBackingNote; open: boolean }) 
  * being silently dropped, which is why a CDP asset can show this card with no
  * metrics of its own beneath `CollateralizationCard`.
  */
-export function BackingMechanicsCard({ view }: { view: MechanismBackingView | null }) {
+export function BackingMechanicsCard({ view, frameless }: { view: MechanismBackingView | null; frameless?: boolean }) {
   const [open, setOpen] = useState(false);
   if (view === null) return null;
 
@@ -84,6 +84,7 @@ export function BackingMechanicsCard({ view }: { view: MechanismBackingView | nu
 
   return (
     <RailCard
+      frameless={frameless}
       title="Backing mechanics"
       ariaLabel="Backing mechanics"
       trailing={<ReviewedStamp date={view.reviewedAt} />}

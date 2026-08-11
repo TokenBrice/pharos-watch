@@ -15,11 +15,12 @@ import { cn } from "@/lib/utils";
  * passport chip linking off to /compliance. Renders nothing when neither
  * regime has a curated profile.
  */
-export function RegulatoryStandingCard({ view }: { view?: RegulatoryStandingView | null }) {
+export function RegulatoryStandingCard({ view, frameless }: { view?: RegulatoryStandingView | null; frameless?: boolean }) {
   if (!view) return null;
 
   return (
     <RailCard
+      frameless={frameless}
       title="Regulatory standing"
       ariaLabel="Regulatory standing"
       trailing={

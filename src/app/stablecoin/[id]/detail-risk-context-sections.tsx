@@ -118,7 +118,7 @@ export function DetailRiskContextSections({
         {sharedModules.custody ? (
           <div className="xl:hidden">
             <RailCopyFold title="Custody" chip={sharedModules.foldChips.custody}>
-              {sharedModules.custody}
+              {sharedModules.foldBodies.custody}
             </RailCopyFold>
           </div>
         ) : null}
@@ -155,40 +155,40 @@ export function DetailRiskContextSections({
         {mechanismReview ? (
           <div className="xl:hidden">
             <RailCopyFold title="Mechanism review" id="mechanism-review">
-              <MechanismReviewPanel review={mechanismReview} />
+              <MechanismReviewPanel review={mechanismReview} embedded />
             </RailCopyFold>
           </div>
         ) : null}
         {sharedModules.backingMechanics ? (
           <div className="xl:hidden">
-            <RailCopyFold title="Backing mechanics">{sharedModules.backingMechanics}</RailCopyFold>
+            <RailCopyFold title="Backing mechanics">{sharedModules.foldBodies.backingMechanics}</RailCopyFold>
           </div>
         ) : null}
         {sharedModules.bridging ? (
           <div className="xl:hidden">
             <RailCopyFold title="Bridging" chip={sharedModules.foldChips.bridging}>
-              {sharedModules.bridging}
+              {sharedModules.foldBodies.bridging}
             </RailCopyFold>
           </div>
         ) : null}
         {sharedModules.regulatoryStanding ? (
           <div className="xl:hidden">
             <RailCopyFold title="Regulatory standing" chip={sharedModules.foldChips.regulatoryStanding}>
-              {sharedModules.regulatoryStanding}
+              {sharedModules.foldBodies.regulatoryStanding}
             </RailCopyFold>
           </div>
         ) : null}
         {sharedModules.controlPosture ? (
           <div className="xl:hidden">
             <RailCopyFold title="Control posture" chip={sharedModules.foldChips.controlPosture}>
-              {sharedModules.controlPosture}
+              {sharedModules.foldBodies.controlPosture}
             </RailCopyFold>
           </div>
         ) : null}
         {sharedModules.freezeSeizure ? (
           <div className="xl:hidden">
             <RailCopyFold title="Freeze & seizure" chip={sharedModules.foldChips.freezeSeizure}>
-              {sharedModules.freezeSeizure}
+              {sharedModules.foldBodies.freezeSeizure}
             </RailCopyFold>
           </div>
         ) : null}
