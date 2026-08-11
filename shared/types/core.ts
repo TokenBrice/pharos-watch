@@ -13,7 +13,14 @@ import {
 } from "./stablecoin-taxonomy";
 export type { DependencyType } from "./dependency-types";
 export type { V9DependencyEconomicRole } from "./dependency-types";
-export type { ReserveBlacklistabilityExposure, ReserveRisk, ReserveSlice } from "./reserves";
+export type {
+  ReserveAssetClass,
+  ReserveBlacklistabilityExposure,
+  ReserveLiquidityHorizon,
+  ReserveRisk,
+  ReserveRiskFactor,
+  ReserveSlice,
+} from "./reserves";
 export {
   GOVERNANCE_TYPE_VALUES,
   MECHANISM_ARCHETYPE_VALUES,

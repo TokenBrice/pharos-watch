@@ -34,6 +34,10 @@ import {
   projectOracleRiskClientSummary,
   type OracleRiskClientSummary,
 } from "@/lib/stablecoin-detail-oracle-client";
+import {
+  projectReserveQualityClientSummary,
+  type ReserveQualityClientSummary,
+} from "@/lib/stablecoin-detail-reserve-quality-client";
 /**
  * A single externally-owned key is presented as unverifiable custody unless the
  * review carries an MPC or HSM attestation. Safety 9.1 keeps the label local:
@@ -144,6 +148,7 @@ export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServ
   bridgeRouteRiskSummary?: BridgeRouteRiskClientSummary | null;
   custodyProfileSummary?: CustodyClientSummary | null;
   oracleRiskSummary?: OracleRiskClientSummary | null;
+  reserveQualitySummary?: ReserveQualityClientSummary | null;
   mintAuthoritySummary?: MintAuthorityClientSummary | null;
   mintAuthorityParentSummaries?: Record<string, MintAuthorityClientSummary>;
 };
@@ -201,11 +206,13 @@ export function buildStablecoinDetailClientCoin(
     ? projectCustodyClientSummary(coin)
     : null;
   const oracleRiskSummary = resolvedArchetype === "cdp" ? projectOracleRiskClientSummary(coin) : null;
+  const reserveQualitySummary = projectReserveQualityClientSummary(coin);
   return {
     ...clientCoin,
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
     ...(custodyProfileSummary ? { custodyProfileSummary } : {}),
     ...(oracleRiskSummary ? { oracleRiskSummary } : {}),
+    ...(reserveQualitySummary ? { reserveQualitySummary } : {}),
     ...(mintAuthoritySummary ? { mintAuthoritySummary } : {}),
     ...(mintAuthorityParentSummaries ? { mintAuthorityParentSummaries } : {}),
   };
