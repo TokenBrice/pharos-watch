@@ -326,7 +326,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect("showExitScore" in missingCache).toBe(false);
     expect(missingCache.showResolutionStateBadge).toBe(true);
     expect(missingCache.resolutionStateLabel).toBe("missing cache");
-    expect(missingCache.modelConfidenceLabel).toBe("confidence: low");
+    expect(missingCache.modelConfidenceLabel).toBe("Confidence: low");
     expect(missingCache.resolutionSummary).toContain("current stablecoins snapshot did not contain the asset");
     expect(missingCache.scoreBreakdown.access.label).toBe("Access score");
     expect(missingCache.scoreBreakdown.settlement.label).toBe("Settlement");

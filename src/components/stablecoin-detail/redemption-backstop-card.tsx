@@ -74,23 +74,22 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
           <DetailSectionTitle className={DETAIL_MODULE_TITLE_CLASS}>
             <MethodologyLabel topic="redemptionBackstop">{viewModel.title}</MethodologyLabel>
           </DetailSectionTitle>
-          <FreshnessIndicator
-            compact
-            updatedAtMs={entry.updatedAt * 1000}
-            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 1000}
-            labelPrefix="Updated"
-          />
+          {/* Score in the header, not on its own body row: the header slot is
+              where every other scored module states its band, and the label
+              "Standalone route score" plus a lone pill cost a full row for one
+              number. A low-confidence score keeps the broken outline so it does
+              not read as firm as a well-evidenced one. */}
+          <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
+            <ScorePill
+              label={viewModel.heroScoreLabel}
+              toneClass={viewModel.scoreToneClass}
+              title="Standalone route score"
+              className={viewModel.isLowConfidence ? "border-dashed" : undefined}
+            />
+          </ScoreBadgeWrapper>
         </div>
       </CardHeader>
       <CardContent className={cn(DETAIL_MODULE_BODY_CLASS, "space-y-4")}>
-        {/* ── arrange: standalone route score, separated from metadata ── */}
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <span className="text-sm text-muted-foreground">Standalone route score</span>
-          <ScoreBadgeWrapper topic="redemptionBackstop" variant="tooltip-only">
-            <ScorePill size="lg" label={viewModel.heroScoreLabel} toneClass={viewModel.scoreToneClass} />
-          </ScoreBadgeWrapper>
-        </div>
-
         {viewModel.score != null ? (
           <ScoreBandSpectrum
             mode="range"
@@ -227,7 +226,17 @@ export function RedemptionBackstopCard({ entry }: { entry: RedemptionBackstopEnt
             ) : null
           }
           trailing={viewModel.docsReviewedAt ? `Reviewed ${viewModel.docsReviewedAt}` : undefined}
-        />
+        >
+          {/* Live-data freshness joins the footer's inline row rather than the
+              header, which now carries status only. It is a different fact from
+              the docs `Reviewed` stamp on the right, so the two coexist here. */}
+          <FreshnessIndicator
+            compact
+            updatedAtMs={entry.updatedAt * 1000}
+            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 1000}
+            labelPrefix="Updated"
+          />
+        </EvidenceFooter>
       </CardContent>
     </Card>
   );

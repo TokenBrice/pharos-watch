@@ -95,9 +95,9 @@ const REDEMPTION_ROUTE_STATUS_LABELS = {
 } as const satisfies Record<RedemptionRouteStatus, string>;
 
 const REDEMPTION_MODEL_CONFIDENCE_LABELS = {
-  high: "confidence: high",
-  medium: "confidence: medium",
-  low: "confidence: low",
+  high: "Confidence: high",
+  medium: "Confidence: medium",
+  low: "Confidence: low",
 } as const satisfies Record<RedemptionModelConfidence, string>;
 
 const REDEMPTION_DOCS_PROVENANCE_LABELS = {

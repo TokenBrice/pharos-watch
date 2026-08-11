@@ -23,7 +23,7 @@ describe("redemption-backstop-labels", () => {
     expect(formatRedemptionRouteStatus("cohort-limited")).toBe("cohort limited");
     expect(formatRedemptionRouteStatus("unknown")).toBe("status unknown");
     expect(formatRedemptionResolutionState("missing-capacity")).toBe("missing capacity");
-    expect(formatRedemptionModelConfidence("medium")).toBe("confidence: medium");
+    expect(formatRedemptionModelConfidence("medium")).toBe("Confidence: medium");
     expect(formatRedemptionDocsProvenance("proof-of-reserves")).toBe("Fallback proof-of-reserves source");
   });
 });
