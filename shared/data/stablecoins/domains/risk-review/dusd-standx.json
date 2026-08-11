@@ -1,6 +1,5 @@
 {
   "id": "dusd-standx",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

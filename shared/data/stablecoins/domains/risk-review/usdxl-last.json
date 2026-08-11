@@ -1,6 +1,5 @@
 {
   "id": "usdxl-last",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

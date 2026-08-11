@@ -1,6 +1,5 @@
 {
   "id": "btcusd-btcfi",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

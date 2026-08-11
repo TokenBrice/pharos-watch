@@ -1,6 +1,5 @@
 {
   "id": "dusd-alto",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "usn-noon",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

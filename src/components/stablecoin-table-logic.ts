@@ -189,7 +189,7 @@ export function sortStablecoins({
     liquidity: (r) => dexLiquidity?.[r.id]?.liquidityScore ?? null,
     grade: (r) => reportCards?.[r.id]?.score ?? null,
     blacklistable: (r) => {
-      const status = getResolvedBlacklistStatus(r.id, reportCards?.[r.id]);
+      const status = getResolvedBlacklistStatus(r.id);
       if (status === null) return null;
       if (status === true) return 3;
       if (status === "possible" || status === "inherited") return 1;
@@ -254,7 +254,7 @@ export function exportStablecoinsCsv(
         header: "Blacklistable",
         accessor: (row) => {
           if (!TRACKED_META_BY_ID.has(row.id)) return null;
-          const status = getResolvedBlacklistStatus(row.id, reportCards?.[row.id]);
+          const status = getResolvedBlacklistStatus(row.id);
           return status === true ? "Yes" : status === "inherited" ? "Upstream" : status === "possible" ? "Possible" : status === false ? "No" : "Unknown";
         },
       },

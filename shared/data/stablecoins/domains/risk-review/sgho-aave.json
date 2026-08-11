@@ -1,6 +1,5 @@
 {
   "id": "sgho-aave",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

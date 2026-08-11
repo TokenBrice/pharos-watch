@@ -1,6 +1,5 @@
 {
   "id": "nect-beraborrow",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

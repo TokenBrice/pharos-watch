@@ -1,6 +1,5 @@
 {
   "id": "audm-macropod",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -38,12 +38,8 @@ export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
 export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const satisfies readonly ReportCardGrade[];
 
 /**
- * Blacklistability buckets. Maps to the tri-state `canBeBlacklisted` field on
- * the stablecoin meta (boolean | "possible") with friendlier
- * URL keys.
- *   - "yes"        → canBeBlacklisted === true  (issuer can freeze tokens)
- *   - "no"         → canBeBlacklisted === false (no privileged freeze path)
- *   - "possible"   → canBeBlacklisted === "possible"  (implementation-dependent)
+ * Blacklistability buckets. Maps the reviewed status to friendlier URL keys.
+ * Upstream exposure remains outside this legacy three-bucket screener filter.
  */
 export const BLACKLISTABLE_VALUES = ["yes", "no", "possible"] as const;
 export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
@@ -402,8 +398,10 @@ export function normalizeScreenerDeepLinkAliases(params: URLSearchParams): boole
   return changed;
 }
 
-/** Project the meta `canBeBlacklisted` tri-state to the screener bucket. */
-export function projectBlacklistable(value: boolean | "possible" | undefined): BlacklistableValue | null {
+/** Project the reviewed status to the screener's legacy three buckets. */
+export function projectBlacklistable(
+  value: boolean | "possible" | "inherited" | undefined,
+): BlacklistableValue | null {
   if (value === true) return "yes";
   if (value === false) return "no";
   if (value === "possible") return value;

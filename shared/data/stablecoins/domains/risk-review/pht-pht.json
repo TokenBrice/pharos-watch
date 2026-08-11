@@ -1,6 +1,5 @@
 {
   "id": "pht-pht",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "sofid-sofi",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

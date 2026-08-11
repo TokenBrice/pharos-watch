@@ -1,6 +1,5 @@
 {
   "id": "bib01-backed",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

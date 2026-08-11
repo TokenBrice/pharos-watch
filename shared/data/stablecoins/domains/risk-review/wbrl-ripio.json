@@ -1,6 +1,5 @@
 {
   "id": "wbrl-ripio",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

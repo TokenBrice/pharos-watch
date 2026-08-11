@@ -1,6 +1,5 @@
 {
   "id": "jusd-jusd-stable-token",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -268,7 +268,7 @@ export function buildStablecoinDetailHeroViewModel({
   redemptionBackstop,
 }: BuildHeroCardViewModelParams): HeroCardViewModel {
   const infrastructures: Infrastructure[] = coin.infrastructures ?? [];
-  const blacklistStatus = getResolvedBlacklistStatus(coin.id, reportCard);
+  const blacklistStatus = getResolvedBlacklistStatus(coin.id);
   const primaryComparisonPage = getPrimaryStaticComparisonLinkForCoin(coin.id);
   const effectivePegScore = resolveEffectivePegScore(isNavToken, pegScoreResult);
   const pegScoreDisplay = buildPegScoreDisplay(

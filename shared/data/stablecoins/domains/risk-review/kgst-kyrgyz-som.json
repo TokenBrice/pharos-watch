@@ -1,6 +1,5 @@
 {
   "id": "kgst-kyrgyz-som",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -21,7 +20,7 @@
         "url": "https://www.kgstoken.kg/"
       }
     ],
-    "evidence": "2026-07-30 re-review of KGST holder freeze/blacklist posture. Sole tracked deployment is BSC proxy 0x94be0bba8e1e303fe998c9360b57b826f1a4f828. At BSC block 113079584, EIP-1967 implementation slot resolved to 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin slot to ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; token owner() returned 2-of-5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify exact-matches the implementation as Stablecoin (ERC20PermitUpgradeable + Ownable2StepUpgradeable + PausableUpgradeable). Source exposes owner-only freeze(address)/unfreeze(address) over mapping frozen, owner-only pause()/unpause(), and _transfer/_approve overrides that require whenNotPaused and notFrozen(from/to). That is a direct individual holder freeze plus system-wide pause on the sole material deployment. paused() read false at the observation block. Issuer site confirms a centralized, regulator-supervised KGSToken LLC issuance model consistent with privileged admin controls. Conclusion: canBeBlacklisted=true (reach individual; pause also system-wide).",
+    "evidence": "2026-07-30 re-review of KGST holder freeze/blacklist posture. Sole tracked deployment is BSC proxy 0x94be0bba8e1e303fe998c9360b57b826f1a4f828. At BSC block 113079584, EIP-1967 implementation slot resolved to 0xa903a6c1c3bd45927542823528a6fa73a2a410e2 and admin slot to ProxyAdmin 0xcb628ce396f8f6ffbfae48721fe02a668a9a718b; token owner() returned 2-of-5 Safe 0xb94f9247bd181fc9aca4d8694fb3774ed99be5d5. Sourcify exact-matches the implementation as Stablecoin (ERC20PermitUpgradeable + Ownable2StepUpgradeable + PausableUpgradeable). Source exposes owner-only freeze(address)/unfreeze(address) over mapping frozen, owner-only pause()/unpause(), and _transfer/_approve overrides that require whenNotPaused and notFrozen(from/to). That is a direct individual holder freeze plus system-wide pause on the sole material deployment. paused() read false at the observation block. Issuer site confirms a centralized, regulator-supervised KGSToken LLC issuance model consistent with privileged admin controls. Conclusion: reviewedStatus=true (reach individual; pause also system-wide).",
     "reviewer": "Grok T28 safety-v9 unknown-reduction w2",
     "reviewedAt": "2026-07-30"
   }

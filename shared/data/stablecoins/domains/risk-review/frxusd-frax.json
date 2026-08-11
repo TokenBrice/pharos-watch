@@ -1,6 +1,5 @@
 {
   "id": "frxusd-frax",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

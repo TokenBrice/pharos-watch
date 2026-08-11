@@ -1,6 +1,5 @@
 {
   "id": "yzusd-yuzu",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

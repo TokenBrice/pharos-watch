@@ -1,6 +1,5 @@
 {
   "id": "zsd-zephyr-protocol",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "jpysc-sbi-startale",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

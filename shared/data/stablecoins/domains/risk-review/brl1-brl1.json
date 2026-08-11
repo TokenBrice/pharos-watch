@@ -1,6 +1,5 @@
 {
   "id": "brl1-brl1",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

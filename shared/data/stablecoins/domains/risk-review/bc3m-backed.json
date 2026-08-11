@@ -1,6 +1,5 @@
 {
   "id": "bc3m-backed",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

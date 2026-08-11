@@ -1,6 +1,5 @@
 {
   "id": "vbill-vaneck",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

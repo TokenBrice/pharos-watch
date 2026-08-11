@@ -1,6 +1,5 @@
 {
   "id": "iusd-indigo-protocol",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

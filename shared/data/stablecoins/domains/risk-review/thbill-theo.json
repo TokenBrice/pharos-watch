@@ -1,6 +1,5 @@
 {
   "id": "thbill-theo",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

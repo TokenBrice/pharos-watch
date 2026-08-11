@@ -1,6 +1,5 @@
 {
   "id": "audx-aussie-dollar-token",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "cdp-enosys",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

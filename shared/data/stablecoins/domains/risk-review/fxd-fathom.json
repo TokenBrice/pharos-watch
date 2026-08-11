@@ -1,6 +1,5 @@
 {
   "id": "fxd-fathom",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "silk-shade-protocol",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

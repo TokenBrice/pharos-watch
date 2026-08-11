@@ -1,6 +1,5 @@
 {
   "id": "brla-brla-digital",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -265,73 +265,31 @@ describe("StablecoinMeta schema — listing lifecycle status", () => {
 });
 
 describe("StablecoinMeta schema — blacklistability review", () => {
-  const explicitStatuses = [true, false, "possible"] as const;
-
-  for (const status of explicitStatuses) {
-    it(`rejects explicit canBeBlacklisted=${String(status)} without review evidence`, () => {
-      const json = [
-        {
-          id: `fixture-blacklist-${String(status)}`,
-          name: "Fixture",
-          symbol: "FXT",
-          flags: baseFlags,
-          canBeBlacklisted: status,
-        },
-      ];
-      expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/blacklistabilityReview/);
-    });
-  }
-
-  it("rejects the retired Dilutable blacklistability status", () => {
+  it("rejects the retired canBeBlacklisted field", () => {
     const json = [
       {
-        id: "fixture-blacklist-dilutable",
+        id: "fixture-blacklist-legacy",
         name: "Fixture",
         symbol: "FXT",
         flags: baseFlags,
-        canBeBlacklisted: "dilutable",
-      },
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow();
-  });
-
-  it("rejects manual inherited blacklistability metadata", () => {
-    const json = [
-      {
-        id: "fixture-blacklist-inherited",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
-        canBeBlacklisted: "inherited",
-        blacklistabilityReview: {
-          reviewedStatus: "inherited",
-          sourceFreeRationale: "fixture",
-          evidence: "Fixture evidence for inherited rejection.",
-          reviewer: "Fixture",
-          reviewedAt: "2026-05-12",
-        },
+        canBeBlacklisted: true,
       },
     ];
     expect(() => parseStablecoinMetaAssets(json, "fixture")).toThrow(/canBeBlacklisted/);
   });
 
-  it("accepts inferred blacklistability review metadata without an override", () => {
-    const json = [
-      {
-        id: "fixture-blacklist-inferred",
-        name: "Fixture",
-        symbol: "FXT",
-        flags: baseFlags,
+  it.each([true, false, "possible", "inherited"] as const)("accepts reviewed status %s", (reviewedStatus) => {
+    expect(() => parseStablecoinMetaAssets([
+      makeCoin({
         blacklistabilityReview: {
-          reviewedStatus: "inherited",
-          sourceFreeRationale: "Resolved from Pharos stablecoin metadata.",
-          evidence: "Fixture evidence for inferred upstream exposure.",
+          reviewedStatus,
+          sourceFreeRationale: "Reviewed fixture status.",
+          evidence: "Fixture evidence for reviewed blacklistability status.",
           reviewer: "Fixture",
           reviewedAt: "2026-05-12",
         },
-      },
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
+      }),
+    ], "fixture")).not.toThrow();
   });
 
   it.each(["2026-99-99", "2026-02-30", "2025-00-12"])(
@@ -352,35 +310,15 @@ describe("StablecoinMeta schema — blacklistability review", () => {
     },
   );
 
-  it("requires review status to match the override and include a source or rationale", () => {
-    const base = {
-      id: "fixture-blacklist-review",
-      name: "Fixture",
-      symbol: "FXT",
-      flags: baseFlags,
-      canBeBlacklisted: true,
-    };
-
-    expect(() => parseStablecoinMetaAssets([{
-      ...base,
-      blacklistabilityReview: {
-        reviewedStatus: false,
-        sourceFreeRationale: "fixture",
-        evidence: "Fixture evidence for mismatch.",
-        reviewer: "Fixture",
-        reviewedAt: "2026-05-12",
-      },
-    }], "fixture")).toThrow(/reviewedStatus/);
-
-    expect(() => parseStablecoinMetaAssets([{
-      ...base,
+  it("requires a review source or rationale", () => {
+    expect(() => parseStablecoinMetaAssets([makeCoin({
       blacklistabilityReview: {
         reviewedStatus: true,
         evidence: "Fixture evidence without source.",
         reviewer: "Fixture",
         reviewedAt: "2026-05-12",
       },
-    }], "fixture")).toThrow(/sources/);
+    })], "fixture")).toThrow(/sources/);
   });
 });
 
@@ -1248,7 +1186,6 @@ describe("Stablecoin research sidecar schemas", () => {
     }).success).toBe(true);
     expect(StablecoinRiskReviewSidecarSchema.safeParse({
       id: "fixture-usd",
-      canBeBlacklisted: true,
       blacklistabilityReview,
       oracleRisk: {
         tier: "opaque-or-unknown",
@@ -1385,15 +1322,10 @@ describe("Stablecoin research sidecar schemas", () => {
     }).success).toBe(true);
   });
 
-  it("keeps explicit blacklistability overrides coupled to their review", () => {
+  it("rejects the retired blacklistability override", () => {
     expect(StablecoinRiskReviewSidecarSchema.safeParse({
       id: "fixture-usd",
       canBeBlacklisted: true,
-    }).success).toBe(false);
-    expect(StablecoinRiskReviewSidecarSchema.safeParse({
-      id: "fixture-usd",
-      canBeBlacklisted: false,
-      blacklistabilityReview,
     }).success).toBe(false);
   });
 

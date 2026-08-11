@@ -1,6 +1,5 @@
 {
   "id": "usdsui-sui",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

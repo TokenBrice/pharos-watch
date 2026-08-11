@@ -1,6 +1,5 @@
 {
   "id": "usdm-monetrix",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

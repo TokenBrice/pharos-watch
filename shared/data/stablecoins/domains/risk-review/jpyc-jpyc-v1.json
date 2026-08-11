@@ -1,6 +1,5 @@
 {
   "id": "jpyc-jpyc-v1",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

@@ -107,7 +107,7 @@ export function toStructural(meta: StablecoinMeta, dependencyImpaired?: boolean 
     collateralQuality: meta.collateralQuality ?? null,
     custodyModel: meta.custodyModel ?? null,
     reserves: meta.reserves?.map((r) => ({ risk: r.risk, pct: r.pct })),
-    canBeBlacklisted: meta.canBeBlacklisted ?? null,
+    canBeBlacklisted: meta.blacklistabilityReview?.reviewedStatus ?? null,
     dependencyImpaired:
       v9DependencyImpaired ??
       (meta.dependencies?.some((d) => FROZEN_IDS.has(d.id) && d.weight >= 0.3) ?? false),

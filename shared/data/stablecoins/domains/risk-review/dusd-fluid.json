@@ -1,6 +1,5 @@
 {
   "id": "dusd-fluid",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

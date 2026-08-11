@@ -1,6 +1,5 @@
 {
   "id": "hbd-hive",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

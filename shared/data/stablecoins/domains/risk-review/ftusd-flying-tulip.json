@@ -1,6 +1,5 @@
 {
   "id": "ftusd-flying-tulip",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

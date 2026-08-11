@@ -1,6 +1,5 @@
 {
   "id": "safo-spiko-usd",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

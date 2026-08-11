@@ -1,6 +1,5 @@
 {
   "id": "usdk-orki",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

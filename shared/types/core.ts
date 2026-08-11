@@ -505,8 +505,7 @@ export interface MintAuthorityProfile {
   review: MintAuthorityReview;
 }
 
-export type BlacklistabilityStatus = boolean | "possible";
-export type BlacklistabilityReviewStatus = BlacklistabilityStatus | "inherited";
+export type BlacklistabilityReviewStatus = boolean | "possible" | "inherited";
 
 export interface BlacklistabilityReview {
   reviewedStatus: BlacklistabilityReviewStatus;
@@ -515,7 +514,6 @@ export interface BlacklistabilityReview {
   evidence: string;
   reviewer: string;
   reviewedAt: string;
-  upstreamSuppressionRationale?: string;
 }
 
 export interface Jurisdiction {
@@ -1060,7 +1058,6 @@ export interface StablecoinMeta {
   tradedContracts?: ContractDeployment[];
   dependencies?: DependencyWeight[];
   dependencyReview?: DependencyReview;
-  canBeBlacklisted?: BlacklistabilityStatus;
   blacklistabilityReview?: BlacklistabilityReview;
   collateralQuality?: CollateralQuality;
   custodyModel?: CustodyModel;

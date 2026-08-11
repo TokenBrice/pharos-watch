@@ -1,6 +1,5 @@
 {
   "id": "acred-apollo-securitize",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

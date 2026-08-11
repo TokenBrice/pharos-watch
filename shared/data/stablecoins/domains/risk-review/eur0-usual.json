@@ -1,6 +1,5 @@
 {
   "id": "eur0-usual",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

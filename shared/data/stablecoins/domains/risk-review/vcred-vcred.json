@@ -1,6 +1,5 @@
 {
   "id": "vcred-vcred",
-  "canBeBlacklisted": false,
   "blacklistabilityReview": {
     "reviewedStatus": false,
     "sources": [

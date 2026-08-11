@@ -160,7 +160,6 @@ const StablecoinMetaAssetSchemaShape = {
   tradedContracts: z.array(ContractDeploymentSchema).optional(),
   dependencies: z.array(DependencyWeightSchema).optional(),
   dependencyReview: DependencyReviewSchema.optional(),
-  canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
   blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
   collateralQuality: StablecoinMetaEnumSchemas.collateralQuality.optional(),
   custodyModel: StablecoinMetaEnumSchemas.custodyModel.optional(),
@@ -281,7 +280,6 @@ export const StablecoinComplianceSidecarSchema = z
 export const StablecoinRiskReviewSidecarSchema = z
   .object({
     id: StablecoinIdSchema,
-    canBeBlacklisted: z.union([z.boolean(), z.literal("possible")]).optional(),
     blacklistabilityReview: BlacklistabilityReviewSchema.optional(),
     oracleRisk: OracleRiskProfileSchema.optional(),
     bridgeRouteRisk: BridgeRouteRiskProfileSchema.optional(),
@@ -289,7 +287,6 @@ export const StablecoinRiskReviewSidecarSchema = z
   .strict()
   .superRefine((sidecar, ctx) => {
     if (
-      sidecar.canBeBlacklisted === undefined &&
       sidecar.blacklistabilityReview == null &&
       sidecar.oracleRisk == null &&
       sidecar.bridgeRouteRisk == null
@@ -301,32 +298,13 @@ export const StablecoinRiskReviewSidecarSchema = z
       });
     }
 
-    if (sidecar.canBeBlacklisted !== undefined && sidecar.blacklistabilityReview == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
-        path: ["blacklistabilityReview"],
-      });
-    }
-
-    if (
-      sidecar.canBeBlacklisted !== undefined &&
-      sidecar.blacklistabilityReview?.reviewedStatus !== undefined &&
-      sidecar.blacklistabilityReview.reviewedStatus !== sidecar.canBeBlacklisted
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
-        path: ["blacklistabilityReview", "reviewedStatus"],
-      });
-    }
   });
 
 export const STABLECOIN_SOURCE_DOMAIN_FIELDS = {
   reserves: ["reserves", "reserveReview", "custodyProfile"],
   "mint-authority": ["mintAuthority"],
   compliance: ["mica", "genius"],
-  "risk-review": ["canBeBlacklisted", "blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
+  "risk-review": ["blacklistabilityReview", "oracleRisk", "bridgeRouteRisk"],
 } as const satisfies Record<StablecoinSourceDomain, readonly (keyof StablecoinMeta)[]>;
 
 export const STABLECOIN_SOURCE_DOMAIN_SCHEMAS = {
@@ -625,25 +603,6 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
       });
     }
 
-    if (meta.canBeBlacklisted !== undefined && meta.blacklistabilityReview == null) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "explicit canBeBlacklisted overrides require blacklistabilityReview",
-        path: ["blacklistabilityReview"],
-      });
-    }
-
-    if (
-      meta.canBeBlacklisted !== undefined &&
-      meta.blacklistabilityReview?.reviewedStatus !== undefined &&
-      meta.blacklistabilityReview.reviewedStatus !== meta.canBeBlacklisted
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "blacklistabilityReview.reviewedStatus must match canBeBlacklisted",
-        path: ["blacklistabilityReview", "reviewedStatus"],
-      });
-    }
   },
 )
   .superRefine((meta, ctx) => {

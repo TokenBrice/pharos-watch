@@ -1,6 +1,5 @@
 {
   "id": "yusd-yieldfi",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

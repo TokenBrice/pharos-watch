@@ -1,6 +1,5 @@
 {
   "id": "rwausdi-multipli",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

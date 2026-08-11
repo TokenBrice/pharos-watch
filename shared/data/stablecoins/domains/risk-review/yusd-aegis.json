@@ -1,6 +1,5 @@
 {
   "id": "yusd-aegis",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

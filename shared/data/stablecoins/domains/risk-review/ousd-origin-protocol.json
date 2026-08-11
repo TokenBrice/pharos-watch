@@ -1,6 +1,5 @@
 {
   "id": "ousd-origin-protocol",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

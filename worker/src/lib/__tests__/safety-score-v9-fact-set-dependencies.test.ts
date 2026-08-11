@@ -312,7 +312,7 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     // no `variantOf`/`mintAuthority.inheritedFrom` to name. Before this branch
     // accepted the reserve edge, those assets scored `missing-access-review`
     // ("we never looked") and curators were pushed to write
-    // `canBeBlacklisted: false` instead — the wave-1 over-suppression of 29
+    // a direct false verdict instead — the wave-1 over-suppression of 29
     // honest verdicts, restored in `1134ab32f`.
     const inheritedReview = {
       reviewedStatus: "inherited" as const,

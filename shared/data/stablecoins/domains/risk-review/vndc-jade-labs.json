@@ -1,6 +1,5 @@
 {
   "id": "vndc-jade-labs",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

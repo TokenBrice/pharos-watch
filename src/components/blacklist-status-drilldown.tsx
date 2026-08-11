@@ -45,8 +45,8 @@ export function BlacklistStatusDrilldown({
   );
 
   const filteredStablecoins = useMemo(
-    () => filterStablecoinsByBlacklistStatus(stablecoins, status, reportCards),
-    [stablecoins, status, reportCards],
+    () => filterStablecoinsByBlacklistStatus(stablecoins, status),
+    [stablecoins, status],
   );
 
   return (

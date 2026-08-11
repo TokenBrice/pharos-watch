@@ -54,7 +54,6 @@ const coin: StablecoinMeta = {
   symbol: "USDC",
   name: "USD Coin",
   oneLiner: "Circle-issued dollar stablecoin backed by cash and short-duration reserves.",
-  canBeBlacklisted: true,
   status: "active",
   infrastructures: ["liquity-v2"],
   tags: ["major", "fiat-backed"],
@@ -427,13 +426,12 @@ describe("HeroCard", () => {
     expect(html).not.toContain("-mb-4");
   });
 
-  it("prefers resolved report-card blacklist status for inherited-risk coins", () => {
+  it("uses the reviewed registry blacklist status for inherited-risk coins", () => {
     const inheritedCoin: StablecoinMeta = {
       ...coin,
-      id: "mock-inherited",
+      id: "dai-makerdao",
       name: "Mock Inherited",
       symbol: "MCK",
-      canBeBlacklisted: undefined,
       flags: {
         ...coin.flags,
         governance: "centralized-dependent",
@@ -443,7 +441,7 @@ describe("HeroCard", () => {
     const html = renderToStaticMarkup(
       <HeroCardUnderTest
         coin={inheritedCoin}
-        coinData={{ ...coinData, id: "mock-inherited", name: "Mock Inherited", symbol: "MCK" }}
+        coinData={{ ...coinData, id: "dai-makerdao", name: "Mock Inherited", symbol: "MCK" }}
         logoSrc="/logos/mock.svg"
         isNavToken={false}
         mcap={1_000_000_000}
@@ -461,7 +459,7 @@ describe("HeroCard", () => {
         stressSignal={null}
         reportCard={{
           ...reportCardWithInheritedBlacklistRisk,
-          id: "mock-inherited",
+          id: "dai-makerdao",
         }}
         onOpenFeedback={() => {}}
       />,

@@ -1,6 +1,5 @@
 {
   "id": "wclp-ripio",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

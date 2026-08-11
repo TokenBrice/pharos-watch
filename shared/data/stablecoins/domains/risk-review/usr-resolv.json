@@ -1,6 +1,5 @@
 {
   "id": "usr-resolv",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "mai-qidao",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

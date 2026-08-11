@@ -1,6 +1,5 @@
 {
   "id": "gbpsafo-spiko",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

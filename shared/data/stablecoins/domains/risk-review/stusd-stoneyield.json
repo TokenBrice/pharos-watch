@@ -1,6 +1,5 @@
 {
   "id": "stusd-stoneyield",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

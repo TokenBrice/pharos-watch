@@ -1,6 +1,5 @@
 {
   "id": "gbpm-mento",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "zchf-frankencoin",
-  "canBeBlacklisted": "possible",
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

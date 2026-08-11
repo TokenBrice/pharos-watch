@@ -1,6 +1,5 @@
 {
   "id": "chfau-allunity",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

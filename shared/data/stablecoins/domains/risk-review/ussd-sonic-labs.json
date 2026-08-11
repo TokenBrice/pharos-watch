@@ -1,6 +1,5 @@
 {
   "id": "ussd-sonic-labs",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -1,6 +1,5 @@
 {
   "id": "xo-exodus",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

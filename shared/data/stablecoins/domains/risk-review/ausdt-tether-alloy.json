@@ -1,6 +1,5 @@
 {
   "id": "ausdt-tether-alloy",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -189,8 +189,7 @@ function describeReserveEvidence(coin: StablecoinMeta): string {
 }
 
 function describeFreezeControl(coin: StablecoinMeta): string {
-  const resolvedStatus = getResolvedBlacklistStatus(coin.id);
-  const status = resolvedStatus ?? coin.canBeBlacklisted ?? null;
+  const status = getResolvedBlacklistStatus(coin.id);
 
   switch (status) {
     case true:

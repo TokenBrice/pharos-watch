@@ -1,6 +1,5 @@
 {
   "id": "trusd-tori",
-  "canBeBlacklisted": true,
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
