@@ -181,6 +181,7 @@ function DetailSummaryRail({
         {sharedModules.backingMechanics}
         {sharedModules.custody}
         {sharedModules.controlPosture}
+        {sharedModules.freezeSeizure}
         {sharedModules.failureDomains}
         <MechanismReviewPanel review={mechanismReview} compact />
         {sharedModules.bridging}

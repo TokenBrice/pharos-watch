@@ -156,6 +156,7 @@ export function DetailRiskContextSections({
           <div className="xl:hidden">{sharedModules.regulatoryStanding}</div>
         ) : null}
         {sharedModules.controlPosture ? <div className="xl:hidden">{sharedModules.controlPosture}</div> : null}
+        {sharedModules.freezeSeizure ? <div className="xl:hidden">{sharedModules.freezeSeizure}</div> : null}
         <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
         {viewModel.coin.reserveQualitySummary ? (
           <ReserveQualitySection summary={viewModel.coin.reserveQualitySummary} />

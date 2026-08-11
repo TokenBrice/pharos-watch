@@ -22,6 +22,10 @@ import {
 import { projectMintAuthorityClientSummary } from "@/lib/stablecoin-detail-mint-authority-client";
 import { formatMintAuthorityCustodyAttestation } from "@/lib/stablecoin-detail-mint-authority-format";
 import {
+  projectBlacklistabilityClientSummary,
+  type BlacklistabilityClientSummary,
+} from "@/lib/stablecoin-detail-blacklistability-client";
+import {
   projectBridgeRouteRiskClientSummary,
   type BridgeRouteRiskClientSummary,
 } from "@/lib/stablecoin-detail-bridge-client";
@@ -145,6 +149,7 @@ type StablecoinDetailServerOnlyField =
   | "reserveReview";
 
 export type StablecoinDetailCoinMeta = Omit<StablecoinMeta, StablecoinDetailServerOnlyField> & {
+  blacklistabilitySummary?: BlacklistabilityClientSummary | null;
   bridgeRouteRiskSummary?: BridgeRouteRiskClientSummary | null;
   custodyProfileSummary?: CustodyClientSummary | null;
   oracleRiskSummary?: OracleRiskClientSummary | null;
@@ -207,8 +212,10 @@ export function buildStablecoinDetailClientCoin(
     : null;
   const oracleRiskSummary = resolvedArchetype === "cdp" ? projectOracleRiskClientSummary(coin) : null;
   const reserveQualitySummary = projectReserveQualityClientSummary(coin);
+  const blacklistabilitySummary = projectBlacklistabilityClientSummary(coin, options.parentById);
   return {
     ...clientCoin,
+    ...(blacklistabilitySummary ? { blacklistabilitySummary } : {}),
     ...(bridgeRouteRiskSummary ? { bridgeRouteRiskSummary } : {}),
     ...(custodyProfileSummary ? { custodyProfileSummary } : {}),
     ...(oracleRiskSummary ? { oracleRiskSummary } : {}),
