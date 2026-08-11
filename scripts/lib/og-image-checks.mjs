@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
 
 const DEFAULT_TOLERANCE = {
@@ -66,8 +66,36 @@ export async function stalePngCheckLabel({ fileLabel, expectedPath, actualPath }
   return null;
 }
 
-export function formatOgWriteStatus({ check, publicPath, suffix = "" }) {
-  return `${check ? "Checked" : "Wrote"} ${publicPath}${suffix}`;
+export async function promoteGeneratedPngIfChanged({ stagedPath, publicPath }) {
+  const staged = readFileSync(stagedPath);
+  const existing = existsSync(publicPath) ? readFileSync(publicPath) : null;
+  if (existing?.equals(staged)) {
+    unlinkSync(stagedPath);
+    return false;
+  }
+  if (existing) {
+    const comparison = await comparePngContent(publicPath, stagedPath);
+    if (comparison.matches) {
+      unlinkSync(stagedPath);
+      return false;
+    }
+  }
+
+  renameSync(stagedPath, publicPath);
+  return true;
+}
+
+export function writeFileIfChanged(path, contents) {
+  const next = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
+  const existing = existsSync(path) ? readFileSync(path) : null;
+  if (existing?.equals(next)) return false;
+  writeFileSync(path, next);
+  return true;
+}
+
+export function formatOgWriteStatus({ check, changed = true, publicPath, suffix = "" }) {
+  const action = check ? "Checked" : changed ? "Wrote" : "Unchanged";
+  return `${action} ${publicPath}${suffix}`;
 }
 
 export function assertNoStaleOgOutputs({ family, staleFiles, refreshCommand }) {
