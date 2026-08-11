@@ -1,3 +1,4 @@
+import type { SeverityTone } from "@/lib/severity-tone";
 import type {
   ReserveAssetClass,
   ReserveLiquidityHorizon,
@@ -23,12 +24,14 @@ export interface ReserveQualityMixClientRow {
   key: string;
   label: string;
   pct: number;
-  /** Monochrome ramp class by share rank; amber is reserved for unknowns. */
+  /** Categorical data-series class by share rank; index 5 is the folded tail. */
   barClass: string;
 }
 
 export interface ReserveQualityLadderClientRow {
   key: ReserveLiquidityHorizon;
+  /** Severity tone for the ladder bar fill; see `HORIZON_TONES`. */
+  tone: SeverityTone;
   label: string;
   pct: number;
 }
@@ -103,6 +106,24 @@ const HORIZON_LABELS: Record<ReserveLiquidityHorizon, string> = {
   unknown: "Unknown",
 };
 
+/**
+ * The ladder is an ordinal *risk* ramp, not a composition: how fast the basket
+ * can actually be turned into cash. It therefore takes severity tones (owner
+ * feedback 2026-08-11) — a same-day horizon and a beyond-a-week horizon are not
+ * two shades of the same grey.
+ *
+ * `unknown` stays `neutral`: an unestablished exit timeline is an absence of
+ * evidence, and absence of data does not get an alarm colour (owner ruling
+ * §5.4). Its amber row label already flags it.
+ */
+const HORIZON_TONES: Record<ReserveLiquidityHorizon, SeverityTone> = {
+  immediate: "ok",
+  "one-day": "info",
+  "seven-days": "watch",
+  "over-seven-days": "alert",
+  unknown: "neutral",
+};
+
 const RISK_LABELS: Record<ReserveRisk, string> = {
   "very-low": "Very low",
   low: "Low",
@@ -135,17 +156,26 @@ const CONFIDENCE_LABELS: Record<string, string> = {
 /** Distinct asset classes rendered inline before the tail folds into one segment. */
 const MIX_SEGMENT_LIMIT = 5;
 
-// Share-ranked near-monochrome ramp; index 5 is the folded tail. Index 4
-// switches to the muted token to stay within committed opacity variants —
-// ranks 5+ are tail segments where the small tonal step is acceptable. Tone
-// strings stay static per the Tailwind hard rule.
+/**
+ * Asset mix is a *categorical composition* (T-bills vs repo vs private credit),
+ * so it takes the categorical data-series palette rather than the severity ramp
+ * — the classes are distinct kinds, not degrees of risk. The previous
+ * share-ranked `bg-foreground/80…/10` monochrome ramp made adjacent segments
+ * indistinguishable (owner feedback 2026-08-11: "hard to read with those
+ * nuances of grey-black").
+ *
+ * Hues are drawn from the same sequence the donut charts use, which the owner
+ * ratified as a legitimate wide palette for data series (plan §5.6). Index 5 is
+ * the folded tail and stays muted so it reads as "everything else". Static
+ * strings per the Tailwind hard rule.
+ */
 const MIX_BAR_CLASSES = [
-  "bg-foreground/80",
-  "bg-foreground/60",
-  "bg-foreground/45",
-  "bg-foreground/30",
+  "bg-blue-500",
+  "bg-cyan-500",
+  "bg-violet-500",
+  "bg-amber-500",
+  "bg-teal-500",
   "bg-muted-foreground/40",
-  "bg-foreground/10",
 ] as const;
 
 const UNCLASSIFIED_MIX_KEY = "unclassified";
@@ -255,6 +285,7 @@ function buildLadder(slices: readonly ReserveSlice[]): ReserveQualityLadderClien
   }
   return LADDER_ORDER.filter((horizon) => (shares.get(horizon) ?? 0) > 0).map((horizon) => ({
     key: horizon,
+    tone: HORIZON_TONES[horizon],
     label: HORIZON_LABELS[horizon],
     pct: round1(shares.get(horizon)!),
   }));
