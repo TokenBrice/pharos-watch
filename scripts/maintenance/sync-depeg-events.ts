@@ -15,7 +15,7 @@ import type { DepegEvent } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
+import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -101,6 +101,30 @@ export function findMissingStaticDepegArchiveSlugs(
   return selectStaticDepegEventPages(previous)
     .map((event) => event.slug)
     .filter((slug) => !currentSlugs.has(slug));
+}
+
+/**
+ * Keep a published page when the live event is later reclassified below the
+ * static-page threshold. The archive is grow-only, so the older published row
+ * remains the source for that URL while the current API projection continues
+ * to describe the event in the live tracker.
+ */
+export function preserveStaticDepegArchiveEntries(
+  previous: readonly DepegEventEntry[],
+  current: readonly DepegEventEntry[],
+): DepegEventEntry[] {
+  const mergedBySlug = new Map(current.map((entry) => [entry.slug, entry] as const));
+
+  for (const previousEntry of selectStaticDepegEventPages(previous)) {
+    const currentEntry = mergedBySlug.get(previousEntry.slug);
+    if (currentEntry != null && hasDedicatedDepegEventPage(currentEntry)) continue;
+    mergedBySlug.set(previousEntry.slug, previousEntry);
+  }
+
+  return [...mergedBySlug.values()].sort((a, b) => {
+    if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
+    return b.id - a.id;
+  });
 }
 
 export function assertStaticDepegArchivePreserved(
@@ -258,8 +282,13 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
           }
         }
 
-        assertStaticDepegArchivePreserved(previousEntries, computedEntries, options.allowArchiveShrink);
-        return computedEntries;
+        const archivePreservedEntries = preserveStaticDepegArchiveEntries(previousEntries, computedEntries);
+        assertStaticDepegArchivePreserved(
+          previousEntries,
+          archivePreservedEntries,
+          options.allowArchiveShrink,
+        );
+        return archivePreservedEntries;
       },
       write: !options.dryRun,
     });
