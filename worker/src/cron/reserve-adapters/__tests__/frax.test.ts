@@ -135,6 +135,31 @@ describe("adaptFraxBalanceSheet", () => {
     expect(unknown!.risk).toBe("high");
   });
 
+  it("classifies the current legacy FRAX residual symbols without collapsing them into an unknown bucket", () => {
+    const result = adaptFraxBalanceSheet({
+      asOfTimestamp: "2026-08-11T12:04:11.000Z",
+      totalAssets: 100,
+      assets: [
+        { tokenSymbol: "EREBOR_USD", totalValueUsd: 40, category: "asset:owned:usd" },
+        { tokenSymbol: "VELO", totalValueUsd: 20, category: "asset:owned:usd" },
+        { tokenSymbol: "crvUSD", totalValueUsd: 15, category: "asset:owned:usd" },
+        { tokenSymbol: "USDT", totalValueUsd: 10, category: "asset:owned:usd" },
+        { tokenSymbol: "BNB", totalValueUsd: 10, category: "asset:owned:usd" },
+        { tokenSymbol: "MATIC", totalValueUsd: 5, category: "asset:owned:usd" },
+      ],
+    });
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "EREBOR_USD (Erebor Bank frxUSD reserve account)", risk: "very-low" }),
+      expect.objectContaining({ name: "VELO (locked veNFT #4976)", risk: "very-high" }),
+      expect.objectContaining({ name: "sfrxUSD/scrvUSD Curve LP", risk: "medium" }),
+      expect.objectContaining({ name: "USDT", coinId: "usdt-tether", risk: "low" }),
+      expect.objectContaining({ name: "BNB", risk: "high" }),
+      expect.objectContaining({ name: "MATIC", risk: "high" }),
+    ]));
+  });
+
   it("keeps source total-assets gaps explicit instead of renormalizing mapped rows", () => {
     const result = adaptFraxBalanceSheet({
       ...BALANCE_SHEET_SAMPLE,
