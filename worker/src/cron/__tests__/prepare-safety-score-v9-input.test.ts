@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION as METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import type { PegSummaryCoin } from "@shared/types/market";
 
@@ -13,6 +13,8 @@ const mockDerivePegAnalytics = vi.fn();
 const mockPublishPegAnalytics = vi.fn();
 const mockLoadExactDexGeneration = vi.fn();
 const mockSetCacheMany = vi.fn();
+const mockGetCacheUpdatedAt = vi.fn();
+const mockLoadStablecoinsCache = vi.fn();
 const mockCapturePegProvenance = vi.fn();
 const mockBuildV9PegProvenanceSeed = vi.fn();
 
@@ -47,6 +49,11 @@ vi.mock("../../lib/report-cards-snapshot", () => ({
 
 vi.mock("../../lib/db-cache", () => ({
   setCacheMany: mockSetCacheMany,
+  getCacheUpdatedAt: mockGetCacheUpdatedAt,
+}));
+
+vi.mock("../../lib/stablecoins-cache", () => ({
+  loadStablecoinsCache: mockLoadStablecoinsCache,
 }));
 
 vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => ({
@@ -55,9 +62,35 @@ vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => ({
   buildSafetyScoreV9PegProvenanceSeedCacheEntry: mockBuildV9PegProvenanceSeed,
 }));
 
-const { prepareSafetyScoreV9Input } = await import("../prepare-safety-score-v9-input");
+const {
+  prepareSafetyScoreV9Input,
+  V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS,
+} = await import("../prepare-safety-score-v9-input");
 const { buildNativeSafetyScoreV9Capture } = await import("../../lib/safety-score-v9-capture");
 const { NativeSafetyScoreV9InputSchema } = await import("../../lib/safety-score-v9-native-input");
+
+type ProgressRow = {
+  started_at: number;
+  updated_at: number;
+  stage: string | null;
+  lease_owner: string | null;
+  lease_until: number;
+} | null;
+
+function makeDb(progressRows: ProgressRow[] = [null]): D1Database {
+  let progressIndex = 0;
+  return {
+    prepare: () => ({
+      bind: () => ({
+        first: async () => {
+          const row = progressRows[Math.min(progressIndex, progressRows.length - 1)] ?? null;
+          progressIndex += 1;
+          return row;
+        },
+      }),
+    }),
+  } as unknown as D1Database;
+}
 
 function pegSummary(): PegSummaryCoin {
   return {
@@ -83,28 +116,7 @@ function pegSummary(): PegSummaryCoin {
 
 function snapshotInputs() {
   return {
-    stablecoinsCached: {
-      kind: "ok" as const,
-      updatedAt: STABLECOINS_UPDATED_AT,
-      payload: {
-        peggedAssets: [
-          {
-            id: ASSET_ID,
-            circulating: { peggedUSD: 1_000 },
-            chainCirculating: {
-              ethereum: {
-                current: 1_000,
-                circulatingPrevDay: 900,
-                circulatingPrevWeek: 800,
-                circulatingPrevMonth: 700,
-              },
-            },
-            supplyObservedAt: STABLECOINS_UPDATED_AT,
-          },
-        ],
-        fxFallbackRates: {},
-      },
-    },
+    stablecoinsCached: stablecoinsCache(),
     bluechipCached: null,
     dexLiquiditySnapshot: {
       map: {
@@ -137,14 +149,42 @@ function snapshotInputs() {
   };
 }
 
+function stablecoinsCache(updatedAt = STABLECOINS_UPDATED_AT) {
+  return {
+    kind: "ok" as const,
+    updatedAt,
+    payload: {
+      peggedAssets: [
+        {
+          id: ASSET_ID,
+          circulating: { peggedUSD: 1_000 },
+          chainCirculating: {
+            ethereum: {
+              current: 1_000,
+              circulatingPrevDay: 900,
+              circulatingPrevWeek: 800,
+              circulatingPrevMonth: 700,
+            },
+          },
+          supplyObservedAt: updatedAt,
+        },
+      ],
+      fxFallbackRates: {},
+    },
+  };
+}
+
 describe("prepareSafetyScoreV9Input", () => {
   beforeEach(() => {
+    vi.useRealTimers();
     for (const mock of [
       mockLoadInputs,
       mockDerivePegAnalytics,
       mockPublishPegAnalytics,
       mockLoadExactDexGeneration,
       mockSetCacheMany,
+      mockGetCacheUpdatedAt,
+      mockLoadStablecoinsCache,
       mockCapturePegProvenance,
       mockBuildV9PegProvenanceSeed,
     ]) {
@@ -163,6 +203,8 @@ describe("prepareSafetyScoreV9Input", () => {
       updatedAt: DEX_UPDATED_AT,
     });
     mockSetCacheMany.mockResolvedValue(undefined);
+    mockGetCacheUpdatedAt.mockResolvedValue(STABLECOINS_UPDATED_AT);
+    mockLoadStablecoinsCache.mockResolvedValue(stablecoinsCache());
     mockCapturePegProvenance.mockReturnValue({ [ASSET_ID]: { marker: "compact-peg-provenance" } });
     mockBuildV9PegProvenanceSeed.mockImplementation(({ safetyScoreIdentity }) => ({
       key: "report-cards:v9-peg-provenance-seed:exact",
@@ -171,8 +213,12 @@ describe("prepareSafetyScoreV9Input", () => {
     }));
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("writes an envelope-v2 capture and its seed under one v9-input identity", async () => {
-    const result = await prepareSafetyScoreV9Input({} as D1Database);
+    const result = await prepareSafetyScoreV9Input(makeDb());
 
     expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
     const [, entries] = mockSetCacheMany.mock.calls[0]!;
@@ -203,6 +249,9 @@ describe("prepareSafetyScoreV9Input", () => {
     expect(metadata.activeAssets).toBe(1);
     expect(metadata.pegAnalyticsPublished).toBe(true);
     expect(metadata.dexGenerationId).toBe(DEX_GENERATION_ID);
+    expect(metadata.stablecoinsCacheReadiness).toMatchObject({
+      pendingStartedAt: null,
+    });
     expect(result.itemCount).toBe(1);
   });
 
@@ -220,7 +269,7 @@ describe("prepareSafetyScoreV9Input", () => {
   });
 
   it("publishes the peg-analytics aggregate exactly once per capture", async () => {
-    await prepareSafetyScoreV9Input({} as D1Database);
+    await prepareSafetyScoreV9Input(makeDb());
 
     expect(mockPublishPegAnalytics).toHaveBeenCalledTimes(1);
     expect(mockPublishPegAnalytics.mock.calls[0]![1]).toMatchObject({ nowSec: CLOCK_SEC });
@@ -228,9 +277,89 @@ describe("prepareSafetyScoreV9Input", () => {
 
   it("refuses a capture whose DEX generation is not the one the scheduler observed", async () => {
     await expect(
-      prepareSafetyScoreV9Input({} as D1Database, undefined, "dex-liquidity-1"),
+      prepareSafetyScoreV9Input(makeDb(), undefined, "dex-liquidity-1"),
     ).rejects.toThrow(/captured DEX generation .* expected dex-liquidity-1/);
     expect(mockSetCacheMany).not.toHaveBeenCalled();
   });
 
+  it("passes the settled stablecoins cache into the native capture", async () => {
+    const settledCache = stablecoinsCache();
+
+    mockLoadStablecoinsCache.mockResolvedValueOnce(settledCache);
+    await prepareSafetyScoreV9Input(makeDb());
+
+    expect(mockLoadInputs).toHaveBeenCalledWith(expect.anything(), {
+      preloadedStablecoinsCache: settledCache,
+    });
+  });
+
+  it("waits for an active stablecoins run before capturing V9 input", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const settledCache = stablecoinsCache(200);
+    const activeProgress = {
+      started_at: 200,
+      updated_at: 201,
+      stage: "pricing",
+      lease_owner: "lease-a",
+      lease_until: 999,
+    };
+    mockGetCacheUpdatedAt
+      .mockResolvedValueOnce(100)
+      .mockResolvedValueOnce(200);
+    mockLoadStablecoinsCache.mockResolvedValueOnce(settledCache);
+
+    const promise = prepareSafetyScoreV9Input(makeDb([activeProgress, activeProgress]));
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(2_500);
+    const result = await promise;
+
+    expect(result.status).toBeUndefined();
+    expect(mockLoadInputs).toHaveBeenCalledWith(expect.anything(), {
+      preloadedStablecoinsCache: settledCache,
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stablecoinsCacheReadiness: {
+        waitedMs: 2500,
+        pendingStartedAt: 200,
+      },
+    });
+  });
+
+  it("does not overwrite the fixed input while a newer stablecoins generation remains pending", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    const activeProgress = {
+      started_at: 200,
+      updated_at: 201,
+      stage: "pricing",
+      lease_owner: "lease-a",
+      lease_until: 999,
+    };
+    mockGetCacheUpdatedAt.mockResolvedValue(100);
+
+    const promise = prepareSafetyScoreV9Input(makeDb([activeProgress]));
+    await Promise.resolve();
+    await Promise.resolve();
+    await vi.advanceTimersByTimeAsync(V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS);
+    const result = await promise;
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 0,
+      productivity: {
+        productive: false,
+        reason: "safety-score-v9-input-source-unavailable",
+      },
+    });
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      stage: "stablecoins-cache-readiness",
+      reason: "stablecoins-generation-pending",
+      pendingStablecoinsStartedAt: 200,
+      pendingStablecoinsStage: "pricing",
+    });
+    expect(mockLoadInputs).not.toHaveBeenCalled();
+    expect(mockSetCacheMany).not.toHaveBeenCalled();
+  });
 });
