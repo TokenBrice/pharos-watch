@@ -922,7 +922,9 @@ export function upstreamOracleNavScore(
   result: V9EvaluatedAsset,
   envelope: V9ValidatedPolicyEnvelope,
 ): number | null {
-  const localScore = result.control.components.find((component) => component.kind === "oracle")?.score ?? null;
+  const localComponentScore = result.control.components.find((component) => component.kind === "oracle")?.score;
+  const localScore =
+    localComponentScore ?? (result.control.oracleApplicability === "not-applicable" ? 95 : null);
   const oracleRoleInputs = (result.dependencyInputs.roleInputs ?? []).filter(
     (input) => input.role === "oracle-nav",
   );

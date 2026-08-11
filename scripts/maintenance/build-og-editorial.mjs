@@ -26,7 +26,9 @@ import { escapeXml } from "../lib/og-svg.mjs";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
+  promoteGeneratedPngIfChanged,
   stalePngCheckLabel,
+  writeFileIfChanged,
 } from "../lib/og-image-checks.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -298,7 +300,10 @@ try {
     writeFileSync(htmlPath, buildHtml(svg));
 
     const publicPath = resolve(PUBLIC, card.file);
-    const outPath = CHECK_MODE ? resolve(STAGING, card.file.replace(/\.png$/, ".check.png")) : publicPath;
+    const outPath = resolve(
+      STAGING,
+      card.file.replace(/\.png$/, CHECK_MODE ? ".check.png" : `.write-${process.pid}.png`),
+    );
     const page = await browser.newPage({
       viewport: { width: 1200, height: 628 },
     });
@@ -313,6 +318,7 @@ try {
     });
     await page.close();
 
+    let changed = false;
     if (CHECK_MODE) {
       const staleLabel = await stalePngCheckLabel({
         fileLabel: card.file,
@@ -322,6 +328,8 @@ try {
       if (staleLabel) {
         staleFiles.push(staleLabel);
       }
+    } else {
+      changed = await promoteGeneratedPngIfChanged({ stagedPath: outPath, publicPath });
     }
 
     // Clean up the staging files now that the PNG is captured.
@@ -334,6 +342,7 @@ try {
     }
     console.log(formatOgWriteStatus({
       check: CHECK_MODE,
+      changed,
       publicPath,
       suffix: ` (kicker: ${card.kicker})`,
     }));
@@ -344,7 +353,7 @@ try {
       staleFiles.push("scripts/maintenance/state/og-editorial-signatures.json");
     }
   } else {
-    writeFileSync(SIGNATURE_PATH, buildSignatureManifest(withPublicPngSignatures(renderInputSignatures)));
+    writeFileIfChanged(SIGNATURE_PATH, buildSignatureManifest(withPublicPngSignatures(renderInputSignatures)));
   }
 
   assertNoStaleOgOutputs({

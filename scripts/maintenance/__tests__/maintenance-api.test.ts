@@ -145,5 +145,11 @@ describe("AI summary V9 current-value projection", () => {
       expect.objectContaining({ kind: "holder-address-scope", severity: "medium" }),
       expect.objectContaining({ kind: "financing-to-product-scale", severity: "high" }),
     ]));
+
+    expect(
+      extractFindings("Deposited assets are owned by the strategy, holders receive no priority claim.", current),
+    ).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ kind: "holder-address-scope" }),
+    ]));
   });
 });

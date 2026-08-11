@@ -6,7 +6,10 @@ import {
   useBluechipRatings,
   useDexLiquidity,
   usePegSummary,
+  useRedemptionBackstops,
   useReportCardsV9,
+  useStressSignals,
+  useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useQuerySlices } from "@/hooks/use-query-slice";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
@@ -39,21 +42,28 @@ export function useCompareDataModel({
   const bluechipQuery = useBluechipRatings();
   const dexQuery = useDexLiquidity();
   const reportCardsQuery = useReportCardsV9();
+  const redemptionQuery = useRedemptionBackstops();
+  const yieldQuery = useYieldRankings();
+  const stressQuery = useStressSignals();
   const { data: flowData, refetch: refetchFlows } = useMintBurnFlows();
 
-  const { list, peg, bluechip, dex, reportCards } = useQuerySlices({
+  const { list, peg, bluechip, dex, reportCards, redemption, yieldRankings, stress } = useQuerySlices({
     list: listQuery,
     peg: pegQuery,
     bluechip: bluechipQuery,
     dex: dexQuery,
     reportCards: reportCardsQuery,
+    redemption: redemptionQuery,
+    yieldRankings: yieldQuery,
+    stress: stressQuery,
   });
   const listData = list.data;
   const pegSummary = peg.data;
   const dexData = dex.data;
   const reportCardsData = reportCards.data;
 
-  const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error;
+  const globalError = list.error ?? peg.error ?? bluechip.error ?? dex.error ?? reportCards.error
+    ?? redemption.error ?? yieldRankings.error ?? stress.error;
 
   const cardMap = useMemo(() => {
     if (!reportCardsData?.cards) return new Map<string, V9ConsumerCard>();
@@ -122,6 +132,10 @@ export function useCompareDataModel({
     return new Map(flowData.coins.map((c) => [c.stablecoinId, c] as const));
   }, [flowData]);
 
+  const yieldMap = useMemo(() => {
+    return new Map((yieldRankings.data?.rankings ?? []).map((row) => [row.id, row] as const));
+  }, [yieldRankings.data?.rankings]);
+
   const comparisonCoins = useMemo(() => {
     return deriveComparisonCoins({
       selectedIds,
@@ -131,8 +145,12 @@ export function useCompareDataModel({
       dexData,
       cardMap,
       flowCoinMap,
+      bluechipMap: bluechip.data,
+      redemptionMap: redemption.data?.coins,
+      yieldMap,
+      stressMap: stress.data?.signals,
     });
-  }, [assetMap, cardMap, dexData, flowCoinMap, pegCoinMap, selectedIds]);
+  }, [assetMap, bluechip.data, cardMap, dexData, flowCoinMap, pegCoinMap, redemption.data?.coins, selectedIds, stress.data?.signals, yieldMap]);
 
   const supplySeries = useMemo(() => {
     return deriveSupplySeries({
@@ -167,6 +185,9 @@ export function useCompareDataModel({
       bluechipQuery.refetch,
       dexQuery.refetch,
       reportCardsQuery.refetch,
+      redemptionQuery.refetch,
+      yieldQuery.refetch,
+      stressQuery.refetch,
       refetchFlows,
       ...detailQueries.map((query) => query.refetch),
       ...flowCoinQueries.map((query) => query.refetch),
@@ -182,6 +203,9 @@ export function useCompareDataModel({
     listQuery.refetch,
     pegQuery.refetch,
     reportCardsQuery.refetch,
+    redemptionQuery.refetch,
+    stressQuery.refetch,
+    yieldQuery.refetch,
   ]);
 
   return {
@@ -201,7 +225,10 @@ export function useCompareDataModel({
     pegRates,
     radarCards,
     reportCards,
+    redemption,
+    stress,
     supplySeries,
+    yieldRankings,
     handleRetry,
   };
 }

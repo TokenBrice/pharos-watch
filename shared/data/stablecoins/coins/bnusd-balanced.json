@@ -49,6 +49,21 @@
   ],
   "contracts": [
     {
+      "chain": "icon",
+      "address": "cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
+      "decimals": 18
+    },
+    {
+      "chain": "archway",
+      "address": "archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7",
+      "decimals": 18
+    },
+    {
+      "chain": "havah",
+      "address": "cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc",
+      "decimals": 18
+    },
+    {
       "chain": "base",
       "address": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
       "decimals": 18
@@ -85,8 +100,8 @@
   "notices": [
     {
       "type": "info",
-      "title": "Primary issuance lives on ICON, not yet a Pharos-supported chain",
-      "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb) where ~95% of supply currently sits. Balanced uses its xCall infrastructure to extend the same supply to other chains, so the EVM/Injective contracts tracked here represent cross-chain burn-mint representations of the ICON-issued supply. Additional active deployments on Archway and Havah (also not Pharos-supported) are visible in DefiLlama but excluded from contracts[] until those chains are wired into Pharos; the Optimism deployment was verified and added 2026-07-20."
+      "title": "Primary issuance lives on ICON",
+      "message": "bnUSD is minted on ICON (canonical contract cx88fd7df7ddff82f7cc735c871dc519838cb235bb). Balanced uses its xCall infrastructure to extend the same supply to other chains, so the Archway, Havah, EVM, and Injective contracts tracked here are cross-chain burn-mint representations of the ICON-issued supply. ICON, Archway, and Havah deployments were added after their chain mappings and connected-contract identities were verified on 2026-08-11; these chains do not have token-pool providers, so contract-level runtime balance queries remain unsupported."
     },
     {
       "type": "info",

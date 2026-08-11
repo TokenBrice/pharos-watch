@@ -101,13 +101,34 @@ describe("projectOracleRiskClientSummary", () => {
 
   it("tolerates a single-path profile with no branches", () => {
     const summary = projectOracleRiskClientSummary(
-      coinWith({ tier: "oracleless-or-internal", summary: "Internal exchange-rate accounting only." }),
+      coinWith({ tier: "privileged-internal-pricing", summary: "Internal exchange-rate accounting only." }),
     );
     expect(summary!.branchCount).toBe(0);
     expect(summary!.worstMaxLtvPct).toBeNull();
     expect(summary!.maxLiquidationDelayLabel).toBeNull();
     expect(summary!.confidenceLabel).toBeNull();
     expect(summary!.reviewedAt).toBeNull();
+  });
+
+  it("presents a not-applicable liquidation review as neutral and unscored", () => {
+    const summary = projectOracleRiskClientSummary(
+      coinWith({
+        tier: "oracleless",
+        summary: "No liquidation oracle is needed.",
+        branchApplicability: {
+          disposition: "not-applicable",
+          reviewedAt: "2026-08-11",
+          reviewer: "test",
+          rationale: "This asset has no price-sensitive liquidation path.",
+          sources: [{ label: "Docs", url: "https://example.com/docs" }],
+        },
+      }),
+    );
+
+    expect(summary).toMatchObject({
+      tierLabel: "No liquidation oracle · not scored",
+      tierToneClass: "border-border/60 bg-muted/30 text-muted-foreground",
+    });
   });
 
   it("rounds collateral-parameter percentage labels while keeping the numeric worst-case fields exact", () => {

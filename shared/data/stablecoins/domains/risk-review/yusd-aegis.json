@@ -13,7 +13,7 @@
     "reviewedAt": "2026-07-14"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "YUSD is issued against Aegis's pooled BTC spot and COIN-M hedge portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
     "branchModel": "single-path",
     "branchApplicability": {

@@ -25,7 +25,7 @@
     "reviewedAt": "2026-08-09"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "LUAUSD is minted by users staking LUA against Lumi's internal floor-price mechanism; the reviewed material does not establish the position-level collateral checks or liquidation path.",
     "branchModel": "single-path",
     "branchApplicability": {

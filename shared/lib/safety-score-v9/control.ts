@@ -30,7 +30,8 @@ export type V9MintPosture =
   | "unbounded-or-compromised"
   | "unknown";
 export type V9OracleTier =
-  | "oracleless-or-internal"
+  | "oracleless"
+  | "privileged-internal-pricing"
   | "redundant-with-failover"
   | "medianized-with-delay"
   | "standard-external"
@@ -114,6 +115,7 @@ export interface V9OracleBranchReview {
 export interface V9OracleControlReview {
   status: V9FactStatusV2;
   tier: V9OracleTier | null;
+  liquidationBranchesApplicable?: boolean;
   branches: readonly V9OracleBranchReview[];
   /**
    * Worst severity band from weak market branches whose measured debt share is
@@ -223,6 +225,7 @@ export interface V9ControlStructuralFailure {
 export interface V9EconomicControlResult {
   score: number | null;
   state: "rated" | "not-rated";
+  oracleApplicability: V9FactStatusV2["applicability"]["state"];
   components: readonly V9ControlComponent[];
   reasons: readonly V9CompactControlReason[];
   structuralFailures: readonly V9ControlStructuralFailure[];
@@ -988,15 +991,8 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
 
   const oracle = args.oracle;
   if (oracle.status.applicability.state === "not-applicable") {
-    components.push({
-      componentKey: "oracle",
-      kind: "oracle",
-      posture: "oracleless-or-internal",
-      score: policy.control.oracleTierQuality["oracleless-or-internal"],
-      binding: true,
-      controlKeys: [],
-      failureDomains: [],
-    });
+    // No price-sensitive oracle or internal valuation path exists to score.
+    // Not-applicable is neutral rather than evidence of a strong control.
   } else if (oracle.status.applicability.state === "unresolved") {
     addReason("unresolved-oracle-branch-applicability", "local-component", "oracle");
   } else if (oracle.status.observationState !== "known") {
@@ -1014,7 +1010,10 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       branchesByKind.set(branch.branch, branch);
     }
     const oracleControls = new Map<string, V9DeploymentControlFactV2>();
-    const missingBranches = ORACLE_BRANCHES.filter((branch) => !branchesByKind.has(branch));
+    const missingBranches =
+      oracle.liquidationBranchesApplicable === false
+        ? []
+        : ORACLE_BRANCHES.filter((branch) => !branchesByKind.has(branch));
     if (missingBranches.length > 0) {
       addReason("missing-required-oracle-branches", "local-component", "oracle:branches");
     }
@@ -1066,7 +1065,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
         controlKeys: linkedControls.map((control) => control.controlKey).sort(compareText),
         failureDomains,
       });
-      if (oracle.tier === "single-source-or-laggy" || oracle.tier === "opaque-or-unknown") {
+      if (
+        oracle.tier === "privileged-internal-pricing" ||
+        oracle.tier === "single-source-or-laggy" ||
+        oracle.tier === "opaque-or-unknown"
+      ) {
         addStructuralFailure({
           kind: "weak-oracle-branch",
           severity: oracle.tier === "opaque-or-unknown" ? "critical" : "high",
@@ -1311,11 +1314,20 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
   const bindingScores = normalizedComponents
     .filter((component) => component.binding)
     .map((component) => component.score);
-  const score = critical || bindingScores.length === 0 ? null : Math.min(...bindingScores);
+  const neutralWithoutBindingControls =
+    bindingScores.length === 0 && oracle.status.applicability.state === "not-applicable";
+  const score = critical
+    ? null
+    : bindingScores.length > 0
+      ? Math.min(...bindingScores)
+      : neutralWithoutBindingControls
+        ? 95
+        : null;
 
   return {
     score,
     state: score === null ? "not-rated" : "rated",
+    oracleApplicability: oracle.status.applicability.state,
     components: normalizedComponents,
     reasons: normalizedReasons,
     structuralFailures: normalizedStructuralFailures,

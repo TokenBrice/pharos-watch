@@ -270,7 +270,7 @@ const WORK_TYPES: Record<V9MissingDataWorkType, WorkTypeDefinition> = {
     title: "Oracle and liquidation profile",
     stream: "ORCL",
     instructions:
-      "Populate oracleRisk with tier, branch model/applicability disposition, all required branch reviews, control or mechanism references, sources, reviewer, and review date. Explicitly review genuinely oracleless designs as not applicable.",
+      "Populate oracleRisk with tier, branch model/applicability disposition, all required branch reviews, control or mechanism references, sources, reviewer, and review date. Use not-applicable only when no price-sensitive control exists; classify genuinely oracleless and privileged internal pricing separately.",
     completionCriteria:
       "The oracle economic-control review compiles as known or reviewed not-applicable and the profile gapId is absent.",
     recommendedSkill: null,

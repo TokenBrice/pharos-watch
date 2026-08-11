@@ -5,18 +5,43 @@
 
 import { COMPARE_COLORS } from "@/lib/compare-config";
 import type {
+  BluechipRating,
+  DexLiquidityData,
+  MintBurnCoinFlow,
   MintBurnPerCoinResponse,
+  PegSummaryCoin,
+  RedemptionBackstopEntry,
   ReportCardGrade,
   StablecoinData,
-  StablecoinMeta,
+  StressSignalEntry,
   SupplyHistoryPoint,
+  YieldRanking,
 } from "@shared/types";
+import type { StablecoinClientMeta } from "@shared/types/stablecoin-client-meta";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import type { NetFlowDirection24h, PressureShiftState } from "@shared/lib/mint-burn-signals";
 
 export type ComparisonMeta = Pick<
-  StablecoinMeta,
-  "commodityOunces" | "flags" | "frozenAt" | "id" | "name" | "status" | "symbol"
+  StablecoinClientMeta,
+  | "blacklistStatus"
+  | "collateralQuality"
+  | "commodityOunces"
+  | "custodyModel"
+  | "flags"
+  | "frozenAt"
+  | "genius"
+  | "id"
+  | "launchDate"
+  | "mechanismArchetype"
+  | "mica"
+  | "mintAuthoritySummary"
+  | "name"
+  | "reserves"
+  | "status"
+  | "symbol"
+  | "variantKind"
+  | "variantOf"
+  | "yieldConfig"
 >;
 
 export interface ComparisonCoinEntry {
@@ -29,6 +54,14 @@ export interface ComparisonCoinEntry {
   liquidityScore: number | null;
   safetyGrade: ReportCardGrade | null;
   netFlow30d: number | null;
+  pegDetails?: PegSummaryCoin | null;
+  liquidity?: DexLiquidityData | null;
+  safetyCard?: V9ConsumerCard | null;
+  redemption?: RedemptionBackstopEntry | null;
+  yield?: YieldRanking | null;
+  stress?: StressSignalEntry | null;
+  flow?: MintBurnCoinFlow | null;
+  bluechipRating?: BluechipRating | null;
 }
 
 export interface SupplySeriesEntry {
@@ -84,6 +117,10 @@ export function deriveComparisonCoins({
   dexData,
   cardMap,
   flowCoinMap,
+  bluechipMap,
+  redemptionMap,
+  yieldMap,
+  stressMap,
 }: {
   selectedIds: string[];
   assetMap: Map<string, StablecoinData>;
@@ -92,6 +129,10 @@ export function deriveComparisonCoins({
   dexData: DexDataMap | undefined;
   cardMap: Map<string, V9ConsumerCard>;
   flowCoinMap: Map<string, FlowCoinSlice>;
+  bluechipMap?: Record<string, BluechipRating> | null;
+  redemptionMap?: Record<string, RedemptionBackstopEntry>;
+  yieldMap?: Map<string, YieldRanking>;
+  stressMap?: Record<string, StressSignalEntry>;
 }): ComparisonCoinEntry[] {
   if (assetMap.size === 0) return [];
   return selectedIds
@@ -113,6 +154,14 @@ export function deriveComparisonCoins({
         liquidityScore: dexCoin?.liquidityScore ?? null,
         safetyGrade,
         netFlow30d: flowCoin?.netFlow30dUsd ?? null,
+        pegDetails: (pegCoin as PegSummaryCoin | undefined) ?? null,
+        liquidity: (dexCoin as DexLiquidityData | undefined) ?? null,
+        safetyCard: cardMap.get(id) ?? null,
+        redemption: redemptionMap?.[id] ?? null,
+        yield: yieldMap?.get(id) ?? null,
+        stress: stressMap?.[id] ?? null,
+        flow: (flowCoin as MintBurnCoinFlow | undefined) ?? null,
+        bluechipRating: bluechipMap?.[id] ?? null,
       };
     })
     .filter((coin): coin is NonNullable<typeof coin> => coin != null);

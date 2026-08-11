@@ -4036,7 +4036,7 @@
     {
       "assetId": "paxg-paxos",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Pax Gold terms and conditions",
@@ -4061,9 +4061,12 @@
         },
         "assuranceAndReconciliation": {
           "quality": "adequate"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       },
-      "notes": "Carries forward the 2026-07-15 review: current PAXG terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure, and KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces and names Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers, supporting strong claim and segregation and strong custody continuity. Added in this pass: assurance and reconciliation is adequate because the same KPMG attestation provides a current, itemized, independent assets-and-liabilities reconciliation of redeemable tokens to vaulted fine troy ounces on a monthly cadence; adequate rather than strong because the engagement is an attestation over redemption assets rather than an audit or examination of the full reserve relationship. Not established: the June 2026 or later KPMG report was not reviewed in this pass, and per-bar allocation lookup for individual holders remains a Paxos-operated service rather than an independent disclosure.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact."
+      "notes": "Carries forward the 2026-07-15 review: current PAXG terms make holders beneficial and fractional owners of allocated London Good Delivery bars held through the federally regulated Paxos trust structure, and KPMG's May 29, 2026 report independently reconciles 467,075 redeemable tokens to 467,075 fine troy ounces and names Brink's Global Services and ICBC Standard Bank as the LBMA-approved vault providers, supporting strong claim and segregation and strong custody continuity. Added in this pass: assurance and reconciliation is adequate because the same KPMG attestation provides a current, itemized, independent assets-and-liabilities reconciliation of redeemable tokens to vaulted fine troy ounces on a monthly cadence; adequate rather than strong because the engagement is an attestation over redemption assets rather than an audit or examination of the full reserve relationship. Not established: the June 2026 or later KPMG report was not reviewed in this pass, and per-bar allocation lookup for individual holders remains a Paxos-operated service rather than an independent disclosure.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: the binding PAX Gold Terms section 11 gives verified holders an allocated-gold redemption route, subject to due diligence and delivery instructions, with a minimum of 430 PAXG plus the applicable fee for each London Good Delivery bar and settlement described as taking several business days. KPMG's May 29, 2026 examination independently reconciles the redeemable PAXG liability to the fine-troy-ounce redemption assets, but expressly does not examine the holder terms or execution of redemption. The enforceable route plus independently reconciled redemption-asset perimeter supports limited, not adequate, physicalRedemption."
     },
     {
       "assetId": "tbill-openeden",
@@ -4296,14 +4299,18 @@
     {
       "assetId": "vnxau-vnx",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "AREVA VNXAU agreed-upon-procedures report as of December 31, 2025",
           "url": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        {
+          "label": "VNX Commodity Token binding terms and conditions",
+          "url": "https://vnx-terms.s3.eu-central-1.amazonaws.com/VNX-Commodity-Token-Terms.pdf"
         }
       ],
-      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: sections 5 and 7 of the binding Commodity Token Terms provide a holder collection or delivery route, require the token burn and vault confirmation before release, and place delivery instructions and costs on the holder. The AREVA report independently anchors the VNXAU reserve account and records the governing terms in its reporting perimeter, but supplies no assurance over the redemption terms or execution. The enforceable but issuer-operated route supports limited physicalRedemption. The current reserve composition remains bounded because the December 2025 AUP does not cover the materially expanded current multi-chain supply perimeter.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
@@ -4313,6 +4320,9 @@
           "applicability": "unavailable",
           "rationale": "The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
           "sourceUrl": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },
@@ -4364,7 +4374,7 @@
     {
       "assetId": "xaum-matrixdock",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Matrixdock XAUm live reserve and redemption disclosure",
@@ -4385,15 +4395,30 @@
         {
           "label": "Matrixdock and Brink's XAUm vault partnership disclosure",
           "url": "https://www.matrixdock.com/blog/announcements/brinks-matrixdock-xaum-gold-partnership"
+        },
+        {
+          "label": "Matrixdock XAUm binding token terms",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2Foa3Zaj3t7Mic13UuT1ph%2FXAUm%20Token%20Terms%20and%20Conditions.docx.pdf?alt=media&token=3cad87ae-7846-4bfe-ba2e-411fbf166f60"
+        },
+        {
+          "label": "Matrixdock XAUm physical redemption process",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/minting-and-redeeming"
+        },
+        {
+          "label": "XAUm first physical-redemption burn transaction",
+          "url": "https://etherscan.io/tx/0x8716f5eb1d37a65c644b75e521905ff786e128a9a124a1f75d076ad6fa0ab905"
         }
       ],
-      "notes": "Reviewed 2026-08-08. Matrixdock reports 16,331.178 XAUm outstanding against 16,331.184 troy ounces in 508 bars. Its purpose-trust disclosure says token-issuing and asset-holding SPVs are segregated and bankruptcy remote, but no executed trust deed or holder-facing legal instrument is public, so claimAndSegregation is limited. The dated Bureau Veritas report physically inspected the 508 bars, and Matrixdock's inspection summary identifies Brink's Singapore, Brink's Hong Kong, and Malca-Amit Singapore as the active vault locations; this independently anchors the named custody set, but no failure, replacement, successor-custody, or rehypothecation terms are published, so custodyContinuity is limited. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport auto-resolves that component (audit, assets-only) as adequate. Archetype note: XAUm is a physically allocated gold token, so fiat-cash is a poor conceptual fit; a commodity-reserve archetype would be preferable if one is introduced.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Reviewed 2026-08-08. Matrixdock reports 16,331.178 XAUm outstanding against 16,331.184 troy ounces in 508 bars. Its purpose-trust disclosure says token-issuing and asset-holding SPVs are segregated and bankruptcy remote, but no executed trust deed or holder-facing legal instrument is public, so claimAndSegregation is limited. The dated Bureau Veritas report physically inspected the 508 bars, and Matrixdock's inspection summary identifies Brink's Singapore, Brink's Hong Kong, and Malca-Amit Singapore as the active vault locations; this independently anchors the named custody set, but no failure, replacement, successor-custody, or rehypothecation terms are published, so custodyContinuity is limited. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport auto-resolves that component (audit, assets-only) as adequate. Archetype note: XAUm is a physically allocated gold token, so fiat-cash is a poor conceptual fit; a commodity-reserve archetype would be preferable if one is introduced.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: the binding XAUm Terms section 4 grants eligible holders physical delivery subject to current requirements and requires redeemed tokens to be burned. The issuer process specifies a 32.148-XAUm one-kilogram minimum and 0.25% fee. A public Ethereum transaction independently confirms the exact 32.148-XAUm burn leg of Matrixdock's April 2025 first-redemption record; the physical handover remains issuer-reported. This measured but only partly independently observable route supports limited physicalRedemption.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
+          "quality": "limited"
+        },
+        "physicalRedemption": {
           "quality": "limited"
         }
       }
@@ -12641,7 +12666,7 @@
     {
       "assetId": "pgold-pleasing",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Pleasing PGOLD binding Terms of Sale and Service",
@@ -12649,15 +12674,19 @@
         },
         {
           "label": "Pleasing How PGOLD Works disclosure",
-          "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/how-pgold-works.md"
+          "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/how-pgold-works.md"
         },
         {
           "label": "Pleasing PGOLD token features",
-          "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/token-features"
+          "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/token-features"
         },
         {
           "label": "Pleasing PGOLD reserve-report page searched for financial assurance",
-          "url": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/reserve-report"
+          "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md"
+        },
+        {
+          "label": "Pleasing PGOLD physical redemption guide",
+          "url": "https://pleasing.gitbook.io/docs/user-guide/redeem-physical-gold.md"
         },
         {
           "label": "Beosin Pleasing Golden Yield smart-contract audit (not a bullion-reserve audit)",
@@ -12668,7 +12697,7 @@
           "url": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/licenses-and-certificates.md"
         }
       ],
-      "notes": "Pleasing's binding sale terms say each PGOLD is intended to correspond to an undivided interest in vaulted LBMA-standard metal with qualified Hong Kong custodians, and product docs state one token represents one troy ounce of 99.99% gold with KYC-gated physical redemption. The issuer's Hong Kong precious-metals registration corroborates its identity, but the terms hedge the claim and do not establish allocated bars, a trust, segregation or insolvency priority, so claimAndSegregation remains limited. The terms say custodian relationships are on a Transparency page, yet no named vault/custodian, allocation, succession plan or public Transparency page was found. The Reserve Report page contains no dated reconciliation; the terms state Chainlink PoR is informational, and the Beosin report covers staking contracts, not bullion. Custody and assurance are therefore unavailable. The centralized allocated-commodity design maps to the repository's fiat-cash control family; no alternative commodity archetype exists.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Pleasing's binding sale terms say each PGOLD is intended to correspond to an undivided interest in vaulted LBMA-standard metal with qualified Hong Kong custodians, and product docs state one token represents one troy ounce of 99.99% gold with KYC-gated physical redemption. The issuer's Hong Kong precious-metals registration corroborates its identity, but the terms hedge the claim and do not establish allocated bars, a trust, segregation or insolvency priority, so claimAndSegregation remains limited. The terms say custodian relationships are on a Transparency page, yet no named vault/custodian, allocation, succession plan or public Transparency page was found. Custody therefore remains unavailable. The current reserve-report page now embeds a June 25, 2026 VISTO CPA HKSAE 3000 report, but its limited inventory perimeter, partial physical count, absence of cadence, and omission of the Ethereum native supply require a separate assurance ruling before the prior unavailable disposition can be replaced.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: the binding sale terms provide KYC/KYB-qualified holders a Hong Kong physical-delivery route subject to minimums, fees, delivery instructions, and commercially reasonable processing. The issuer's operational guide specifies a 32.15-PGOLD minimum and an offline pickup workflow. The route is enforceable but issuer-operated, with no independent execution record or settlement SLA, so it supports limited physicalRedemption.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
@@ -12681,8 +12710,11 @@
         },
         "assuranceAndReconciliation": {
           "applicability": "unavailable",
-          "rationale": "The reviewed Reserve Report page publishes no dated reserve-to-token reconciliation; Chainlink PoR is expressly informational and the only located Beosin audit is smart-contract-only, not independent bullion inventory assurance.",
-          "sourceUrl": "https://pleasing.gitbook.io/docs/pleasing-gold-pgold/reserve-report"
+          "rationale": "The current Reserve Report page embeds a June 25, 2026 VISTO CPA HKSAE 3000 report, but only 50.86% of the claimed bullion was physically counted, the remainder relies on shipping and issuer/insider assertions, the liability perimeter covers the Arbitrum contract while a separate Ethereum native supply exists, and no recurring cadence is stated. This newly located report remains pending an explicit methodology ruling and does not yet replace the bounded disposition.",
+          "sourceUrl": "https://pleasing.gitbook.io/docs/tokenized-gold-pgold/reserve-report.md"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },

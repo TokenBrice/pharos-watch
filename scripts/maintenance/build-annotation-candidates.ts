@@ -36,7 +36,7 @@ const FETCH_TIMEOUT_MS = 6000;
 
 const LAST_SWEPT_RE = /<!--\s*last_swept_at:\s*(\d{4}-\d{2}-\d{2})\s*-->/;
 
-interface Candidate {
+export interface Candidate {
   coinId: string;
   date: string;
   kind: string;
@@ -261,9 +261,17 @@ function indexExistingFingerprints(existingBody: string): Set<string> {
   return seen;
 }
 
-function filterAgainstExisting(candidates: Candidate[], existingBody: string): Candidate[] {
+export function filterAgainstExisting(
+  candidates: Candidate[],
+  existingBody: string,
+  lastSweptAt: string | null = null,
+): Candidate[] {
   const existing = indexExistingFingerprints(existingBody);
-  return candidates.filter((c) => !existing.has(`${c.date}|${c.coinId}|${c.kind}`));
+  return candidates.filter(
+    (c) =>
+      (lastSweptAt == null || c.date > lastSweptAt) &&
+      !existing.has(`${c.date}|${c.coinId}|${c.kind}`),
+  );
 }
 
 function renderRow(c: Candidate): string {
@@ -323,7 +331,7 @@ async function main(): Promise<void> {
   const sinceMs = epochAt(lookbackDays);
   const today = todayIso();
 
-  const { body: existingBody } = readExistingQueue();
+  const { body: existingBody, lastSweptAt } = readExistingQueue();
 
   const notes: string[] = [];
   const collected: Candidate[] = [];
@@ -359,7 +367,7 @@ async function main(): Promise<void> {
   collected.push(...findRecentMilestones(coins));
 
   const deduped = dedupe(collected);
-  const fresh = filterAgainstExisting(deduped, existingBody);
+  const fresh = filterAgainstExisting(deduped, existingBody, lastSweptAt);
   fresh.sort((a, b) => {
     if (a.date !== b.date) return a.date.localeCompare(b.date);
     if (a.coinId !== b.coinId) return a.coinId.localeCompare(b.coinId);

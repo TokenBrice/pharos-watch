@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WFPS (Wrapped Frankencoin Pool Share)",
-      "pct": 66.3,
+      "pct": 79.9,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frankencoin protocol",
@@ -17,7 +17,7 @@
     },
     {
       "name": "WBTC (Wrapped BTC)",
-      "pct": 29.3,
+      "pct": 19,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BitGo WBTC",
@@ -31,26 +31,11 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "name": "cbBTC (Coinbase Wrapped BTC)",
-      "pct": 3.9,
-      "risk": "medium",
-      "assetClass": "cryptoasset",
-      "issuerOrObligor": "Coinbase cbBTC",
-      "riskFactors": [
-        "market",
-        "custody",
-        "counterparty",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "seven-days"
-    },
-    {
       "name": "Other collateral",
-      "pct": 0.5,
-      "risk": "high",
+      "pct": 1.1,
+      "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "dEURO approved collateral basket",
+      "issuerOrObligor": "Coinbase cbBTC, Kraken kBTC, and Ethereum",
       "riskFactors": [
         "market",
         "liquidity",
@@ -61,8 +46,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "SONG-1 Safety Score V9 reserve review",
+    "reviewedAt": "2026-08-11",
+    "reviewer": "Pharos reserve research (Kimi P0 re-verification)",
     "confidence": "verified",
     "sources": [
       {
@@ -76,21 +61,29 @@
       {
         "label": "dEURO collateral positions API",
         "url": "https://api.deuro.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "dEURO collateral price mapping API",
+        "url": "https://api.deuro.com/prices/mapping"
+      },
+      {
+        "label": "Blockscout verified WFPS wrapper contract",
+        "url": "https://eth.blockscout.com/address/0x5052D3Cc819f53116641e89B96ff4cD1Ee80B182"
       }
     ],
-    "rationale": "The current dEURO collateral positions capture contains four categories totaling 100%: WFPS, WBTC, cbBTC, and an aggregate Other collateral row. dEURO documentation describes immutable, oracle-free collateralized positions and the live API supplies the point-in-time weights; the aggregate residual remains explicitly unresolved rather than being split into unsupported constituents.",
+    "rationale": "The dEURO collateral positions and price-mapping APIs re-read on 2026-08-11 produce the same three normalized slices as the live collateral-positions adapter: 79.9% WFPS, 19.0% WBTC, and 1.1% Other collateral. The source itemizes the residual as cbBTC, kBTC, and WETH positions below the adapter's 2% display threshold. The verified WFPS wrapper contract independently anchors the dominant token identity; the API price dimension remains issuer-provided.",
     "compositionBasis": "Current dEURO collateral positions API and official protocol documentation",
-    "compositionAsOf": "2026-07-14",
+    "compositionAsOf": "2026-08-11",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 0.5% Other collateral row is an aggregate live category whose constituent assets and issuer exposure are not disclosed by the reviewed API response.",
-    "knownUnknownExposurePct": 0.5,
+    "knownUnknownExposure": "No collateral identity is undisclosed in the reviewed source. The displayed 1.1% Other collateral row aggregates identified cbBTC, kBTC, and WETH positions below the adapter's 2% threshold, so its exact per-asset failure-domain weights remain unresolved in the displayed slice.",
+    "knownUnknownExposurePct": 1.1,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 3,
+        "reserveIndex": 2,
         "reserveName": "Other collateral",
-        "pct": 0.5,
+        "pct": 1.1,
         "disposition": "insufficient-evidence",
-        "rationale": "The live API reports an aggregate Other collateral category without constituent identity or weights."
+        "rationale": "The live display aggregates individually identified cbBTC, kBTC, and WETH positions below the 2% threshold, so no single dependency edge is assigned to the combined slice."
       }
     ]
   }

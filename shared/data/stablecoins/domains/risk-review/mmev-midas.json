@@ -17,7 +17,7 @@
     "reviewedAt": "2026-05-14"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "mMEV is a NAV-accreting Midas Liquid Yield Token tracking a delta-neutral DeFi strategy; its underlying protocols can have liquidation risk, but mMEV is not itself a borrower CDP.",
     "branchModel": "single-path",
     "branchApplicability": {

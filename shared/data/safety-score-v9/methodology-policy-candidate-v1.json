@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "9.16",
+  "releaseVersion": "9.17",
   "semantic": {
     "formula": {
       "pillarWeights": {
@@ -884,7 +884,8 @@
         }
       },
       "oracleTierQuality": {
-        "oracleless-or-internal": 95,
+        "oracleless": 95,
+        "privileged-internal-pricing": 45,
         "redundant-with-failover": 90,
         "medianized-with-delay": 80,
         "standard-external": 70,

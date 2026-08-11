@@ -8,7 +8,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "The native Avalanche avUSD contract is an owner-administered ERC-20 with an authorized-minter map, not a collateralized-debt engine: its verified source has no price-feed, borrower collateral-health, or forced-liquidation logic.",
     "branchModel": "single-path",
     "branchApplicability": {

@@ -410,7 +410,9 @@ function buildWrapperStructuralDimensions(
   ) {
     const oracleTier = input.economicControlReview.oracle.tier;
     const weakOracle =
-      oracleTier === "single-source-or-laggy" || oracleTier === "opaque-or-unknown";
+      oracleTier === "privileged-internal-pricing" ||
+      oracleTier === "single-source-or-laggy" ||
+      oracleTier === "opaque-or-unknown";
     shareAccountingNavOracle = reviewedWrapperFact(
       context,
       weakOracle ? "high" : "moderate",

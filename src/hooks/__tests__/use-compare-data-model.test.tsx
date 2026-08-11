@@ -8,7 +8,10 @@ const {
   useBluechipRatingsMock,
   useDexLiquidityMock,
   usePegSummaryMock,
+  useRedemptionBackstopsMock,
   useReportCardsV9Mock,
+  useStressSignalsMock,
+  useYieldRankingsMock,
   useStablecoinsMock,
   useMintBurnFlowsMock,
   supplyHistoryQueryOptionsMock,
@@ -18,7 +21,10 @@ const {
   useBluechipRatingsMock: vi.fn(),
   useDexLiquidityMock: vi.fn(),
   usePegSummaryMock: vi.fn(),
+  useRedemptionBackstopsMock: vi.fn(),
   useReportCardsV9Mock: vi.fn(),
+  useStressSignalsMock: vi.fn(),
+  useYieldRankingsMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
   useMintBurnFlowsMock: vi.fn(),
   supplyHistoryQueryOptionsMock: vi.fn(),
@@ -37,7 +43,10 @@ vi.mock("../api-hooks", () => ({
   useBluechipRatings: useBluechipRatingsMock,
   useDexLiquidity: useDexLiquidityMock,
   usePegSummary: usePegSummaryMock,
+  useRedemptionBackstops: useRedemptionBackstopsMock,
   useReportCardsV9: useReportCardsV9Mock,
+  useStressSignals: useStressSignalsMock,
+  useYieldRankings: useYieldRankingsMock,
 }));
 
 vi.mock("../use-stablecoins", () => ({
@@ -69,7 +78,10 @@ describe("useCompareDataModel", () => {
     useBluechipRatingsMock.mockReset();
     useDexLiquidityMock.mockReset();
     usePegSummaryMock.mockReset();
+    useRedemptionBackstopsMock.mockReset();
     useReportCardsV9Mock.mockReset();
+    useStressSignalsMock.mockReset();
+    useYieldRankingsMock.mockReset();
     useStablecoinsMock.mockReset();
     useMintBurnFlowsMock.mockReset();
     supplyHistoryQueryOptionsMock.mockReset();
@@ -88,6 +100,15 @@ describe("useCompareDataModel", () => {
     }));
     useReportCardsV9Mock.mockReturnValue(makeQueryResult({
       data: { cards: [] },
+    }));
+    useRedemptionBackstopsMock.mockReturnValue(makeQueryResult({
+      data: { coins: {} },
+    }));
+    useStressSignalsMock.mockReturnValue(makeQueryResult({
+      data: { signals: {} },
+    }));
+    useYieldRankingsMock.mockReturnValue(makeQueryResult({
+      data: { rankings: [] },
     }));
     supplyHistoryQueryOptionsMock.mockReturnValue({});
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue({});

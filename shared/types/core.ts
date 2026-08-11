@@ -711,7 +711,8 @@ export const GOVERNANCE_QUALITY_VALUES = [
 export type GovernanceQuality = (typeof GOVERNANCE_QUALITY_VALUES)[number];
 
 export const ORACLE_RISK_TIER_VALUES = [
-  "oracleless-or-internal",
+  "oracleless",
+  "privileged-internal-pricing",
   "redundant-with-failover",
   "medianized-with-delay",
   "standard-external",
@@ -726,15 +727,15 @@ export const ORACLE_RISK_BRANCH_MODEL_VALUES = ["single-path", "multi-branch"] a
 export type OracleRiskBranchModel = (typeof ORACLE_RISK_BRANCH_MODEL_VALUES)[number];
 export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
   "branches-required",
+  "top-level-only",
   "not-applicable",
   "unresolved",
 ] as const;
 export type OracleRiskBranchApplicability = (typeof ORACLE_RISK_BRANCH_APPLICABILITY_VALUES)[number];
 
-/**
- * Reviewed decision on whether a CDP needs market-specific oracle and
- * liquidation evidence. It is intentionally score-inert until a separately
- * approved scoring release consumes it.
+/** Reviewed scope of the price-authority review. `not-applicable` is neutral,
+ * `top-level-only` scores a price-sensitive control without liquidation rows,
+ * and `branches-required` activates market-specific liquidation evidence.
  */
 export interface OracleRiskBranchApplicabilityReview {
   disposition: OracleRiskBranchApplicability;

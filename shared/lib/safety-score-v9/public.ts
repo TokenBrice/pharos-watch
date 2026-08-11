@@ -385,7 +385,12 @@ function projectControlBreakdown(
       .sort((left, right) => compareText(left.componentKey, right.componentKey))
       .map((component) => ({
         key: component.componentKey,
-        label: publicLabel(input, component.componentKey),
+        label:
+          component.kind === "oracle" && component.posture === "privileged-internal-pricing"
+            ? "Privileged internal pricing"
+            : component.kind === "oracle" && component.posture === "oracleless"
+              ? "Oracleless design"
+              : publicLabel(input, component.componentKey),
         kind: component.kind,
         score: component.score,
         binding: component.binding,

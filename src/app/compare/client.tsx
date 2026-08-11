@@ -282,8 +282,11 @@ export function CompareClient() {
     peg,
     pegRates,
     radarCards,
+    redemption,
     reportCards,
+    stress,
     supplySeries,
+    yieldRankings,
   } = useCompareDataModel({
     selectedIds,
     flowHours,
@@ -428,6 +431,27 @@ export function CompareClient() {
             hasData: !!bluechip.data,
             meta: bluechip.meta,
           },
+          {
+            preset: "redemptionBackstops",
+            dataUpdatedAt: redemption.dataUpdatedAt,
+            error: redemption.error,
+            hasData: !!redemption.data?.coins,
+            meta: redemption.meta,
+          },
+          {
+            preset: "yieldRankings",
+            dataUpdatedAt: yieldRankings.dataUpdatedAt,
+            error: yieldRankings.error,
+            hasData: !!yieldRankings.data?.rankings?.length,
+            meta: yieldRankings.meta,
+          },
+          {
+            preset: "stressSignals",
+            dataUpdatedAt: stress.dataUpdatedAt,
+            error: stress.error,
+            hasData: !!stress.data?.signals,
+            meta: stress.meta,
+          },
         ]}
       />
       <SafetyScoreV9StatusNotice response={reportCardsData} />
@@ -543,7 +567,7 @@ export function CompareClient() {
                 </h3>
                 {flowUpdatedMinutes != null && (
                   <span className="text-xs text-muted-foreground">
-                    Updated {flowUpdatedMinutes} min ago · Ethereum
+                    Updated {flowUpdatedMinutes} min ago · {flowData?.scope?.label ?? "Configured issuance chains"}
                   </span>
                 )}
               </div>
@@ -569,7 +593,7 @@ export function CompareClient() {
               {/* Coverage note */}
               {selectedIds.length > flowCardData.length && (
                 <p className="text-xs text-muted-foreground">
-                  {flowCardData.length} of {selectedIds.length} selected coins have Ethereum flow tracking.
+                  {flowCardData.length} of {selectedIds.length} selected coins have tracked issuance flows.
                 </p>
               )}
             </div>

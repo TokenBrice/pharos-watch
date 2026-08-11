@@ -21,7 +21,7 @@
     "reviewedAt": "2026-07-30"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "LeverUp describes lvUSD as a USDC-backed liquidity-layer token stabilized through protocol-internal TWAP anchoring, LV auctions, and redemption quotas rather than an external liquidation oracle.",
     "branchModel": "single-path",
     "branchApplicability": {

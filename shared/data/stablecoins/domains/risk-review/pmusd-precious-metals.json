@@ -8,7 +8,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "pmUSD uses an external gold-linked price for RWf(x) treasury accounting, but RAAC explicitly disables liquidation and self-liquidation, so there is no external liquidation-oracle branch.",
     "branchModel": "single-path",
     "branchApplicability": {

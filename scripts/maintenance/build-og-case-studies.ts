@@ -31,7 +31,9 @@ import { escapeXml } from "../lib/og-svg.mjs";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
+  promoteGeneratedPngIfChanged,
   stalePngCheckLabel,
+  writeFileIfChanged,
 } from "../lib/og-image-checks.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -269,7 +271,7 @@ async function main() {
       writeFileSync(htmlPath, buildHtml(svg));
 
       const publicPath = resolve(PUBLIC, fileName);
-      const outPath = CHECK_MODE ? resolve(STAGING, `${card.slug}.check.png`) : publicPath;
+      const outPath = resolve(STAGING, `${card.slug}.${CHECK_MODE ? "check" : "write"}.png`);
       const page = await browser.newPage({ viewport: { width: 1200, height: 628 } });
       await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load", timeout: 15000 });
       await page.evaluate(() => document.fonts.ready);
@@ -282,6 +284,7 @@ async function main() {
       });
       await page.close();
 
+      let changed = false;
       if (CHECK_MODE) {
         const staleLabel = await stalePngCheckLabel({
           fileLabel: fileName,
@@ -291,6 +294,8 @@ async function main() {
         if (staleLabel) {
           staleFiles.push(staleLabel);
         }
+      } else {
+        changed = await promoteGeneratedPngIfChanged({ stagedPath: outPath, publicPath });
       }
 
       try {
@@ -300,7 +305,7 @@ async function main() {
       } catch {
         /* swallow */
       }
-      console.log(formatOgWriteStatus({ check: CHECK_MODE, publicPath }));
+      console.log(formatOgWriteStatus({ check: CHECK_MODE, changed, publicPath }));
     }
 
     const signatureManifest = buildSignatureManifest(signatures);
@@ -310,7 +315,7 @@ async function main() {
         staleFiles.push("scripts/maintenance/state/og-case-study-signatures.json");
       }
     } else {
-      writeFileSync(SIGNATURE_PATH, signatureManifest);
+      writeFileIfChanged(SIGNATURE_PATH, signatureManifest);
     }
 
     assertNoStaleOgOutputs({

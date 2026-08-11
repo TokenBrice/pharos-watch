@@ -353,7 +353,7 @@ export function extractFindings(text: string, cur: Current): Finding[] {
     });
   }
 
-  const holderScopeRe = /\b([\d,]+)\s+(holders?|users?)\b/gi;
+  const holderScopeRe = /\b(\d[\d,]*)\s+(holders?|users?)\b/gi;
   for (const match of t.matchAll(holderScopeRe)) {
     push({
       kind: "holder-address-scope",

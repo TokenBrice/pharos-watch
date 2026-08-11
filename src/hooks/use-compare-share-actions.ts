@@ -95,7 +95,6 @@ export function useCompareShareActions({
         marketCap: formatCurrency(cap),
         pegScore: coin.pegScore != null ? `${coin.pegScore.toFixed(1)}` : "—",
         weeklyChange: weeklyPct != null ? `${weeklyPct >= 0 ? "+" : ""}${weeklyPct.toFixed(2)}%` : "—",
-        weeklyChangePositive: weeklyPct != null ? weeklyPct >= 0 : true,
         liquidityScore: coin.liquidityScore != null ? `${coin.liquidityScore.toFixed(1)}` : "—",
         governance: GOVERNANCE_LABELS_SHORT[coin.meta.flags.governance] ?? coin.meta.flags.governance,
         backing: BACKING_LABELS_SHORT[coin.meta.flags.backing] ?? coin.meta.flags.backing,

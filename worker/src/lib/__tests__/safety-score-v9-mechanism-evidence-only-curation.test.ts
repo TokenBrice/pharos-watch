@@ -46,6 +46,12 @@ const EVIDENCE_ONLY_TARGETS = {
   "fusd-freedom-dollar": ["emergencyRecovery", "lossRecovery"],
 } as const;
 
+const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, string>> = {
+  "pgold-pleasing": "2026-08-11",
+  "vnxau-vnx": "2026-08-11",
+  "xaum-matrixdock": "2026-08-11",
+};
+
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
     expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(36);
@@ -56,7 +62,9 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
     );
     for (const [assetId, componentKeys] of Object.entries(EVIDENCE_ONLY_TARGETS)) {
       const overlay = MechanismReviewOverlaySchema.parse(overlayById.get(assetId));
-      expect(overlay.reviewedAt, assetId).toBe("2026-08-08");
+      expect(overlay.reviewedAt, assetId).toBe(
+        REVIEW_DATE_OVERRIDES[assetId as keyof typeof EVIDENCE_ONLY_TARGETS] ?? "2026-08-08",
+      );
       const expanded = expandOverlayReview(overlay) as unknown as Record<
         string,
         { quality: string | null; status: { observationState: string; gapIds: string[] } }

@@ -853,7 +853,8 @@ const V9OracleControlReviewV2Schema = z
     status: V9FactStatusV2Schema,
     tier: z
       .enum([
-        "oracleless-or-internal",
+        "oracleless",
+        "privileged-internal-pricing",
         "redundant-with-failover",
         "medianized-with-delay",
         "standard-external",
@@ -861,6 +862,7 @@ const V9OracleControlReviewV2Schema = z
         "opaque-or-unknown",
       ])
       .nullable(),
+    liquidationBranchesApplicable: z.boolean().optional(),
     branches: canonicalArrayBy(V9OracleBranchReviewV2Schema, (branch) => branch.branch),
     // Worst severity band contributed by weak market branches whose measured
     // debt share is below the deployment-materiality threshold. These branches

@@ -1,6 +1,6 @@
 {
   "id": "frax-frax",
-  "name": "Frax",
+  "name": "Legacy Frax Dollar",
   "symbol": "FRAX",
   "oneLiner": "FRAX is Frax's dollar stablecoin, backed by protocol-owned stable liquidity, tokenized cash/T-bill/MMF assets, and strategy exposure.",
   "flags": {

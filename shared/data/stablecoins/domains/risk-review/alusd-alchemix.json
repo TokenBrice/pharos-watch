@@ -41,7 +41,7 @@
     "reviewedAt": "2026-07-15"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "Alchemix alUSD loans are self-repaying and non-liquidating, so the CDP path does not rely on an external liquidation oracle.",
     "branchModel": "single-path",
     "branchApplicability": {

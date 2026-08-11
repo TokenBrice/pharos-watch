@@ -58,7 +58,8 @@ export interface OracleRiskClientSummary {
 }
 
 const TIER_LABELS: Record<OracleRiskTier, string> = {
-  "oracleless-or-internal": "Oracleless / internal",
+  "oracleless": "Oracleless",
+  "privileged-internal-pricing": "Privileged internal pricing",
   "redundant-with-failover": "Redundant + failover",
   "medianized-with-delay": "Medianized + delay",
   "standard-external": "Standard external",
@@ -68,7 +69,8 @@ const TIER_LABELS: Record<OracleRiskTier, string> = {
 
 // Tone strings match the bridge-client TIER_TONES palette byte-for-byte.
 const TIER_TONES: Record<OracleRiskTier, string> = {
-  "oracleless-or-internal": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  "oracleless": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
+  "privileged-internal-pricing": "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
   "redundant-with-failover": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
   "medianized-with-delay": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
   "standard-external": "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -160,10 +162,14 @@ export function projectOracleRiskClientSummary(coin: StablecoinMeta): OracleRisk
     sources.push(source);
   }
 
+  const notApplicable = profile.branchApplicability?.disposition === "not-applicable";
+
   return {
     tier: profile.tier,
-    tierLabel: TIER_LABELS[profile.tier] ?? profile.tier,
-    tierToneClass: TIER_TONES[profile.tier] ?? "border-border/60 bg-muted/30 text-muted-foreground",
+    tierLabel: notApplicable ? "No liquidation oracle · not scored" : TIER_LABELS[profile.tier] ?? profile.tier,
+    tierToneClass: notApplicable
+      ? "border-border/60 bg-muted/30 text-muted-foreground"
+      : TIER_TONES[profile.tier] ?? "border-border/60 bg-muted/30 text-muted-foreground",
     summary: profile.summary,
     confidenceLabel: profile.confidence ? CONFIDENCE_LABELS[profile.confidence] : null,
     reviewedAt: profile.reviewedAt ?? null,

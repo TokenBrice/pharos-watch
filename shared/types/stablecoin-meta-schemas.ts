@@ -433,6 +433,13 @@ export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
         path: ["branchApplicability", "disposition"],
       });
     }
+    if (profile.branchApplicability?.disposition === "top-level-only" && profile.branchModel !== "single-path") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "top-level-only oracle applicability requires a single-path model",
+        path: ["branchModel"],
+      });
+    }
   });
 
 export const BridgeRouteProtocolEvidenceSchema: z.ZodType<BridgeRouteProtocolEvidence> = z

@@ -35,7 +35,7 @@
         "directMintAbility": "direct",
         "chain": "cardano",
         "canRaiseCap": "unknown",
-        "observedAt": "2026-08-08",
+        "observedAt": "2026-08-11",
         "sources": [
           {
             "label": "Anzens USDA homepage",
@@ -44,15 +44,19 @@
           {
             "label": "Koios policy_asset_list for USDA policy",
             "url": "https://api.koios.rest/api/v1/policy_asset_list?_asset_policy=fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456"
+          },
+          {
+            "label": "Koios tx_info — sampled USDA mint transaction 04509007…",
+            "url": "https://api.koios.rest/api/v1/tx_info"
           }
         ],
-        "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy. On 2026-08-08, Koios policy_asset_list returned the single USDA asset under policy fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 with raw supply 4,452,382,510,000 at six decimals. The policy remains PlutusV2, but its embedded signer/control parameters are not decoded by the public sources, so canRaiseCap remains unknown rather than inferred."
+        "evidence": "Anzens mints/burns USDA 1:1 against segregated USD reserves and Treasuries custodied at BitGo Trust, gated by KYC bank transfers; no permissionless or user-collateralized mint route exists on the Cardano native policy. On 2026-08-11, Koios policy_asset_list returned the single USDA asset under policy fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 with raw supply 4,452,382,510,000 at six decimals. A sampled mint transaction confirmed the PlutusV2 policy, an intent-spend script b09775cba66375b3287233c6f809036c066937d05254df82c2e4cfd3, and a reference datum containing key hashes b2136f4e7341a81ed5069cdf86f41a5e779498b6c97cab6496d1f358 and 57dc15b18a02c5ceedab40fc4c37dd4824a869983c7496c6e6516ba5. Koios returned no required_signers and no native script for either the mint or referenced setup transaction, so the datum alone does not establish which key authorizes minting, a threshold, or cap-changing power; canRaiseCap remains unknown rather than inferred."
       }
     ],
     "review": {
-      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 is a PlutusV2 script. Minting transactions include uid metadata but no required_signers field is exposed in Koios tx_info; the PlutusV2 script validates internally with signing key(s) embedded as script parameters that are not observable from chain state without full script-parameter decoding. Koios script_info confirms the policy was created in transaction 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish custody-adjacent statements but no script parameterization or admin-control inventory, so the controlling signing keys remain unestablished from public sources. Rechecked 2026-08-08: Koios still returns type=plutusV2 and one policy asset, USDA, with raw supply 4,452,382,510,000 at six decimals; the Cardano Token Registry independently maps the same policy-plus-asset name to USDA. The public evidence still does not establish a hard supply ceiling or identify the embedded authorization threshold, so economicCapSemantics and canRaiseCap remain unknown. Reconciliation also remains unknown: the claimed series is four image-only Medium-hosted examination posts in 16 months, newest period 2026-01-31 (about six months stale while supply fell materially), with no machine-readable report naming the firm, period, or opinion and no current transparency surface on anzens.com. A stalled, unverifiable series cannot support recurring-reconciliation credit.",
-      "reviewer": "OpenAI Codex C07 control review; Kimi data review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Anzens (FinCEN MSB) is the sole issuer of USDA on Cardano; mint/redeem is centralized 1:1 via KYC bank transfers against BitGo Trust-custodied reserves. Policy ID fe7c786ab321f41c654ef6c1af7b3250a613c24e4213e0425a7ae456 is a PlutusV2 script. Independent Koios replay on 2026-08-11 inspected mint transaction 0450900785fa6608eb5f18b4f481939af82512f05b574bc8e5c3fdfea7d5f6fc: it minted 181.64 USDA, spent intent script b09775cba66375b3287233c6f809036c066937d05254df82c2e4cfd3, executed the USDA policy, and referenced b91c80748190c7280be0a41da2b80fd9690af6e174bca2e388476f8eea200b86#0. That reference datum contains key hashes b2136f4e7341a81ed5069cdf86f41a5e779498b6c97cab6496d1f358 and 57dc15b18a02c5ceedab40fc4c37dd4824a869983c7496c6e6516ba5 plus the intent and USDA policy identities. However, Koios exposed no required_signers field and no native script in either the mint transaction or reference-setup transaction. This confirms an intent/reference architecture but does not reproduce the claimed hot-signer semantics or cold 3-of-7 threshold; legal-entity-to-key attribution is also absent. Koios script_info confirms the policy was created in transaction 77f120599d05ed304970bb9bda15f2a8f56aa6495178065444c601f0212e675a with the USDA asset name embedded; Anzens/EMURGO publish custody-adjacent statements but no script parameterization or admin-control inventory. The public evidence still does not establish a hard supply ceiling or identify the authorization threshold, so authorityPosture, economicCapSemantics, and canRaiseCap remain unknown. Reconciliation also remains unknown: the claimed series is four image-only Medium-hosted examination posts in 16 months, newest period 2026-01-31 (about six months stale while supply fell materially), with no machine-readable report naming the firm, period, or opinion and no current transparency surface on anzens.com. A stalled, unverifiable series cannot support recurring-reconciliation credit.",
+      "reviewer": "OpenAI Codex independent review of Grok control evidence; prior Kimi data review",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Anzens USDA homepage",
@@ -65,6 +69,10 @@
         {
           "label": "Koios script_info — USDA PlutusV2 minting policy",
           "url": "https://api.koios.rest/api/v1/script_info"
+        },
+        {
+          "label": "Koios tx_info — sampled USDA mint and reference transactions",
+          "url": "https://api.koios.rest/api/v1/tx_info"
         },
         {
           "label": "Cardano Token Registry — Anzens USDA",
@@ -85,7 +93,7 @@
       ],
       "disposition": "unresolved",
       "unresolvedQuestions": [
-        "Which signing keys, threshold, and authorization conditions are embedded in the PlutusV2 minting policy, and can that authority expand USDA supply without an independently enforced ceiling?",
+        "What authorization semantics does the PlutusV2 policy assign to the key hashes and reference configuration visible in the sampled mint, what is the independently reproducible threshold, and can that authority expand USDA supply without an enforced ceiling?",
         "Does Anzens publish a current, recurring, independently verifiable reserve reconciliation that identifies the reporting period, examiner, liabilities, reserve assets, and conclusion?"
       ]
     }

@@ -61,7 +61,7 @@
     "reviewedAt": "2026-07-30"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "reUSD is a senior NAV-based tranche token rather than a collateralized debt position, so it has no borrower health factor or oracle-triggered collateral liquidation branch.",
     "branchModel": "single-path",
     "branchApplicability": {

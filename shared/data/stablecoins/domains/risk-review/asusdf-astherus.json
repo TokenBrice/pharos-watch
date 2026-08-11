@@ -25,7 +25,7 @@
     "reviewedAt": "2026-08-09"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "asUSDF is a NAV-accreting staking wrapper minted from deposited USDF and withdrawn back to USDF through Aster's queue, not a borrower debt market with oracle-triggered collateral liquidation.",
     "branchModel": "single-path",
     "branchApplicability": {

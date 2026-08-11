@@ -360,8 +360,18 @@ describe("SafetyScoreV9ResponseSchema", () => {
     );
     invalidControl.cards[0]!.breakdowns!.control.components[0]!.binding = false;
     expect(() => SafetyScoreV9CurrentResponseSchema.parse(invalidControl)).toThrow(
-      /binding controls must reconcile/,
+      /binding controls, or the neutral empty set, must reconcile/,
     );
+  });
+
+  it("accepts a neutral control breakdown without a manufactured binding component", () => {
+    const neutral = breakdowns(90, 92, 95);
+    neutral.control.components = [];
+
+    expect(SafetyScoreV9BreakdownsSchema.parse(neutral).control).toMatchObject({
+      evaluatedScore: 95,
+      components: [],
+    });
   });
 
   it("requires explicit bounded causality for D and measured causality for F", () => {
