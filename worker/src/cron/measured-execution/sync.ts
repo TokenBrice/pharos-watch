@@ -234,6 +234,46 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
   }
 }
 
+export function isDiagnosticDexMeasuredQuoteFailure(outcome: Pick<DexMeasuredQuoteOutcome, "status" | "failureReason" | "target">): boolean {
+  return (
+    outcome.status === "failed" &&
+    outcome.failureReason === "profile-validation:quote-price-mismatch" &&
+    outcome.target.tokenOut.trackedAssetId == null
+  );
+}
+
+export function summarizeMeasuredExecutionQuoteFailures(
+  outcomes: readonly DexMeasuredQuoteOutcome[],
+  oversizedTargetIds: ReadonlySet<string> = new Set(),
+): {
+  attemptedFailureCount: number;
+  scoreEligibleAttemptedFailureCount: number;
+  scoreEligibleDiagnosticFailureCount: number;
+  scoreEligibleBlockingFailureCount: number;
+  diagnosticAttemptedFailureCount: number;
+} {
+  const attemptedFailures = outcomes.filter(
+    (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
+  );
+  const scoreEligibleFailures = attemptedFailures.filter(
+    (outcome) =>
+      !oversizedTargetIds.has(outcome.target.targetId) &&
+      isDexMeasuredExecutionTargetScoreEligible(outcome.target),
+  );
+  const scoreEligibleDiagnosticFailureCount = scoreEligibleFailures.filter(isDiagnosticDexMeasuredQuoteFailure).length;
+  const scoreEligibleBlockingFailureCount = scoreEligibleFailures.length - scoreEligibleDiagnosticFailureCount;
+  return {
+    attemptedFailureCount: attemptedFailures.length,
+    scoreEligibleAttemptedFailureCount: scoreEligibleFailures.length,
+    scoreEligibleDiagnosticFailureCount,
+    scoreEligibleBlockingFailureCount,
+    diagnosticAttemptedFailureCount: Math.max(
+      0,
+      attemptedFailures.length - scoreEligibleFailures.length - oversizedTargetIds.size,
+    ) + scoreEligibleDiagnosticFailureCount,
+  };
+}
+
 function countAdmissionBatches<T>(
   values: readonly T[],
   groupKey: (value: T) => string,
@@ -1501,20 +1541,7 @@ async function syncDexMeasuredExecutionLane(
         : cursorWrite.errorClass;
   }
   const retention = await pruneDexMeasuredExecutionGenerations(db, publishedAt, signal);
-  const attemptedFailureCount = outcomes.filter(
-    (outcome) => outcome.status === "failed" && outcome.failureReason !== "budget-deferred",
-  ).length;
-  const scoreEligibleAttemptedFailureCount = outcomes.filter(
-    (outcome) =>
-      outcome.status === "failed" &&
-      outcome.failureReason !== "budget-deferred" &&
-      !oversized.has(outcome.target.targetId) &&
-      isDexMeasuredExecutionTargetScoreEligible(outcome.target),
-  ).length;
-  const diagnosticAttemptedFailureCount = Math.max(
-    0,
-    attemptedFailureCount - scoreEligibleAttemptedFailureCount - oversized.size,
-  );
+  const failureSummary = summarizeMeasuredExecutionQuoteFailures(outcomes, oversized);
   const metadata = {
     lane,
     targetGenerationId: targetGeneration.generationId,
@@ -1522,9 +1549,11 @@ async function syncDexMeasuredExecutionLane(
     targetCount: targetGeneration.targets.length,
     measuredCount: publication.measuredCount,
     failedCount: publication.failedCount,
-    attemptedFailureCount,
-    scoreEligibleAttemptedFailureCount,
-    diagnosticAttemptedFailureCount,
+    attemptedFailureCount: failureSummary.attemptedFailureCount,
+    scoreEligibleAttemptedFailureCount: failureSummary.scoreEligibleAttemptedFailureCount,
+    scoreEligibleDiagnosticFailureCount: failureSummary.scoreEligibleDiagnosticFailureCount,
+    scoreEligibleBlockingFailureCount: failureSummary.scoreEligibleBlockingFailureCount,
+    diagnosticAttemptedFailureCount: failureSummary.diagnosticAttemptedFailureCount,
     deferredCount: deferred.size,
     budgetDeferredCount,
     admissionEstimatedRpcRequests: estimatedRpcRequests,
@@ -1544,7 +1573,7 @@ async function syncDexMeasuredExecutionLane(
     cursorWriteStatus,
     oversizedCoinIds,
     degradedReasons: [
-      ...(scoreEligibleAttemptedFailureCount > 0 ? ["quote-failures"] : []),
+      ...(failureSummary.scoreEligibleBlockingFailureCount > 0 ? ["quote-failures"] : []),
       ...(oversizedCoinIds.length > 0 ? ["admission-coin-group-oversized"] : []),
       ...(cursorWriteStatus === "write-failed" ? ["admission-cursor-write-failed"] : []),
       ...(budgetDeferredCount > 0 && cursorWriteStatus !== "written"
@@ -1572,7 +1601,7 @@ async function syncDexMeasuredExecutionLane(
     status: retention.error
       ? "degraded"
       : resolveMeasuredExecutionCronStatus({
-          attemptedFailureCount: scoreEligibleAttemptedFailureCount,
+          attemptedFailureCount: failureSummary.scoreEligibleBlockingFailureCount,
           deferredCount: budgetDeferredCount,
           admissionRotationCycles,
           cursorWriteStatus,

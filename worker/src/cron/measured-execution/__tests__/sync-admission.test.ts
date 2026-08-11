@@ -10,8 +10,10 @@ import {
   estimateAdmissionRotationCycles,
   hasCompleteDexMeasuredQuoteProgress,
   isDexMeasuredExecutionTargetScoreEligible,
+  isDiagnosticDexMeasuredQuoteFailure,
   resolveMeasuredExecutionCronStatus,
   selectExpiringScoreBearingPriorityPacket,
+  summarizeMeasuredExecutionQuoteFailures,
   type PublishedScoreBearingDexRoute,
 } from "../sync";
 import {
@@ -629,6 +631,91 @@ describe("measured execution overflow admission", () => {
         }),
       ),
     ).toBe(true);
+  });
+
+  it("keeps untracked pool-implied price mismatches diagnostic for cron status", () => {
+    const poolImpliedDrift = target("coin-a", 100_000, "untracked-output", {
+      tokenOut: {
+        address: "0x3333333333333333333333333333333333333333",
+        symbol: "PRD",
+        decimals: 10,
+        referencePriceUsd: 0.00052,
+      },
+    });
+    const trackedMismatch = target("coin-b", 100_000, "tracked-output");
+    const summary = summarizeMeasuredExecutionQuoteFailures([
+      {
+        target: poolImpliedDrift,
+        status: "failed",
+        failureReason: "profile-validation:quote-price-mismatch",
+      },
+      {
+        target: trackedMismatch,
+        status: "failed",
+        failureReason: "profile-validation:quote-price-mismatch",
+      },
+      {
+        target: target("coin-c", 100_000, "transport-failure"),
+        status: "failed",
+        failureReason: "transport-error",
+      },
+    ]);
+
+    expect(isDiagnosticDexMeasuredQuoteFailure({
+      target: poolImpliedDrift,
+      status: "failed",
+      failureReason: "profile-validation:quote-price-mismatch",
+    })).toBe(true);
+    expect(isDiagnosticDexMeasuredQuoteFailure({
+      target: trackedMismatch,
+      status: "failed",
+      failureReason: "profile-validation:quote-price-mismatch",
+    })).toBe(false);
+    expect(summary).toMatchObject({
+      attemptedFailureCount: 3,
+      scoreEligibleAttemptedFailureCount: 3,
+      scoreEligibleDiagnosticFailureCount: 1,
+      scoreEligibleBlockingFailureCount: 2,
+      diagnosticAttemptedFailureCount: 1,
+    });
+    expect(
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
+        deferredCount: 0,
+        admissionRotationCycles: 1,
+        cursorWriteStatus: "not-needed",
+      }),
+    ).toBe("degraded");
+  });
+
+  it("does not degrade when only pool-implied price drift fails score-eligible quotes", () => {
+    const poolImpliedDrift = target("coin-a", 100_000, "untracked-output", {
+      tokenOut: {
+        address: "0x3333333333333333333333333333333333333333",
+        symbol: "PRD",
+        decimals: 10,
+        referencePriceUsd: 0.00052,
+      },
+    });
+    const summary = summarizeMeasuredExecutionQuoteFailures([
+      {
+        target: poolImpliedDrift,
+        status: "failed",
+        failureReason: "profile-validation:quote-price-mismatch",
+      },
+    ]);
+
+    expect(summary.scoreEligibleAttemptedFailureCount).toBe(1);
+    expect(summary.scoreEligibleBlockingFailureCount).toBe(0);
+    expect(summary.diagnosticAttemptedFailureCount).toBe(1);
+    expect(
+      resolveMeasuredExecutionCronStatus({
+        attemptedFailureCount: summary.scoreEligibleBlockingFailureCount,
+        deferredCount: 0,
+        admissionRotationCycles: 1,
+        cursorWriteStatus: "not-needed",
+      }),
+    ).toBe("ok");
   });
 
   it("degrades rotation that cannot refresh every admitted target within one hour", () => {
