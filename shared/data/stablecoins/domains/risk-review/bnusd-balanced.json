@@ -1000,9 +1000,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "bnUSD is minted on ICON (canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb, ~97% of DefiLlama-tracked supply) and every tracked off-ICON deployment is a burn-mint representation settled through Balanced's own xCall messaging: on Base, Avalanche, Arbitrum, BSC, and Optimism only the chain's xCall contract can invoke handleCallMessage to mint, per the verified BalancedDollar source; on Injective the CW20 bnUSD minter is the cw_xcall contract. Token UUPS ownership and xCallManager ownership sit with the Balanced ops EOA 0x9920c455 (EVM) / inj106a2du (Injective). All six routes re-verified on-chain 2026-08-08 (implementation, owner, xCall, iconBnUSD, and totalSupply reads; Injective via LCD minter/admin/token_info queries). DefiLlama's ICON/Archway/Havah raw chain labels (~98.9% of tracked supply) have no Pharos chain mapping and remain an accepted unmatched-label pool routed to the policy maintainer. Caveat: a v2 facilitator-minted Balanced Dollar token exists on the Sonic hub (0x94dc79ce9c515ba4ae4d195da8e6ab86c69bfc38, supply 1,401,091 bnUSD on 2026-08-08) per SODAX docs and the coin's own reserveReview; it is not in contracts[], has no DefiLlama-tracked supply, and deliberately has no route row here — flagged for a coordinated follow-up rather than invented. The two remaining unsupported-chain deployments are now address-authenticated for a future wiring: on Archway the canonical bnUSD is CW20 archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7 (contract label \"Balanced Dollar\", code_id 502; token_info name Balanced Dollar / symbol bnUSD / 18 decimals / total_supply 17,555.38; minter query returns the cw_xcall contract archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6 with cap null, and the wasm admin is archway17j96tj3xr02cua5fvf3t95nxhshzgc2x2yfsfy0ktmvw6t2jnfms6j8kup), and on Havah it is IRC2 cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc (symbol() bnUSD, getXCall() cx00104193d0a593c4b57fda544d1b7c88b8ed4fae, getXCallManager() cx49afee1a85186bacb921c5a8ee1df329e006e340) — both re-read live on 2026-08-09 and both listed as bnUSD(old) for archway-1 / 0x100.icon in Balanced's own xTokens registry, i.e. the same ICON-hub xCall burn-mint spoke pattern as the reviewed routes. They remain outside contracts[] and outside routes[] until those chains are Pharos-supported, because a route row without a matching catalog deployment reads as an unmatched route.",
-    "reviewedAt": "2026-08-08",
-    "reviewer": "wave3-longtail-L03 (research agent)",
+    "summary": "bnUSD is natively minted on ICON at canonical SCORE cx88fd7df7ddff82f7cc735c871dc519838cb235bb. Every reviewed off-ICON deployment is a burn-mint representation settled through Balanced's xCall messaging. The ICON SCORE's live getConnectedChains inventory names the tracked Archway and Havah contracts; Archway identifies cw_xcall as the CW20 minter with no cap, while Havah exposes the expected xCall and xCallManager contracts. Those deployments now join the registered Pharos chain mappings and authored contracts instead of falling into the unmatched-label pool. The previously reviewed Base, Avalanche, Arbitrum, BSC, Optimism, and Injective routes retain their verified xCall controllers. Caveat: a separate v2 facilitator-minted Balanced Dollar exists on Sonic (0x94dc79ce9c515ba4ae4d195da8e6ab86c69bfc38) per SODAX documentation and the coin's reserve review; it is not part of DefiLlama stablecoin id 204 and remains outside this ICON-hub route inventory pending a coordinated series and supply-netting review.",
+    "reviewedAt": "2026-08-11",
+    "reviewer": "OpenAI Codex review of Grok control-evidence research",
     "confidence": "verified",
     "protocols": [
       {
@@ -1058,6 +1058,106 @@
       }
     ],
     "routes": [
+      {
+        "id": "icon:cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
+        "destinationChain": "icon",
+        "canonicalChain": "icon",
+        "contractAddress": "cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
+        "protocol": "Balanced native issuance (ICON)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Canonical ICON bnUSD issuance contract. Live RPC reads on 2026-08-11 returned symbol bnUSD, name Balanced Dollar, active SCORE status, owner Balanced Governance, and connected-chain entries matching the authored Archway, Havah, EVM, and Injective representations. Mint controls remain modeled in the dedicated mint-authority review rather than as a bridge controller.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-11",
+        "sources": [
+          {
+            "label": "ICON bnUSD SCORE",
+            "url": "https://tracker.icon.community/contract/cx88fd7df7ddff82f7cc735c871dc519838cb235bb"
+          },
+          {
+            "label": "ICON public RPC (status, token metadata, supply, and connected-chain reads on 2026-08-11)",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          }
+        ]
+      },
+      {
+        "id": "archway:archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7",
+        "sourceChain": "icon",
+        "destinationChain": "archway",
+        "canonicalChain": "icon",
+        "contractAddress": "archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Balanced's pinned xTokens registry maps this 18-decimal bnUSD(old) contract to archway-1. Live Archway LCD reads on 2026-08-11 identified it as Balanced Dollar (code_id 502), returned the cw_xcall contract archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6 as its uncapped minter, and returned the icon-ibc contract archway17j96tj3xr02cua5fvf3t95nxhshzgc2x2yfsfy0ktmvw6t2jnfms6j8kup as admin. ICON getConnectedChains independently returned the same Archway token address.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "archway",
+        "controllerAddress": "archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:archway:archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6"
+        ],
+        "observedAt": "2026-08-11",
+        "sources": [
+          {
+            "label": "Balanced xTokens registry (pinned Archway bnUSD address)",
+            "url": "https://github.com/balancednetwork/balanced-network-interface/blob/3f4fecb9e7d0b30a0bf2c6c8744128e3220dd811/packages/xwagmi/src/constants/xTokens.ts"
+          },
+          {
+            "label": "Archway LCD — bnUSD CW20 contract info",
+            "url": "https://api.mainnet.archway.io/cosmwasm/wasm/v1/contract/archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7"
+          },
+          {
+            "label": "Archway LCD — cw_xcall minter contract info",
+            "url": "https://api.mainnet.archway.io/cosmwasm/wasm/v1/contract/archway19hzhgd90etqc3z2qswumq80ag2d8het38r0al0r4ulrly72t20psdrpna6"
+          }
+        ]
+      },
+      {
+        "id": "havah:cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc",
+        "sourceChain": "icon",
+        "destinationChain": "havah",
+        "canonicalChain": "icon",
+        "contractAddress": "cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc",
+        "protocol": "Balanced xCall (ICON-hub burn-mint)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Balanced's pinned xTokens registry maps this 18-decimal bnUSD(old) contract to the Havah network id 0x100.icon. Live Havah RPC reads on 2026-08-11 returned symbol bnUSD, xCall cx00104193d0a593c4b57fda544d1b7c88b8ed4fae, and xCallManager cx49afee1a85186bacb921c5a8ee1df329e006e340. ICON getConnectedChains independently returned the same Havah token address and network id.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "controllerChain": "havah",
+        "controllerAddress": "cx00104193d0a593c4b57fda544d1b7c88b8ed4fae",
+        "failureDomainKeys": [
+          "protocol:xcall",
+          "contract:havah:cx00104193d0a593c4b57fda544d1b7c88b8ed4fae"
+        ],
+        "observedAt": "2026-08-11",
+        "sources": [
+          {
+            "label": "Balanced xTokens registry (pinned Havah bnUSD address)",
+            "url": "https://github.com/balancednetwork/balanced-network-interface/blob/3f4fecb9e7d0b30a0bf2c6c8744128e3220dd811/packages/xwagmi/src/constants/xTokens.ts"
+          },
+          {
+            "label": "Havah public RPC (symbol, xCall, xCallManager, and supply reads on 2026-08-11)",
+            "url": "https://ctz.havah.io/api/v3"
+          },
+          {
+            "label": "ICON public RPC (connected-chain inventory read on 2026-08-11)",
+            "url": "https://ctz.solidwallet.io/api/v3"
+          }
+        ]
+      },
       {
         "id": "base:0x78b7cd9308287deb724527d8703c889e2d6c3708",
         "sourceChain": "icon",
