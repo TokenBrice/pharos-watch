@@ -15,7 +15,6 @@ import {
   DETAIL_MODULE_HEADER_CLASS,
   DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
-  SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
 import {
   getMechanismArchetypeLabel,
@@ -60,7 +59,9 @@ function ClampedRailProse({ text }: { text: string }) {
  *
  * Lives in the summary rail at `xl+` (`compact`) and in the Context zone below
  * `xl`, the same split `#price` and `#coin-timeline` use, so narrow viewports
- * still get the review.
+ * still get the review. Neither treatment carries an anchor id or a breakpoint
+ * class: the in-flow copy mounts inside the `xl:hidden` `RailCopyFold` band
+ * that owns `#mechanism-review` and the visibility gate.
  *
  * Both treatments are built from one set of locals and branch only on the
  * shell (`RailCard` vs `Card`), so the archetype badge, explainer link, review
@@ -113,7 +114,7 @@ export function MechanismReviewPanel({
   }
 
   return (
-    <Card id="mechanism-review" className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT, "xl:hidden")}>
+    <Card className={DETAIL_MODULE_SHELL_CLASS}>
       <CardHeader className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex min-w-0 items-center gap-2">
           <FlaskConical className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

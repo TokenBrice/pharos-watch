@@ -11,7 +11,6 @@ import { RailCopyFold } from "@/components/stablecoin-detail/rail-copy-fold";
 import { ReserveQualitySection } from "@/components/stablecoin-detail/reserve-quality-section";
 import { SectionBanner } from "@/components/stablecoin-detail/section-banner";
 import { LazySection } from "@/components/lazy-section";
-import { SectionErrorBoundary } from "@/components/section-error-boundary";
 import type { StablecoinDetailViewModel } from "@/hooks/use-stablecoin-detail-view-model";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
@@ -21,11 +20,8 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
   DEWSDetail,
-  DistributionSection,
   FlowsSection,
   KeyInfoCard,
-  MarketDataSection,
-  McapChart,
   PegStabilityCard,
   StablecoinSafetyScoreV9Card,
   StablecoinDepegResolverCard,
@@ -67,11 +63,6 @@ export function DetailRiskContextSections({
     ? resolveMechanismArchetype(viewModel.variantParent, TRACKED_META_BY_ID)
     : null;
   const overviewNotices = viewModel.coin.notices?.filter((notice) => notice.type !== "danger") ?? [];
-  const showPegChart =
-    viewModel.coin.flags.pegCurrency === "USD"
-    && !viewModel.isNavToken
-    && viewModel.coin.flags.yieldBearing !== true
-    && viewModel.supplyHistory.length > 0;
   const showDepegResolver = !viewModel.isNavToken && viewModel.pegScoreResult?.activeDepeg === true;
 
   return (
@@ -154,7 +145,20 @@ export function DetailRiskContextSections({
           hasCollateralUsage={hasCollateralUsage}
           collateralUsageEntries={collateralUsageEntries}
         />
-        <MechanismReviewPanel review={mechanismReview} />
+        <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
+        {viewModel.coin.reserveQualitySummary ? (
+          <ReserveQualitySection summary={viewModel.coin.reserveQualitySummary} />
+        ) : null}
+        {viewModel.coin.oracleRiskSummary ? (
+          <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />
+        ) : null}
+        {mechanismReview ? (
+          <div className="xl:hidden">
+            <RailCopyFold title="Mechanism review" id="mechanism-review">
+              <MechanismReviewPanel review={mechanismReview} />
+            </RailCopyFold>
+          </div>
+        ) : null}
         {sharedModules.backingMechanics ? (
           <div className="xl:hidden">
             <RailCopyFold title="Backing mechanics">{sharedModules.backingMechanics}</RailCopyFold>
@@ -188,35 +192,6 @@ export function DetailRiskContextSections({
             </RailCopyFold>
           </div>
         ) : null}
-        <MintAuthoritySection profile={viewModel.mintAuthority} symbol={viewModel.coin.symbol} />
-        {viewModel.coin.reserveQualitySummary ? (
-          <ReserveQualitySection summary={viewModel.coin.reserveQualitySummary} />
-        ) : null}
-        {viewModel.coin.oracleRiskSummary ? (
-          <OracleLiquidationSection summary={viewModel.coin.oracleRiskSummary} />
-        ) : null}
-        {showPegChart ? (
-          <MarketDataSection
-            stablecoinId={viewModel.id}
-            supplyHistory={viewModel.supplyHistory}
-            pegCurrency={viewModel.coin.flags.pegCurrency}
-            updatedAtMs={viewModel.supplyUpdatedAt}
-            frozenNote={frozenNote}
-          />
-        ) : (
-          <section id="chart">
-            {frozenNote}
-            <LazySection minHeight={420}>
-              <McapChart data={viewModel.supplyHistory} stablecoinId={viewModel.id} />
-            </LazySection>
-          </section>
-        )}
-        <section id="distribution">
-          {frozenNote}
-          <SectionErrorBoundary name="distribution">
-            <DistributionSection stablecoinId={viewModel.id} />
-          </SectionErrorBoundary>
-        </section>
       </div>
     </>
   );

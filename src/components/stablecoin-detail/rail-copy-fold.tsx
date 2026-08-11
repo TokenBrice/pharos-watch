@@ -1,9 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
+import {
+  DETAIL_MODULE_TITLE_CLASS,
+  SECTION_SCROLL_MT,
+} from "@/components/stablecoin-detail/section-title-class";
+import { revealAnchorTarget } from "@/lib/anchor-reveal";
 import { cn } from "@/lib/utils";
 
 export interface RailCopyFoldChip {
@@ -19,23 +23,42 @@ export interface RailCopyFoldChip {
  * status chip) in a collapsed card band and folds the card body.
  *
  * Native `<details>` keeps the folded card in the DOM — crawlable, and
- * Chromium auto-expands it on find-in-page. The wrapped cards carry no anchor
- * ids (rail and in-flow copies coexist), so no hash-navigation reveal is
- * needed. The rail instance at `xl+` renders the bare card and is untouched;
- * this wrapper only ever appears inside the `xl:hidden` mounts.
+ * Chromium auto-expands it on find-in-page. Most wrapped cards carry no anchor
+ * ids (rail and in-flow copies coexist); the one that does — Mechanism review,
+ * `#mechanism-review` — passes `id` here so the fold band itself is the anchor
+ * target and opens on hash navigation. The rail instance at `xl+` renders the
+ * bare card and is untouched; this wrapper only ever appears inside the
+ * `xl:hidden` mounts.
  */
 export function RailCopyFold({
   title,
   chip,
+  id,
   children,
 }: {
   title: string;
   /** Scan-level status chip mirrored from the card's own header badge. */
   chip?: RailCopyFoldChip | null;
+  /** Anchor id on the <details> so hash navigation can reveal + open it. */
+  id?: string;
   children: ReactNode;
 }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  // Deep links arrive both on load (before lazy sections settle, which is why
+  // `DetailContent` also sweeps once on mount) and while the page is already
+  // open, when only `hashchange` fires.
+  useEffect(() => {
+    if (!id) return;
+    const openOnHashMatch = () => {
+      const targetId = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+      if (targetId === id) revealAnchorTarget(detailsRef.current);
+    };
+    openOnHashMatch();
+    window.addEventListener("hashchange", openOnHashMatch);
+    return () => window.removeEventListener("hashchange", openOnHashMatch);
+  }, [id]);
   return (
-    <details className="group">
+    <details ref={detailsRef} id={id} className={cn("group", id ? SECTION_SCROLL_MT : undefined)}>
       <summary
         className={cn(
           "pharos-card-shell pharos-focus-ring flex cursor-pointer list-none items-center justify-between gap-3",

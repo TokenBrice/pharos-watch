@@ -607,6 +607,71 @@ describe("StablecoinDetailClient", () => {
     expect(container.querySelector("#chart")).toBeTruthy();
   });
 
+  it("mounts the chart and distribution in the Market zone above DEX liquidity", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+
+    const { container } = render(
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />,
+    );
+
+    const banner = container.querySelector("#liquidity");
+    const chart = container.querySelector("#chart");
+    const distribution = container.querySelector("#distribution");
+    const dexLiquidity = container.querySelector("#dex-liquidity");
+    // The zone id stays `liquidity`; only its label reads "Market".
+    expect(banner?.textContent).toContain("Market");
+    expect(chart?.parentElement).toBe(dexLiquidity?.parentElement);
+    expect(distribution?.parentElement).toBe(dexLiquidity?.parentElement);
+    expect(chart!.compareDocumentPosition(distribution!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(distribution!.compareDocumentPosition(dexLiquidity!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(longformScrollspyNavMock.mock.calls[0]?.[0]?.sections).toEqual(
+      expect.arrayContaining([{ id: "liquidity", label: "Market", icon: expect.anything() }]),
+    );
+  });
+
+  it("orders the Context zone with the mechanism review folded after the zone-owned modules", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        mechanismReview={{
+          archetype: "fiat-cash",
+          reviewedAt: "2026-07-15",
+          notes: "Reserves sit in segregated accounts.",
+          sources: [{ label: "Terms", url: "https://example.com/terms" }],
+        }}
+        mechanismBacking={{
+          archetype: "fiat-cash",
+          reviewedAt: "2026-07-15",
+          metrics: [],
+          protocolFacts: [],
+          notes: [],
+          sourceLabel: "Terms",
+          sourceUrl: "https://example.com/terms",
+        }}
+      />,
+    );
+
+    const mintAuthority = container.querySelector("#mint-authority");
+    const mechanismReview = container.querySelector("#mechanism-review");
+    // The anchor now lands on the collapsed fold band, not the card inside it.
+    expect(mechanismReview?.tagName).toBe("DETAILS");
+    expect((mechanismReview as HTMLDetailsElement).open).toBe(false);
+    expect(mechanismReview?.closest("div")?.className).toContain("xl:hidden");
+    expect(mintAuthority!.compareDocumentPosition(mechanismReview!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // Reference material sits below the zone-owned modules and leads the folds.
+    const contextZone = mechanismReview!.parentElement!.parentElement!;
+    const foldBands = Array.from(contextZone.querySelectorAll('div[class~="xl:hidden"] > details'));
+    expect(foldBands.length).toBeGreaterThan(1);
+    expect(foldBands[0]).toBe(mechanismReview);
+  });
+
   it("mounts redemption backstop data in the liquidity zone", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
     useStablecoinDetailViewModelMock.mockReturnValue(

@@ -51,10 +51,13 @@ describe("MechanismReviewPanel", () => {
       .toBe("https://example.com/deloitte");
   });
 
-  it("hides the in-flow section at xl so it does not duplicate the rail copy", () => {
+  it("leaves the anchor and the xl gate to the fold band wrapping the in-flow copy", () => {
+    // `#mechanism-review` and `xl:hidden` moved onto the `RailCopyFold` band in
+    // the Context zone: the anchor must land on the collapsed header, not on a
+    // card body inside it.
     const { container } = render(<MechanismReviewPanel review={review} />);
-    const section = container.querySelector("#mechanism-review");
-    expect(section?.className).toContain("xl:hidden");
+    expect(container.querySelector("#mechanism-review")).toBeNull();
+    expect(container.querySelector('[class*="xl:hidden"]')).toBeNull();
   });
 
   it("cuts long in-flow notes to a lead behind one control", () => {
@@ -99,7 +102,7 @@ describe("MechanismReviewPanel", () => {
     expect(getSourcesContainer(container)?.hasAttribute("hidden")).toBe(false);
   });
 
-  it("keeps the anchor id on the in-flow copy only", () => {
+  it("keeps the rail copy free of the anchor id", () => {
     const { container } = render(<MechanismReviewPanel review={review} compact />);
     expect(container.querySelector("#mechanism-review")).toBeNull();
   });
