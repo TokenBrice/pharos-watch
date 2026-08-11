@@ -12,6 +12,7 @@ import {
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
+import { buildBrowserHeaders } from "./request";
 import { toFiniteNumber } from "../../lib/number-utils";
 
 interface AccountableDashboardResponse {
@@ -516,7 +517,7 @@ export function adaptAccountableDashboard(
 }
 
 export async function fetchAccountableReserves(
-  _coin: StablecoinMeta,
+  coin: StablecoinMeta,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -528,6 +529,9 @@ export async function fetchAccountableReserves(
     signal,
     12_000,
     ctx,
+    coin.id === "apxusd-apyx"
+      ? { headers: buildBrowserHeaders("https://accountable.apyx.fi", "https://accountable.apyx.fi/") }
+      : undefined,
   );
   return adaptAccountableDashboard(payload, params);
 }
