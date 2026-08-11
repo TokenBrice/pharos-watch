@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeftRight, ArrowRight, BookOpen, ExternalLink, FileText, Flag, Globe, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MethodologyLabel } from "@/components/methodology-hint";
+import { MethodologyHint, MethodologyLabel } from "@/components/methodology-hint";
 import { ShareButton } from "@/components/share-button";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
@@ -46,13 +46,22 @@ function renderMetricValue(metric: HeroTertiaryMetricViewModel): React.ReactNode
   return display.value;
 }
 
+// The mobile metric chips put label, value and sub-line on one line, so the
+// help affordance is an inline glyph sized to the 24px minimum tap target
+// rather than the full-size circular button, which crowded values into
+// truncation.
+const MOBILE_HINT_BUTTON_CLASS =
+  "h-6 w-6 border-transparent bg-transparent text-muted-foreground hover:border-transparent hover:bg-transparent hover:text-foreground dark:text-muted-foreground";
+
 function renderMetricLabel(metric: HeroTertiaryMetricViewModel, mobile = false): React.ReactNode {
   const label = mobile ? (metric.mobileLabel ?? metric.label) : metric.label;
   if (!metric.methodologyTopic) return label;
+  if (!mobile) return <MethodologyLabel topic={metric.methodologyTopic}>{label}</MethodologyLabel>;
   return (
-    <MethodologyLabel topic={metric.methodologyTopic} compact={mobile}>
-      {label}
-    </MethodologyLabel>
+    <span className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <MethodologyHint topic={metric.methodologyTopic} buttonClassName={MOBILE_HINT_BUTTON_CLASS} />
+    </span>
   );
 }
 

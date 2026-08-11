@@ -111,9 +111,16 @@ export function HeroPassportStrip({
   // start-aligned gap so three fields don't float disconnected across the card.
   const distributionClass = items.length >= 6 ? "lg:justify-between" : "";
   const desktopItems = compactDesktop ? items.filter((item) => item.category !== "Mechanism") : items;
+  // Content-sized tracks with an even-distribution ceiling: `min-content` floors
+  // each column at its own longest entry so a wide value takes the room from its
+  // short-value neighbours instead of spilling over them, while `1fr` still
+  // shares the leftover evenly so sparse strips keep the document rhythm.
   const desktopGridStyle = {
-    gridTemplateColumns: `repeat(${Math.max(desktopItems.length, 1)}, minmax(0, 1fr))`,
+    gridTemplateColumns: `repeat(${Math.max(desktopItems.length, 1)}, minmax(min-content, 1fr))`,
   } as CSSProperties;
+  // At nine-plus fields the entries alone consume the strip: trade cell padding
+  // for value room so the band still resolves on one row.
+  const desktopCellPaddingClass = desktopItems.length >= 9 ? "px-2.5" : "px-4";
 
   return (
     <TooltipProvider>
@@ -126,9 +133,12 @@ export function HeroPassportStrip({
         role="group"
         aria-label="Verification passport"
       >
+        {/* Scroll affordance for the two tiers that can run out of room: the
+            mobile row, and xl+, where the summary rail narrows the hero enough
+            that a dense strip scrolls rather than wrapping off its one row. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-8 bg-gradient-to-l from-card to-transparent lg:hidden xl:block xl:w-6"
         />
         <div
           className={`scrollbar-none flex snap-x items-start gap-x-6 gap-y-1.5 overflow-x-auto ${
@@ -165,7 +175,7 @@ export function HeroPassportStrip({
           })}
         </div>
         {compactDesktop ? (
-          <div className="hidden lg:grid" style={desktopGridStyle}>
+          <div className="scrollbar-none hidden overflow-x-auto lg:grid" style={desktopGridStyle}>
             {desktopItems.map((item) => {
               const isHashJump = item.href.startsWith("#");
               return withPassportTooltip(
@@ -182,7 +192,7 @@ export function HeroPassportStrip({
                         }
                       : undefined
                   }
-                  className="pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 px-4 py-3 last:border-r-0"
+                  className={`pharos-focus-ring group flex min-h-14 min-w-0 flex-col justify-center border-r border-border/40 py-3 last:border-r-0 ${desktopCellPaddingClass}`}
                 >
                   <span className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">
                     {item.category}

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { ScoreBadgeWrapper } from "@/components/score-badge-wrapper";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
@@ -10,13 +9,16 @@ import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
   GOVERNANCE_PROSE_LABELS,
+  HERO_CHIP_BACKING_LABELS,
+  HERO_CHIP_GOVERNANCE_LABELS,
+  HERO_CHIP_PEG_LABELS,
   PEG_LABELS,
   PEG_LABELS_SHORT,
   PEG_METADATA,
 } from "@shared/lib/classification";
 import { pegCurrencySymbol } from "@shared/lib/format";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
-import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
+import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import type {
   Infrastructure,
   StablecoinMeta,
@@ -109,11 +111,15 @@ function HeroClassificationLine({
     && coin.flags.pegCurrency !== "GOLD"
     && coin.flags.pegCurrency !== "SILVER";
 
-  const sentenceSegments: { key: string; label: string; href: string | null; aria: string }[] = [];
+  // Stacked (mobile) renders these as chips, so each segment carries both its
+  // sentence form and the desktop chip rail's label — same axis, same wording
+  // across breakpoints.
+  const sentenceSegments: { key: string; label: string; chipLabel: string; href: string | null; aria: string }[] = [];
   if (!isNonUsdPeg) {
     sentenceSegments.push({
       key: "peg",
       label: "USD-pegged",
+      chipLabel: HERO_CHIP_PEG_LABELS[coin.flags.pegCurrency],
       href: pegHref,
       aria: `Browse ${pegShortLabel} stablecoins`,
     });
@@ -122,6 +128,7 @@ function HeroClassificationLine({
     sentenceSegments.push({
       key: "backing",
       label: BACKING_SENTENCE_LABELS[coin.flags.backing],
+      chipLabel: HERO_CHIP_BACKING_LABELS[coin.flags.backing],
       href: backingHref,
       aria: `Browse ${backingFullLabel} stablecoins`,
     });
@@ -130,6 +137,7 @@ function HeroClassificationLine({
     sentenceSegments.push({
       key: "governance",
       label: GOVERNANCE_PROSE_LABELS[coin.flags.governance],
+      chipLabel: HERO_CHIP_GOVERNANCE_LABELS[coin.flags.governance],
       href: governanceHref,
       aria: `Browse ${governanceFullLabel} stablecoins`,
     });
@@ -139,38 +147,33 @@ function HeroClassificationLine({
     "pharos-focus-ring rounded-sm underline-offset-2 transition-colors hover:text-foreground hover:underline";
   const pillClass =
     "pharos-focus-ring inline-flex items-center rounded-full border border-border/50 bg-background/60 px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-border hover:text-foreground";
+  const segmentChipNodes = sentenceSegments.map((segment) =>
+    segment.href ? (
+      <Link key={segment.key} href={segment.href} className={pillClass} aria-label={segment.aria}>
+        {segment.chipLabel}
+      </Link>
+    ) : (
+      <span key={segment.key} className={pillClass}>
+        {segment.chipLabel}
+      </span>
+    ),
+  );
   const sentenceNode =
     sentenceSegments.length > 0 ? (
-      stackedSegments ? (
-        <span className="flex flex-col items-start leading-relaxed">
-          {sentenceSegments.map((segment) => (
-            <span key={segment.key} className="block">
-              {segment.href ? (
-                <Link href={segment.href} className={segmentLinkClass} aria-label={segment.aria}>
-                  {segment.label}
-                </Link>
-              ) : (
-                <span>{segment.label}</span>
-              )}
-            </span>
-          ))}
-        </span>
-      ) : (
-        <span className="inline-flex flex-wrap items-baseline">
-          {sentenceSegments.map((segment, index) => (
-            <span key={segment.key} className="inline">
-              {index > 0 && <span aria-hidden>, </span>}
-              {segment.href ? (
-                <Link href={segment.href} className={segmentLinkClass} aria-label={segment.aria}>
-                  {segment.label}
-                </Link>
-              ) : (
-                <span>{segment.label}</span>
-              )}
-            </span>
-          ))}
-        </span>
-      )
+      <span className="inline-flex flex-wrap items-baseline">
+        {sentenceSegments.map((segment, index) => (
+          <span key={segment.key} className="inline">
+            {index > 0 && <span aria-hidden>, </span>}
+            {segment.href ? (
+              <Link href={segment.href} className={segmentLinkClass} aria-label={segment.aria}>
+                {segment.label}
+              </Link>
+            ) : (
+              <span>{segment.label}</span>
+            )}
+          </span>
+        ))}
+      </span>
     ) : null;
   const taxonomyNodes = (
     <>
@@ -208,11 +211,9 @@ function HeroClassificationLine({
 
   if (stackedSegments) {
     return (
-      <div className="text-xs text-muted-foreground">
-        {sentenceNode}
-        <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          {taxonomyNodes}
-        </div>
+      <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        {segmentChipNodes}
+        {taxonomyNodes}
       </div>
     );
   }
@@ -225,6 +226,11 @@ function HeroClassificationLine({
   );
 }
 
+/**
+ * Hero grade, in the same form as the desktop summary rail (RailSafetySummary):
+ * a bare band-colored letter followed by `· 87/100`. Deliberately not a boxed,
+ * captioned, tinted pill — the page carries one grade presentation.
+ */
 export function SafetyGradeHero({
   reportCard,
   mobile = false,
@@ -232,50 +238,31 @@ export function SafetyGradeHero({
   reportCard: V9ConsumerCard | null;
   mobile?: boolean;
 }) {
+  const letterClass = mobile ? "text-3xl" : "text-5xl";
+  const scoreClass = mobile ? "text-xs" : "text-base";
+
   if (!reportCard) {
     return (
-      <div
-        className={`flex flex-col items-center justify-center rounded-xl border border-border/60 bg-background/50 ${
-          mobile ? "h-full min-w-[9rem] px-2.5 py-2.5" : "px-4 py-3"
-        }`}
-      >
-        <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          Safety
-        </span>
-        <span className="text-lg font-bold text-muted-foreground">—</span>
+      <div className="flex h-full shrink-0 items-baseline justify-end gap-1.5">
+        <span className={`pharos-numeric font-extrabold leading-none text-muted-foreground ${letterClass}`}>—</span>
       </div>
     );
   }
 
-  const sizeClasses = mobile ? "px-3 py-1.5 text-[2rem] leading-none" : "text-5xl px-6 py-3";
-
   return (
-    <div
-      className={`flex flex-col items-center rounded-xl border-2 border-border/60 bg-background/50 ${
-        mobile
-          ? "h-full min-w-[9rem] justify-between gap-2 px-2.5 py-2.5"
-          : "justify-center gap-2.5 px-5 py-4"
-      }`}
-    >
-      <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        Safety Grade
-      </span>
+    <div className="flex h-full shrink-0 items-baseline justify-end gap-1.5">
       <ScoreBadgeWrapper topic="safetyScore" variant="tooltip-only">
-        <Badge
-          variant="outline"
-          className={`${sizeClasses} font-extrabold tracking-tight ${REPORT_CARD_GRADE_COLORS[reportCard.grade]}`}
-        >
-          {reportCard.grade}
-        </Badge>
-      </ScoreBadgeWrapper>
-      {reportCard.score !== null && (
         <span
-          className={`pharos-numeric tracking-tight text-foreground ${
-            mobile ? "text-base leading-none" : "text-lg"
+          className={`pharos-numeric font-extrabold leading-none tracking-tight ${letterClass} ${
+            getSafetyGradeMetadata(reportCard.grade).pulse.accentClassName
           }`}
         >
-          {reportCard.score}
-          <span className="text-xs text-muted-foreground">/100</span>
+          {reportCard.grade}
+        </span>
+      </ScoreBadgeWrapper>
+      {reportCard.score !== null && (
+        <span className={`font-mono text-muted-foreground ${scoreClass}`}>
+          · {reportCard.score}/100
         </span>
       )}
     </div>
@@ -367,7 +354,10 @@ export function HeroMobileIdentity({
         </div>
         <div className="min-w-0 flex-1">
           <h2
-            className="pharos-page-title text-2xl"
+            // The grade now sits inline to the right rather than in its own
+            // boxed column, so at 390 the title steps down a size to clear it;
+            // break-words is the last-resort guard for a longer single word.
+            className="pharos-page-title break-words text-xl sm:text-2xl"
             {...(showVerdict ? { "aria-describedby": verdictId } : {})}
           >
             {coin.name}

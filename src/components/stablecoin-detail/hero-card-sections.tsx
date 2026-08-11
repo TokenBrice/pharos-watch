@@ -29,7 +29,6 @@ import {
   HeroTertiaryMetrics,
 } from "./hero-card-metrics";
 import type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
-import { RecentBlacklistBanner } from "./recent-blacklist-banner";
 export type { HeroSignalRailItem, HeroTertiaryMetricConfig } from "./hero-card-metrics";
 
 function formatChipLaunchDate(value: string | undefined): string | null {
@@ -196,11 +195,7 @@ export function HeroCardMobileSection({
         prevMonthTrendClass={market.prevMonthTrendClass}
       />
 
-      <HeroTertiaryMetrics
-        metrics={tertiaryMetrics}
-        activeDepeg={peg.activeDepeg}
-        trailing={<RecentBlacklistBanner symbol={coin.symbol} coinStatus={coin.status} />}
-      />
+      <HeroTertiaryMetrics metrics={tertiaryMetrics} activeDepeg={peg.activeDepeg} />
     </div>
   );
 }
