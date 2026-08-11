@@ -1,14 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { FlaskConical } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
-import { InlineDisclosureToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
-import { RailCard, ReviewedStamp } from "@/components/stablecoin-detail/rail-card";
+import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import {
   DETAIL_MODULE_BODY_CLASS,
@@ -21,36 +19,6 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import type { MechanismReviewView } from "@/lib/mechanism-review";
-import { cn } from "@/lib/utils";
-
-/**
- * Rail-only prose treatment: a `line-clamp` fold rather than the shared
- * `prose-lead` string cut. Deliberate and documented in `prose-lead.ts` — the
- * string cut exists because one *full-width* clamped line already carries ~150
- * characters, which is not true of a 22rem column, where three clamped lines
- * are the right budget.
- */
-function ClampedRailProse({ text }: { text: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <p
-        className={cn(
-          "mt-3 whitespace-pre-line text-xs leading-relaxed text-muted-foreground",
-          !open && "line-clamp-3",
-        )}
-      >
-        {text}
-      </p>
-      <InlineDisclosureToggle
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
-        collapsedLabel="Read more"
-        className="mt-2"
-      />
-    </>
-  );
-}
 
 /**
  * The reviewed evidence behind the Backing pillar's mechanism component scores.
@@ -102,15 +70,16 @@ export function MechanismReviewPanel({
       <RailCard
         title="Mechanism review"
         ariaLabel="Mechanism review"
-        trailing={<ReviewedStamp date={review.reviewedAt} />}
+        trailing={archetypeBadge}
       >
         <div className="px-4 pb-4">
-          {archetypeBadge}
-          <ClampedRailProse text={review.notes} />
+          <CollapsibleProse text={review.notes} className="mt-3 whitespace-pre-line text-xs" variant="rail" toggleClassName="mt-2" />
         </div>
 
         <div className="px-4 pb-4">
-          <EvidenceFooter sources={review.sources} trailing={explainerLink} />
+          <EvidenceFooter sources={review.sources} trailing={`Reviewed ${review.reviewedAt}`}>
+            {explainerLink}
+          </EvidenceFooter>
         </div>
       </RailCard>
     );

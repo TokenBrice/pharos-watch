@@ -38,7 +38,7 @@ export function FreezeSeizureCard({ summary, frameless }: { summary?: Blacklista
         <p className="text-xs leading-relaxed text-muted-foreground">{summary.statusNote}</p>
         {/* Access-review evidence routinely runs past 400 characters (on-chain
             slot reads at a fixed block), so it folds to a lead. */}
-        <CollapsibleProse text={summary.evidence} className="text-xs" />
+        <CollapsibleProse text={summary.evidence} className="text-xs" variant="rail" />
         <FactGrid aria-label="Freeze and seizure facts" items={facts} className="grid-cols-2" />
         {summary.sourceFreeRationale ? (
           <p className="text-xs leading-relaxed text-muted-foreground">{summary.sourceFreeRationale}</p>

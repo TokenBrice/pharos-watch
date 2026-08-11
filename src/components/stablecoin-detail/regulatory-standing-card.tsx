@@ -5,6 +5,7 @@ import { Check, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid } from "@/components/stablecoin-detail/fact-grid";
+import { CollapsibleProse } from "@/components/stablecoin-detail/collapsible-prose";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import type { RegulatoryStandingView } from "@/lib/regulatory-standing";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,7 @@ export function RegulatoryStandingCard({ view, frameless }: { view?: RegulatoryS
       }
     >
       <div className="space-y-3 px-4 pb-4">
-        <p className="text-xs leading-relaxed text-muted-foreground">{view.summary}</p>
+        <CollapsibleProse text={view.summary} className="text-xs" variant="rail" />
         {view.regimes.map((regime) => (
           <div key={regime.key} className="space-y-2.5 border-t border-border/50 pt-3">
             <div className="text-[10px] font-medium uppercase leading-tight tracking-[0.14em] text-muted-foreground">

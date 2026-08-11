@@ -5,7 +5,13 @@ import {
   InlineDisclosureToggle,
   type InlineDisclosureToggleSize,
 } from "@/components/stablecoin-detail/disclosure-toggles";
-import { buildProseLead, PROSE_COLLAPSE_THRESHOLD } from "@/components/stablecoin-detail/prose-lead";
+import {
+  buildProseLead,
+  PROSE_COLLAPSE_THRESHOLD,
+  PROSE_LEAD_CHARS,
+  RAIL_PROSE_COLLAPSE_THRESHOLD,
+  RAIL_PROSE_LEAD_CHARS,
+} from "@/components/stablecoin-detail/prose-lead";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,6 +26,7 @@ export function CollapsibleProse({
   collapsedLabel = "Read more",
   toggleClassName,
   size,
+  variant = "default",
 }: {
   text: string;
   /** Paragraph type scale, e.g. `text-xs` or `whitespace-pre-line text-sm`. */
@@ -28,9 +35,18 @@ export function CollapsibleProse({
   /** Placement utilities for the toggle (margins). */
   toggleClassName?: string;
   size?: InlineDisclosureToggleSize;
+  /**
+   * `"rail"` folds to a ~3-line lead sized for the 22rem summary rail. The
+   * default lead is measured for the main column and is about seven lines
+   * there, which is why stacked rail prose modules read as a wall.
+   */
+  variant?: "default" | "rail";
 }) {
   const [open, setOpen] = useState(false);
-  const collapsible = text.length > PROSE_COLLAPSE_THRESHOLD;
+  const rail = variant === "rail";
+  const threshold = rail ? RAIL_PROSE_COLLAPSE_THRESHOLD : PROSE_COLLAPSE_THRESHOLD;
+  const leadChars = rail ? RAIL_PROSE_LEAD_CHARS : PROSE_LEAD_CHARS;
+  const collapsible = text.length > threshold;
   const showLead = collapsible && !open;
 
   return (
@@ -39,7 +55,7 @@ export function CollapsibleProse({
           `text-{size}` as overriding `leading-*`, so a base-first merge would
           silently drop `leading-relaxed` for every caller that sets a size. */}
       <p className={cn(className, "leading-relaxed text-muted-foreground")}>
-        {showLead ? buildProseLead(text) : text}
+        {showLead ? buildProseLead(text, leadChars) : text}
       </p>
       {collapsible ? (
         <InlineDisclosureToggle
