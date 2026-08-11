@@ -24,8 +24,6 @@ import type {
 } from "../../types";
 import type { StablecoinClientMeta } from "../../types/stablecoin-client-meta";
 
-type V9ReportCard = ReportCardsV9CurrentResponse["cards"][number];
-
 export interface BuildSelectorRowsArgs {
   stablecoinsData: StablecoinListResponse | null;
   pegCurrency?: SelectorInput["pegCurrency"] | null;
