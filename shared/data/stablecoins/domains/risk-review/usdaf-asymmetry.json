@@ -81,7 +81,7 @@
       {
         "id": "ysybold",
         "label": "ysyBOLD Trove branch",
-        "tier": "oracleless-or-internal",
+        "tier": "oracleless",
         "summary": "The branch prices st-yBOLD from its ERC-4626 conversion into yBOLD and yBOLD's ERC-4626 conversion into USDaf/BOLD; the implementation explicitly assumes BOLD remains solvent and has no external market feed or fallback.",
         "collateralAssets": [
           "ysyBOLD (st-yBOLD)"

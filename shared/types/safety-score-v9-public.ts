@@ -1266,17 +1266,18 @@ export const SafetyScoreV9ControlBreakdownSchema = z
       });
     }
     const binding = breakdown.components.filter((component) => component.binding);
-    if (
-      binding.length === 0 ||
-      !numbersAgree(
-        Math.min(...binding.map((component) => component.score)),
-        breakdown.evaluatedScore,
-      )
-    ) {
+    const bindingScoreReconciles =
+      binding.length === 0
+        ? numbersAgree(breakdown.evaluatedScore, 95)
+        : numbersAgree(
+            Math.min(...binding.map((component) => component.score)),
+            breakdown.evaluatedScore,
+          );
+    if (!bindingScoreReconciles) {
       ctx.addIssue({
         code: "custom",
         path: ["components"],
-        message: "V9 binding controls must reconcile the minimum-component evaluated score",
+        message: "V9 binding controls, or the neutral empty set, must reconcile the evaluated score",
       });
     }
   });

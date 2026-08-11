@@ -54,6 +54,11 @@
       "type": "warning",
       "title": "Custodian identities undisclosed; on-chain flows reach exchanges",
       "message": "Tori's Accountable dashboard attributes ~90% of backing to unnamed 'regulated custodian banks' and ~10% to 'regulated investment banks', with names withheld for operational security. Independent on-chain tracing of the sole minting custodian wallet shows collateral flowing to BiLira Pro and Binance deposit addresses and a large USDT balance in an unlabeled externally owned account, so Pharos classifies custody as CEX/off-exchange rather than accepting the custodian-bank framing at face value."
+    },
+    {
+      "type": "warning",
+      "title": "strUSD has a separate privileged loss-reporting path",
+      "message": "The StakedTrUSD wrapper lets the rewards distributor's designated operator call reportLoss(), burning up to the trUSD balance available in the vault and reducing ERC-4626 assets per share without a proportional cap or timelock. This authority affects strUSD's wrapper exchange rate; it does not rewrite ordinary trUSD holder balances or the base token's mint/redeem quote."
     }
   ],
   "featuredContent": [

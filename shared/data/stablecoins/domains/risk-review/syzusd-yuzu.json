@@ -34,7 +34,7 @@
     "reviewedAt": "2026-08-09"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "syzUSD is Yuzu's staking wrapper over yzUSD; its share price accrues strategy yield and the wrapper does not expose a separate borrower collateral market or token-level liquidation oracle.",
     "branchModel": "single-path",
     "branchApplicability": {

@@ -13,7 +13,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "nBASIS is a Nest NAV vault receipt token whose value is determined by the vault's strategy accounting and redemption value, not by borrower-specific collateral liquidation oracles.",
     "branchModel": "single-path",
     "branchApplicability": {

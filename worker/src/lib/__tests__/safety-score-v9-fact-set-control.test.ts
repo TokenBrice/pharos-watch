@@ -98,6 +98,45 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(withoutOracle.assets[0]!.economicControlReview).toBeNull();
   });
 
+  it("compiles a reviewed top-level internal price without liquidation branches", () => {
+    const fixed = exactFixedInput();
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "synthetic-delta-neutral" as const,
+            oracleRisk: {
+              tier: "privileged-internal-pricing" as const,
+              summary: "A privileged backend constructs the economically effective mint and redemption quote.",
+              branchModel: "single-path" as const,
+              branchApplicability: {
+                disposition: "top-level-only" as const,
+                reviewedAt: "1970-01-01",
+                reviewer: "Fixture reviewer",
+                rationale: "The price authority applies without borrower liquidation branches.",
+                sources: [{ label: "Pricing docs", url: "https://example.com/pricing" }],
+              },
+              reviewedAt: "1970-01-01",
+              reviewer: "Fixture reviewer",
+              confidence: "verified" as const,
+              sources: [{ label: "Pricing docs", url: "https://example.com/pricing" }],
+            },
+          },
+        ],
+      ]),
+    });
+
+    const oracle = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.economicControlReview.oracle;
+    expect(oracle).toMatchObject({
+      tier: "privileged-internal-pricing",
+      liquidationBranchesApplicable: false,
+      branches: [],
+    });
+    expect(oracle.status.observationState).toBe("known");
+  });
+
   it("retains reviewed mint controls when the aggregate inventory remains unresolved", () => {
     const fixed = exactFixedInput();
     const baseline = buildSafetyScoreV9BaselineExtension(fixed, {

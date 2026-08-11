@@ -397,6 +397,33 @@ describe("Safety Score v9 economic control", () => {
     ]);
   });
 
+  it("omits a not-applicable oracle instead of manufacturing a scored control", () => {
+    const result = evaluateV9EconomicControl(args());
+
+    expect(result.components.some((component) => component.kind === "oracle")).toBe(false);
+    expect(result).toMatchObject({ score: 95, state: "rated", oracleApplicability: "not-applicable" });
+  });
+
+  it("scores privileged top-level pricing without requiring liquidation branches", () => {
+    const result = evaluateV9EconomicControl(
+      args({
+        oracle: {
+          status: requiredKnown("oracle"),
+          tier: "privileged-internal-pricing",
+          liquidationBranchesApplicable: false,
+          branches: [],
+        },
+      }),
+    );
+
+    expect(result.components.find((component) => component.kind === "oracle")).toMatchObject({
+      posture: "privileged-internal-pricing",
+      score: 45,
+      binding: true,
+    });
+    expect(result.reasons.map((reason) => reason.code)).not.toContain("missing-required-oracle-branches");
+  });
+
   it("surfaces a sub-material weak oracle branch as a non-binding moderate diagnostic without dragging the component", () => {
     const oracleControl = control("oracle:core", "oracle");
     const oracle: V9OracleControlReview = {
@@ -995,7 +1022,7 @@ describe("Safety Score v9 economic control", () => {
     expect(result.reasons).toEqual([
       expect.objectContaining({ code: "unresolved-control-identity", path: "controls", controlKey: null }),
     ]);
-    expect(result.components.map((component) => component.componentKey)).toEqual(["bridge:native", "mint", "oracle"]);
+    expect(result.components.map((component) => component.componentKey)).toEqual(["bridge:native", "mint"]);
     expect(reasonPolicy.ceiling).toEqual({ kind: "reason:unresolved-control-identity", limit: 55 });
     expect(Math.min(result.score!, reasonPolicy.ceiling!.limit)).toBe(55);
   });

@@ -1,5 +1,25 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_ORACLE_APPLICABILITY: MethodologyChangelogEntry = {
+  version: "9.17",
+  title: "Oracle applicability no longer implies oracle safety",
+  date: "2026-08-11",
+  effectiveAt: 1786672801,
+  summary:
+    "Economic Control now separates a genuinely oracleless mechanism from privileged internal pricing, while a reviewed not-applicable oracle path is neutral and emits no scored component instead of manufacturing a green 95.",
+  impact: [
+    "The combined `oracleless-or-internal` posture is replaced by `oracleless` at 95 and `privileged-internal-pricing` at 45; external-feed tiers and scores are unchanged",
+    "A not-applicable oracle review emits no oracle component and contributes neither credit nor penalty to Economic Control",
+    "A reviewed top-level price authority can be scored without inventing collateral-liquidation branches",
+    "Tori trUSD moves to privileged internal pricing because its backend constructs the economically effective signed-order quote without an independent on-chain feed or collateral-depeg circuit breaker",
+    "Tori's strUSD loss-reporting authority is disclosed separately as wrapper-specific risk and is not attributed to ordinary trUSD balances",
+    "On the 337-card fixed-input replay, 281 manufactured not-applicable oracle rows disappear; after partitioning unrelated registry drift, Tori is the only methodology-attributed score move, from 57/C to 52/C- as Economic Control moves from 70 to 45",
+    "Pillar weights, aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 /**
  * V9 is activated under methodology `9.0`.
  */

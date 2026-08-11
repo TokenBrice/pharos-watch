@@ -21,7 +21,7 @@
     "reviewedAt": "2026-07-30"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "srUSDe is a senior ERC-4626 tranche over Strata's USDe strategy and has no borrower-owned collateral positions or token-level liquidation oracle. Junior capital absorbs first loss, while underlying USDe and sUSDe risks remain inherited dependencies.",
     "branchModel": "single-path",
     "branchApplicability": {

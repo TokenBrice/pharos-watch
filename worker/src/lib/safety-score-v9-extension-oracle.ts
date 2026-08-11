@@ -51,7 +51,11 @@ const ORACLE_BRANCH_MATERIAL_SHARE_PCT = V9_CANDIDATE_POLICY_V1.policy.semantic.
 const ORACLE_SUB_MATERIAL_MODERATE_MIN_SHARE_PCT = 5;
 
 function isWeakOracleTier(tier: OracleRiskTier): boolean {
-  return tier === "single-source-or-laggy" || tier === "opaque-or-unknown";
+  return (
+    tier === "privileged-internal-pricing" ||
+    tier === "single-source-or-laggy" ||
+    tier === "opaque-or-unknown"
+  );
 }
 
 export function deriveOracleBranchMateriality(
@@ -97,12 +101,14 @@ export function adaptOracleReview(
           [],
         ),
         tier: null,
+        liquidationBranchesApplicable: false,
         branches: [],
       };
     }
     return {
       status: requiredStatus("v9.control.oracle-review", "missing", `oracle:${meta.id}`),
       tier: null,
+      liquidationBranchesApplicable: true,
       branches: [],
     };
   }
@@ -124,6 +130,7 @@ export function adaptOracleReview(
     return {
       status: requiredStatus("v9.control.oracle-review", "stale", `oracle:${meta.id}`, evidenceKeys),
       tier: null,
+      liquidationBranchesApplicable: true,
       branches: [],
     };
   }
@@ -131,11 +138,13 @@ export function adaptOracleReview(
     return {
       status: notApplicableStatus("v9.control.oracle-review", profile.branchApplicability.rationale, evidenceKeys),
       tier: null,
+      liquidationBranchesApplicable: false,
       branches: [],
     };
   }
   const topState =
-    profile.branchApplicability?.disposition === "branches-required"
+    profile.branchApplicability?.disposition === "branches-required" ||
+    profile.branchApplicability?.disposition === "top-level-only"
       ? reviewedObservationState(confidence)
       : "bounded-unknown";
   const branchesRequired =
@@ -176,6 +185,7 @@ export function adaptOracleReview(
       topState === "known" || topState === "bounded-unknown" ? evidenceKeys : [],
     ),
     tier: topState === "missing" ? null : materiality.tier,
+    liquidationBranchesApplicable: profile.branchApplicability?.disposition !== "top-level-only",
     ...(materiality.subMaterialWeakBand !== undefined
       ? { subMaterialWeakBand: materiality.subMaterialWeakBand }
       : {}),

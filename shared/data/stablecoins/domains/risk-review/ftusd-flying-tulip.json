@@ -17,7 +17,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "The ftUSD mint/redeem token path is documented as oracleless, but the live reserve strategies borrow against collateral in Aave-compatible markets and therefore depend on venue price oracles and liquidation mechanics. The token is not itself a borrower-owned collateral market with an oracle-triggered liquidation branch.",
     "branchModel": "single-path",
     "branchApplicability": {

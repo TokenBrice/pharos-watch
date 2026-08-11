@@ -41,7 +41,7 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "JuiceDollar's tracked WCBTC CDP path uses permissionless challenges and Dutch auctions to discover collateral price and liquidate positions, explicitly replacing an external oracle.",
     "branchModel": "single-path",
     "branchApplicability": {

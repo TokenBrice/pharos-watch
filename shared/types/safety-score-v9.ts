@@ -1113,7 +1113,8 @@ const V9ControlPolicySchema = z
       }),
     oracleTierQuality: z
       .object({
-        "oracleless-or-internal": ScoreSchema,
+        "oracleless": ScoreSchema,
+        "privileged-internal-pricing": ScoreSchema,
         "redundant-with-failover": ScoreSchema,
         "medianized-with-delay": ScoreSchema,
         "standard-external": ScoreSchema,

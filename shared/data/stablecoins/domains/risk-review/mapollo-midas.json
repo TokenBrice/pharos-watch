@@ -17,7 +17,7 @@
     "reviewedAt": "2026-05-14"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "mAPOLLO is a NAV-accreting Midas Liquid Yield Token tracking an Apollo Crypto strategy, not a borrower CDP with user collateral liquidation.",
     "branchModel": "single-path",
     "branchApplicability": {

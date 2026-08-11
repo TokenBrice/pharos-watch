@@ -21,7 +21,7 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "Resupply lending pairs value ERC-4626 collateral from its share-to-underlying conversion while treating the crvUSD or frxUSD underlying as one dollar, so liquidations use an internal vault-rate path rather than market-price feeds.",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -57,7 +57,7 @@
       {
         "id": "registered-lending-vault-pairs",
         "label": "Registered Curve Lend and Fraxlend vault pairs",
-        "tier": "oracleless-or-internal",
+        "tier": "oracleless",
         "summary": "Enabled Resupply pairs use the common BasicVaultOracle to convert lending-vault shares to crvUSD or frxUSD units and apply the pair's configured maximum LTV without an external USD market-price feed.",
         "collateralAssets": [
           "Registered Curve Lend and Fraxlend ERC-4626 vault shares backed by crvUSD or frxUSD"

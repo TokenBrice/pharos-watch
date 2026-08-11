@@ -438,6 +438,30 @@ describe("Safety Score v9 public projection", () => {
     }]);
   });
 
+  it("names privileged internal pricing explicitly in the public control breakdown", () => {
+    const input = fixture("internal-pricing", {
+      score: 52,
+      grade: "C-",
+      pillars: { backing: 50, exit: 65, control: 45 },
+    });
+    input.control = {
+      score: 45,
+      components: [{
+        componentKey: "oracle",
+        kind: "oracle",
+        posture: "privileged-internal-pricing",
+        score: 45,
+        binding: true,
+        controlKeys: [],
+        failureDomains: [],
+      }],
+    };
+
+    expect(projectSafetyScoreV9Card(input).breakdowns?.control.components).toEqual([
+      expect.objectContaining({ label: "Privileged internal pricing", posture: "privileged-internal-pricing" }),
+    ]);
+  });
+
   it("keeps access unknowns, evidence owners, aggregation, and all score stages explicit", () => {
     const input = fixture("unknown-access", { score: 91.8, grade: "A+" });
     input.access = {

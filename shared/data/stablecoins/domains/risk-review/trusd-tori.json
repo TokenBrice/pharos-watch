@@ -25,14 +25,14 @@
     "reviewedAt": "2026-08-08"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
-    "summary": "trUSD is minted and redeemed through ToriMinting signed orders whose collateral and trUSD amounts are fixed off-chain by Tori's pricing system and co-signed by a live operator; the verified TrUSD, ToriMinting, StakedTrUSD, and StakingRewardsDistributor contract sources contain no price-feed, oracle, or exchange-rate oracle call. Accepted collateral is confined to USDC and USDT, so the signed-order rate only spans stablecoin quotes, and Tori publishes no oracle provider, feed, or failover documentation.",
+    "tier": "privileged-internal-pricing",
+    "summary": "trUSD mint and redemption amounts are constructed off-chain by Tori's pricing system, signed by the whitelisted participant, and executed by a privileged ToriMinting operator. The contract restricts collateral to USDC and USDT and enforces nominal amount bounds and per-block throughput caps, but it has no independent on-chain price feed or collateral-depeg circuit breaker. Tori's backend therefore remains the concentrated authority over the economically effective quote.",
     "branchModel": "single-path",
     "branchApplicability": {
-      "disposition": "not-applicable",
-      "reviewedAt": "2026-08-08",
-      "reviewer": "wave3-longtail-l01 (research agent)",
-      "rationale": "trUSD is issued and redeemed through KYC-whitelisted signed orders against USDC or USDT at Tori's off-chain quoted rate, while backing sits in a centrally managed delta-neutral portfolio verified in real time by Accountable. The protocol exposes no user CDP markets with per-collateral on-chain liquidation thresholds, liquidation auctions, backstops, or shutdown branches, so the V9 collateral-liquidation branch families do not apply.",
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-08-11",
+      "reviewer": "OpenAI Codex Tori oracle review",
+      "rationale": "Tori has no borrower CDP markets requiring collateral-specific liquidation branch rows, but its backend-defined mint and redemption quote is still a price-sensitive top-level control. The review therefore scores that internal pricing authority without inventing liquidation branches.",
       "sources": [
         {
           "label": "Tori docs — institutional minting and redemption (signed-order mint/redeem at quoted rate)",
@@ -43,13 +43,17 @@
           "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
         },
         {
+          "label": "Sherlock Tori audit (acknowledged lack of an on-chain oracle circuit breaker)",
+          "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+        },
+        {
           "label": "Tori docs — introduction (delta-neutral strategies, Accountable proof of reserves)",
           "url": "https://docs.tori.finance/"
         }
       ]
     },
-    "reviewedAt": "2026-08-08",
-    "reviewer": "wave3-longtail-l01 (research agent)",
+    "reviewedAt": "2026-08-11",
+    "reviewer": "OpenAI Codex Tori oracle review",
     "confidence": "verified",
     "sources": [
       {
@@ -71,6 +75,14 @@
       {
         "label": "Tori docs — institutional minting and redemption",
         "url": "https://docs.tori.finance/resources/institutional"
+      },
+      {
+        "label": "Sherlock Tori audit (acknowledged lack of an on-chain oracle circuit breaker)",
+        "url": "https://github.com/sherlock-protocol/sherlock-reports/blob/main/audits/2026.02.10%20-%20Final%20-%20Tori%20Finance%20Collaborative%20Audit%20Report%201770734349.pdf"
+      },
+      {
+        "label": "Nethermind Tori audit (backend collateral pricing trust assumption)",
+        "url": "https://github.com/NethermindEth/PublicAuditReports/blob/main/NM_0854_Tori.pdf"
       },
       {
         "label": "Tori docs — contract addresses (full deployed contract inventory, Ethereum mainnet)",

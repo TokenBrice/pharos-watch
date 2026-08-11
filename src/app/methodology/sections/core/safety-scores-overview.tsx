@@ -55,6 +55,14 @@ export function SafetyScoresOverview() {
         remain separate.
       </p>
       <p>
+        Economic Control treats oracle applicability separately from oracle quality. A reviewed path with no
+        price-sensitive oracle or internal valuation authority is not applicable and contributes no scored component.
+        If no other binding control remains, the neutral empty set resolves to 95 without manufacturing a display row.
+        A genuinely oracleless mechanism scores 95, while privileged internal pricing scores 45; a top-level mint,
+        redemption, NAV, or exchange-rate authority can therefore be evaluated without inventing borrower liquidation
+        branches. External oracle tiers keep their existing scores.
+      </p>
+      <p>
         Publication is fail-closed. If a score-bearing producer is stale, unavailable, or would create a new
         infrastructure-attributed downgrade or NR transition, Pharos retains the last accepted V9 ratings and exposes
         the publication as held. Active consumers do not recompute or fall back to V8.

@@ -8,7 +8,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "The tracked deprecated V1 uses collateral pricing only when recording a mint. Its verified router later burns the exact recorded ZeUSD debt and returns the recorded collateral, with no ongoing collateral-health oracle or liquidation engine.",
     "branchModel": "single-path",
     "branchApplicability": {

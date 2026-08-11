@@ -17,7 +17,7 @@
     "reviewedAt": "2026-05-12"
   },
   "oracleRisk": {
-    "tier": "oracleless-or-internal",
+    "tier": "oracleless",
     "summary": "NUSD is minted 1:1 from admitted liquid assets and backed by a managed delta-neutral portfolio, not by user debt positions subject to oracle-triggered collateral liquidation.",
     "branchModel": "single-path",
     "branchApplicability": {
