@@ -1,3 +1,4 @@
+import { SEVERITY_TONE_CLASS, type SeverityTone } from "@/lib/severity-tone";
 import type { StablecoinLink, StablecoinMeta } from "@shared/types";
 import { isRecord, stringValue } from "@shared/lib/type-guards";
 
@@ -37,12 +38,11 @@ const STATUS_LABELS: Record<BlacklistabilityClientStatus, string> = {
   inherited: "Inherited",
 };
 
-// Chip tone strings match the oracle/bridge TIER_TONES palette byte-for-byte.
-const STATUS_TONES: Record<BlacklistabilityClientStatus, string> = {
-  freezable: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  "not-freezable": "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  possible: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  inherited: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+const STATUS_TONES: Record<BlacklistabilityClientStatus, SeverityTone> = {
+  freezable: "watch",
+  "not-freezable": "ok",
+  possible: "watch",
+  inherited: "info",
 };
 
 function statusValue(value: unknown): BlacklistabilityClientStatus | null {
@@ -113,7 +113,7 @@ export function projectBlacklistabilityClientSummary(
   return {
     status,
     statusLabel: STATUS_LABELS[status],
-    statusToneClass: STATUS_TONES[status],
+    statusToneClass: SEVERITY_TONE_CLASS[STATUS_TONES[status]].pill,
     statusNote: buildStatusNote(status, upstreamLabel),
     evidence,
     basisLabel: sources.length > 0 ? "Sourced review" : sourceFreeRationale ? "Rationale only" : "Unsourced",
