@@ -1849,6 +1849,36 @@ export const CURATED_ANNOTATIONS: Record<string, readonly ChartAnnotation[]> = {
       href: "https://www.spiko.io/spiko-cash-and-carry",
     },
   ],
+  "trusd-tori": [
+    {
+      // 2026-07-26 — trUSD reached live price coverage after its pre-deposit phase.
+      ts: Date.UTC(2026, 6, 26),
+      kind: "governance",
+      label: "trUSD mainnet launch — live supply and price coverage begins",
+      severity: "med",
+      href: "https://app.tori.finance/transparency",
+    },
+  ],
+  "bd-basedollar": [
+    {
+      // 2026-08-01 — BaseDollar production contracts deployed to Base mainnet.
+      ts: Date.UTC(2026, 7, 1),
+      kind: "governance",
+      label: "BaseDollar production contracts deploy to Base mainnet",
+      severity: "med",
+      href: "https://github.com/basedollar/basedollar/pull/160",
+    },
+  ],
+  "kusd-kerne": [
+    {
+      // 2026-08-06 — kUSD and PSM administration completed its timelock handoff.
+      ts: Date.UTC(2026, 7, 6),
+      kind: "governance",
+      label: "kUSD administration completes 48-hour timelock handoff",
+      severity: "med",
+      href: "https://basescan.org/tx/0xed24d495789540dae543793a5d8c9d884d8abfc386c0e726084da9183933d9b8",
+    },
+  ],
   "usr-resolv": [
     {
       // 2026-03-22 — Attacker compromised a Resolv signing key (AWS KMS) and
