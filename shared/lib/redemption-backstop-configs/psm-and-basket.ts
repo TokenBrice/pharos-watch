@@ -12,6 +12,7 @@ import {
 } from "./shared";
 import {
   REVIEWED_EXIT_CREDIT_WAVE_AT,
+  REVIEWED_EXIT_CREDIT_WAVE3_AT,
   REVIEWED_EXIT_CREDIT_WAVE2_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
@@ -53,6 +54,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "honey-berachain": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
@@ -63,9 +66,17 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "capacity",
         "fees",
       ]),
+      sourceRef(
+        "Berachain HoneyFactory source",
+        "https://github.com/berachain/contracts/blob/main/src/honey/HoneyFactory.sol",
+        ["route", "capacity", "fees"],
+      ),
     ],
     notes: [
       "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",
+      "Capacity became live-direct 2026-08-12: the gated probe enumerates the HoneyFactory's registered assets and their collateral vaults, verifying the factory's own `honey()` resolves to the tracked token before reading vault holdings, so the documented full-supply model is replaced by what the vaults actually hold.",
+      "The documented asset-specific fee schedule above is now bounded by live telemetry as well: the probe reads each asset's `redeemRates()` and takes the least favourable as the route's max fee.",
+      "Verified at Berachain block 24750999: `honey()` resolved to the tracked token, `isBasketModeEnabled()` was false for both mint and redeem, all four registered assets read `isPegged()` true, and the vaults held 7,831,557.70 against a HONEY supply of 7,831,365.98. Live `redeemRates()` were 0 bps on three assets and exactly 5 bps on the fourth, matching the documented schedule.",
     ],
   },
   "dai-makerdao": {
@@ -454,8 +465,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "eusd-electronic-usd": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     outputAssets: ["usdc-circle", "usdt-tether"],
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     costModel: {
       ...documentedVariableFee(
         "Reserve's documented DTF fee schedule has exactly two fees — a TVL fee and a mint fee charged whenever a user mints new DTF tokens — so redeeming the pro-rata basket is charged 0 bps",
@@ -479,6 +491,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
       "Fee bound declared 2026-08-12: the Reserve fee documentation enumerates a closed schedule of a TVL fee and a mint fee applied \"whenever a user mints new DTF tokens\", and the minting-and-redeeming page describes redemption as a permissionless direct conversion back into the underlying tokens with no charge, so the reviewed ceiling is 0 bps. The previously cited reserve-index doc URLs now 404 and were repointed to their core-components successors.",
+      "Capacity became live-only 2026-08-12, matching the USD3 treatment: the route migrated to the Reserve DTF adapter, which reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed with no fallback. The throttle refills over time and shrinks as it is drawn down, so no static supply figure represents it and an unavailable read leaves the route unrated rather than restoring full supply.",
+      "Verified at Ethereum block 25737172: `redemptionAvailable()` returned exactly 5,000,000.00 against a supply of 22,834,920.56, and the basket handler reached through the RToken's own `main()` reported status SOUND (0). The throttle is therefore binding at roughly 22% of supply, which is what the full-supply model had been overstating.",
     ],
   },
   "usd3-reserve-protocol": {

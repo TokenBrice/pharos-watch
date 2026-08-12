@@ -56,18 +56,23 @@ function reviewedOn(
  * or no-longer-active rows so this list cannot silently become stale.
  */
 export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedemptionCoverageDisposition[] = [
-  reviewed({
+  reviewedOn("2026-08-12", {
     id: "bnusd-balanced",
     disposition: "defer",
-    reasonCode: "borrower-repay-only",
+    reasonCode: "route-status-unverified",
     blocker:
-      "Balanced documents borrower repayment and secondary swaps, not a face-value exit exercisable by any bnUSD holder.",
+      "The tracked asset is Balanced v1 bnUSD(old) on ICON, and the maintained documentation has narrowed to wind-down tasks — withdraw funds, move loans to v2, migrate assets, claim rewards, unstake sICX. No Stability Fund redemption page survives there, and the marketing page describes the Stability Fund as working 'behind the scenes with SODAX Intents', on token identities distinct from the tracked contract.",
     rationale:
-      "Repaying bnUSD releases only the borrower's own collateral; that is not a general holder redemption backstop.",
+      "A 1:1 Stability Fund swap into USDC or USDT is documented in the abstract, but nothing published shows a holder of the tracked v1 token calling it today: the only documented v1 action is migrating bnUSD(old) 1:1 into the new bnUSD, and that new identity is not this tracked asset. Crediting the fund's capacity here would attribute a route on one token to a different one.",
     evidenceNeeded:
-      "An official callable redemption path, output asset, fee, capacity, and access terms for ordinary holders.",
-    evidenceUrls: ["https://docs.balanced.network/finance/loans"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
+      "The active Stability Fund or SODAX route identifier reachable from the tracked ICON contract, plus its pause state, stablecoin balances, redemption limits, fee, and access terms — or a tracked-asset identity update to the current bnUSD deployment.",
+    evidenceUrls: [
+      "https://docs.balanced.network/",
+      "https://docs.balanced.network/migrate-assets",
+      "https://balanced.network/stablecoin/",
+      "https://www.sodax.com/partners/balanced",
+    ],
+    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
     id: "btcusd-btcfi",
@@ -499,22 +504,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
   reviewed({
-    id: "usdpt-western-union",
-    disposition: "add",
-    reasonCode: "holder-route-confirmed",
-    blocker:
-      "Issuer redemption is confirmed, but direct customer eligibility, fee schedule, limits, and settlement must be sourced for config.",
-    rationale:
-      "Anchorage states its issued stablecoins are redeemable 1:1 on its platform, while Western Union confirms USDPT is 1:1 redeemable and available through fiat channels.",
-    evidenceNeeded:
-      "Anchorage platform eligibility, direct redemption workflow, minimums, fees, daily limits, settlement, and route status.",
-    evidenceUrls: [
-      "https://www.anchorage.com/platform/transparency-stablecoin-reserves",
-      "https://ir.westernunion.com/news/archived-press-releases/press-release-details/2026/Bybit-Becomes-First-Major-Crypto-Exchange-to-Integrate-Western-Unions-USDPT-Stablecoin-Bridging-Two-Financial-Worlds-Through-One-Stablecoin/default.aspx",
-    ],
-    allowedRouteFamilyIfProven: "offchain-issuer",
-  }),
-  reviewed({
     id: "usdr-ring",
     disposition: "hard-reject",
     reasonCode: "no-holder-route",
@@ -614,18 +603,20 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://www.xt.com/"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
+  reviewedOn("2026-08-12", {
     id: "zeusd-zoth",
     disposition: "hard-reject",
     reasonCode: "borrower-repay-only",
     blocker:
-      "Zoth documents repayment to reclaim a user's own RWA collateral, not broad ZeUSD-holder redemption for reserve assets.",
-    rationale: "CDP debt closure is position-specific and does not create a claim for secondary holders.",
+      "Zoth documents repayment to reclaim a user's own RWA collateral, not broad ZeUSD-holder redemption for reserve assets. Re-verified 2026-08-12: the route is the ZeDP position NFT holder burning that position's own ZeUSD debt to withdraw the exact collateral originally deposited, and the shared V1 deposit/redemption router is recorded as paused.",
+    rationale:
+      "CDP debt closure is position-specific and does not create a claim for secondary holders. V1 is additionally deprecated, so even the position route is not currently exercisable; the separate V2 contracts are a different deployment and cannot be substituted for the tracked asset.",
     evidenceNeeded:
       "Official ordinary-holder redemption mechanics with access, output, capacity, fee, and settlement evidence.",
     evidenceUrls: [
       "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
       "https://docs.zoth.io/zoth/products/zeusd-debt-position-zedp",
+      "https://docs.zoth.io/zoth/tech-center/contract-deployments",
     ],
     allowedRouteFamilyIfProven: null,
   }),

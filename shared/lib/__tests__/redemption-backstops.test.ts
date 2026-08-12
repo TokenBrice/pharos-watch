@@ -647,7 +647,9 @@ describe("getRedemptionBackstopConfig", () => {
       settlementModel: "atomic",
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      // v4.34 moved this route off the documented-bound full-supply model onto
+      // the live PYUSD float, with no fallback.
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 10 },
       reviewedAt: "2026-08-12",
     });
@@ -804,13 +806,17 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("honey-berachain")).toMatchObject({
       routeFamily: "basket-redeem",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-      reviewedAt: "2026-03-23",
+      // v4.34 replaced the documented full-supply model with live-direct
+      // HoneyFactory vault telemetry.
+      capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("eusd-electronic-usd")).toMatchObject({
       routeFamily: "basket-redeem",
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      // v4.34 moved this route onto the Reserve DTF redemptionAvailable()
+      // throttle, live-only with no fallback.
+      capacityModel: { kind: "reserve-sync-metadata" },
       reviewedAt: "2026-08-12",
     });
 
@@ -818,9 +824,11 @@ describe("getRedemptionBackstopConfig", () => {
       routeFamily: "stablecoin-redeem",
       accessModel: "whitelisted-onchain",
       outputAssets: ["usdc-circle"],
-      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
+      // Upgraded from the reviewed supply-full model to live redeemer-float
+      // telemetry in v4.34.
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 10 },
-      reviewedAt: "2026-07-14",
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("ousd-origin-protocol")).toMatchObject({
@@ -1004,7 +1012,9 @@ describe("getRedemptionBackstopConfig", () => {
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
       costModel: { kind: "fee-bps", feeBps: 0 },
-      reviewedAt: "2026-07-15",
+      // Outputs were declared in the 2026-07-15 wave; the v4.34 move onto live
+      // BrandedCustodian escrow telemetry moved reviewedAt forward.
+      reviewedAt: "2026-08-12",
     });
     expect(getRedemptionBackstopConfig("ftusd-flying-tulip")).toMatchObject({
       outputAssetType: "stable-basket",
@@ -1123,7 +1133,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("satusd-river")).toMatchObject({
       outputAssetType: "bluechip-collateral",
       outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
-      reviewedAt: "2026-07-19",
+      // Outputs were declared in the 2026-07-19 wave; the v4.34 fee-schedule
+      // re-read moved reviewedAt forward without changing the output set.
+      reviewedAt: "2026-08-12",
     });
 
     // Durable withholdings from the 2026-07-15 EXIT_OUTPUT waves remain

@@ -21,6 +21,7 @@ export {
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_EXIT_CREDIT_WAVE_AT,
   REVIEWED_EXIT_CREDIT_WAVE2_AT,
+  REVIEWED_EXIT_CREDIT_WAVE3_AT,
 } from "../review-dates";
 
 /** Scaffold for the one-coin modules in this directory: applies the shared

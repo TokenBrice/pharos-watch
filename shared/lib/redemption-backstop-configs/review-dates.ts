@@ -23,3 +23,5 @@ export const REVIEWED_FOLLOWUP_REMEDIATION_AT = "2026-05-13";
 export const REVIEWED_EXIT_CREDIT_WAVE_AT = "2026-08-12";
 /** Second exit-credit wave: further fee bounds and newly configured PSM routes. */
 export const REVIEWED_EXIT_CREDIT_WAVE2_AT = "2026-08-12";
+/** Third exit-credit wave: collateral-redeem fee bounds and issuer-route coverage. */
+export const REVIEWED_EXIT_CREDIT_WAVE3_AT = "2026-08-12";

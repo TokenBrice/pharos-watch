@@ -14,6 +14,7 @@ import {
   REVIEWED_DIRECT_REDEMPTION_AT,
   REVIEWED_EXIT_CREDIT_WAVE_AT,
   REVIEWED_EXIT_CREDIT_WAVE2_AT,
+  REVIEWED_EXIT_CREDIT_WAVE3_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
   REVIEWED_REMEDIATION_AT,
@@ -532,11 +533,12 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...reviewedDirectRedemptionSupplyFull,
     accessModel: "whitelisted-onchain",
     outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "reserve-sync-metadata" },
     costModel: fixedFee(
       10,
-      "GAIB docs currently show a 10 bps sell fee in the dApp, while direct AID minting and redemption are reserved for whitelisted users and partners",
+      "GAIB docs currently show a 10 bps sell fee in the dApp — confirmed by the deployed redeemer's redemptionFeeBps() reading 10 on-chain — while direct AID minting and redemption are reserved for whitelisted users and partners",
     ),
-    reviewedAt: "2026-07-14",
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     docs: [
       sourceRef(
         "GAIB AID acquisition and redemption guide",
@@ -547,6 +549,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Regular users typically exit AID through the GAIB app or DEX liquidity, while the modeled primary redemption rail is the whitelisted direct burn-and-withdraw contract path",
+      "Fresh reserve telemetry reads the redeemer's USDC payout float capped by the remaining daily redemption allowance (identity-gated on stablecoin()/aid() and the pinned beacon implementation) as the live executable bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy",
     ],
   }),
   "u-united-stables": defineStablecoinRedeemConfig({
@@ -623,7 +626,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdai-usd-ai": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["pyusd-paypal"],
     accessModel: "whitelisted-onchain",
     costModel: fixedFee(
@@ -643,6 +647,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Current route models the base USDai burn-and-withdraw path into PYUSD; the asynchronous queue applies to sUSDai unstaking, not direct USDai redemption",
       "Output declared 2026-07-19 from the existing reviewed note above: the modeled direct redemption pays PYUSD (tracked pyusd-paypal).",
       "Fee bounded and access corrected 2026-08-12 from the same verified issuer notice: it applies a 10 bps redemption fee and restricts direct contract-level mint and redemption to a KYC'd set of whitelisted market makers and approved institutional depositors, so the route is whitelisted rather than permissionless and ordinary holders exit through secondary markets.",
+      "Fresh reserve telemetry reads the live PYUSD float held by the USDai contract as the executable bound, gated on baseToken() still resolving to that same PYUSD deployment. The prior full-supply model is dropped with no fallback: for a KYC-gated burn-and-withdraw route the float is the only honest bound, and supply-full would overstate the route precisely when the read is unavailable.",
+      "Verified 2026-08-12 on Arbitrum: baseToken() resolved to PYUSD 0x46850aD61C2B7d64d08c9C754F45254596696984, the contract's paused() read false, and its PYUSD balance was 174,318,300.42 against a USDai supply near 172.6M — the float currently exceeds supply, so the ratio is not a fixed fraction that a static model could stand in for.",
     ],
   }),
   "frxusd-frax": defineStablecoinRedeemConfig({
@@ -796,7 +802,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usdz-anzen": defineStablecoinRedeemConfig({
     ...documentedBoundSupplyFull("2026-04-16"),
-    accessModel: "whitelisted-onchain",
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["usdc-circle"],
     costModel: undisclosedReviewedFee(
       "Qualified Market Makers mint and redeem 1:1 USDz/USDC against SPCT collateral; public docs reviewed do not publish a fixed retail redemption fee",
@@ -804,9 +811,18 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     docs: [
       sourceRef("Anzen Finance", "https://www.anzen.finance/", ["route"]),
       sourceRef("Anzen documentation", "https://docs.anzen.finance/", ["route", "capacity"]),
+      sourceRef("Anzen USDz overview", "https://docs.anzen.finance/usdz-101/overview", ["route", "fees"]),
+      sourceRef(
+        "USDz verified deployed source (Ethereum 0xa469b7ee...10067)",
+        "https://etherscan.io/address/0xa469b7ee9ee773642b3e93e842e5d9b5baa10067#code",
+        ["route", "access", "capacity", "fees"],
+      ),
     ],
     notes: [
-      "Primary mint and redeem rail is reserved for whitelisted Qualified Market Makers; retail holders exit via DEX liquidity while arbitrage by QMMs maintains the peg against SPCT collateral",
+      "Access corrected 2026-08-12 from the deployed source rather than the docs: `redeem(uint256)` gates only on `whenNotPaused`, a collateral-rate modifier, sufficient SPCT reserve, and `require(!_blacklist[msg.sender])`. There is no holder whitelist, so the route is permissionless-onchain with a caller blacklist. The SPCT whitelist sits one level down and covers the USDz contract itself, which calls `spct.redeem()` — confirmed on-chain, where SPCT `isWhitelist()` reads true for the USDz contract and false for an ordinary address. Anzen's Qualified-Market-Maker framing describes the primary mint rail, not a restriction on who may call redeem.",
+      "Fresh reserve telemetry bounds the route at the USDC the payout path actually holds — `redeem()` pays USDC out of the USDz contract after pulling it from the SPCT pool, so the pool's own USDC is the depth — and withholds the whole surface when USDz's pinned `usdc()`, `spct()`, or `oracle()` identities stop resolving or `paused()` reads true. The documented-bound full-supply model is dropped with no fallback.",
+      "The redemption fee is read live rather than bounded statically: `redeem()` charges USDz's `redeemFeeRate()` first and SPCT's rate on the remainder, so the adapter composes the two against each contract's own coefficient and reports no fee at all when either rate is unreadable or out of range.",
+      "The first live read is an honest negative: at Ethereum mainnet on 2026-08-12 the SPCT pool held 6,695 raw USDC units — 0.006695 USDC, under a cent — against a USDz supply of 806,422.80. The source makes the ceiling exact rather than approximate, because `redeem()` requires `spct.reserveUSD() * 1e12 >= _amount`, capping any single redemption at 0.006695 USDz. The permissionless route is open and unpaused but is drained to a rounding error, so live-only capacity with no fallback is what keeps the route from being credited against a reserve it cannot pay.",
     ],
   }),
   "usdsc-startale": defineStablecoinRedeemConfig({
@@ -1256,10 +1272,13 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
   }),
   "sbold-k3-capital": defineStablecoinRedeemConfig({
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+    // The static documented-bound downgrade is retired: the adapter now reads
+    // K3's collateral-health gate (maxCollInBold) each run and self-downgrades
+    // to documented-bound whenever the gate is restricted or unreadable, so an
+    // observed-open run may resolve live-direct.
     capacityModel: {
       kind: "reserve-sync-metadata",
-      liveCapacityConfidence: "documented-bound",
       basis: "strategy-buffer",
     },
     executionModel: "rules-based-nav",
