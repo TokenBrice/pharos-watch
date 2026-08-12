@@ -1,6 +1,8 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type {
+  LiveReserveRedemptionOutputValuation,
   LiveReserveRedemptionTelemetry,
   LiveReserveWarning,
   LiveReservesConfig,
@@ -73,6 +75,16 @@ const QUOTE_SELECTOR = "0x3913d11a";
 const PRICE_SELECTOR = "0xa035b1fe";
 const COLLATERAL_STATUS_SELECTOR = "0x200d2ed2";
 const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
+const CONVERT_TO_ASSETS_SELECTOR = "0x07a2d13a";
+const ERC4626_ASSET_SELECTOR = "0x38d52e0f";
+const EXCHANGE_RATE_SELECTOR = "0x3ba0b9a9";
+const UNDERLYING_COMET_SELECTOR = "0x97008d6c";
+const COMET_BASE_TOKEN_SELECTOR = "0xc55dae63";
+// Verified CusdcV3Wrapper/CFiatV3Wrapper deployments expose exchangeRate(), not ERC-4626 convertToAssets().
+const COMET_EXCHANGE_RATE_WRAPPERS = new Set([
+  "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+  "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+]);
 // Verified RTokenP1 implementation ABI for the USD3 proxy:
 // https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833CF9AD19208372763A00aA1565Dd40b3C
 const REDEMPTION_AVAILABLE_SELECTOR = "0x9926020b";
@@ -203,6 +215,106 @@ function decodePriceResult(raw: string | null, context: string): { low: bigint; 
     throw new Error(`reserve-protocol-dtf non-positive price for ${context}`);
   }
   return { low, high, mid: (low + high) / 2n };
+}
+
+interface ReserveProtocolDtfOutputLeg {
+  address: `0x${string}`;
+  quantity: bigint;
+  tokenDecimals: number;
+  assetId: string;
+}
+
+async function readOutputLegValueUsd(
+  leg: ReserveProtocolDtfOutputLeg,
+  onchain: ReturnType<typeof makeOnchainCallers>,
+): Promise<number | null> {
+  if (!COMET_EXCHANGE_RATE_WRAPPERS.has(leg.address.toLowerCase())) {
+    const convertedAssets = await onchain.uint256(
+      leg.address,
+      `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(leg.quantity)}`,
+    );
+    if (convertedAssets == null) return null;
+    const rawUnderlying = await onchain.raw(leg.address, ERC4626_ASSET_SELECTOR);
+    const underlying = parseAddressResult(rawUnderlying, `asset() for ${leg.address}`);
+    const underlyingDecimals = decodeDecimals(
+      await onchain.uint256(underlying, DECIMALS_SELECTOR),
+      `underlying ${underlying}`,
+    );
+    const valueUsd = decimalNumberFromBigInt(convertedAssets, underlyingDecimals);
+    return Number.isFinite(valueUsd) && valueUsd > 0 ? valueUsd : null;
+  }
+
+  const [exchangeRate, rawComet] = await Promise.all([
+    onchain.uint256(leg.address, EXCHANGE_RATE_SELECTOR),
+    onchain.raw(leg.address, UNDERLYING_COMET_SELECTOR),
+  ]);
+  if (exchangeRate == null || exchangeRate <= 0n) return null;
+  const comet = parseAddressResult(rawComet, `underlyingComet() for ${leg.address}`);
+  const rawUnderlying = await onchain.raw(comet, COMET_BASE_TOKEN_SELECTOR);
+  const underlying = parseAddressResult(rawUnderlying, `baseToken() for ${comet}`);
+  const underlyingDecimals = decodeDecimals(
+    await onchain.uint256(underlying, DECIMALS_SELECTOR),
+    `underlying ${underlying}`,
+  );
+  const underlyingRaw = (leg.quantity * exchangeRate) / 10n ** BigInt(leg.tokenDecimals);
+  const valueUsd = decimalNumberFromBigInt(underlyingRaw, underlyingDecimals);
+  return Number.isFinite(valueUsd) && valueUsd > 0 ? valueUsd : null;
+}
+
+async function buildRedemptionOutputValuation(args: {
+  coinId: string;
+  rTokenAddress: string;
+  rTokenDecimals: number;
+  totalSupply: bigint;
+  legs: readonly ReserveProtocolDtfOutputLeg[];
+  onchain: ReturnType<typeof makeOnchainCallers>;
+  observedAt: number;
+}): Promise<LiveReserveRedemptionOutputValuation | null> {
+  const configuredAssetIds = REDEMPTION_BACKSTOP_CONFIGS[args.coinId]?.outputAssets;
+  if (!configuredAssetIds || configuredAssetIds.length < 2 || args.totalSupply <= 0n) return null;
+
+  const liveAssetIds = [...new Set(args.legs.map((leg) => leg.assetId))].sort();
+  const expectedAssetIds = [...configuredAssetIds].sort();
+  if (
+    liveAssetIds.length !== expectedAssetIds.length ||
+    liveAssetIds.some((assetId, index) => assetId !== expectedAssetIds[index])
+  ) {
+    return null;
+  }
+
+  try {
+    const legValues: Array<{ assetId: string; valueUsd: number | null }> = [];
+    for (const leg of args.legs) {
+      legValues.push({
+        assetId: leg.assetId,
+        valueUsd: await readOutputLegValueUsd(leg, args.onchain),
+      });
+    }
+    if (legValues.some((leg) => leg.valueUsd == null)) return null;
+
+    const valueByAssetId = new Map<string, number>();
+    for (const leg of legValues) {
+      valueByAssetId.set(leg.assetId, (valueByAssetId.get(leg.assetId) ?? 0) + leg.valueUsd!);
+    }
+    const totalValueUsd = [...valueByAssetId.values()].reduce((sum, value) => sum + value, 0);
+    const supply = decimalNumberFromBigInt(args.totalSupply, args.rTokenDecimals);
+    const unitValueUsd = totalValueUsd / supply;
+    if (!Number.isFinite(totalValueUsd) || totalValueUsd <= 0 || !Number.isFinite(unitValueUsd) || unitValueUsd <= 0) {
+      return null;
+    }
+
+    return {
+      sourceId: `reserve-protocol-dtf:basket-nav:${args.rTokenAddress.toLowerCase()}`,
+      observedAt: args.observedAt,
+      unitValueUsd,
+      basketWeights: configuredAssetIds.map((assetId) => ({
+        assetId,
+        weight: valueByAssetId.get(assetId)! / totalValueUsd,
+      })),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function adaptReserveProtocolDtfRows(
@@ -388,6 +500,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
   let unknownValue = 0;
   let totalValue = 0;
   const componentMetadata: Array<Record<string, unknown>> = [];
+  const outputLegs: ReserveProtocolDtfOutputLeg[] = [];
 
   for (const entry of quoteEntries) {
     throwIfAborted(signal);
@@ -444,6 +557,14 @@ async function fetchReserveProtocolDtfOnchainReserves(
       });
       continue;
     }
+    if (descriptor.coinId) {
+      outputLegs.push({
+        address: entry.address,
+        quantity: entry.quantity,
+        tokenDecimals,
+        assetId: descriptor.coinId,
+      });
+    }
     values.push({
       value,
       name: descriptor.name,
@@ -476,7 +597,7 @@ async function fetchReserveProtocolDtfOnchainReserves(
       ),
     );
   }
-  const redemption = buildRedemptionTelemetry(
+  let redemption = buildRedemptionTelemetry(
     rTokenAddress,
     rTokenDecimals,
     rawRedemptionAvailable,
@@ -484,6 +605,18 @@ async function fetchReserveProtocolDtfOnchainReserves(
     fullyCollateralized,
     rawBasketStatus,
   );
+  if (redemption && rawTotalSupply != null && outputLegs.length === quoteEntries.length) {
+    const outputValuation = await buildRedemptionOutputValuation({
+      coinId: coin.id,
+      rTokenAddress,
+      rTokenDecimals,
+      totalSupply: rawTotalSupply,
+      legs: outputLegs,
+      onchain,
+      observedAt: Math.floor(ctx?.nowSec ?? Date.now() / 1_000),
+    });
+    if (outputValuation) redemption = { ...redemption, outputValuation };
+  }
 
   return {
     slices: slicesFromValues(values),

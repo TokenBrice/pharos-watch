@@ -81,7 +81,75 @@
     },
     "params": {
       "pricesUrl": "https://api.deuro.com/prices/mapping",
-      "otherThresholdPct": 2
+      "otherThresholdPct": 2,
+      "redemptionBridgeBasket": {
+        "chain": "ethereum",
+        "rpcMode": "public-rpc",
+        "dEuroAddress": "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+        "eurUsdPriceAddress": "0xba3f535bbcccca2a154b573ca6c5a49baae0a3ea",
+        "bridges": [
+          {
+            "label": "EURT",
+            "bridgeAddress": "0x2353D16869F717BFCD22DaBc0ADbf4Dca62C609f",
+            "tokenAddress": "0xC581b735A1688071A1746c968e0798D642EDE491",
+            "tokenDecimals": 6
+          },
+          {
+            "label": "EURS",
+            "bridgeAddress": "0x73f38ca06b27eaefb1612d062d885f58924f5897",
+            "tokenAddress": "0xdb25f211ab05b1c97d595516f45794528a807ad8",
+            "tokenDecimals": 2
+          },
+          {
+            "label": "VEUR",
+            "bridgeAddress": "0x76d8f514554a4a8e5d6103875f2dd7a67543692b",
+            "tokenAddress": "0x6ba75d640bebfe5da1197bb5a2aff3327789b5d3",
+            "tokenDecimals": 18
+          },
+          {
+            "label": "EURC",
+            "bridgeAddress": "0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1",
+            "tokenAddress": "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c",
+            "tokenDecimals": 6
+          },
+          {
+            "label": "EURR",
+            "bridgeAddress": "0x20B0a153fF16c7B1e962FD3D3352A00cf019f1a7",
+            "tokenAddress": "0x50753CfAf86c094925Bf976f218D043f8791e408",
+            "tokenDecimals": 6
+          },
+          {
+            "label": "EUROP",
+            "bridgeAddress": "0x3EF3d03EFCc1338d6210946f8cF5Fb1a8b630341",
+            "tokenAddress": "0x888883b5F5D21fb10Dfeb70e8f9722B9FB0E5E51",
+            "tokenDecimals": 6
+          },
+          {
+            "label": "EURI",
+            "bridgeAddress": "0xb66A40934a996373fA7602de9820C6bf3e8c9afE",
+            "tokenAddress": "0x9d1A7A3191102e9F900Faa10540837ba84dCBAE7",
+            "tokenDecimals": 18
+          },
+          {
+            "label": "EURE",
+            "bridgeAddress": "0x4dfd460d54854087af195906a2f260aa483a13b1",
+            "tokenAddress": "0x3231Cb76718CDeF2155FC47b5286d82e6eDA273f",
+            "tokenDecimals": 18
+          },
+          {
+            "label": "EURA",
+            "bridgeAddress": "0x05620F4bB92246b4e067EBC0B6f5c7FF6B771702",
+            "tokenAddress": "0x1a7e4e63778B4f12a199C062f3eFdD288afCBce8",
+            "tokenDecimals": 18
+          }
+        ],
+        "rpcUrl": "https://ethereum-rpc.publicnode.com",
+        "sourceUrls": [
+          "https://docs.deuro.com/smart-contracts",
+          "https://raw.githubusercontent.com/d-EURO/smartContracts/develop/contracts/StablecoinBridge.sol",
+          "https://api.deuro.com/prices/mapping"
+        ]
+      }
     }
   },
   "launchDate": "2025-03-20"

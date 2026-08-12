@@ -1,12 +1,35 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { adaptCollateralPositions } from "../collateral-positions-api";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return {
+    ...actual,
+    fetchJsonWithRetry: vi.fn(),
+    fetchOnchainMulticall3: vi.fn(),
+  };
+});
+
+import { adaptCollateralPositions, fetchCollateralPositionsApiReserves } from "../collateral-positions-api";
+import { fetchJsonWithRetry, fetchOnchainMulticall3 } from "../helpers";
+
+const signal = AbortSignal.timeout(5_000);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("adaptCollateralPositions", () => {
   it("declares latest-state collateral APIs as not-applicable freshness", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["collateral-positions-api"].validation.allowedFreshnessModes).toEqual([
       "not-applicable",
     ]);
+    expect(LIVE_RESERVE_ADAPTER_DEFINITIONS["collateral-positions-api"].redemptionTelemetry).toMatchObject({
+      capacity: "direct",
+      capacityParamsGated: true,
+    });
   });
 
   it("aggregates open collateral positions into reserve slices and folds small tails into Other", () => {
@@ -354,5 +377,136 @@ describe("adaptCollateralPositions", () => {
     expect(result.slices).toEqual([
       { name: "USDC (USD Coin)", pct: 100, risk: "low", coinId: "usdc-circle" },
     ]);
+  });
+});
+
+const DEURO = "0xbA3f535bbCcCcA2A154b573Ca6c5A49BAAE0a3ea";
+const EURS_BRIDGE = "0x73f38ca06b27eaefb1612d062d885f58924f5897";
+const EURS = "0xdb25f211ab05b1c97d595516f45794528a807ad8";
+const EURC_BRIDGE = "0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1";
+const EURC = "0x1aBaEA1f7C830bD89Acc67eC4af516284b1bC33c";
+
+const BRIDGE_BASKET_CONFIG: LiveReservesConfig = {
+  adapter: "collateral-positions-api",
+  version: 1,
+  semantics: "collateral-mix",
+  inputs: { primary: { kind: "http-json", url: "https://example.com/positions" } },
+  params: {
+    pricesUrl: "https://example.com/prices",
+    redemptionBridgeBasket: {
+      chain: "ethereum",
+      rpcMode: "public-rpc",
+      dEuroAddress: DEURO,
+      eurUsdPriceAddress: DEURO,
+      bridges: [
+        { label: "EURS", bridgeAddress: EURS_BRIDGE, tokenAddress: EURS, tokenDecimals: 2 },
+        { label: "EURC", bridgeAddress: EURC_BRIDGE, tokenAddress: EURC, tokenDecimals: 6 },
+      ],
+      rpcUrl: "https://ethereum-rpc.publicnode.com",
+      sourceUrls: ["https://docs.deuro.com/smart-contracts"],
+    },
+  },
+};
+
+const TEST_COIN = { id: "deuro-deuro", name: "dEURO", ticker: "DEURO" } as unknown as StablecoinMeta;
+
+function word(value: bigint | boolean | string): `0x${string}` {
+  if (typeof value === "string") {
+    return `0x${value.replace(/^0x/, "").toLowerCase().padStart(64, "0")}` as `0x${string}`;
+  }
+  const uint = typeof value === "boolean" ? (value ? 1n : 0n) : value;
+  return `0x${uint.toString(16).padStart(64, "0")}` as `0x${string}`;
+}
+
+function primeBridgeBasketMocks(options: {
+  balances?: [bigint, bigint];
+  failedLabel?: string;
+  underlyingOverride?: string;
+} = {}) {
+  vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string) => {
+    if (url.endsWith("/positions")) {
+      return {
+        wbtc: {
+          address: "0xBTC",
+          name: "Wrapped BTC",
+          symbol: "WBTC",
+          decimals: 8,
+          positions: [{ collateralBalance: "100000000" }],
+        },
+      };
+    }
+    return {
+      "0xbtc": { price: { usd: 100_000 } },
+      [DEURO.toLowerCase()]: { price: { usd: 1.2, eur: 1 } },
+    };
+  });
+
+  const balances = options.balances ?? [51n, 100_250_000n];
+  const defaults: Record<string, `0x${string}`> = {
+    "bridge:0:underlying": word(options.underlyingOverride ?? EURS),
+    "bridge:0:deuro": word(DEURO),
+    "bridge:0:decimals": word(2n),
+    "bridge:0:inventory": word(balances[0]),
+    "bridge:0:minter": word(true),
+    "bridge:1:underlying": word(EURC),
+    "bridge:1:deuro": word(DEURO),
+    "bridge:1:decimals": word(6n),
+    "bridge:1:inventory": word(balances[1]),
+    "bridge:1:minter": word(true),
+  };
+  vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => calls.map((call) => ({
+    label: call.label,
+    success: call.label !== options.failedLabel,
+    returnData: defaults[call.label] ?? word(0n),
+  })));
+}
+
+describe("fetchCollateralPositionsApiReserves bridge basket", () => {
+  it("sums every verified bridge inventory and converts the EUR total to USD", async () => {
+    primeBridgeBasketMocks();
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+
+    expect(result.metadata).toMatchObject({
+      immediateRedeemableUsd: 120.912,
+      redemption: {
+        capacityUsd: 120.912,
+        capacityEur: 100.76,
+        eurUsdReference: 1.2,
+        capacityKind: "live-direct-bounded",
+        routeStatus: "open",
+        bridgeInventories: [
+          { label: "EURS", inventoryRaw: "51", inventoryEur: 0.51 },
+          { label: "EURC", inventoryRaw: "100250000", inventoryEur: 100.25 },
+        ],
+      },
+    });
+  });
+
+  it("withholds the whole redemption block when one bridge read fails", async () => {
+    primeBridgeBasketMocks({ failedLabel: "bridge:1:inventory" });
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
+    expect(result.metadata).not.toHaveProperty("redemption");
+  });
+
+  it("withholds the whole redemption block on an underlying identity mismatch", async () => {
+    primeBridgeBasketMocks({ underlyingOverride: "0x0000000000000000000000000000000000000001" });
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+
+    expect(result.metadata).not.toHaveProperty("immediateRedeemableUsd");
+    expect(result.metadata).not.toHaveProperty("redemption");
+  });
+
+  it("publishes zero capacity without asserting the route open", async () => {
+    primeBridgeBasketMocks({ balances: [0n, 0n] });
+    const result = await fetchCollateralPositionsApiReserves(TEST_COIN, BRIDGE_BASKET_CONFIG, signal);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      capacityEur: 0,
+      routeStatus: "unknown",
+      routeStatusSource: "onchain",
+    });
   });
 });

@@ -4,8 +4,10 @@ import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
+  decimalNumberFromBigInt,
   fetchErc20Balance,
   fetchJsonWithRetry,
+  fetchOnchainMulticall3,
   notApplicableFreshnessMetadata,
   normalizeSlices,
   parseBoundedDecimals,
@@ -13,6 +15,14 @@ import {
   reserveDegradedWarning,
   valueUsdFromBigIntPrice,
 } from "./helpers";
+import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
+import { rethrowIfAborted } from "../../lib/abort";
+
+const BRIDGE_EUR_SELECTOR = "0x7439ae59";
+const BRIDGE_DEURO_SELECTOR = "0xd395d24b";
+const ERC20_DECIMALS_SELECTOR = "0x313ce567";
+const DEURO_IS_MINTER_SELECTOR = "0xaa271e1a";
 
 interface PositionDetailsEntry {
   address: string;
@@ -42,6 +52,21 @@ interface PositionsApiParams {
     rpcUrl?: string;
     fallbackRpcUrl?: string;
   };
+  redemptionBridgeBasket?: {
+    chain: string;
+    rpcMode: LiveReserveRpcMode;
+    dEuroAddress: string;
+    eurUsdPriceAddress: string;
+    bridges: Array<{
+      label: string;
+      bridgeAddress: string;
+      tokenAddress: string;
+      tokenDecimals: number;
+    }>;
+    rpcUrl?: string;
+    fallbackRpcUrl?: string;
+    sourceUrls: string[];
+  };
 }
 
 interface ProtocolAssetConfig {
@@ -52,6 +77,23 @@ interface ProtocolAssetConfig {
 
 interface CollateralPositionsRedemptionOptions {
   sourceUrls?: string[];
+  zeroCapacityRouteStatus?: "paused" | "unknown";
+  routeStatusReason?: string;
+  telemetryDetails?: Record<string, unknown>;
+}
+
+interface BridgeBasketProbe {
+  capacityEur: number;
+  capacityUsd: number;
+  eurUsdReference: number;
+  bridgeInventories: Array<{
+    label: string;
+    bridgeAddress: string;
+    tokenAddress: string;
+    tokenDecimals: number;
+    inventoryRaw: string;
+    inventoryEur: number;
+  }>;
 }
 
 function readParams(config: LiveReservesConfig): PositionsApiParams {
@@ -258,11 +300,17 @@ export function adaptCollateralPositions(
               capacityUsd: immediateRedeemableUsd,
               capacityKind: "live-direct-bounded" as const,
               freshnessKind: "same-run-onchain" as const,
-              routeStatus: immediateRedeemableUsd > 0 ? ("open" as const) : ("paused" as const),
+              routeStatus: immediateRedeemableUsd > 0
+                ? ("open" as const)
+                : (redemptionOptions.zeroCapacityRouteStatus ?? "paused"),
               routeStatusSource: "onchain" as const,
+              ...(redemptionOptions.routeStatusReason
+                ? { routeStatusReason: redemptionOptions.routeStatusReason }
+                : {}),
               holderEligibility: "any-holder" as const,
               settlementDelaySec: 0,
               ...(redemptionOptions.sourceUrls ? { sourceUrls: redemptionOptions.sourceUrls } : {}),
+              ...(redemptionOptions.telemetryDetails ?? {}),
             },
           }
         : {}),
@@ -272,6 +320,92 @@ export function adaptCollateralPositions(
       }),
     },
   };
+}
+
+async function fetchBridgeBasketImmediateRedeemableUsd(
+  basket: NonNullable<PositionsApiParams["redemptionBridgeBasket"]>,
+  prices: PriceMappingPayload,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<BridgeBasketProbe | null> {
+  const calls = basket.bridges.flatMap((bridge, index) => {
+    const label = `bridge:${index}`;
+    return [
+      { label: `${label}:underlying`, contract: bridge.bridgeAddress, data: BRIDGE_EUR_SELECTOR },
+      { label: `${label}:deuro`, contract: bridge.bridgeAddress, data: BRIDGE_DEURO_SELECTOR },
+      { label: `${label}:decimals`, contract: bridge.tokenAddress, data: ERC20_DECIMALS_SELECTOR },
+      {
+        label: `${label}:inventory`,
+        contract: bridge.tokenAddress,
+        data: encodeBalanceOfCallData(bridge.bridgeAddress),
+      },
+      {
+        label: `${label}:minter`,
+        contract: basket.dEuroAddress,
+        data: `${DEURO_IS_MINTER_SELECTOR}${encodeAddress(bridge.bridgeAddress)}`,
+      },
+    ];
+  });
+
+  try {
+    const results = await fetchOnchainMulticall3({
+      calls,
+      chain: basket.chain,
+      signal,
+      ctx,
+      rpcUrl: basket.rpcUrl,
+      fallbackRpcUrl: basket.fallbackRpcUrl,
+      timeoutMs: 12_000,
+    });
+    if (!results || results.some((result) => !result.success)) return null;
+
+    const byLabel = new Map(results.map((result) => [result.label, result.returnData]));
+    const bridgeInventories: BridgeBasketProbe["bridgeInventories"] = [];
+    let capacityEur = 0;
+
+    for (const [index, bridge] of basket.bridges.entries()) {
+      const label = `bridge:${index}`;
+      const underlying = decodeStrictAddressWord(byLabel.get(`${label}:underlying`));
+      const dEuro = decodeStrictAddressWord(byLabel.get(`${label}:deuro`));
+      const decimals = decodeUint256Word(byLabel.get(`${label}:decimals`));
+      const inventoryRaw = decodeUint256Word(byLabel.get(`${label}:inventory`));
+      const isMinter = decodeStrictBoolWord(byLabel.get(`${label}:minter`));
+      if (
+        underlying !== bridge.tokenAddress.toLowerCase()
+        || dEuro !== basket.dEuroAddress.toLowerCase()
+        || decimals !== BigInt(bridge.tokenDecimals)
+        || inventoryRaw == null
+        || isMinter !== true
+      ) {
+        return null;
+      }
+
+      const inventoryEur = decimalNumberFromBigInt(inventoryRaw, bridge.tokenDecimals);
+      if (!Number.isFinite(inventoryEur) || inventoryEur < 0) return null;
+      capacityEur += inventoryEur;
+      bridgeInventories.push({
+        label: bridge.label,
+        bridgeAddress: bridge.bridgeAddress,
+        tokenAddress: bridge.tokenAddress,
+        tokenDecimals: bridge.tokenDecimals,
+        inventoryRaw: inventoryRaw.toString(),
+        inventoryEur,
+      });
+    }
+
+    const fx = prices[basket.eurUsdPriceAddress.toLowerCase()]?.price;
+    const eurUsdReference = fx?.usd != null && fx?.eur != null && fx.usd > 0 && fx.eur > 0
+      ? fx.usd / fx.eur
+      : null;
+    if (eurUsdReference == null || !Number.isFinite(eurUsdReference) || eurUsdReference <= 0) return null;
+
+    const capacityUsd = capacityEur * eurUsdReference;
+    if (!Number.isFinite(capacityUsd) || capacityUsd < 0) return null;
+    return { capacityEur, capacityUsd, eurUsdReference, bridgeInventories };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return null;
+  }
 }
 
 async function fetchBridgeImmediateRedeemableUsd(
@@ -325,13 +459,31 @@ export async function fetchCollateralPositionsApiReserves(
   const immediateRedeemableUsd = params.redemptionBridge
     ? await fetchBridgeImmediateRedeemableUsd(params.redemptionBridge, prices, signal, ctx)
     : null;
+  const bridgeBasketProbe = params.redemptionBridgeBasket
+    ? await fetchBridgeBasketImmediateRedeemableUsd(params.redemptionBridgeBasket, prices, signal, ctx)
+    : null;
+  const redemptionCapacityUsd = bridgeBasketProbe?.capacityUsd ?? immediateRedeemableUsd;
 
   return adaptCollateralPositions(
     details,
     prices,
     params.otherThresholdPct ?? 2,
-    immediateRedeemableUsd,
-    params.redemptionBridge
+    redemptionCapacityUsd,
+    params.redemptionBridgeBasket && bridgeBasketProbe
+      ? {
+          sourceUrls: params.redemptionBridgeBasket.sourceUrls,
+          zeroCapacityRouteStatus: "unknown",
+          routeStatusReason: bridgeBasketProbe.capacityEur > 0
+            ? `All ${bridgeBasketProbe.bridgeInventories.length} configured StablecoinBridge identities passed; summed idle inventory is ${bridgeBasketProbe.capacityEur} EUR`
+            : `All ${bridgeBasketProbe.bridgeInventories.length} configured StablecoinBridge identities passed, but summed idle inventory is zero`,
+          telemetryDetails: {
+            capacityEur: bridgeBasketProbe.capacityEur,
+            eurUsdReference: bridgeBasketProbe.eurUsdReference,
+            eurUsdReferenceSource: params.redemptionBridgeBasket.eurUsdPriceAddress,
+            bridgeInventories: bridgeBasketProbe.bridgeInventories,
+          },
+        }
+      : params.redemptionBridge
       ? { sourceUrls: [input.url, params.pricesUrl] }
       : {},
   );

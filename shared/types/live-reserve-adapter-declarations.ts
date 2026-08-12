@@ -283,7 +283,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    // Capacity is emitted only when a coin opts into either the legacy
+    // single-bridge probe or the identity-gated bridge-basket probe.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
@@ -347,8 +349,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    // The read is the escrow the redemption is actually paid out of, so the
-    // measured balance is direct capacity rather than a backing proxy.
+    // The single read or bounded all-or-nothing sum measures the escrow or
+    // issuance state the redemption is actually paid against, so the result is
+    // direct capacity rather than a backing proxy.
     redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },

@@ -263,13 +263,39 @@ const collateralPositionsRedemptionBridgeSchema = z
   })
   .strict();
 
+const collateralPositionsRedemptionBasketBridgeSchema = z
+  .object({
+    label: z.string().trim().min(1),
+    bridgeAddress: EvmAddressSchema,
+    tokenAddress: EvmAddressSchema,
+    tokenDecimals: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const collateralPositionsRedemptionBridgeBasketSchema = z
+  .object({
+    chain: z.string().min(1),
+    rpcMode: LiveReserveRpcModeSchema,
+    dEuroAddress: EvmAddressSchema,
+    eurUsdPriceAddress: EvmAddressSchema,
+    bridges: z.array(collateralPositionsRedemptionBasketBridgeSchema).nonempty().max(16),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+  })
+  .strict();
+
 const collateralPositionsParamsSchema = z
   .object({
     pricesUrl: AbsoluteUrlSchema,
     otherThresholdPct: z.number().positive().optional(),
     redemptionBridge: collateralPositionsRedemptionBridgeSchema.optional(),
+    redemptionBridgeBasket: collateralPositionsRedemptionBridgeBasketSchema.optional(),
   })
-  .strict();
+  .strict()
+  .refine((params) => !(params.redemptionBridge && params.redemptionBridgeBasket), {
+    message: "redemptionBridge and redemptionBridgeBasket are mutually exclusive",
+  });
 
 const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
 
@@ -527,13 +553,55 @@ const erc4626SingleAssetParamsSchema = z
 const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
 const evmAbiWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
 
+const escrowBalanceIdentityCheckSchema = z
+  .object({
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    expectedAddress: EvmAddressSchema,
+  })
+  .strict();
+
+const escrowBalanceSelectorReadSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    decimals: z.number().int().nonnegative().max(36),
+    identityCheck: escrowBalanceIdentityCheckSchema.optional(),
+  })
+  .strict();
+
+const escrowBalanceErc20ReadSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    erc20BalanceOf: EvmAddressSchema,
+    decimals: z.number().int().nonnegative().max(36),
+    identityCheck: escrowBalanceIdentityCheckSchema.optional(),
+  })
+  .strict();
+
+const escrowBalancePauseCheckSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+  })
+  .strict();
+
+const escrowBalanceSharedParamsShape = {
+  slice: reserveSliceDescriptorSchema,
+  sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+  holderEligibility: RedemptionHolderEligibilitySchema.optional(),
+  settlementDelaySec: z.number().int().nonnegative().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+};
+
 // One pinned escrow/reserve contract whose redemption capacity is readable as a
-// single token-denominated view call. `args` are pre-encoded 32-byte ABI words,
-// so the adapter never needs to know the escrow's ABI: an ERC-20 escrow is just
-// selector `0x70a08231` with the holder word, and richer accounting views (e.g.
-// Circle xReserve `balanceOfNativeCollateral(address,uint32)`) are the same
-// shape. `decimals` is the escrowed asset's decimals, not the tracked coin's.
-const escrowBalanceParamsSchema = z
+// single token-denominated view call. This original shape remains unchanged for
+// existing configs. `args` are pre-encoded 32-byte ABI words and `decimals` is
+// the escrowed asset's decimals, not the tracked coin's.
+const escrowBalanceSingleParamsSchema = z
   .object({
     contract: EvmAddressSchema,
     selector: evmSelectorSchema,
@@ -542,14 +610,31 @@ const escrowBalanceParamsSchema = z
     // Optional boolean view on the same contract; a true word withholds the
     // route instead of publishing capacity as freely redeemable.
     pausedSelector: evmSelectorSchema.optional(),
-    slice: reserveSliceDescriptorSchema,
-    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
-    holderEligibility: RedemptionHolderEligibilitySchema.optional(),
-    settlementDelaySec: z.number().int().nonnegative().optional(),
-    rpcUrl: AbsoluteUrlSchema.optional(),
-    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    ...escrowBalanceSharedParamsShape,
   })
   .strict();
+
+// Bounded aggregation for routes whose direct capacity is split across several
+// reviewer-pinned views. Every item is either a selector call whose first ABI
+// return word is the capacity or an ERC-20 balanceOf(holder) call. Optional
+// address-returning identity checks bind a read contract to a reviewed
+// dependency. The adapter withholds the whole observation if any read or
+// identity check fails.
+const escrowBalanceMultiParamsSchema = z
+  .object({
+    reads: z
+      .array(z.union([escrowBalanceSelectorReadSchema, escrowBalanceErc20ReadSchema]))
+      .min(1)
+      .max(16),
+    pauseCheck: escrowBalancePauseCheckSchema.optional(),
+    ...escrowBalanceSharedParamsShape,
+  })
+  .strict();
+
+const escrowBalanceParamsSchema = z.union([
+  escrowBalanceSingleParamsSchema,
+  escrowBalanceMultiParamsSchema,
+]);
 
 // Same wrapper + M token contract addresses as the primary chain, deployed on
 // another EVM network (M0's native-multichain model reuses addresses across

@@ -2,13 +2,15 @@ import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchEscrowBalanceReserves } from "../escrow-balance";
-import { fetchOnchainUint256 } from "../helpers";
+import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   const fetchOnchainUint256 = vi.fn();
+  const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
+    fetchOnchainRawCall,
     fetchOnchainUint256,
     makeOnchainCallers: vi.fn((
       input: { chain?: string; rpcMode?: unknown },
@@ -25,7 +27,17 @@ vi.mock("../helpers", async (importOriginal) => {
           rpcUrl: options.rpcUrl,
           fallbackRpcUrl: options.fallbackRpcUrl,
         }),
-      raw: vi.fn(),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          contract,
+          data,
+          signal: options.signal,
+          ctx: options.ctx,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+          rpcUrl: options.rpcUrl,
+          fallbackRpcUrl: options.fallbackRpcUrl,
+        }),
     })),
   };
 });
@@ -33,6 +45,9 @@ vi.mock("../helpers", async (importOriginal) => {
 const XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
 const USDC_WORD = "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const MOVEMENT_DOMAIN_WORD = "0x0000000000000000000000000000000000000000000000000000000000002715";
+const PARALLELIZER = "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2";
+const PARALLEL_USDP = "0x9B3a8f7CEC208e247d97dEE13313690977e24459";
+const FRXUSD_WORD = "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29";
 
 const coin = { id: "usdcx-movement", symbol: "USDCx" } as StablecoinMeta;
 
@@ -56,6 +71,49 @@ const config: LiveReservesConfig = {
       depType: "wrapper",
     },
     sourceUrls: ["https://developers.circle.com/xreserve/concepts/technical-guide"],
+    holderEligibility: "any-holder",
+    settlementDelaySec: 0,
+  },
+};
+
+const multiReadConfig: LiveReservesConfig = {
+  adapter: "escrow-balance",
+  version: 1,
+  semantics: "single-asset",
+  inputs: {
+    primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+  },
+  params: {
+    reads: [
+      {
+        contract: PARALLELIZER,
+        selector: "0x94e35d9e",
+        args: [FRXUSD_WORD],
+        decimals: 6,
+        identityCheck: {
+          selector: "0x1978a5ed",
+          expectedAddress: PARALLEL_USDP,
+        },
+      },
+      {
+        contract: "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+        erc20BalanceOf: PARALLELIZER,
+        decimals: 18,
+      },
+    ],
+    pauseCheck: {
+      contract: PARALLELIZER,
+      selector: "0x0d126627",
+      args: [
+        FRXUSD_WORD,
+        "0x0000000000000000000000000000000000000000000000000000000000000002",
+      ],
+    },
+    slice: {
+      name: "Parallelizer redemption capacity",
+      risk: "medium",
+    },
+    sourceUrls: ["https://docs.parallel.best/"],
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
   },
@@ -149,5 +207,88 @@ describe("fetchEscrowBalanceReserves", () => {
     await expect(
       fetchEscrowBalanceReserves(coin, config, new AbortController().signal),
     ).rejects.toThrow("pause check failed");
+  });
+
+  it("sums bounded selector and ERC-20 balance reads after checking identity", async () => {
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(BigInt(PARALLEL_USDP))
+      .mockResolvedValueOnce(2_000_000_000_000_000_000n)
+      .mockResolvedValueOnce(0n);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
+      `0x${1_250_000n.toString(16).padStart(64, "0")}${4_000_000n.toString(16).padStart(64, "0")}`,
+    );
+
+    const result = await fetchEscrowBalanceReserves(
+      { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
+      multiReadConfig,
+      new AbortController().signal,
+    );
+
+    expect(vi.mocked(fetchOnchainUint256).mock.calls.map(([call]) => call.data)).toEqual([
+      "0x1978a5ed",
+      `0x70a08231${PARALLELIZER.slice(2).toLowerCase().padStart(64, "0")}`,
+      `0x0d126627${FRXUSD_WORD.slice(2)}0000000000000000000000000000000000000000000000000000000000000002`,
+    ]);
+    expect(vi.mocked(fetchOnchainRawCall)).toHaveBeenCalledWith(expect.objectContaining({
+      contract: PARALLELIZER,
+      data: `0x94e35d9e${FRXUSD_WORD.slice(2)}`,
+    }));
+    expect(result.metadata).toMatchObject({
+      contractAddresses: [
+        PARALLELIZER,
+        "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+      ],
+      escrowBalanceReadCount: 2,
+      escrowBalancesRaw: ["1250000", "2000000000000000000"],
+      escrowBalanceUsd: 3.25,
+      immediateRedeemableUsd: 3.25,
+      redemption: {
+        capacityUsd: 3.25,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        routeStatusReason: expect.stringContaining("positive sum"),
+      },
+    });
+  });
+
+  it("withholds the whole multi-read observation when one capacity read fails", async () => {
+    vi.mocked(fetchOnchainUint256)
+      .mockResolvedValueOnce(BigInt(PARALLEL_USDP))
+      .mockResolvedValueOnce(null);
+    vi.mocked(fetchOnchainRawCall).mockResolvedValueOnce(
+      `0x${1_250_000n.toString(16).padStart(64, "0")}${4_000_000n.toString(16).padStart(64, "0")}`,
+    );
+
+    await expect(
+      fetchEscrowBalanceReserves(
+        { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
+        multiReadConfig,
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("capacity read 2 failed");
+  });
+
+  it("rejects multi-read configs above the bounded item cap", async () => {
+    const params = multiReadConfig.params as Record<string, unknown>;
+    const reads = params.reads as unknown[];
+    const overCapConfig: LiveReservesConfig = {
+      ...multiReadConfig,
+      params: {
+        ...params,
+        reads: Array.from({ length: 17 }, () => reads[0]),
+      },
+    };
+
+    await expect(
+      fetchEscrowBalanceReserves(
+        { id: "usdp-parallel", symbol: "USDp" } as StablecoinMeta,
+        overCapConfig,
+        new AbortController().signal,
+      ),
+    ).rejects.toThrow("adapter params invalid");
+    expect(vi.mocked(fetchOnchainUint256)).not.toHaveBeenCalled();
+    expect(vi.mocked(fetchOnchainRawCall)).not.toHaveBeenCalled();
   });
 });

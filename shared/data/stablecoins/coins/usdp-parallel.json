@@ -163,6 +163,86 @@
       "decimals": 18
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "escrow-balance",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdp-parallel",
+    "display": {
+      "url": "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module",
+      "label": "Ethereum Parallelizer redemption capacity"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "reads": [
+        {
+          "contract": "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2",
+          "selector": "0x94e35d9e",
+          "args": [
+            "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29"
+          ],
+          "decimals": 18,
+          "identityCheck": {
+            "selector": "0x1978a5ed",
+            "expectedAddress": "0x9B3a8f7CEC208e247d97dEE13313690977e24459"
+          }
+        },
+        {
+          "contract": "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2",
+          "selector": "0x94e35d9e",
+          "args": [
+            "0x000000000000000000000000cf62f905562626cfcdd2261162a51fd02fc9c5b6"
+          ],
+          "decimals": 18
+        },
+        {
+          "contract": "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2",
+          "selector": "0x94e35d9e",
+          "args": [
+            "0x0000000000000000000000004c9edd5852cd905f086c759e8383e09bff1e68b3"
+          ],
+          "decimals": 18
+        },
+        {
+          "contract": "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2",
+          "selector": "0x94e35d9e",
+          "args": [
+            "0x0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a3497"
+          ],
+          "decimals": 18
+        }
+      ],
+      "pauseCheck": {
+        "contract": "0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2",
+        "selector": "0x0d126627",
+        "args": [
+          "0x000000000000000000000000cacd6fd266af91b8aed52accc382b4e165586e29",
+          "0x0000000000000000000000000000000000000000000000000000000000000002"
+        ]
+      },
+      "slice": {
+        "name": "Ethereum Parallelizer proportional redemption basket",
+        "risk": "medium"
+      },
+      "sourceUrls": [
+        "https://docs.parallel.best/products/parallel-v3/how-it-works/parallelizer-module",
+        "https://docs.parallel.best/developers-hub/parallel-v3/build-on-parallel/parallelizer-module-integration",
+        "https://etherscan.io/address/0x6efeDDF9269c3683Ba516cb0e2124FE335F262a2#code",
+        "https://etherscan.io/address/0x4E899B0aB9b7A0Fd5fc0DD288fab8a581BB40986#code",
+        "https://etherscan.io/address/0xb049D96b8fEdd3eB8Ec767B7A33bf95D3bE128d0#code",
+        "https://github.com/parallel-protocol/parallel-parallelizer/blob/main/contracts/parallelizer/facets/Getters.sol",
+        "https://github.com/parallel-protocol/parallel-parallelizer/blob/main/contracts/parallelizer/facets/Redeemer.sol"
+      ],
+      "holderEligibility": "any-holder",
+      "settlementDelaySec": 0
+    }
+  },
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "dao-governance",
