@@ -1,8 +1,27 @@
-import { describe, it, expect } from "vitest";
+import { beforeEach, describe, it, expect, vi } from "vitest";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainUint256 = vi.fn();
+  const fetchOnchainRawCall = vi.fn();
+  return {
+    ...actual,
+    fetchJsonAdapterInput: vi.fn(),
+    fetchOnchainUint256,
+    fetchOnchainRawCall,
+    makeOnchainCallers: vi.fn(() => ({
+      uint256: (contract: string, data: string) => fetchOnchainUint256({ contract, data }),
+      raw: (contract: string, data: string) => fetchOnchainRawCall({ contract, data }),
+    })),
+  };
+});
+
+import { fetchJsonAdapterInput, fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import {
   resolveBaseSymbol,
   bucketForAsset,
   adaptFirmMarkets,
+  fetchDolaInverseReserves,
   listUnexpectedDolaAssets,
   type FirmMarket,
 } from "../dola-inverse";
@@ -12,6 +31,75 @@ import { validateAdapterOutput } from "../validate";
 function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, borrowPaused: false };
 }
+
+const PSM_ADDRESS = "0x4dfd662622d766304cb539e66f893c4defa19398";
+const SUSDS_ADDRESS = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd";
+const USDS_ADDRESS = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";
+const DOLA_ADDRESS = "0x865377367054516e17014ccded1e7d814edc9ce4";
+const VAULT_SELECTOR = "0xfbfa77cf";
+const COLLATERAL_SELECTOR = "0xd8dfeb45";
+const DOLA_SELECTOR = "0x92c592d0";
+const SUPPLY_SELECTOR = "0x047fc9aa";
+const SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
+const MAX_WITHDRAW_DATA = `0xce96cb77${PSM_ADDRESS.slice(2).padStart(64, "0")}`;
+const DOLA_LIVE_CONFIG = {
+  adapter: "dola-inverse",
+  version: 1,
+  semantics: "collateral-mix",
+  inputs: { primary: { kind: "http-json", url: "https://www.inverse.finance/api/f2/fixed-markets" } },
+} as never;
+
+function word(hexBody: string): string {
+  return `0x${hexBody.replace(/^0x/, "").padStart(64, "0")}`;
+}
+
+/**
+ * Route the mocked callers by contract and selector: the adapter fires the
+ * three identity reads, supply(), maxWithdraw() and sellFeeBps() concurrently,
+ * so ordered mock queues would be fragile here.
+ */
+function primeDolaPsmMocks(options: {
+  vault?: string | null;
+  collateral?: string | null;
+  dola?: string | null;
+  supply?: bigint | null;
+  maxWithdraw?: bigint | null;
+  sellFeeBps?: bigint | null;
+} = {}) {
+  const vault = options.vault === undefined ? word(SUSDS_ADDRESS) : options.vault;
+  const collateral = options.collateral === undefined ? word(USDS_ADDRESS) : options.collateral;
+  const dola = options.dola === undefined ? word(DOLA_ADDRESS) : options.dola;
+  vi.mocked(fetchOnchainRawCall).mockImplementation((args: unknown) => {
+    const { contract, data } = args as { contract: string; data: string };
+    if (contract !== PSM_ADDRESS) return Promise.resolve(null);
+    if (data === VAULT_SELECTOR) return Promise.resolve(vault);
+    if (data === COLLATERAL_SELECTOR) return Promise.resolve(collateral);
+    if (data === DOLA_SELECTOR) return Promise.resolve(dola);
+    return Promise.resolve(null);
+  });
+  vi.mocked(fetchOnchainUint256).mockImplementation((args: unknown) => {
+    const { contract, data } = args as { contract: string; data: string };
+    if (contract === PSM_ADDRESS && data === SUPPLY_SELECTOR) {
+      return Promise.resolve(options.supply === undefined ? 0n : options.supply);
+    }
+    if (contract === PSM_ADDRESS && data === SELL_FEE_BPS_SELECTOR) {
+      return Promise.resolve(options.sellFeeBps === undefined ? 20n : options.sellFeeBps);
+    }
+    if (contract === SUSDS_ADDRESS && data === MAX_WITHDRAW_DATA) {
+      return Promise.resolve(options.maxWithdraw === undefined ? 0n : options.maxWithdraw);
+    }
+    return Promise.resolve(null);
+  });
+  vi.mocked(fetchJsonAdapterInput).mockResolvedValue({
+    markets: [makeMarket("wstETH", 1_000_000)],
+    timestamp: 1_776_330_494,
+  } as never);
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  primeDolaPsmMocks();
+});
 
 describe("resolveBaseSymbol", () => {
   it("extracts asset from Yearn DOLA vault: yv-DOLA-sUSDe → sUSDe", () => {
@@ -192,6 +280,95 @@ describe("adaptFirmMarkets", () => {
     ]));
     expect(result.slices.find((slice) => slice.name === "toString collateral")).toBeUndefined();
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+});
+
+describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
+  it("publishes the measured zero capacity without claiming the route is open", async () => {
+    // The PSM has been empty since 2025-12-10. It is not paused — it has
+    // nothing to pay out — so neither "open" nor "paused" is an honest claim.
+    primeDolaPsmMocks({ supply: 0n, maxWithdraw: 0n });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata).toMatchObject({
+      psmSupplyRaw: "0",
+      psmVaultWithdrawableRaw: "0",
+      redemption: {
+        capacityUsd: 0,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
+        feeBps: 20,
+      },
+    });
+    expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
+    expect(result.metadata?.redemption?.routeStatusSource).toBeUndefined();
+    expect(result.metadata?.redemption?.routeStatusReason).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+
+  it("reports the route open and binds capacity to the lower of supply() and vault maxWithdraw()", async () => {
+    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 8_000n * 10n ** 18n });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 5_000,
+      capacityKind: "live-direct",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      feeBps: 20,
+    });
+    expect(result.metadata?.redemption?.routeStatusReason).toContain("supply()");
+    expect(result.metadata?.redemption?.sourceUrls).toContain(
+      "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module",
+    );
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+
+  it("binds capacity to the vault leg when the sUSDS vault cannot pay out the full accounted supply", async () => {
+    primeDolaPsmMocks({ supply: 9_000n * 10n ** 18n, maxWithdraw: 1_500n * 10n ** 18n });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption?.capacityUsd).toBe(1_500);
+  });
+
+  it("withholds the whole redemption block when the PSM vault identity no longer matches sUSDS", async () => {
+    primeDolaPsmMocks({ vault: word("0x1111111111111111111111111111111111111111"), supply: 5_000n * 10n ** 18n });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.psmSupplyRaw).toBeUndefined();
+    expect(result.warnings ?? []).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "dola-psm-unreadable", effect: "info" })]),
+    );
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+
+  it("withholds the whole redemption block when supply() cannot be read", async () => {
+    primeDolaPsmMocks({ supply: null });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings ?? []).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "dola-psm-unreadable" })]),
+    );
+  });
+
+  it("still publishes capacity when the sellFeeBps() read fails", async () => {
+    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 5_000n * 10n ** 18n, sellFeeBps: null });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 5_000, routeStatus: "open" });
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("dola-inverse") ?? undefined }).valid).toBe(true);
+  });
+
+  it("rejects a sellFeeBps() reading outside the contract's own bps denominator", async () => {
+    primeDolaPsmMocks({ supply: 5_000n * 10n ** 18n, maxWithdraw: 5_000n * 10n ** 18n, sellFeeBps: 10_001n });
+    const result = await fetchDolaInverseReserves({ id: "dola-inverse-finance" } as never, DOLA_LIVE_CONFIG, new AbortController().signal);
+
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
   });
 });
 

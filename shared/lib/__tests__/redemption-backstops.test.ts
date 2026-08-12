@@ -228,9 +228,9 @@ describe("getRedemptionBackstopConfig", () => {
   it("promotes reviewed stable-buffer routes out of the heuristic bucket", () => {
     expect(getRedemptionBackstopConfig("usdd-tron-dao-reserve")).toMatchObject({
       routeFamily: "psm-swap",
-      capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.16, confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 0 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("lisusd-lista")).toMatchObject({
@@ -374,7 +374,6 @@ describe("getRedemptionBackstopConfig", () => {
   });
 
   it("keeps explicitly unmodeled protocol routes unmodeled", () => {
-    expect(getRedemptionBackstopConfig("hollar-hydrated")).toBeNull();
     expect(getRedemptionBackstopConfig("frax-frax")).toBeNull();
   });
 
@@ -644,13 +643,13 @@ describe("getRedemptionBackstopConfig", () => {
 
     expect(getRedemptionBackstopConfig("usdai-usd-ai")).toMatchObject({
       routeFamily: "stablecoin-redeem",
-      accessModel: "permissionless-onchain",
+      accessModel: "whitelisted-onchain",
       settlementModel: "atomic",
       executionModel: "deterministic-onchain",
       outputAssetType: "stable-single",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-      costModel: { kind: "dynamic-or-unclear" },
-      reviewedAt: "2026-07-19",
+      costModel: { kind: "fee-bps", feeBps: 10 },
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("susdai-usd-ai")).toMatchObject({
@@ -857,9 +856,9 @@ describe("getRedemptionBackstopConfig", () => {
   it("upgrades the moderate-effort reviewed queue out of heuristic redemption semantics", () => {
     expect(getRedemptionBackstopConfig("dola-inverse-finance")).toMatchObject({
       routeFamily: "psm-swap",
-      capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
+      capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 20 },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("rwausdi-multipli")).toMatchObject({
@@ -1065,7 +1064,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("usdai-usd-ai")).toMatchObject({
       outputAssetType: "stable-single",
       outputAssets: ["pyusd-paypal"],
-      reviewedAt: "2026-07-19",
+      reviewedAt: "2026-08-12",
     });
     expect(getRedemptionBackstopConfig("u-united-stables")).toMatchObject({
       outputAssetType: "stable-basket",

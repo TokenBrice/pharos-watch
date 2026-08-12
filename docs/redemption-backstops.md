@@ -6,12 +6,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.32`
+- **Current methodology version:** `v4.33`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.32` update: live adapters now assert current route openness and fees where the chain proves them, and several routes gained live-direct capacity, documented fee bounds, or primary-source corrections. ERC-4626 wrapper adapters emit `routeStatus` open/paused from positive same-run redemption liquidity plus opportunistic `paused()`/`isShutdown()` probes; Mento FPMM pools read `lpFee()+protocolFee()` live; USDe reads the EthenaMinting contract's own USDT/USDC float capped by max-redeem-per-block config; Reservoir routes read the USDC PSM on-chain and base rUSD gains its own PSM route; USTB is remodeled onto its atomic on-chain RedemptionIdle USDC rail; IST's route status is unknown following Inter Protocol's sunset; eUSD and USD3 (Reserve) carry documented 0 bps fee ceilings. Scoring weights, ladders, and the exit engine are unchanged — routes move only through better evidence.
+Latest `v4.33` update: a second exit-credit pass configures three previously unconfigured PSM rails and bounds four more redemption fees against primary sources. FXD (Fathom), HOLLAR (Hydration), and USDH (Hubble) gain `psm-swap` routes, lifting coverage to 314 configured coins; USDai is bounded at its published 10 bps redemption fee and corrected from permissionless to whitelisted access; ZYS takes a fixed 10 bps bound from Zephyr's consensus RingCT source; USDnr is bounded at 0 bps for the modeled USDnr → M leg. USDH carries `routeStatus` unknown because no current Hubble source proves the module still executes, and HOLLAR deliberately keeps no fee bound because its buy-back fee is a per-collateral on-chain parameter with no documented ceiling. MAI (QiDao) and iUSD (Initia) stay unconfigured — QiDao's PSM pages now 404, and Initia's bridge documentation does not mention iUSD. Four routes also move onto live capacity telemetry: OUSG reads its InstantManager router capacity (with Ondo's published $50M 24-hour global instant-redemption limit as fallback), USD3 reads the RToken `redemptionAvailable()` throttle with no fallback, USDD reads the Tron PSM GemJoin balance behind its reviewed 16% fallback, and DOLA is corrected downward — its reviewed 8% PSM share was phantom capacity in a contract drained in December 2025, so it is now live-only with no fallback. Scoring weights, ladders, and the exit engine are unchanged — routes move only through better evidence.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -23,8 +23,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 311
-- **Route families:** 147 `offchain-issuer`, 67 `stablecoin-redeem`, 38 `collateral-redeem`, 39 `queue-redeem`, 11 `psm-swap`, 9 `basket-redeem`
+- **Configured coins:** 314
+- **Route families:** 147 `offchain-issuer`, 67 `stablecoin-redeem`, 38 `collateral-redeem`, 39 `queue-redeem`, 14 `psm-swap`, 9 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

@@ -60,5 +60,45 @@
   ],
   "collateralQuality": "native",
   "custodyModel": "institutional-top",
-  "governanceQuality": "single-entity"
+  "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "escrow-balance",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "usdcx-movement",
+    "display": {
+      "url": "https://developers.circle.com/xreserve/concepts/how-xreserve-works",
+      "label": "Circle xReserve collateral"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "contract": "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce",
+      "selector": "0xc47cf5ef",
+      "args": [
+        "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "0x0000000000000000000000000000000000000000000000000000000000002715"
+      ],
+      "decimals": 6,
+      "pausedSelector": "0x5c975abb",
+      "slice": {
+        "name": "USDC held as Circle xReserve native collateral for the Movement domain",
+        "risk": "very-low",
+        "coinId": "usdc-circle",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://developers.circle.com/xreserve/concepts/technical-guide",
+        "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
+        "https://github.com/circlefin/evm-xreserve-contracts/blob/master/src/xReserve.sol"
+      ],
+      "holderEligibility": "any-holder",
+      "settlementDelaySec": 0
+    }
+  }
 }

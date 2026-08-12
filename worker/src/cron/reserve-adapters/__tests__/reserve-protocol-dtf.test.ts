@@ -1,7 +1,7 @@
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { encodeAbiParameters } from "viem/utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../../lib/evm-selectors";
 
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
@@ -50,6 +50,7 @@ const QUOTE_SELECTOR = "0x3913d11a";
 const PRICE_SELECTOR = "0xa035b1fe";
 const COLLATERAL_STATUS_SELECTOR = "0x200d2ed2";
 const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
+const REDEMPTION_AVAILABLE_SELECTOR = "0x9926020b";
 
 const RTOKEN = "0x0d86883faf4ffd7aeb116390af37746f45b6f378";
 const MAIN = "0x81117e3e98910c3dcf956b5fc97a7212e047acf4";
@@ -111,13 +112,29 @@ function createOnchainConfig(): LiveReservesConfig {
   };
 }
 
-function mockReserveProtocolOnchain(statusByAsset = new Map<string, bigint>()): void {
+interface MockReserveProtocolOnchainOptions {
+  statusByAsset?: Map<string, bigint>;
+  redemptionAvailable?: bigint | null;
+  totalSupply?: bigint | null;
+  fullyCollateralized?: boolean;
+  basketStatus?: bigint | null;
+}
+
+function mockReserveProtocolOnchain(options: MockReserveProtocolOnchainOptions = {}): void {
+  const {
+    statusByAsset = new Map<string, bigint>(),
+    redemptionAvailable = 40n * ONE,
+    totalSupply = 100n * ONE,
+    fullyCollateralized = true,
+    basketStatus = 0n,
+  } = options;
   vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
     const normalizedContract = normalizeAddress(contract);
     if (normalizedContract === RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(MAIN);
     if (normalizedContract === MAIN && data === ASSET_REGISTRY_SELECTOR) return encodeAddressResult(ASSET_REGISTRY);
     if (normalizedContract === MAIN && data === BASKET_HANDLER_SELECTOR) return encodeAddressResult(BASKET_HANDLER);
-    if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR) return encodeBoolResult(true);
+    if (normalizedContract === BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
+      return encodeBoolResult(fullyCollateralized);
     if (normalizedContract === BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
       return encodeAbiParameters(
         [{ type: "address[]" }, { type: "uint256[]" }],
@@ -142,6 +159,9 @@ function mockReserveProtocolOnchain(statusByAsset = new Map<string, bigint>()): 
   vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
     const normalizedContract = normalizeAddress(contract);
     if (normalizedContract === RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
+    if (normalizedContract === RTOKEN && data === REDEMPTION_AVAILABLE_SELECTOR) return redemptionAvailable;
+    if (normalizedContract === RTOKEN && data === TOTAL_SUPPLY_SELECTOR) return totalSupply;
+    if (normalizedContract === BASKET_HANDLER && data === COLLATERAL_STATUS_SELECTOR) return basketStatus;
     if (normalizedContract === SUSDS && data === DECIMALS_SELECTOR) return 18n;
     if (normalizedContract === WCUSDCV3 && data === DECIMALS_SELECTOR) return 6n;
     if (
@@ -348,8 +368,69 @@ describe("reserve-protocol-dtf adapter", () => {
     });
   });
 
+  it("emits throttle-open redemption capacity capped by RToken total supply", async () => {
+    mockReserveProtocolOnchain({ redemptionAvailable: 120n * ONE, totalSupply: 100n * ONE });
+
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 100,
+      capacityRatioOfSupply: 1,
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      holderEligibility: "any-holder",
+      settlementDelaySec: 0,
+    });
+    expect(result.metadata?.redemption?.routeStatusReason).toContain("redemptionAvailable() throttle read");
+  });
+
+  it("emits zero capacity when the redemption throttle is exhausted", async () => {
+    mockReserveProtocolOnchain({ redemptionAvailable: 0n });
+
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 0,
+      capacityRatioOfSupply: 0,
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    });
+  });
+
+  it("degrades redemption telemetry when the basket is not sound", async () => {
+    mockReserveProtocolOnchain({ fullyCollateralized: false, basketStatus: 1n });
+
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 40,
+      routeStatus: "degraded",
+      routeStatusSource: "onchain",
+    });
+    expect(result.metadata?.redemption?.routeStatusReason).toContain(
+      "basket status is 1 and fullyCollateralized() is false",
+    );
+  });
+
+  it.each([
+    ["redemptionAvailable()", { redemptionAvailable: null }],
+    ["totalSupply()", { totalSupply: null }],
+    ["BasketHandler.status()", { basketStatus: null }],
+  ])("withholds redemption telemetry when %s fails", async (_label, options) => {
+    mockReserveProtocolOnchain(options);
+
+    const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
+
+    expect(result.slices).toHaveLength(2);
+    expect(result.metadata?.redemption).toBeUndefined();
+  });
+
   it("keeps IFFY collateral published with a degraded status warning", async () => {
-    mockReserveProtocolOnchain(new Map([[SUSDS_ASSET, 1n]]));
+    mockReserveProtocolOnchain({ statusByAsset: new Map([[SUSDS_ASSET, 1n]]) });
 
     const result = await fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal);
 
@@ -367,7 +448,7 @@ describe("reserve-protocol-dtf adapter", () => {
   });
 
   it("rejects DISABLED collateral status instead of publishing a stale basket", async () => {
-    mockReserveProtocolOnchain(new Map([[SUSDS_ASSET, 2n]]));
+    mockReserveProtocolOnchain({ statusByAsset: new Map([[SUSDS_ASSET, 2n]]) });
 
     await expect(fetchReserveProtocolDtfReserves(coin as never, createOnchainConfig(), signal)).rejects.toThrow(
       /collateral status is DISABLED \(2\)/,

@@ -1,9 +1,13 @@
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type {
+  LiveReserveRedemptionTelemetry,
+  LiveReserveWarning,
+  LiveReservesConfig,
+} from "@shared/types/live-reserves";
 import { decodeAbiParameters } from "viem/utils";
 import { throwIfAborted } from "../../lib/abort";
-import { DECIMALS_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
+import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, encodeAddress, encodeUint256 } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildUnknownExposureWarning,
@@ -69,6 +73,9 @@ const QUOTE_SELECTOR = "0x3913d11a";
 const PRICE_SELECTOR = "0xa035b1fe";
 const COLLATERAL_STATUS_SELECTOR = "0x200d2ed2";
 const FULLY_COLLATERALIZED_SELECTOR = "0xe45a5b2d";
+// Verified RTokenP1 implementation ABI for the USD3 proxy:
+// https://eth.blockscout.com/api/v2/smart-contracts/0x258ce833CF9AD19208372763A00aA1565Dd40b3C
+const REDEMPTION_AVAILABLE_SELECTOR = "0x9926020b";
 const FLOOR_ROUNDING = 0n;
 const APPLY_ISSUANCE_PREMIUM = 0n;
 const PRICE_DECIMALS = 18;
@@ -131,6 +138,38 @@ function decodeDecimals(raw: bigint | null, context: string): number {
 
 function decodeBoolResult(raw: string | null): boolean | null {
   return decodeBoolWord(raw);
+}
+
+function buildRedemptionTelemetry(
+  rTokenAddress: string,
+  rTokenDecimals: number,
+  redemptionAvailable: bigint | null,
+  totalSupply: bigint | null,
+  fullyCollateralized: boolean,
+  basketStatus: bigint | null,
+): LiveReserveRedemptionTelemetry | undefined {
+  if (redemptionAvailable == null || totalSupply == null || basketStatus == null) return undefined;
+
+  const capacityRaw = redemptionAvailable < totalSupply ? redemptionAvailable : totalSupply;
+  const capacityUsd = decimalNumberFromBigInt(capacityRaw, rTokenDecimals);
+  const supplyUsd = decimalNumberFromBigInt(totalSupply, rTokenDecimals);
+  if (!Number.isFinite(capacityUsd) || !Number.isFinite(supplyUsd)) return undefined;
+
+  const basketSound = fullyCollateralized && basketStatus === COLLATERAL_STATUS_SOUND;
+  return {
+    capacityUsd,
+    ...(supplyUsd > 0 ? { capacityRatioOfSupply: capacityUsd / supplyUsd } : {}),
+    capacityKind: "live-direct",
+    freshnessKind: "same-run-onchain",
+    routeStatus: basketSound ? "open" : "degraded",
+    routeStatusSource: "onchain",
+    routeStatusReason: basketSound
+      ? `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units; capacity is capped by totalSupply() at ${capacityRaw} raw units`
+      : `Reserve Protocol RToken redemptionAvailable() throttle read returned ${redemptionAvailable} raw units, but basket status is ${basketStatus} and fullyCollateralized() is ${fullyCollateralized}`,
+    holderEligibility: "any-holder",
+    settlementDelaySec: 0,
+    sourceUrls: [`https://eth.blockscout.com/address/${rTokenAddress}`],
+  };
 }
 
 function encodeQuoteCall(amount: bigint): `0x${string}` {
@@ -294,10 +333,12 @@ async function fetchReserveProtocolDtfOnchainReserves(
   const input = requireOnchainInput(config.inputs.primary, "reserve-protocol-dtf");
   const params = parseLiveReserveAdapterParams("reserve-protocol-dtf", config.params) as ReserveProtocolDtfParams;
   const descriptorByAddress = buildDescriptorMap(params.assets);
-  const rTokenAddress = coin.contracts?.find((contract) => contract.chain === input.chain)?.address;
-  if (!rTokenAddress) {
+  const rTokenContract = coin.contracts?.find((contract) => contract.chain === input.chain);
+  if (!rTokenContract) {
     throw new Error(`reserve-protocol-dtf found no ${input.chain} RToken contract for ${coin.id}`);
   }
+  const rTokenAddress = rTokenContract.address;
+  const rTokenDecimals = validateDecimals(rTokenContract.decimals, `reserve-protocol-dtf ${coin.id} RToken decimals`);
 
   const onchain = makeOnchainCallers(input, {
     signal,
@@ -319,8 +360,14 @@ async function fetchReserveProtocolDtfOnchainReserves(
     throw new Error("reserve-protocol-dtf basketsNeeded() call failed");
   }
   const quoteAmount = rawBasketsNeeded;
-  const rawFullyCollateralized = await onchain.raw(basketHandler, FULLY_COLLATERALIZED_SELECTOR);
-  const rawQuote = await onchain.raw(basketHandler, encodeQuoteCall(quoteAmount));
+  const [rawFullyCollateralized, rawBasketStatus, rawQuote, rawRedemptionAvailable, rawTotalSupply] =
+    await Promise.all([
+      onchain.raw(basketHandler, FULLY_COLLATERALIZED_SELECTOR),
+      onchain.uint256(basketHandler, COLLATERAL_STATUS_SELECTOR),
+      onchain.raw(basketHandler, encodeQuoteCall(quoteAmount)),
+      onchain.uint256(rTokenAddress, REDEMPTION_AVAILABLE_SELECTOR),
+      onchain.uint256(rTokenAddress, TOTAL_SUPPLY_SELECTOR),
+    ]);
   if (!rawQuote) {
     throw new Error("reserve-protocol-dtf quote() call failed");
   }
@@ -429,6 +476,14 @@ async function fetchReserveProtocolDtfOnchainReserves(
       ),
     );
   }
+  const redemption = buildRedemptionTelemetry(
+    rTokenAddress,
+    rTokenDecimals,
+    rawRedemptionAvailable,
+    rawTotalSupply,
+    fullyCollateralized,
+    rawBasketStatus,
+  );
 
   return {
     slices: slicesFromValues(values),
@@ -447,6 +502,8 @@ async function fetchReserveProtocolDtfOnchainReserves(
       componentCount: values.length,
       totalQuotedValueUsd: totalValue,
       fullyCollateralized,
+      ...(rawBasketStatus != null ? { basketStatus: rawBasketStatus.toString() } : {}),
+      ...(redemption ? { redemption } : {}),
     },
   };
 }

@@ -16,6 +16,7 @@ import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api"
 import { fetchCrvUsdReserves } from "./crvusd";
 import { fetchCuratedValidatedReserves } from "./curated-validated";
 import { fetchDolaInverseReserves } from "./dola-inverse";
+import { fetchEscrowBalanceReserves } from "./escrow-balance";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
 import { fetchFalconReserves } from "./falcon";
@@ -85,6 +86,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "curated-validated": fetchCuratedValidatedReserves,
   "dola-inverse": fetchDolaInverseReserves,
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
+  "escrow-balance": fetchEscrowBalanceReserves,
   ethena: fetchEthenaReserves,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
