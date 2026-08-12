@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const DEPEG_DEWS_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.21",
+    title: "Independent confirmation for native-fiat onsets",
+    date: "2026-08-12",
+    effectiveAt: 1786492800,
+    summary:
+      "A CoinGecko native-fiat quote may still initiate a pending non-USD depeg, but it can no longer promote that event without agreement from fresh canonical pricing outside the CoinGecko source family.",
+    impact: [
+      "Native-origin candidates still use their direct native quote and the universal 15-minute persistence window, preserving detection of moves that USD peer references can mask",
+      "At promotion, the fresh canonical USD price is normalized through the authoritative FX reference and must cross the full threshold in the same direction",
+      "An independent normalized canonical price at peg or in the opposite direction rejects the candidate; stale, cached, fallback, or CoinGecko-only canonical evidence cannot promote it",
+      "Repeated observations from one CoinGecko native feed now prove temporal persistence only, not independent source confirmation",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.2",
     title: "Hourly DEX-price trust window",
     date: "2026-08-10",

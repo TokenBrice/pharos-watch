@@ -32,6 +32,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     authoritativePrice,
     threshold,
     age,
+    primaryStatus,
     primarySameDirectionDepegged,
     primaryConfirmationSources,
     temporalSameDirectionConfirmed,
@@ -42,8 +43,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     evidence.poolStatus === "confirm";
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   const hasSourceConfirmation =
-    isNativeOrigin ||
-    primaryConfirmationSources.length >= 2 ||
+    primaryConfirmationSources.length >= (isNativeOrigin ? 1 : 2) ||
     hasHardConfirmation ||
     (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"));
   if (temporalSameDirectionConfirmed && hasSourceConfirmation) {
@@ -119,7 +119,9 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
 
   const statuses = [evidence.offchainStatus, evidence.dexStatus, evidence.cexStatus, evidence.poolStatus];
   const hasSameDirectionConfirmation = statuses.includes("confirm");
-  const hasOpposingEvidence = statuses.some(isOpposingConfirmationStatus);
+  const hasOpposingEvidence =
+    statuses.some(isOpposingConfirmationStatus) ||
+    (isNativeOrigin && isOpposingConfirmationStatus(primaryStatus));
   const canRejectOpposingEvidence =
     hasOpposingEvidence &&
     !hasSameDirectionConfirmation &&

@@ -233,6 +233,8 @@ Guards (delete pending + skip):
 
 Recovery check: if the current **authoritative** primary price is valid and deviation now < threshold, delete pending (transient noise). Ambiguous primary prices do not clear pending rows on their own.
 
+Native-origin candidates keep their native quote as the event-price domain, but that quote cannot confirm itself. At confirmation time, Pharos normalizes the fresh canonical USD price through the authoritative FX reference and admits only source families outside CoinGecko. One such independent canonical family must agree with the native-domain direction and full threshold before promotion; an at-peg or opposite-direction normalized canonical reading rejects the candidate after the temporal window. Missing, stale, fallback, cached, or CoinGecko-only canonical evidence leaves the row pending rather than promoting it.
+
 Age checks:
 
 - If age < 15 minutes: skip (wait for next cycle)
@@ -243,6 +245,7 @@ Age checks:
 **Off-chain check:**
 
 - Preferred path for supported non-USD fiat pegs: use a fresh CoinGecko native-currency quote (for example `BRZ/BRL` or `EURC/EUR`) and compare that quote to the native `1.0` peg
+- A candidate initiated by that native quote additionally requires a fresh canonical USD price from at least one non-CoinGecko source family, normalized through the authoritative FX reference, to cross the full native-domain threshold in the same direction. Repeated CoinGecko native observations provide temporal persistence only, not independent source confirmation.
 - Default path: CoinGecko can confirm a primary that does not already contain the CoinGecko source family. A CoinGecko-family primary gets no off-chain confirmer because DefiLlama's `coingecko:{id}` price is a CoinGecko mirror, not an independent observation.
 - CoinGecko confirmation uses `/simple/price` with `precision=full` and `include_last_updated_at=true`. Missing, stale, or future-dated observations are ignored, and non-OK response bodies are canceled before later confirmation fetches.
 - Calculate deviation against the current peg reference recomputed during confirmation only when that reference passes the same authority gate as Stage 1; thin non-USD fiat references without FX fallback fall back to the stored pending-row `peg_reference` when valid, or wait without mutating when no safe reference is available
@@ -280,7 +283,8 @@ Age checks:
 | Less than 15 minutes | any | any | Keep pending |
 | Full 15 minutes beyond the trigger threshold | fresh primary cluster spanning at least 2 independent families | none decisive | PROMOTE |
 | Full 15 minutes beyond the trigger threshold | independent CoinGecko, CEX, corroborated aggregate DEX, or qualifying pool evidence | none decisive | PROMOTE |
-| Full 15 minutes beyond the trigger threshold | native-origin candidate still beyond threshold in the same native quote domain | none decisive | PROMOTE |
+| Full 15 minutes beyond the trigger threshold | native-origin candidate plus a fresh non-CoinGecko canonical USD family normalized through authoritative FX, both beyond threshold in the same direction | none decisive | PROMOTE |
+| Full 15 minutes beyond the trigger threshold | native-origin candidate only | normalized independent canonical price is at peg or points in the opposite direction | REJECT |
 | Full 15 minutes | only soft off-chain evidence on a `low-confidence` row | none | Keep pending; require CEX, aggregate DEX, or pool confirmation |
 | any | any | decisive opposing evidence with no same-direction rescue | REJECT under the safeguards below |
 | any | none | none | Keep pending until dynamic expiry, then expire or record `unconfirmed-severe` |

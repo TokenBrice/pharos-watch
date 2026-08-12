@@ -3,6 +3,7 @@ import {
   chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
   getDexTrustPolicy,
+  getFreshIndependentPrimarySourceFamilies,
   getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
@@ -201,5 +202,24 @@ describe("depeg confirmation source families", () => {
       priceSource: "pyth",
       agreeSources: ["coingecko+geckoterminal"],
     })).toBeNull();
+  });
+
+  it("keeps only fresh primary families independent from a native CoinGecko quote", () => {
+    const nowSec = 1_700_000_000;
+    expect([...getFreshIndependentPrimarySourceFamilies({
+      price: 1.15,
+      priceSource: "defillama-list+coingecko",
+      priceConfidence: "high",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["defillama-list", "coingecko"],
+    }, nowSec, "coingecko")]).toEqual(["defillama"]);
+
+    expect([...getFreshIndependentPrimarySourceFamilies({
+      price: 1.15,
+      priceSource: "coingecko",
+      priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60,
+      agreeSources: ["coingecko"],
+    }, nowSec, "coingecko")]).toEqual([]);
   });
 });

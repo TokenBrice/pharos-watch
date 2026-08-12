@@ -471,77 +471,67 @@ describe("confirmPendingDepegs", () => {
     expect(outcome?.boundValues[21]).toBe("native-peg-recovered");
   });
 
-  it("promotes native-origin rows only from the sustained native-domain signal", async () => {
+  it("rejects the EURm native-origin spike when fresh independent USD/FX pricing remains at peg", async () => {
     const nowSec = 1_700_000_000;
     vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
     vi.spyOn(console, "log").mockImplementation(() => {});
-    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce({
-      kind: "ok",
-      value: {
-        prices: new Map([["BRZ", 0.191895]]),
-        diagnostics: [{
-          source: "binance",
-          stage: "primary",
-          endpoint: "data-api.binance.vision/api/v3/ticker/price",
-          status: 200,
-          ok: true,
-          success: true,
-          matchedCount: 1,
-        }],
-      },
-    });
+    vi.mocked(fetchCurrentNativePegQuotes).mockResolvedValue(new Map([
+      ["ceur-celo", {
+        stablecoinId: "ceur-celo",
+        geckoId: "celo-euro",
+        pegCurrency: "EUR",
+        price: 1.199869,
+        updatedAt: nowSec - 60,
+      }],
+    ]));
 
     await confirmPendingDepegs(
       makeDb({
         pendingRows: [
           makePendingRow({
             id: 24,
-            stablecoin_id: "brz-transfero",
-            symbol: "BRZ",
-            peg_type: "peggedREAL",
-            direction: "below",
-            first_seen_bps: -242,
+            stablecoin_id: "ceur-celo",
+            symbol: "EURm",
+            peg_type: "peggedEUR",
+            direction: "above",
+            first_seen_bps: 15_984,
             first_seen_at: nowSec - DEPEG_PENDING_MIN_AGE_SEC - 60,
-            first_price: 0.9758,
-            peak_seen_bps: -242,
-            peak_price: 0.9758,
+            first_price: 2.598389348610164,
+            last_seen_bps: 1_999,
+            last_seen_at: nowSec - 60,
+            last_price: 1.199869,
+            peak_seen_bps: 15_984,
+            peak_price: 2.598389348610164,
             peg_reference: 1,
             reason: "large-cap+native-origin",
           }),
         ],
-        dexRows: [
-          {
-            stablecoin_id: "brz-transfero",
-            dex_price_usd: 0.191895,
-            updated_at: nowSec - 30,
-            source_pool_count: 4,
-            source_total_tvl: 5_000_000,
-            price_sources_json: JSON.stringify([
-              { price: 0.191895, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-              { price: 0.191895, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
-            ]),
-          },
-        ],
       }),
       [
         makeAuthoritativeUsdAsset(nowSec, {
-          id: "brz-transfero",
-          name: "Brazilian Digital",
-          symbol: "BRZ",
-          geckoId: "brz",
-          pegType: "peggedREAL",
-          price: 0.191895,
+          id: "ceur-celo",
+          name: "Mento Euro",
+          symbol: "EURm",
+          geckoId: "celo-euro",
+          pegType: "peggedEUR",
+          price: 1.1529327180815145,
+          priceSource: "defillama",
+          consensusSources: ["defillama"],
+          agreeSources: ["defillama"],
         }),
         ...makeNeutralUsdAssets(),
       ],
-      { peggedREAL: 0.191895 },
+      { peggedEUR: 1.153265 },
     );
 
     expect(fetchWithRetry).not.toHaveBeenCalled();
-    const insert = lastBatchStatements().find((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
-    expect(insert?.boundValues[4]).toBe(-242);
-    expect(insert?.boundValues[7]).toBe(0.9758);
-    expect(insert?.boundValues[9]).toBe("temporal:15m");
+    const statements = lastBatchStatements();
+    const inserts = statements.filter((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
+    const outcome = pendingOutcomeInserts(statements)[0];
+    expect(inserts).toHaveLength(0);
+    expect(outcome?.boundValues[15]).toBe("rejected");
+    expect(outcome?.boundValues[18]).toBe("primary:defillama");
+    expect(outcome?.boundValues[21]).toBe("secondary-evidence-opposes");
   });
 
   it("promotes a native-origin row after the native quote persists for the full window", async () => {
@@ -584,7 +574,7 @@ describe("confirmPendingDepegs", () => {
           symbol: "BRZ",
           geckoId: "brz",
           pegType: "peggedREAL",
-          price: 0.191187,
+          price: 0.187251141,
         }),
         ...makeNeutralUsdAssets(),
       ],
@@ -595,7 +585,7 @@ describe("confirmPendingDepegs", () => {
     const insert = lastBatchStatements().find((stmt) => stmt.sql.startsWith("INSERT INTO depeg_events"));
     expect(insert?.boundValues[4]).toBe(-242);
     expect(insert?.boundValues[7]).toBe(0.9758);
-    expect(insert?.boundValues[9]).toBe("temporal:15m");
+    expect(insert?.boundValues[9]).toBe("temporal:15m+primary:oracle:pyth");
   });
 
   it("promotes or rejects pending rows based on secondary-source agreement", async () => {
