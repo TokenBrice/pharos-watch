@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 54.2,
+      "pct": 54.3,
       "risk": "low",
       "assetClass": "fund-share",
       "issuerOrObligor": "WisdomTree Treasury Money Market Digital Fund",
@@ -18,7 +18,7 @@
     },
     {
       "name": "USTB (Superstate tokenized T-bills)",
-      "pct": 28.9,
+      "pct": 28.8,
       "risk": "low",
       "coinId": "ustb-superstate",
       "assetClass": "fund-share",
@@ -63,23 +63,21 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "Unmapped Frax balance-sheet assets",
+      "name": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
       "pct": 1.7,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Frax balance-sheet unmapped token (EREBOR_USD)",
+      "risk": "very-low",
+      "assetClass": "bank-deposit",
+      "issuerOrObligor": "Erebor Bank (FBO frxUSD Stablecoin Reserve Account)",
       "riskFactors": [
         "counterparty",
-        "liquidity",
         "custody",
-        "smart-contract",
         "concentration"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
+    "reviewedAt": "2026-08-12",
     "reviewer": "Pharos reserve research",
     "confidence": "verified",
     "sources": [
@@ -108,17 +106,17 @@
         "url": "https://www.bridge.xyz/news/usdb"
       }
     ],
-    "rationale": "Re-verified against the live Frax frxUSD balance-sheet API on 2026-08-08. This review mirrors the live frax-balance-sheet adapter's exact normalized names and one-decimal weights and classifies every displayed slice, including the 1.7% EREBOR_USD unmapped token held as an exogenous unknown-asset slice rather than a tracked stablecoin dependency.",
+    "rationale": "Reconciled to the live Frax frxUSD balance-sheet adapter snapshot fetched on 2026-08-12. The five reviewed rows mirror the captured adapter names and one-decimal weights exactly. EREBOR_USD is the issuer-identified FBO frxUSD reserve account at Erebor Bank; it is classified as an exogenous bank-deposit exposure rather than a holding of the tracked frxUSD token.",
     "compositionBasis": "Official Frax frxUSD balance-sheet asset values normalized by the live frax-balance-sheet adapter",
-    "compositionAsOf": "2026-08-08",
+    "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unclassified reserve exposure remains in the official balance sheet or the live adapter output; the EREBOR_USD slice is explicitly named and classified as an unmapped exogenous asset.",
+    "knownUnknownExposure": "No unclassified reserve exposure remains in the captured live adapter output; every displayed slice has an exact reviewed identity and classification.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 54.2,
+        "pct": 54.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "wtgxx-wisdomtree is a quarantined no-supply record (permitted runtime sources report no positive circulating supply or market cap) that can never carry a live score, so this slice is scored on its own fund-share asset class rather than linked as a dependency edge.",
         "candidateCoinIds": [
@@ -134,10 +132,10 @@
       },
       {
         "reserveIndex": 4,
-        "reserveName": "Unmapped Frax balance-sheet assets",
+        "reserveName": "EREBOR_USD (Erebor Bank frxUSD reserve account)",
         "pct": 1.7,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "EREBOR_USD is not listed in the live adapter's token display table and is not a tracked stablecoin dependency; it is classified as an unmapped exogenous reserve asset."
+        "rationale": "EREBOR_USD is an issuer-identified FBO bank-deposit account holding frxUSD reserve cash, not a holding of the tracked frxUSD token and therefore not a dependency edge."
       }
     ]
   }

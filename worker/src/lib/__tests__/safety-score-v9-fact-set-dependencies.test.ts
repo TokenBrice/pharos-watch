@@ -253,11 +253,11 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     );
     // The reviewed non-link only overlays the live slice once the reserve
     // review's own date gate has opened, so the clock sits at or after
-    // `reserveReview.reviewedAt`/`compositionAsOf` (2026-08-08).
+    // `reserveReview.reviewedAt`/`compositionAsOf` (2026-08-12).
     const classifications = buildReviewedReserveClassifications(
       [{ ...wtgxx, coinId: "wtgxx-wisdomtree", depType: "collateral" }],
       frax,
-      Date.parse("2026-08-09T00:00:00.000Z") / 1_000,
+      Date.parse("2026-08-13T00:00:00.000Z") / 1_000,
     );
     expect(classifications).toEqual([
       expect.objectContaining({

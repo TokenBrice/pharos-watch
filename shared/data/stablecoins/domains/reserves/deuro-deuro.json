@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WFPS (Wrapped Frankencoin Pool Share)",
-      "pct": 79.9,
+      "pct": 85,
       "risk": "very-high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frankencoin protocol",
@@ -17,7 +17,7 @@
     },
     {
       "name": "WBTC (Wrapped BTC)",
-      "pct": 19,
+      "pct": 13.8,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "BitGo WBTC",
@@ -32,7 +32,7 @@
     },
     {
       "name": "Other collateral",
-      "pct": 1.1,
+      "pct": 1.2,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Coinbase cbBTC, Kraken kBTC, and Ethereum",
@@ -46,8 +46,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-11",
-    "reviewer": "Pharos reserve research (Kimi P0 re-verification)",
+    "reviewedAt": "2026-08-12",
+    "reviewer": "Pharos reserve research (production-capture alignment)",
     "confidence": "verified",
     "sources": [
       {
@@ -71,17 +71,17 @@
         "url": "https://eth.blockscout.com/address/0x5052D3Cc819f53116641e89B96ff4cD1Ee80B182"
       }
     ],
-    "rationale": "The dEURO collateral positions and price-mapping APIs re-read on 2026-08-11 produce the same three normalized slices as the live collateral-positions adapter: 79.9% WFPS, 19.0% WBTC, and 1.1% Other collateral. The source itemizes the residual as cbBTC, kBTC, and WETH positions below the adapter's 2% display threshold. The verified WFPS wrapper contract independently anchors the dominant token identity; the API price dimension remains issuer-provided.",
+    "rationale": "The production collateral-positions adapter snapshot fetched on 2026-08-12T04:13:17Z emits three normalized slices: 85.0% WFPS, 13.8% WBTC, and 1.2% Other collateral. The first-party positions and price-mapping APIs support those exact live identities and weights; the 2026-08-11 on-chain review independently anchors WFPS and WBTC identity and itemizes the residual as cbBTC, kBTC, and WETH positions below the adapter's 2% display threshold. The API price dimension remains issuer-provided.",
     "compositionBasis": "Current dEURO collateral positions API and official protocol documentation",
-    "compositionAsOf": "2026-08-11",
+    "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
-    "knownUnknownExposure": "No collateral identity is undisclosed in the reviewed source. The displayed 1.1% Other collateral row aggregates identified cbBTC, kBTC, and WETH positions below the adapter's 2% threshold, so its exact per-asset failure-domain weights remain unresolved in the displayed slice.",
-    "knownUnknownExposurePct": 1.1,
+    "knownUnknownExposure": "No collateral identity is undisclosed in the reviewed source. The displayed 1.2% Other collateral row aggregates identified cbBTC, kBTC, and WETH positions below the adapter's 2% threshold, so its exact per-asset failure-domain weights remain unresolved in the displayed slice.",
+    "knownUnknownExposurePct": 1.2,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "Other collateral",
-        "pct": 1.1,
+        "pct": 1.2,
         "disposition": "insufficient-evidence",
         "rationale": "The live display aggregates individually identified cbBTC, kBTC, and WETH positions below the 2% threshold, so no single dependency edge is assigned to the combined slice."
       }
