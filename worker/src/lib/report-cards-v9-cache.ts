@@ -26,15 +26,23 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
   publicationHealth: V9PublicationHealth,
 ): ReportCardsV9CurrentResponse {
   const publication = SafetyScoreV9CurrentResponseSchema.parse(input);
-  if (
-    publicationHealth.acceptedPublicationGenerationId !==
-      publication.publicationGenerationId ||
-    publicationHealth.acceptedAtSec !== publication.publishedAtSec
-  ) {
-    throw new Error(
-      "Safety Score V9 publication health does not match the accepted publication",
-    );
-  }
+  const healthMatchesPublication =
+    publicationHealth.acceptedPublicationGenerationId ===
+      publication.publicationGenerationId &&
+    publicationHealth.acceptedAtSec === publication.publishedAtSec;
+  const effectiveHealth = healthMatchesPublication
+    ? publicationHealth
+    : {
+        ...publicationHealth,
+        status: "held" as const,
+        acceptedPublicationGenerationId: publication.publicationGenerationId,
+        acceptedAtSec: publication.publishedAtSec,
+        heldSinceSec: publication.publishedAtSec,
+        reasons: [{
+          code: "assessment-failed" as const,
+          detail: "Publication health did not match the stored snapshot; serving the last-known-good snapshot as held.",
+        }],
+      };
   return ReportCardsV9CurrentResponseSchema.parse({
     model: "v9",
     schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
@@ -55,7 +63,7 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
     },
     asOfSec: publication.asOfSec,
     updatedAt: publication.publishedAtSec,
-    publicationHealth,
+    publicationHealth: effectiveHealth,
     completeness: publication.completeness,
     source: {
       candidateId: publication.candidateId,
