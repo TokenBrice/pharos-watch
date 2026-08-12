@@ -11,7 +11,7 @@ const TIMELINE_DESCRIPTION =
   "Browse confirmed stablecoin events in one timeline: depegs, freezes, score changes, methodology updates, severity filters, classes, and linked Pharos context.";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Timeline — Stablecoin Market Events",
+  title: "Timeline: Stablecoin Market Events",
   description: TIMELINE_DESCRIPTION,
   canonical: "/timeline/",
   ogImage: `${SITE_URL}/og-timeline.png`,
@@ -29,7 +29,7 @@ const TIMELINE_DATE_MODIFIED = (sitemapDates as Record<string, string>)["/timeli
 // advertised in the ItemList resolves to a non-empty feed.
 const [collectionJsonLd, itemListJsonLd] = buildCollectionItemListJsonLd({
   url: TIMELINE_URL,
-  name: "Timeline — Stablecoin Market Events",
+  name: "Timeline: Stablecoin Market Events",
   description: TIMELINE_DESCRIPTION,
   datePublished: TIMELINE_DATE_PUBLISHED,
   dateModified: TIMELINE_DATE_MODIFIED,

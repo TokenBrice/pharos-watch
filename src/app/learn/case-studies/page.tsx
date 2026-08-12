@@ -41,7 +41,7 @@ const priorityCaseStudySlugs = new Set(priorityCaseStudies.map(({ study }) => st
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Depeg Case Studies",
   description:
-    "Long-form retrospectives of the stablecoin depegs and failures that shaped the market — Terra, USDC/SVB, DAI, and more — sourced from Pharos data.",
+    "Long-form retrospectives of the stablecoin depegs and failures that shaped the market, including Terra, USDC/SVB, DAI, and more, sourced from Pharos data.",
   canonical: "/learn/case-studies/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,
 });
@@ -77,7 +77,7 @@ export default function CaseStudiesHub() {
         { name: "Case Studies", url: "/learn/case-studies/" },
       ]}
       title="When the peg broke"
-      subtitle="Practitioner retrospectives of the depegs and failures that reshaped the stablecoin market — what happened, why the design produced it, and what each one left behind. Built on Pharos data."
+      subtitle="Practitioner retrospectives of the depegs and failures that reshaped the stablecoin market: what happened, why the design produced it, and what each one left behind. Built on Pharos data."
       titleClassName="max-w-[24ch]"
     >
       <CaseStudyListJsonLd studies={CASE_STUDY_LIST} />

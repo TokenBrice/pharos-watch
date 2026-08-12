@@ -5,7 +5,7 @@ const changelog = getMethodologyChangelogEntry("blacklist-tracker");
 
 const route = createStandardMethodologyChangelogRoute({
   path: changelog.publicPath,
-  metadataTitle: "Blacklist Tracker Changelog — Version History",
+  metadataTitle: "Blacklist Tracker Changelog: Version History",
   metadataDescription:
     `Full version history of the Pharos Blacklist Tracker methodology, from v1.0 through ${changelog.currentLabel}. Every event-coverage, cursor, and enrichment revision documented.`,
   breadcrumbName: "Blacklist Tracker Changelog",

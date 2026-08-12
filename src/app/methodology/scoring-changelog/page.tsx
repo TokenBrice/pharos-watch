@@ -10,7 +10,7 @@ const changelog = getMethodologyChangelogEntry("safety-score");
 
 const route = createMethodologyChangelogRoute({
   path: changelog.publicPath,
-  metadataTitle: "Safety Scores Changelog — Version History",
+  metadataTitle: "Safety Scores Changelog: Version History",
   metadataDescription:
     `Safety Score methodology history from V1 through active ${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.toUpperCase()}, including the retained V8 compatibility methodology.`,
   breadcrumbName: "Scoring Changelog",

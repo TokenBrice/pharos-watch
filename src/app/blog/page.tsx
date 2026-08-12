@@ -9,7 +9,7 @@ import { BLOG_POSTS } from "@/data/blog";
 import { formatLongDate } from "@shared/lib/format";
 
 const BLOG_DESCRIPTION =
-  "Product updates and the story of Pharos — what shipped, what's next, and why we build stablecoin risk tooling in the open.";
+  "Product updates and the story of Pharos: what shipped, what's next, and why we build stablecoin risk tooling in the open.";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Stablecoin Research & Product Updates",

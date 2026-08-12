@@ -18,7 +18,7 @@ import {
 const HOMEPAGE_OG_IMAGE = `${SITE_URL}/og-card.png?v=market-pulse-2026-06-28`;
 
 export const metadata: Metadata = buildPageMetadata({
-  title: `Stablecoin Analytics Dashboard — Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
+  title: `Stablecoin Analytics Dashboard: Track ${TRACKED_STABLECOIN_COUNT} Coins | Pharos`,
   titleAbsolute: true,
   description:
     "Pharos tracks stablecoins across supported chains with depeg alerts, liquidity scores, on-chain safety signals, dependency risk scoring, and report-card style risk summaries.",
