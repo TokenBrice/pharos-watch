@@ -370,8 +370,16 @@ export function adaptBridgeReview(
     .filter((route) => !groupedRouteIds.has(route.id))
     .map((route) => bridgeControl(meta.id, route, safetyScoreV9RouteSupplyShare(supplyReview ?? null, route.id)))
     .filter((control): control is ControlOverlay => control !== null);
+  // RULED D-J: a pooled uncanonicalized row below the common-mode floor is
+  // accepted supply evidence, not an unresolved deployment-control identity.
+  // At the floor it keeps the ordinary synthetic control and fails closed.
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
-    .filter((route) => route.reviewState === "unmatched")
+    .filter(
+      (route) =>
+        route.reviewState === "unmatched" &&
+        (!route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) ||
+          route.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD),
+    )
     .map((route) => unmatchedBridgeControl(meta.id, route));
   const controls = [
     ...profileControls,
@@ -392,6 +400,12 @@ export function adaptBridgeReview(
     })),
   ].sort((left, right) => compareText(left.controlKey, right.controlKey));
   const allMaterialRoutesReviewed = hasCompleteSubthresholdBridgeInventory(profileRoutes, controls, supplyReview);
+  const hasToleratedUncanonicalizedPool = (supplyReview?.selectedBridgeRoutes ?? []).some(
+    (route) =>
+      route.reviewState === "unmatched" &&
+      route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
+      route.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
+  );
   const onlyZeroShareUnroutedControls =
     routes.length === 0 &&
     controls.length > 0 &&
@@ -399,7 +413,10 @@ export function adaptBridgeReview(
   // An unresolved registry deployment can remain as a zero-share audit fact
   // while every selected supply route is reviewed native issuance. It does not
   // make the asset bridge-exposed or require a synthetic bridge route row.
-  if (controls.length === 0 || (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls)) {
+  if (
+    (controls.length === 0 && !hasToleratedUncanonicalizedPool) ||
+    (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls)
+  ) {
     return {
       review: {
         status: notApplicableStatus(
@@ -422,4 +439,3 @@ export function adaptBridgeReview(
     controls,
   };
 }
-

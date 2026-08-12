@@ -1179,12 +1179,43 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
 
     const pooledBelow = baselineFor({ ethereum: 0.9001, "Future Chain": 0.0499, future_chain: 0.05 });
     expect(pooledBelow.asset.economicControlReview?.bridge.status.observationState).toBe("known");
+    expect(pooledBelow.asset.economicControlReview?.bridge.status.applicability.state).toBe("required");
     expect(
       pooledBelow.asset.supplyReview?.selectedBridgeRoutes.find((candidate) => candidate.reviewState === "unmatched"),
     ).toMatchObject({ deploymentRouteKey: "unmatched-chain-label-pool:alpha", supplyShare: 0.0999 });
+    expect(
+      pooledBelow.asset.controlReview?.state === "reviewed-controls" ||
+        pooledBelow.asset.controlReview?.state === "partially-reviewed-controls"
+        ? pooledBelow.asset.controlReview.controls.some(
+            (control) => control.deploymentKey === "unmatched-chain-label-pool:alpha",
+          )
+        : false,
+    ).toBe(false);
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(pooledBelow.fixed, pooledBelow.extension).assets[0]!.gaps.some(
+        (gap) =>
+          gap.path.kind === "deployment-control" &&
+          gap.path.deploymentKey === "unmatched-chain-label-pool:alpha",
+      ),
+    ).toBe(false);
 
     const pooledAtThreshold = baselineFor({ ethereum: 0.9, "Future Chain": 0.05, future_chain: 0.05 });
     expect(pooledAtThreshold.asset.economicControlReview?.bridge.status.observationState).toBe("bounded-unknown");
+    expect(
+      pooledAtThreshold.asset.controlReview?.state === "reviewed-controls" ||
+        pooledAtThreshold.asset.controlReview?.state === "partially-reviewed-controls"
+        ? pooledAtThreshold.asset.controlReview.controls.some(
+            (control) => control.deploymentKey === "unmatched-chain-label-pool:alpha",
+          )
+        : false,
+    ).toBe(true);
+    expect(
+      compileSafetyScoreV9FactSetFromFixedInput(pooledAtThreshold.fixed, pooledAtThreshold.extension).assets[0]!.gaps.some(
+        (gap) =>
+          gap.path.kind === "deployment-control" &&
+          gap.path.deploymentKey === "unmatched-chain-label-pool:alpha",
+      ),
+    ).toBe(true);
 
     const ambiguous = baselineFor({ ethereum: 0.95, base: 0.05 }, [
       route("base:0x2222222222222222222222222222222222222222"),
