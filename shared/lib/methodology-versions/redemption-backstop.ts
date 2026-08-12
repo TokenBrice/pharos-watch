@@ -5,7 +5,6 @@ import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemp
 import { createMethodologyVersion } from "./base";
 import {
   REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
-  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
 } from "./constants";
 
@@ -22,7 +21,6 @@ const redemptionBackstop = createMethodologyVersion({
 
 export {
   REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
-  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
 } from "./constants";
