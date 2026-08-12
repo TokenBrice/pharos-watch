@@ -17,7 +17,6 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
-import { MintAuthorityScoreBadge } from "@/components/mint-authority-score-badge";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
@@ -82,11 +81,10 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     title: `Pharos Safety Grade (${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL})`,
   },
   {
-    id: "mintAuthority",
-    label: "Mint Score",
-    sortKey: "mintAuthorityScore",
+    id: "v9Profile",
+    label: "V9 Profile",
     className: "text-center",
-    title: "Mint Authority Score (0-100). V9 evaluates the underlying reviewed control facts directly.",
+    title: "Safety Score V9 pillars: Backing / Exit / Economic Control. The weakest published pillar is highlighted.",
   },
   { id: "mechanism", label: "Mechanism", className: "text-left" },
   { id: "peg", label: "Peg", className: "text-left" },
@@ -110,7 +108,6 @@ const MOBILE_SORT_OPTIONS: Array<{ key: ScreenerSortKey; label: string }> = [
   { key: "pegScore", label: "Peg" },
   { key: "dewsScore", label: "DEWS" },
   { key: "liquidityScore", label: "Liquidity" },
-  { key: "mintAuthorityScore", label: "Mint Score" },
 ];
 
 interface ScreenerTableProps {
@@ -351,12 +348,7 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <MobileMetricPill>Peg <ScoreValue value={row.pegScore} /></MobileMetricPill>
         <MobileMetricPill>DEWS <ScoreValue value={row.dewsScore} /></MobileMetricPill>
         <MobileMetricPill>Liq <ScoreValue value={row.liquidityScore} /></MobileMetricPill>
-        <MintAuthorityScoreBadge
-          scoreLabel={row.mintAuthorityScoreLabel}
-          detail={row.mintAuthorityScoreDetail}
-          reviewBucketLabel={MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
-          badgeClassName={row.mintAuthorityScoreBadgeClassName}
-        />
+        <V9Profile row={row} compact />
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -444,12 +436,7 @@ function ScreenerTableRow({
         )}
       </TableCell>
       <TableCell className="text-center">
-        <MintAuthorityScoreBadge
-          scoreLabel={row.mintAuthorityScoreLabel}
-          detail={row.mintAuthorityScoreDetail}
-          reviewBucketLabel={MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
-          badgeClassName={row.mintAuthorityScoreBadgeClassName}
-        />
+        <V9Profile row={row} />
       </TableCell>
       <TableCell className="text-left text-muted-foreground">
         {row.mechanism ? getMechanismArchetypeLabel(row.mechanism) : "—"}
@@ -486,5 +473,55 @@ function ScreenerTableRow({
         ) : null}
       </TableCell>
     </TableRow>
+  );
+}
+
+const EVIDENCE_BADGE_CLASSES: Record<ScreenerRow["safetyEvidence"], string> = {
+  strong: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+  adequate: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300",
+  limited: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  nr: "border-border/60 bg-muted/30 text-muted-foreground",
+};
+
+const EVIDENCE_LABELS: Record<ScreenerRow["safetyEvidence"], string> = {
+  strong: "Strong",
+  adequate: "Adequate",
+  limited: "Limited",
+  nr: "NR",
+};
+
+function V9Profile({ row, compact = false }: { row: ScreenerRow; compact?: boolean }) {
+  const title = row.safetyBindingCapReason
+    ? `Binding V9 cap: ${row.safetyBindingCapReason}`
+    : `V9 evidence: ${EVIDENCE_LABELS[row.safetyEvidence]}`;
+  return (
+    <span className={`inline-flex ${compact ? "items-center" : "flex-col"} gap-1`} title={title}>
+      <span className="inline-flex items-center gap-1 pharos-numeric text-xs">
+        <PillarReading label="B" value={row.safetyBackingScore} weakest={row.safetyWeakestPillar === "backing"} />
+        <span className="text-border">/</span>
+        <PillarReading label="E" value={row.safetyExitScore} weakest={row.safetyWeakestPillar === "exit"} />
+        <span className="text-border">/</span>
+        <PillarReading label="C" value={row.safetyControlScore} weakest={row.safetyWeakestPillar === "control"} />
+      </span>
+      <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none ${EVIDENCE_BADGE_CLASSES[row.safetyEvidence]}`}>
+        {EVIDENCE_LABELS[row.safetyEvidence]}
+      </span>
+    </span>
+  );
+}
+
+function PillarReading({
+  label,
+  value,
+  weakest,
+}: {
+  label: "B" | "E" | "C";
+  value: number | null;
+  weakest: boolean;
+}) {
+  return (
+    <span className={weakest ? "font-bold text-amber-700 dark:text-amber-300" : "text-foreground"}>
+      <span className="text-muted-foreground">{label}</span>{value == null ? "—" : Math.round(value)}
+    </span>
   );
 }

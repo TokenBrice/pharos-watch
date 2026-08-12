@@ -28,7 +28,7 @@ export default createClientFeaturePage({
       changelogPath: LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
     },
     leadParagraphs: [
-      "Pool depth scored across 15+ DEX protocols — because liquidity is your only exit route in a panic.",
+      "Pool depth scored across 15+ DEX protocols because liquidity is your only exit route in a panic.",
     ],
     headerSupplement: (
       <p className="pharos-lead hidden sm:block">

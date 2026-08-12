@@ -35,6 +35,7 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,
   MINT_AUTHORITY_STATUS_CONFIG,
@@ -67,6 +68,10 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_backing", accessor: (row) => row.safetyBackingScore ?? "" },
   { header: "safety_exit", accessor: (row) => row.safetyExitScore ?? "" },
   { header: "safety_control", accessor: (row) => row.safetyControlScore ?? "" },
+  { header: "safety_evidence", accessor: (row) => row.safetyEvidence },
+  { header: "safety_weakest_pillar", accessor: (row) => row.safetyWeakestPillar ?? "" },
+  { header: "safety_binding_cap", accessor: (row) => row.safetyBindingCapReason ?? "" },
+  { header: "custody_model", accessor: (row) => row.custodyModel },
   { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
   {
     header: "mint_authority",
@@ -204,6 +209,10 @@ export function ScreenerClient() {
         backing: number | null;
         exit: number | null;
         control: number | null;
+        evidence: ScreenerRow["safetyEvidence"];
+        weakestPillar: ScreenerRow["safetyWeakestPillar"];
+        weakestScore: number | null;
+        bindingCapReason: string | null;
         mint: PublishedMintComponent | null;
       }
     >();
@@ -214,6 +223,15 @@ export function ScreenerClient() {
         backing: card.pillars.backing.score,
         exit: card.pillars.exit.score,
         control: card.pillars.control.score,
+        evidence:
+          card.grade === "NR"
+            ? "nr"
+            : card.evidence.level === "insufficient"
+              ? "limited"
+              : card.evidence.level,
+        weakestPillar: card.weakestPillar?.pillar ?? null,
+        weakestScore: card.weakestPillar?.score ?? null,
+        bindingCapReason: card.bindingCap?.reason ?? null,
         mint: readV9CardMintComponent(card),
       });
     }
@@ -250,6 +268,11 @@ export function ScreenerClient() {
         safetyBackingScore: safety?.backing ?? null,
         safetyExitScore: safety?.exit ?? null,
         safetyControlScore: safety?.control ?? null,
+        safetyEvidence: safety?.evidence ?? "nr",
+        safetyWeakestPillar: safety?.weakestPillar ?? null,
+        safetyWeakestScore: safety?.weakestScore ?? null,
+        safetyBindingCapReason: safety?.bindingCapReason ?? null,
+        custodyModel: resolveCustodyModel(meta),
         blacklistable: projectBlacklistable(meta.blacklistStatus),
         mintAuthority: projectMintAuthority(meta.mintAuthoritySummary),
         mintAuthorityScore: mintAuthorityScore.score,

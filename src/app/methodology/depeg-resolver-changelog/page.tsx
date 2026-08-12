@@ -5,7 +5,7 @@ const changelog = getMethodologyChangelogEntry("depeg-resolver");
 
 const route = createStandardMethodologyChangelogRoute({
   path: changelog.publicPath,
-  metadataTitle: "Depeg Duration Resolver Changelog — Version History",
+  metadataTitle: "Depeg Duration Resolver Changelog: Version History",
   metadataDescription:
     `Full version history of the Pharos Depeg Duration Resolver methodology, from v1.0 through ${changelog.currentLabel}. Every resolution-rubric, stratification, and support-gate revision documented.`,
   breadcrumbName: "Depeg Duration Resolver Changelog",

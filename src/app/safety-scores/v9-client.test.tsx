@@ -41,7 +41,10 @@ describe("ReportCardsV9Client", () => {
         makeV9Card({ id: "asset-b", grade: "B", score: 75 }),
       ],
     })));
-    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [] }));
+    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
+      { id: "asset-a", pegType: "peggedUSD" },
+      { id: "asset-b", pegType: "peggedEUR" },
+    ] }));
     mocks.useLogos.mockReturnValue({ data: {} });
   });
 
@@ -55,6 +58,11 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByRole("button", { name: "Backing" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Econ. Control" }).length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Safety score cards")).toBeTruthy();
+    expect(screen.queryByText(/assets are scored/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Three questions behind every grade" })).toBeTruthy();
+    expect(screen.getByText("Is there real value behind the token?")).toBeTruthy();
+    expect(screen.getByText("Can I get my value out?")).toBeTruthy();
+    expect(screen.getByText("Who can change or break the system?")).toBeTruthy();
   });
 
   it("filters the card grid by the existing grade controls", () => {
@@ -63,6 +71,14 @@ describe("ReportCardsV9Client", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "A (1)" })[0]);
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
     expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
+  });
+
+  it("filters the card grid by consolidated peg groups", () => {
+    render(<ReportCardsV9Client />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Fiat non USD" })[0]);
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(screen.getByTestId("v9-card").textContent).toBe("asset-b");
   });
 
   it("shows V9 unavailable without a V8 fallback", () => {

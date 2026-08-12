@@ -45,7 +45,7 @@ function Count({ value }: { value: number }) {
 function StatsSentence({ model }: { model: DataCoverageModel }) {
   return (
     <p className="text-sm leading-relaxed text-muted-foreground">
-      <Count value={model.assetCount} /> assets are scored, thanks to the evaluation of{" "}
+      <Count value={model.assetCount} /> {model.assetCount === 1 ? "asset is" : "assets are"} scored, thanks to the evaluation of{" "}
       <Count value={model.inputsEvaluated} /> inputs with <Count value={model.openGapCount} />{" "}
       remaining open data points.
     </p>
@@ -203,14 +203,14 @@ function HoldRow({ hold }: { hold: NonNullable<DataCoverageModel["hold"]> }) {
 
 /**
  * Reader-facing account of what the Safety Score has measured and what it is
- * still missing, rendered as the footer rail of the page hero. Only the headline
+ * still missing. Only the headline
  * counts and the gap attribution stay visible; the owner explanations, the
  * per-stat breakdowns and the reason-code inventory expand on demand.
  *
  * A publication hold is rare and consequential, so it takes over the headline
  * row when present and pushes the counts into the disclosure.
  */
-export function SafetyScoreDataCoverageRail({ model }: { model: DataCoverageModel | null }) {
+export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | null }) {
   if (!model) return null;
 
   const backingKnownPct =

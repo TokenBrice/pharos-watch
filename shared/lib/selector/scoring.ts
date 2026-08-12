@@ -273,6 +273,16 @@ export function scoreRow(
     confidence = Math.min(confidence, 80);
     confidenceReasons.add("short-yield-history");
   }
+  if (row.safetyEvidenceLevel === "limited") {
+    confidence = Math.min(confidence, 80);
+    confidenceReasons.add("limited-v9-evidence");
+  } else if (row.safetyEvidenceLevel === "insufficient") {
+    confidence = Math.min(confidence, 65);
+    confidenceReasons.add("limited-v9-evidence");
+  }
+  if (row.safetyBindingCap != null) {
+    confidenceReasons.add("v9-binding-cap");
+  }
   score = Math.min(score, scoreCap);
 
   return {

@@ -125,7 +125,7 @@ export default function MechanismExplainersHub() {
         { name: "Mechanisms", url: "/learn/mechanisms/" },
       ]}
       title="How a stablecoin holds its peg"
-      subtitle="The mechanism a coin uses determines how it survives stress. These explainers map every tracked design — what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
+      subtitle="The mechanism a coin uses determines how it survives stress. These explainers map every tracked design: what produces the peg, where it tends to fail, and which Pharos signals fire first when it does."
       titleClassName="max-w-[22ch]"
     >
       <LearnHero

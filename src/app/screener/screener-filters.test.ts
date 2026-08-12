@@ -33,6 +33,11 @@ function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {
     safetyBackingScore: 92,
     safetyExitScore: 88,
     safetyControlScore: 84,
+    safetyEvidence: "strong",
+    safetyWeakestPillar: "control",
+    safetyWeakestScore: 84,
+    safetyBindingCapReason: null,
+    custodyModel: "institutional-top",
     blacklistable: "yes",
     mintAuthority: "issuer-or-backend-mint",
     mintAuthorityScore: 70,
@@ -149,7 +154,7 @@ describe("applyFilters", () => {
     expect(result.map((r) => r.id).sort()).toEqual(["eurs-stasis", "newcoin"]);
   });
 
-  it("excludes rows exactly on active DEWS lower thresholds", () => {
+  it("includes rows exactly on active DEWS lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, dewsMin: 40, dewsMax: 100 };
     const result = applyFilters(
       [
@@ -162,10 +167,10 @@ describe("applyFilters", () => {
       filters,
     );
 
-    expect(result.map((r) => r.id)).toEqual(["inside", "at-default-max"]);
+    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-default-max"]);
   });
 
-  it("excludes rows exactly on active supply lower thresholds", () => {
+  it("includes rows exactly on active supply lower thresholds", () => {
     const filters: ScreenerFilters = { ...SCREENER_FILTER_DEFAULTS, supplyMin: 100, supplyMax: 200 };
     const result = applyFilters(
       [
@@ -178,7 +183,40 @@ describe("applyFilters", () => {
       filters,
     );
 
-    expect(result.map((r) => r.id)).toEqual(["inside", "at-max"]);
+    expect(result.map((r) => r.id)).toEqual(["at-min", "inside", "at-max"]);
+  });
+
+  it("applies the Picker-compatible score, custody, and evidence filters inclusively", () => {
+    const result = applyFilters(
+      [
+        makeRow({ id: "usdc-circle", pegScore: 80, liquidityScore: 65, custodyModel: "institutional-top", safetyEvidence: "strong" }),
+        makeRow({ id: "dai-makerdao", pegScore: 79, liquidityScore: 65, custodyModel: "onchain", safetyEvidence: "adequate" }),
+      ],
+      {
+        ...SCREENER_FILTER_DEFAULTS,
+        pegScoreMin: 80,
+        liquidityScoreMin: 65,
+        custodyModels: ["institutional-top"],
+        safetyEvidence: ["strong"],
+      },
+    );
+
+    expect(result.map((row) => row.id)).toEqual(["usdc-circle"]);
+  });
+
+  it("treats coins as exact Picker inspection mode even when broad filters diverge", () => {
+    const result = applyFilters(
+      [
+        makeRow({ id: "usdc-circle", pegScore: 10 }),
+        makeRow({ id: "dai-makerdao", pegScore: 95 }),
+      ],
+      {
+        ...SCREENER_FILTER_DEFAULTS,
+        coins: ["usdc-circle"],
+        pegScoreMin: 80,
+      },
+    );
+    expect(result.map((row) => row.id)).toEqual(["usdc-circle"]);
   });
 
   it("filters by mechanism (multi-select)", () => {
@@ -275,6 +313,9 @@ describe("hasActiveFilters", () => {
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthority: ["multisig-mint"] })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScoreMin: 80 })).toBe(true);
     expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, mintAuthorityScores: ["hardened"] })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, coins: ["usdc-circle"] })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, safetyEvidence: ["limited"] })).toBe(true);
+    expect(hasActiveFilters({ ...SCREENER_FILTER_DEFAULTS, custodyModels: ["onchain"] })).toBe(true);
   });
 
   it("counts active range groups once and selected pills individually", () => {
@@ -419,6 +460,11 @@ describe("SCREENER_URL_SCHEMA codec", () => {
       pegs: ["USD", "EUR"],
       mintAuthorityScoreMin: 65,
       mintAuthorityScores: ["hardened", "governed"],
+      coins: ["usdc-circle"],
+      safetyEvidence: ["strong", "nr"],
+      custodyModels: ["onchain"],
+      pegScoreMin: 80,
+      liquidityScoreMin: 65,
     };
     const encoded = encodeState(filters, SCREENER_URL_SCHEMA);
     expect(encoded).toContain("dewsMin=20");
@@ -428,6 +474,11 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(encoded).toContain("mechanisms=cdp%2Cfiat-cash");
     expect(encoded).toContain("mintAuthorityScoreMin=65");
     expect(encoded).toContain("mintAuthorityScores=hardened%2Cgoverned");
+    expect(encoded).toContain("coins=usdc-circle");
+    expect(encoded).toContain("safetyEvidence=strong%2Cnr");
+    expect(encoded).toContain("custodyModels=onchain");
+    expect(encoded).toContain("pegScoreMin=80");
+    expect(encoded).toContain("liquidityScoreMin=65");
     const decoded = decodeState(encoded, SCREENER_URL_SCHEMA);
     expect(decoded.dewsMin).toBe(20);
     expect(decoded.dewsMax).toBe(40);
@@ -437,6 +488,11 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.pegs).toEqual(["USD", "EUR"]);
     expect(decoded.mintAuthorityScoreMin).toBe(65);
     expect(decoded.mintAuthorityScores).toEqual(["hardened", "governed"]);
+    expect(decoded.coins).toEqual(["usdc-circle"]);
+    expect(decoded.safetyEvidence).toEqual(["strong", "nr"]);
+    expect(decoded.custodyModels).toEqual(["onchain"]);
+    expect(decoded.pegScoreMin).toBe(80);
+    expect(decoded.liquidityScoreMin).toBe(65);
   });
 
   it("omits defaults from the encoded URL", () => {

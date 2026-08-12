@@ -26,8 +26,15 @@ import {
   MECHANISM_ARCHETYPE_VALUES,
 } from "@shared/types/stablecoin-taxonomy";
 import { PEG_METADATA } from "@shared/lib/classification";
+import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
-import type { PegCurrency, ReportCardGrade } from "@shared/types";
+import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
+import {
+  type CustodyModel,
+  type PegCurrency,
+  type ReportCardGrade,
+  type V9QualityPillar,
+} from "@shared/types";
 import type {
   GovernanceType,
   MechanismArchetype,
@@ -36,6 +43,9 @@ import type {
 
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
 export const SAFETY_GRADE_VALUES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"] as const satisfies readonly ReportCardGrade[];
+export const SCREENER_COIN_VALUES = CLIENT_TRACKED_STABLECOINS.map((coin) => coin.id);
+export const SAFETY_EVIDENCE_VALUES = ["strong", "adequate", "limited", "nr"] as const;
+export type SafetyEvidenceValue = (typeof SAFETY_EVIDENCE_VALUES)[number];
 
 /**
  * Blacklistability buckets. Maps the reviewed status to friendlier URL keys.
@@ -48,6 +58,7 @@ export type BlacklistableValue = (typeof BLACKLISTABLE_VALUES)[number];
 export const SCREENER_LIFECYCLE_VALUES = ["active", "pre-launch", "frozen"] as const satisfies readonly StablecoinStatus[];
 
 export interface ScreenerFilters {
+  coins: readonly string[];
   dewsMin: number;
   dewsMax: number;
   supplyMin: number;
@@ -56,6 +67,10 @@ export interface ScreenerFilters {
   safetyBackingMin: number;
   safetyExitMin: number;
   safetyControlMin: number;
+  safetyEvidence: readonly SafetyEvidenceValue[];
+  pegScoreMin: number;
+  liquidityScoreMin: number;
+  custodyModels: readonly CustodyModel[];
   types: readonly GovernanceType[];
   mechanisms: readonly MechanismArchetype[];
   pegs: readonly PegCurrency[];
@@ -68,6 +83,7 @@ export interface ScreenerFilters {
 
 /** Default scalar ranges. A value at the bound counts as "no filter". */
 export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
+  coins: [],
   dewsMin: 0,
   dewsMax: 100,
   supplyMin: 0,
@@ -76,6 +92,10 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
   safetyBackingMin: 0,
   safetyExitMin: 0,
   safetyControlMin: 0,
+  safetyEvidence: [],
+  pegScoreMin: 0,
+  liquidityScoreMin: 0,
+  custodyModels: [],
   types: [],
   mechanisms: [],
   pegs: [],
@@ -91,6 +111,12 @@ export const SCREENER_FILTER_DEFAULTS: ScreenerFilters = {
  * Flat per-param keys — no nested groups, no fancy query builder.
  */
 export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
+  coins: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.coins,
+    allowedValues: SCREENER_COIN_VALUES,
+    maxItems: 8,
+  },
   dewsMin: {
     kind: "boundedNumber",
     defaultValue: SCREENER_FILTER_DEFAULTS.dewsMin,
@@ -135,6 +161,28 @@ export const SCREENER_URL_SCHEMA: UrlStateSchema<ScreenerFilters> = {
     defaultValue: SCREENER_FILTER_DEFAULTS.safetyControlMin,
     min: 0,
     max: 100,
+  },
+  safetyEvidence: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.safetyEvidence,
+    allowedValues: SAFETY_EVIDENCE_VALUES,
+  },
+  pegScoreMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.pegScoreMin,
+    min: 0,
+    max: 100,
+  },
+  liquidityScoreMin: {
+    kind: "boundedNumber",
+    defaultValue: SCREENER_FILTER_DEFAULTS.liquidityScoreMin,
+    min: 0,
+    max: 100,
+  },
+  custodyModels: {
+    kind: "enumList",
+    defaultValue: SCREENER_FILTER_DEFAULTS.custodyModels,
+    allowedValues: CUSTODY_MODEL_VALUES,
   },
   types: {
     kind: "enumList",
@@ -206,6 +254,11 @@ export interface ScreenerRow {
   safetyBackingScore: number | null;
   safetyExitScore: number | null;
   safetyControlScore: number | null;
+  safetyEvidence: SafetyEvidenceValue;
+  safetyWeakestPillar: V9QualityPillar | null;
+  safetyWeakestScore: number | null;
+  safetyBindingCapReason: string | null;
+  custodyModel: CustodyModel;
   /** Blacklistability bucket. null = unspecified (no per-coin override). */
   blacklistable: BlacklistableValue | null;
   /** Curated mint-authority review bucket. "unknown" = no compact review. */
@@ -278,12 +331,12 @@ function passesRange(
 ): boolean {
   if (!active) return true;
   if (value == null) return false;
-  return (minValue > 0 ? value > minValue : value >= minValue) && value <= maxValue;
+  return value >= minValue && value <= maxValue;
 }
 
 function passesMinimum(value: number | null | undefined, minValue: number): boolean {
   if (minValue <= 0) return true;
-  return value != null && value > minValue;
+  return value != null && value >= minValue;
 }
 
 export function hasLoadingScoreFilterData(
@@ -302,6 +355,7 @@ export function hasLoadingScoreFilterData(
     filters.safetyBackingMin > 0 ||
     filters.safetyExitMin > 0 ||
     filters.safetyControlMin > 0 ||
+    filters.safetyEvidence.length > 0 ||
     filters.mintAuthorityScoreMin > 0 ||
     filters.mintAuthorityScores.length > 0;
 
@@ -321,7 +375,9 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const dewsActive = isScoreRangeActive(filters.dewsMin, filters.dewsMax);
   const supplyActive = isSupplyRangeActive(filters.supplyMin, filters.supplyMax);
 
+  const coinSet = filters.coins.length > 0 ? new Set(filters.coins) : null;
   const safetyGradeSet = filters.safetyGrades.length > 0 ? new Set(filters.safetyGrades) : null;
+  const safetyEvidenceSet = filters.safetyEvidence.length > 0 ? new Set(filters.safetyEvidence) : null;
   const mechanismSet = filters.mechanisms.length > 0 ? new Set(filters.mechanisms) : null;
   const typeSet = filters.types.length > 0 ? new Set(filters.types) : null;
   const pegSet = filters.pegs.length > 0 ? new Set(filters.pegs) : null;
@@ -329,8 +385,13 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
   const blacklistableSet = filters.blacklistable.length > 0 ? new Set(filters.blacklistable) : null;
   const mintAuthoritySet = filters.mintAuthority.length > 0 ? new Set(filters.mintAuthority) : null;
   const mintAuthorityScoreSet = filters.mintAuthorityScores.length > 0 ? new Set(filters.mintAuthorityScores) : null;
+  const custodyModelSet = filters.custodyModels.length > 0 ? new Set(filters.custodyModels) : null;
 
   return rows.filter((row) => {
+    // Picker handoffs use `coins` as an exact inspection mode. The remaining
+    // URL fields describe the reusable broad projection, but must not hide a
+    // relaxed recommendation or a result admitted by a Picker-only gate.
+    if (coinSet) return coinSet.has(row.id);
     if (!passesRange(row.dewsScore, filters.dewsMin, filters.dewsMax, dewsActive)) return false;
     if (!passesRange(row.supplyUsd, filters.supplyMin, filters.supplyMax || Infinity, supplyActive)) return false;
     if (safetyGradeSet) {
@@ -339,6 +400,10 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (!passesMinimum(row.safetyBackingScore, filters.safetyBackingMin)) return false;
     if (!passesMinimum(row.safetyExitScore, filters.safetyExitMin)) return false;
     if (!passesMinimum(row.safetyControlScore, filters.safetyControlMin)) return false;
+    if (safetyEvidenceSet && !safetyEvidenceSet.has(row.safetyEvidence)) return false;
+    if (!passesMinimum(row.pegScore, filters.pegScoreMin)) return false;
+    if (!passesMinimum(row.liquidityScore, filters.liquidityScoreMin)) return false;
+    if (custodyModelSet && !custodyModelSet.has(row.custodyModel)) return false;
     if (mechanismSet) {
       if (!row.mechanism || !mechanismSet.has(row.mechanism)) return false;
     }
@@ -424,6 +489,9 @@ export function hasActiveFilters(filters: ScreenerFilters): boolean {
 /** Counts visible active constraints for summary UI. Ranges count once; selected pills count individually. */
 export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   let count = 0;
+  if (filters.coins.length > 0) {
+    count += 1;
+  }
   if (isScoreRangeActive(filters.dewsMin, filters.dewsMax)) {
     count += 1;
   }
@@ -440,6 +508,14 @@ export function countActiveScreenerFilters(filters: ScreenerFilters): number {
   if (filters.safetyControlMin > 0) {
     count += 1;
   }
+  count += filters.safetyEvidence.length;
+  if (filters.pegScoreMin > 0) {
+    count += 1;
+  }
+  if (filters.liquidityScoreMin > 0) {
+    count += 1;
+  }
+  count += filters.custodyModels.length;
   if (filters.mintAuthorityScoreMin > 0) {
     count += 1;
   }

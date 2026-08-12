@@ -49,7 +49,7 @@
       "outcome": "survived",
       "logo": {
         "path": "public/logos/5-dai.png",
-        "sha256": "ed847eb4eeab353b1c2f79cf1f2c41471e8c0c8e1dd5783a60b47deded0eee53"
+        "sha256": "f8b4b4b92de00750133e182a4f3ab9149361bfd68b5f64d7b9e6ccfa5b4673e6"
       },
       "svgSha256": "95fa603bc4d256b493013c71ef1af249e6653f3abed36c7170cdfe086826fdee"
     },
@@ -61,7 +61,7 @@
       "outcome": "survived",
       "logo": {
         "path": "public/logos/146-usde.png",
-        "sha256": "ef9fc91aa5f0a99cb92736363798a1cbf7ef453b92ae8b06a45435ebfbbab086"
+        "sha256": "e36cb8c41e3570826394e447183824521b21da142c20d8722bc3818263666283"
       },
       "svgSha256": "a6a82ad860d077ee2c7a3cc25793f53d8e9fdb41148d4d2d357f590465134315"
     },
@@ -73,7 +73,7 @@
       "outcome": "survived",
       "logo": {
         "path": "public/logos/173-buidl.png",
-        "sha256": "62559ed2c59032135d8c9f0ad0986ddac4ccf63525578588abb2a4f64a43806a"
+        "sha256": "910998c11de7084f72b3be3638592eae5d0853a5518f9788e7ae9fec178bab72"
       },
       "svgSha256": "781e0bd7621f2032bf0dd94ab80023f03397c68f034d88836ed622360d27696a"
     },
@@ -85,7 +85,7 @@
       "outcome": "wounded",
       "logo": {
         "path": "public/logos/237-usyc.png",
-        "sha256": "9e5b37b0d8a401f9202644ed2a8f728739e4d5c0b2211788c8227afc4037d78b"
+        "sha256": "b7dc9f6ed0e167db527c779d596876be7957d8a8e04b81b286217ff9aeb1faae"
       },
       "svgSha256": "44625342b8badda89d367a7f791a265d2930e997e5168848fd5f780b0f7f5562"
     },
@@ -97,7 +97,7 @@
       "outcome": "wounded",
       "logo": {
         "path": "public/logos/195-usd0.png",
-        "sha256": "ac516fa49a0e9735d5c526e92f86b9141a72834cbdcdb33286ca3b15812245b2"
+        "sha256": "b81e02db0b9f226ee7d0a2c8dae33fe5a77be1b5559d437ae618df8121a02d03"
       },
       "svgSha256": "3f2e7c050dd03a32f3f63c04c615da57b316bca1bbb956cc64596042433818bd"
     },
@@ -109,7 +109,7 @@
       "outcome": "survived",
       "logo": {
         "path": "public/logos/110-crvusd.jpg",
-        "sha256": "9cd4c66420316669c1c7c5a9ac8c8796bd265b971c5bbe3bba1d9c22be719644"
+        "sha256": "de7355c34c6336f6c553375179c6ae769a167b310bab78df6b74affc8018108b"
       },
       "svgSha256": "58feeea52312319a45def370958a25066fe7346b58beeba4d9950e2ea6d3d0a9"
     },
@@ -193,7 +193,7 @@
       "outcome": "wounded",
       "logo": {
         "path": "public/logos/246-usdf.png",
-        "sha256": "31e4db556c1278178a9d2a885e08c8ff973874293eced079254317bb4bc4bb3f"
+        "sha256": "3d72312e32f55e98572ab7305b278a0b0f45d6e3004d6875f7e42fdad52bcfed"
       },
       "svgSha256": "9929a4b3a8b2952360083a925be4286594e21d383db2c0188da92335521df4e1"
     },
@@ -277,7 +277,7 @@
       "outcome": "wounded",
       "logo": {
         "path": "public/logos/14-usdd.jpg",
-        "sha256": "1d066f5470af5dde3bb2fe7d6aa71d6a531b763bed3fc1c389f68b012a0d2004"
+        "sha256": "aef180b34c28cc6bedcc6e42da5b902a833da2be23698170451b88d051b1c43b"
       },
       "svgSha256": "8a5f6e3d5f88b1001cc562af48f2cc5a1b36e0419bfb3150bd1f4c46803c3b33"
     },
@@ -325,7 +325,7 @@
       "outcome": "wounded",
       "logo": {
         "path": "public/logos/354-apxusd.webp",
-        "sha256": "40d0659b1bf7262e1eca98e086134b23d5f594e797ccbf6532b139299958880f"
+        "sha256": "facdc86eb781fc9f91e391a4ed6b3e9d0b3b5149ae0f7838f70d073c6c648ea1"
       },
       "svgSha256": "00abe994d0b5211ac51c664244576d6a0c0acd4b3457ae630da2c69ceb34a908"
     }

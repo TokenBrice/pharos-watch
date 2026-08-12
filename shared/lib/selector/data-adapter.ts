@@ -5,7 +5,7 @@ import { canonicalizeForDatasetHash } from "./canonicalize";
 import type { MergedRow, SelectorInput, SelectorOutput } from "./types";
 import { SELECTOR_VERSION } from "./version";
 import { sha256Hex } from "../sha256";
-import { inferResilienceDefaults } from "../report-card-policy";
+import { resolveCustodyModel } from "../report-card-policy";
 import { isOpportunityDerivedSafety } from "../yield-opportunity-provenance";
 import type {
   AltYieldSource,
@@ -114,6 +114,10 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
       safetyGrade: rowSafetyGrade,
       safetyScore: rowSafetyScore,
       safetyProvenance: rowSafetyProvenance,
+      safetyEvidenceLevel: safety?.evidence?.level ?? null,
+      safetyWeakestPillar: safety?.weakestPillar ?? null,
+      safetyBindingCap: safety?.bindingCap ?? null,
+      safetyNrReasons: safety?.nrReasons?.map((reason) => reason.message) ?? [],
       safetyResilienceScore: safety?.pillars.backing.score ?? null,
       safetyDecentralizationScore: safety?.pillars.control.score ?? null,
       // The published V9 Exit pillar is the single exit read. It used to be
@@ -187,6 +191,10 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         safetyGrade: row.safetyGrade,
         overallScore: row.safetyScore,
         safetyProvenance: row.safetyProvenance,
+        safetyEvidenceLevel: row.safetyEvidenceLevel,
+        safetyWeakestPillar: row.safetyWeakestPillar,
+        safetyBindingCap: row.safetyBindingCap,
+        safetyNrReasons: row.safetyNrReasons,
         pegScore: row.pegScore,
         dewsScore: row.dewsScore,
         liquidityScore: row.liquidityScore,
@@ -257,25 +265,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
 
 function resolveBlacklistability(meta: StablecoinClientMeta): MergedRow["canBeBlacklisted"] {
   return meta.blacklistStatus ?? null;
-}
-
-/**
- * Curated `custodyModel` first, V8 inference only as a fallback.
- *
- * `inferResilienceDefaults` reads a 9-cell `backing × governance` table whose
- * range is just two of the six `CUSTODY_MODEL_VALUES` — `onchain` and
- * `institutional-regulated`. Reading it as the row's custody model made the
- * Selector structurally unable to observe `cex`, `institutional-top`,
- * `institutional-unregulated`, or `institutional-sanctioned`: exchange-custodied
- * coins were inferred `onchain` and passed the "on-chain only" custody rail,
- * while unregulated institutional custody was inferred `institutional-regulated`
- * and passed the "regulated only" rail. Curated review is the authority; the
- * inference stays as the fallback for coins with no reviewed custody model.
- */
-function resolveCustodyModel(meta: StablecoinClientMeta): MergedRow["custodyModel"] {
-  if (meta.custodyModel != null) return meta.custodyModel;
-  const defaults = inferResilienceDefaults(meta.flags.backing, meta.flags.governance);
-  return defaults.custodyModel ?? null;
 }
 
 function normalizeVenueRiskTier(tier: YieldVenueRiskTier | null | undefined): MergedRow["venueRiskTier"] {

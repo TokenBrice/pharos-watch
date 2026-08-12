@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 
   return buildPageMetadata({
-    title: `${coin.name} (${coin.symbol}) — Yield Analysis`,
+    title: `${coin.name} (${coin.symbol}): Yield Analysis`,
     description: `Per-source APY history, warning signals timeline, and source-switch history for ${coin.name} (${coin.symbol}).`,
     canonical: `${buildStablecoinUrl(coin.id)}yield/`,
     robots: { index: false, follow: true },

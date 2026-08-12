@@ -8,6 +8,7 @@ import {
   CoverageMatrixCard,
   CoverageMatrixDataStateCard,
   CoveragePricingSourcesCard,
+  CoverageSafetyScoreDataCard,
 } from "./coverage-page-sections";
 import { useCoveragePageModel } from "./use-coverage-page-model";
 import { COVERAGE_FAQ_ITEMS } from "./coverage-faq";
@@ -24,6 +25,7 @@ export default function CoveragePageClient() {
       ) : (
         <>
           <CoverageFeatureSnapshotCard {...model} />
+          <CoverageSafetyScoreDataCard safetyScoreDataCoverage={model.safetyScoreDataCoverage} />
           <CoveragePricingSourcesCard
             pricingSources={model.pricingSources}
             authoritativeSources={model.authoritativeSources}

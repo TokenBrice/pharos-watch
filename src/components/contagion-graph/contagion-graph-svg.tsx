@@ -30,10 +30,10 @@ type ContagionGraphModel = ReturnType<typeof useContagionGraphModel>;
 const MIN_EDGE_DISPLAY_WEIGHT = 0.12;
 
 /**
- * Raster token logos in `public/logos` are 50px sources, so a node scaled up for a
- * sparse detail neighborhood would upscale them into visible pixelation. Cap the
- * drawn image at this viewBox radius and let the grade-tinted disc carry the rest
- * of the node. Vector logos are exempt — they scale cleanly.
+ * Raster token logos vary in resolution, so a node scaled up for a sparse detail
+ * neighborhood can still expose soft legacy assets. Cap the drawn image at this
+ * viewBox radius and let the grade-tinted disc carry the rest of the node. Vector
+ * logos are exempt — they scale cleanly.
  */
 const MAX_RASTER_LOGO_RADIUS = 46;
 

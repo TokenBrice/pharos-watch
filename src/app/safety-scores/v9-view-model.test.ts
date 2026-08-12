@@ -32,6 +32,8 @@ describe("Safety Scores V9 view model", () => {
     expect(
       filterAndSortV9Cards(cards, {
         gradeFilter: "all",
+        pegFilter: "all",
+        pegTypeMap: new Map(),
         sortKey: "exit",
         mcapMap: new Map(),
       }).map((card) => card.id),
@@ -39,10 +41,33 @@ describe("Safety Scores V9 view model", () => {
     expect(
       filterAndSortV9Cards(cards, {
         gradeFilter: "C",
+        pegFilter: "all",
+        pegTypeMap: new Map(),
         sortKey: "overall",
         mcapMap: new Map(),
       }).map((card) => card.id),
     ).toEqual(["asset-c"]);
+  });
+
+  it("filters USD, non-USD fiat, and commodity peg groups", () => {
+    const pegTypeMap = new Map([
+      ["asset-a", "peggedUSD"],
+      ["asset-b", "peggedEUR"],
+      ["asset-c", "peggedGOLD"],
+    ]);
+
+    const idsFor = (pegFilter: "usd" | "fiat-non-usd" | "commodities") =>
+      filterAndSortV9Cards(cards, {
+        gradeFilter: "all",
+        pegFilter,
+        pegTypeMap,
+        sortKey: "overall",
+        mcapMap: new Map(),
+      }).map((card) => card.id);
+
+    expect(idsFor("usd")).toEqual(["asset-a"]);
+    expect(idsFor("fiat-non-usd")).toEqual(["asset-b"]);
+    expect(idsFor("commodities")).toEqual(["asset-c"]);
   });
 
   it("builds the existing hero metrics from V9 scores and pillars", () => {

@@ -14,7 +14,7 @@ import { formatLongDate } from "@shared/lib/format";
 export const metadata: Metadata = buildPageMetadata({
   title: "Changelog: What's New on Pharos",
   description:
-    "Weekly release notes for Pharos — new stablecoin coverage, pipeline improvements, risk tooling updates, and more.",
+    "Weekly release notes for Pharos: new stablecoin coverage, pipeline improvements, risk tooling updates, and more.",
   canonical: "/changelog/",
   ogImage: `${SITE_URL}/og-changelog.png`,
 });

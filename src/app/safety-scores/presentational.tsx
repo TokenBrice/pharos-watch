@@ -4,10 +4,8 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SafetyScoreDataCoverageRail } from "./data-coverage-module";
-import type { DataCoverageModel } from "./data-coverage-view-model";
 import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
-import type { GradeFilter } from "./v9-view-model";
+import type { GradeFilter, PegFilter } from "./v9-view-model";
 
 export function SafetyScoresLoadingState() {
   return (
@@ -58,20 +56,17 @@ function HeroMetricRow({
  * Split hero for Safety Scores. The One Beam lights the ecosystem average score
  * (frost); the sub-slot folds the retired headline-stat tiles (supply in A/B,
  * weakest dimension) into compact rows; the right slot stages the semantic
- * grade-distribution bar; the footer rail carries the score-input coverage
- * counts. `stats` is the `buildSafetyHeadlineStats` array:
+ * grade-distribution bar. `stats` is the `buildSafetyHeadlineStats` array:
  * [ecosystem avg, supply in A/B, weakest dimension].
  */
 export function SafetyScoresHero({
   stats,
   gradeCounts,
   totalCards,
-  coverage,
 }: {
   stats: Array<{ label: string; value: string; detail: string }>;
   gradeCounts: Record<string, number>;
   totalCards: number;
-  coverage: DataCoverageModel | null;
 }) {
   const [avg, abSupply, weakest] = stats;
   if (!avg) return null;
@@ -99,7 +94,6 @@ export function SafetyScoresHero({
           </div>
         ) : null
       }
-      footer={coverage ? <SafetyScoreDataCoverageRail model={coverage} /> : undefined}
     >
       <div className="flex h-full flex-col justify-center p-5 sm:p-6 lg:p-7">
         <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} />
@@ -111,9 +105,11 @@ export function SafetyScoresHero({
 export function SafetyResultsSummary({
   count,
   gradeFilter,
+  pegFilter,
 }: {
   count: number;
   gradeFilter: GradeFilter;
+  pegFilter: PegFilter;
 }) {
   if (count === 0) return null;
 
@@ -122,21 +118,24 @@ export function SafetyResultsSummary({
       Showing <span className="font-medium text-foreground">{count}</span>{" "}
       {count === 1 ? "coin" : "coins"}
       {gradeFilter !== "all" && ` with grade ${gradeFilter}`}
+      {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "fiat non-USD peg" : "commodity peg"}`}
     </p>
   );
 }
 
 export function SafetyEmptyState({
   gradeFilter,
+  pegFilter,
   onClearFilter,
 }: {
   gradeFilter: GradeFilter;
+  pegFilter: PegFilter;
   onClearFilter: () => void;
 }) {
   return (
     <div className="text-center py-12 space-y-2">
       <p className="text-sm text-muted-foreground">No coins match this filter. Loosen one and look again.</p>
-      {gradeFilter !== "all" && (
+      {(gradeFilter !== "all" || pegFilter !== "all") && (
         <Button
           variant="outline"
           size="sm"

@@ -27,17 +27,19 @@ describe("selectorAnswersToScreenerFilters", () => {
     expect(filters.safetyGrades).toContain("C-");
   });
 
-  it("Treasury × depegTolerance=zero raises safetyPegStabilityMin to 80", () => {
+  it("Treasury × depegTolerance=zero sets the V9-native and live score floors", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "treasury", depegTolerance: "zero" }),
     );
-    expect(filters.safetyPegStabilityMin).toBe(80);
+    expect(filters.pegScoreMin).toBe(80);
+    expect(filters.safetyBackingMin).toBe(50);
+    expect(filters.supplyMin).toBe(5_000_000);
   });
 
   it("peg floors match the engine's exclusion helpers (Q-019)", () => {
     const floor = (profile: "treasury" | "yield" | "trading", tol: "zero" | "tight" | "moderate") =>
       selectorAnswersToScreenerFilters(makeInput({ profile, depegTolerance: tol })).filters
-        .safetyPegStabilityMin;
+        .pegScoreMin;
     // Treasury → treasuryPegScoreFloor
     expect([floor("treasury", "zero"), floor("treasury", "tight"), floor("treasury", "moderate")]).toEqual([
       80, 70, 60,
@@ -52,11 +54,13 @@ describe("selectorAnswersToScreenerFilters", () => {
     ]);
   });
 
-  it("Treasury × horizon=6mplus raises dependency-risk floor to 65", () => {
+  it("does not emit retired resilience or dependency-risk keys", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "treasury", horizon: "6mplus" }),
     );
-    expect(filters.safetyDependencyRiskMin).toBe(65);
+    expect(filters).not.toHaveProperty("safetyResilienceMin");
+    expect(filters).not.toHaveProperty("safetyDependencyRiskMin");
+    expect(filters).not.toHaveProperty("safetyPegStabilityMin");
   });
 
   it("Trading × exitSpeed=1h tightens dewsMax to 35", () => {
@@ -64,7 +68,7 @@ describe("selectorAnswersToScreenerFilters", () => {
       makeInput({ profile: "trading", exitSpeed: "1h" }),
     );
     expect(filters.dewsMax).toBe(35);
-    expect(filters.safetyLiquidityMin).toBe(65);
+    expect(filters.liquidityScoreMin).toBe(65);
   });
 
   it("Yield divergenceWarnings includes yield-warning-signals", () => {
@@ -86,40 +90,29 @@ describe("selectorAnswersToScreenerFilters", () => {
     const { filters } = selectorAnswersToScreenerFilters(
       makeInput({ profile: "treasury", decentralization: "required" }),
     );
-    expect(filters.types).toEqual(["decentralized"]);
-    expect(filters.blacklistable).toEqual(["no"]);
+    expect(filters.types).toEqual(["centralized-dependent", "decentralized"]);
+    expect(filters.blacklistable).toEqual(["no", "possible"]);
+  });
+
+  it("projects the same curated custody model rails used by the engine", () => {
+    expect(
+      selectorAnswersToScreenerFilters(makeInput({ custodyOk: "onchain-only" })).filters.custodyModels,
+    ).toEqual(["onchain"]);
+    expect(
+      selectorAnswersToScreenerFilters(makeInput({ custodyOk: "regulated-only" })).filters.custodyModels,
+    ).toEqual(["institutional-top", "institutional-regulated"]);
   });
 });
 
 describe("buildScreenerUrl", () => {
   it("returns a path with encoded query string", () => {
-    const { url } = buildScreenerUrl(makeInput({ profile: "treasury" }), "/screener");
+    const { url } = buildScreenerUrl(
+      makeInput({ profile: "treasury" }),
+      "/screener",
+      ["usdc-circle", "dai-makerdao", "usdc-circle"],
+    );
     expect(url.startsWith("/screener?")).toBe(true);
     expect(url).toContain("safetyGrades=");
-  });
-});
-
-// -----------------------------------------------------------------------------
-// 27-combo smoke (plan §11 — Test P1 — replaces 405-combo for the default
-// `npm test` lane). Asserts the function does not throw for any profile ×
-// horizon × depegTolerance subset.
-// -----------------------------------------------------------------------------
-describe("survivor-parity smoke", () => {
-  const profiles = ["treasury", "yield", "trading"] as const;
-  const horizons = ["lt24h", "1to6m", "6mplus"] as const;
-  const tolerances = ["zero", "tight", "moderate"] as const;
-  it.each(
-    profiles.flatMap((p) =>
-      horizons.flatMap((h) =>
-        tolerances.map((d) => [p, h, d] as const),
-      ),
-    ),
-  )("%s × %s × %s does not throw and returns filters", (p, h, d) => {
-    const result = selectorAnswersToScreenerFilters(
-      makeInput({ profile: p, horizon: h, depegTolerance: d }),
-    );
-    expect(result.filters).toBeDefined();
-    expect(result.filters.lifecycle).toEqual(["active"]);
-    expect(Array.isArray(result.divergenceWarnings)).toBe(true);
+    expect(url).toContain("coins=usdc-circle%2Cdai-makerdao");
   });
 });

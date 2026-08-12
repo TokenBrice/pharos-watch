@@ -16,16 +16,9 @@ import {
 import type {
   ScreenerDivergenceWarning,
   SelectorInput,
+  SelectorScreenerFilterProjection,
   SelectorScreenerHandoff,
 } from "./types";
-
-/**
- * Subset of `ScreenerFilters` (defined in
- * `src/app/screener/screener-filters.ts`) that the handoff populates.
- * We mirror the shape locally to avoid a cross-boundary import that the
- * shared/lib/* lint rule blocks.
- */
-type ScreenerFilters = Record<string, unknown>;
 
 const SAFETY_GRADES_TREASURY: ReportCardGrade[] = [
   "A+",
@@ -51,8 +44,9 @@ const SAFETY_GRADES_YIELD_TRADING: ReportCardGrade[] = [
 
 export function selectorAnswersToScreenerFilters(
   input: SelectorInput,
+  coinIds: readonly string[] = [],
 ): SelectorScreenerHandoff {
-  const filters: Partial<ScreenerFilters> = {};
+  const filters: SelectorScreenerFilterProjection = {};
   const divergenceWarnings: ScreenerDivergenceWarning[] = [];
 
   // 1. Profile-level base filter.
@@ -63,6 +57,10 @@ export function selectorAnswersToScreenerFilters(
   }
   filters.lifecycle = ["active"];
   filters.pegs = [input.pegCurrency];
+  filters.supplyMin = 5_000_000;
+  if (coinIds.length > 0) {
+    filters.coins = Array.from(new Set(coinIds)).slice(0, 8);
+  }
 
   // 2. Per-profile deltas.
   switch (input.profile) {
@@ -75,18 +73,34 @@ export function selectorAnswersToScreenerFilters(
       break;
     }
     case "trading": {
-      applyTradingDeltas(input, filters);
+      applyTradingDeltas(input, filters, divergenceWarnings);
       break;
     }
   }
 
-  // The peg floors come from the engine's pegScore-calibrated helpers, but the
-  // Screener filters on `safetyPegStabilityScore` (a different sub-dimension).
-  // The numeric floor now matches the engine, but the score it's compared
-  // against diverges — surface that so the handoff banner can flag it.
+  if (input.profile === "treasury") {
+    divergenceWarnings.push({
+      kind: "screener-cannot-express",
+      reason: "bluechip-grade-floor",
+      affectedIds: [],
+    });
+  }
+  if (input.decentralization === "required") {
+    divergenceWarnings.push({
+      kind: "screener-cannot-express",
+      reason: "inherited-blacklist-status",
+      affectedIds: [],
+    });
+  }
+
   divergenceWarnings.push({
     kind: "screener-cannot-express",
-    reason: "peg-score-field-divergence",
+    reason: "active-depeg-gate",
+    affectedIds: [...coinIds],
+  });
+  divergenceWarnings.push({
+    kind: "screener-cannot-express",
+    reason: "howey-uncertain-exclusion",
     affectedIds: [],
   });
 
@@ -95,29 +109,30 @@ export function selectorAnswersToScreenerFilters(
 
 function applyTreasuryDeltas(
   input: SelectorInput,
-  filters: Partial<ScreenerFilters>,
+  filters: SelectorScreenerFilterProjection,
 ): void {
-  filters.safetyPegStabilityMin = treasuryPegScoreFloor(input.depegTolerance);
-  filters.safetyResilienceMin = 50;
-  filters.safetyDependencyRiskMin = input.horizon === "6mplus" ? 65 : 50;
+  filters.pegScoreMin = treasuryPegScoreFloor(input.depegTolerance);
+  filters.safetyBackingMin = 50;
   filters.dewsMax = 60;
   if (input.decentralization === "required") {
-    filters.types = ["decentralized"];
-    filters.blacklistable = ["no"];
+    filters.types = ["centralized-dependent", "decentralized"];
+    filters.blacklistable = ["no", "possible"];
   }
-  if (input.custodyOk === "onchain-only") {
-    filters.mechanisms = ["cdp", "algorithmic"];
-  }
+  applyCustodyFilter(input, filters);
 }
 
 function applyYieldDeltas(
   input: SelectorInput,
-  filters: Partial<ScreenerFilters>,
+  filters: SelectorScreenerFilterProjection,
   divergenceWarnings: ScreenerDivergenceWarning[],
 ): void {
-  filters.safetyPegStabilityMin = yieldPegScoreFloor(input.depegTolerance);
+  filters.pegScoreMin = yieldPegScoreFloor(input.depegTolerance);
   if (input.yieldNativeOnly) {
-    filters.mechanisms = ["fiat-cash"];
+    divergenceWarnings.push({
+      kind: "screener-cannot-express",
+      reason: "yield-native-only",
+      affectedIds: [],
+    });
   }
   if (input.minApy != null) {
     divergenceWarnings.push({
@@ -134,15 +149,37 @@ function applyYieldDeltas(
     reason: "yield-warning-signals",
     affectedIds: [],
   });
+  applyCustodyFilter(input, filters);
 }
 
 function applyTradingDeltas(
   input: SelectorInput,
-  filters: Partial<ScreenerFilters>,
+  filters: SelectorScreenerFilterProjection,
+  divergenceWarnings: ScreenerDivergenceWarning[],
 ): void {
-  filters.safetyPegStabilityMin = tradingPegScoreFloor(input.depegTolerance);
-  filters.safetyLiquidityMin = input.exitSpeed === "1h" ? 65 : 50;
+  filters.pegScoreMin = tradingPegScoreFloor(input.depegTolerance);
+  filters.liquidityScoreMin = input.exitSpeed === "1h" ? 65 : 50;
+  if (input.exitSpeed === "24h") filters.safetyExitMin = 50;
   filters.dewsMax = tradingDewsCeiling(input.exitSpeed);
+  if (input.exitSpeed === "1h") {
+    divergenceWarnings.push({
+      kind: "screener-cannot-express",
+      reason: "effective-tvl-floor-1h",
+      affectedIds: [],
+    });
+  }
+  applyCustodyFilter(input, filters);
+}
+
+function applyCustodyFilter(
+  input: SelectorInput,
+  filters: SelectorScreenerFilterProjection,
+): void {
+  if (input.custodyOk === "onchain-only") {
+    filters.custodyModels = ["onchain"];
+  } else if (input.custodyOk === "regulated-only") {
+    filters.custodyModels = ["institutional-top", "institutional-regulated"];
+  }
 }
 
 /**
@@ -152,8 +189,9 @@ function applyTradingDeltas(
 export function buildScreenerUrl(
   input: SelectorInput,
   baseUrl: string,
+  coinIds: readonly string[] = [],
 ): { url: string; divergenceWarnings: ScreenerDivergenceWarning[] } {
-  const { filters, divergenceWarnings } = selectorAnswersToScreenerFilters(input);
+  const { filters, divergenceWarnings } = selectorAnswersToScreenerFilters(input, coinIds);
   const params: string[] = [];
   for (const [key, value] of Object.entries(filters)) {
     if (value == null) continue;

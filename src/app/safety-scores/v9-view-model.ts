@@ -8,6 +8,7 @@ import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
 export type V9SortKey = "overall" | "backing" | "exit" | "control" | "mcap";
 export type GradeFilter = "all" | "A" | "B" | "C" | "D" | "F" | "NR";
+export type PegFilter = "all" | "usd" | "fiat-non-usd" | "commodities";
 export const GRADE_RANGES: Exclude<GradeFilter, "all">[] = [
   "A",
   "B",
@@ -55,17 +56,24 @@ export function filterAndSortV9Cards(
   cards: readonly V9ConsumerCard[],
   {
     gradeFilter,
+    pegFilter,
+    pegTypeMap,
     sortKey,
     mcapMap,
   }: {
     gradeFilter: GradeFilter;
+    pegFilter: PegFilter;
+    pegTypeMap: ReadonlyMap<string, string>;
     sortKey: V9SortKey;
     mcapMap: ReadonlyMap<string, number>;
   },
 ): V9ConsumerCard[] {
-  const filtered = gradeFilter === "all"
+  const gradeFiltered = gradeFilter === "all"
     ? cards
     : cards.filter((card) => v9GradeRange(card.grade) === gradeFilter);
+  const filtered = pegFilter === "all"
+    ? gradeFiltered
+    : gradeFiltered.filter((card) => pegMatchesFilter(pegTypeMap.get(card.id), pegFilter));
 
   return [...filtered].sort((left, right) => {
     const leftScore = getSortScore(left, sortKey, mcapMap);
@@ -74,6 +82,22 @@ export function filterAndSortV9Cards(
     if (rightScore === null) return -1;
     return rightScore - leftScore || left.id.localeCompare(right.id);
   });
+}
+
+export function pegMatchesFilter(pegType: string | undefined, pegFilter: Exclude<PegFilter, "all">): boolean {
+  if (pegFilter === "usd") return pegType === "peggedUSD";
+  const isCommodity = pegType === "peggedGOLD" || pegType === "peggedSILVER";
+  if (pegFilter === "commodities") return isCommodity;
+  return pegType !== undefined && pegType !== "peggedUSD" && !isCommodity;
+}
+
+export function buildSafetyPegTypeMap(
+  peggedAssets?: Array<{ id: string; pegType?: string }>,
+): Map<string, string> {
+  if (!peggedAssets) return new Map();
+  return new Map(
+    peggedAssets.flatMap((asset) => asset.pegType ? [[asset.id, asset.pegType]] : []),
+  );
 }
 
 export function groupV9CardsByGrade(
