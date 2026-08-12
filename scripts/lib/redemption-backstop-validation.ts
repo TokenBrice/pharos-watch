@@ -685,6 +685,16 @@ function validateRedemptionBackstopPolicies(
   });
 }
 
+/** Params-gated adapters emit capacity only when the coin opts in via a
+ *  redemptionCapacity params block; everything else never emits. */
+function hasRedemptionCapacityParams(params: unknown): boolean {
+  return (
+    typeof params === "object" &&
+    params !== null &&
+    "redemptionCapacity" in (params as Record<string, unknown>)
+  );
+}
+
 function validateUnusedLiveRedemptionTelemetryPolicies(
   mergedConfigs: Record<string, RedemptionBackstopConfig>,
   configuredIds: ReadonlySet<string>,
@@ -695,6 +705,12 @@ function validateUnusedLiveRedemptionTelemetryPolicies(
     if (!adapterKey) continue;
     const definition = getLiveReserveAdapterDefinition(adapterKey);
     if (!definition || definition.redemptionTelemetry.capacity === "none") continue;
+    const capacityParamsGated =
+      "capacityParamsGated" in definition.redemptionTelemetry &&
+      definition.redemptionTelemetry.capacityParamsGated === true;
+    if (capacityParamsGated && !hasRedemptionCapacityParams(meta.liveReservesConfig?.params)) {
+      continue;
+    }
 
     const config = mergedConfigs[id];
     if (config?.capacityModel.kind === "reserve-sync-metadata") continue;
