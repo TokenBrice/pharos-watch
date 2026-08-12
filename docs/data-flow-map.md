@@ -114,7 +114,10 @@ hold only when fewer than 90% of active assets remain unaffected; isolated
 failures above that healthy-coverage floor do not freeze unrelated ratings.
 The accepted publication and current health commit atomically. A held attempt
 updates only `report-cards:v9:publication-health`, leaving accepted ratings and
-timestamps unchanged.
+timestamps unchanged, and the store rejects a held identity that does not match
+the retained publication. If the accepted ledger cannot be read, the runner
+records an isolated failed-attempt diagnostic without mutating publication or
+health.
 The V9-only supply-attribution enrichment may also bind an aggregate asset supply
 to a reviewed route-ID inventory. The wM observer requires the complete
 Ethereum, Arbitrum, Base, Plume, and Solana deployment packet, verifies pinned

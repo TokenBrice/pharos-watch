@@ -234,7 +234,7 @@ describe("Safety Score V9 publication runner", () => {
     );
   });
 
-  it("holds when publication assessment loading fails", async () => {
+  it("preserves accepted state when publication assessment loading fails", async () => {
     mocks.build.mockReturnValue({
       candidate: makeWorkerSafetyScoreV9Publication({
         baseInputGenerationId: fixedInput.baseInputGenerationId,
@@ -255,19 +255,61 @@ describe("Safety Score V9 publication runner", () => {
     });
 
     expect(result).toMatchObject({
+      status: "failed",
+      stage: "publication-gate",
+      message: "read failed",
+    });
+    expect(mocks.persist).not.toHaveBeenCalled();
+    expect(mocks.persistAttempt).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        publicationAttempt: expect.objectContaining({
+          outcome: "failed",
+          failure: expect.objectContaining({
+            stage: "publication-gate",
+            message: "read failed",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("holds with the retained identity when assessment itself fails", async () => {
+    const accepted = makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: fixedInput.baseInputGenerationId,
+      publicationGenerationId: "report-cards:v9:accepted",
+      publishedAtSec: fixedInput.clockSec - 30,
+    });
+    mocks.loadPublication.mockResolvedValue(accepted);
+    mocks.loadHealth.mockResolvedValue({
+      schemaVersion: 1,
+      status: "current",
+      acceptedPublicationGenerationId: accepted.publicationGenerationId,
+      acceptedAtSec: accepted.publishedAtSec,
+      attemptedAtSec: accepted.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    });
+    mocks.assess.mockImplementation(() => {
+      throw new Error("assessment failed");
+    });
+
+    const result = await runSafetyScoreV9Publication({
+      db: {} as D1Database,
+      fixedInput,
+    });
+
+    expect(result).toMatchObject({
       status: "held",
       reasons: [expect.objectContaining({ code: "assessment-failed" })],
-      affectedAssetIds: ["alpha"],
     });
     expect(mocks.persist).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        publicationAttempt: expect.objectContaining({
-          outcome: "held",
-          quarantines: [
-            { assetId: "alpha", code: "fact-build-failed" },
-          ],
-          affectedAssetIds: ["alpha"],
+        publicationHealth: expect.objectContaining({
+          status: "held",
+          acceptedPublicationGenerationId: accepted.publicationGenerationId,
+          acceptedAtSec: accepted.publishedAtSec,
         }),
       }),
     );

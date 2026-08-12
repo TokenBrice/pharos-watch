@@ -2356,12 +2356,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.17",
+    "methodologyVersion": "9.19",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.17",
+    "version": "9.19",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2369,7 +2369,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
     "status": "current | held",
     "acceptedAtSec": 1771977600,
     "attemptedAtSec": 1771977600,
-    "holdReasons": []
+    "reasons": []
   },
   "cards": [SafetyScoreV9Card, ...],
   "dependencyGraph": {
@@ -2380,7 +2380,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 }
 ```
 
-The endpoint reads only the accepted `report-cards:v9` publication and its matching `report-cards:v9:publication-health` row. Missing, malformed, incomplete, or identity-inconsistent state returns `503`; the handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
+The endpoint reads only the accepted `report-cards:v9` publication and its `report-cards:v9:publication-health` row. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
 
@@ -2644,7 +2644,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.17",
+      "methodologyVersion": "9.19",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2655,7 +2655,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.17",
+      "methodologyVersion": "9.19",
       "publishedAt": 1772000700
     }
   },

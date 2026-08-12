@@ -52,6 +52,47 @@ describe("Safety Score V9 publication codec", () => {
     );
   });
 
+  it("reads an authenticated pre-9.19 compressed publication without per-fact paths", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication({
+      policyVersion: "9.18",
+    });
+    const envelope = JSON.parse(
+      await serializeSafetyScoreV9Publication(publication),
+    ) as Record<string, unknown>;
+    const legacyPublication = JSON.parse(
+      gunzipSync(Buffer.from(String(envelope.payload), "base64")).toString("utf8"),
+    ) as typeof publication;
+    for (const card of legacyPublication.cards) {
+      delete (card.scoreTrace.evidenceResponsibility as { facts?: unknown }).facts;
+    }
+    const legacyPayload = stableJsonStringifyV1(legacyPublication);
+    const compressed = gzipSync(Buffer.from(legacyPayload));
+    const stored = stableJsonStringifyV1({
+      ...envelope,
+      payloadSha256: createHash("sha256").update(legacyPayload).digest("hex"),
+      uncompressedBytes: Buffer.byteLength(legacyPayload),
+      compressedBytes: compressed.byteLength,
+      payload: compressed.toString("base64"),
+    });
+
+    await expect(parseSafetyScoreV9Publication(stored)).resolves.toEqual(
+      legacyPublication,
+    );
+  });
+
+  it("rejects post-9.19 serialization without per-fact paths", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication({
+      policyVersion: "9.19",
+    });
+    delete (publication.cards[0]!.scoreTrace.evidenceResponsibility as {
+      facts?: unknown;
+    }).facts;
+
+    await expect(
+      serializeSafetyScoreV9Publication(publication),
+    ).rejects.toThrow(/v9\.19\+ publications require per-fact disclosure paths/);
+  });
+
   it("rejects a malformed retired stressStateDigest", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = stableJsonStringifyV1({

@@ -401,17 +401,41 @@ export async function persistSafetyScoreV9Publication(
     );
   }
   if (health.status === "current") {
+    // Compare the raw row clock so a newer valid publication can replace an
+    // older retained payload that the current reader can no longer parse.
+    const existingPublicationRow = await getCache(
+      db,
+      SAFETY_SCORE_V9_CACHE_KEYS.publication,
+      input.signal,
+    );
+    if (
+      existingPublicationRow !== null &&
+      (
+        existingPublicationRow.updatedAt > input.publicationClockSec ||
+        (
+          existingPublicationRow.updatedAt === input.publicationClockSec &&
+          existingPublicationRow.value !== publicationValue
+        )
+      )
+    ) {
+      throw new SafetyScoreV9PublicationConflictError(
+        "Stale or conflicting Safety Score v9 publication update",
+      );
+    }
+  } else {
     const existingPublication = await loadSafetyScoreV9Publication(
       db,
       input.signal,
     );
-    if (
-      existingPublication !== null &&
-      existingPublication.publicationGenerationId !== health.acceptedPublicationGenerationId &&
-      existingPublication.publishedAtSec >= input.publicationClockSec
-    ) {
+    const healthMatchesPublication = existingPublication === null
+      ? health.acceptedPublicationGenerationId === null &&
+        health.acceptedAtSec === null
+      : health.acceptedPublicationGenerationId ===
+          existingPublication.publicationGenerationId &&
+        health.acceptedAtSec === existingPublication.publishedAtSec;
+    if (!healthMatchesPublication) {
       throw new SafetyScoreV9PublicationConflictError(
-        "Stale or conflicting Safety Score v9 publication update",
+        "Held Safety Score v9 health does not match the stored publication",
       );
     }
   }
@@ -440,6 +464,23 @@ export async function persistSafetyScoreV9Publication(
         publicationValue,
         input.publicationClockSec,
       ),
+    );
+  }
+  if (health.status === "held" && health.acceptedAtSec !== null) {
+    // Recheck the retained publication inside the atomic batch. A concurrent
+    // current publication must roll this held attempt back instead of letting
+    // health advance with the identity loaded before the race.
+    statements.push(
+      db
+        .prepare(
+          `UPDATE cache
+           SET value = CASE WHEN updated_at = ? THEN value ELSE NULL END
+           WHERE key = ?`,
+        )
+        .bind(
+          health.acceptedAtSec,
+          SAFETY_SCORE_V9_CACHE_KEYS.publication,
+        ),
     );
   }
   statements.push(

@@ -78,6 +78,24 @@ describe("canonical V9 report-card cache", () => {
     });
   });
 
+  it("holds a newer stored publication when health is older", () => {
+    const publication = evaluatorPublication();
+    const health = {
+      ...makeReportCardsV9Response().publicationHealth,
+      acceptedPublicationGenerationId: "report-cards:v9:older",
+      acceptedAtSec: publication.publishedAtSec - 20,
+      attemptedAtSec: publication.publishedAtSec - 10,
+    };
+
+    expect(projectSafetyScoreV9PublicationToPublicSnapshot(publication, health).publicationHealth).toMatchObject({
+      status: "held",
+      acceptedPublicationGenerationId: publication.publicationGenerationId,
+      acceptedAtSec: publication.publishedAtSec,
+      attemptedAtSec: publication.publishedAtSec,
+      heldSinceSec: publication.publishedAtSec,
+    });
+  });
+
   it("requires a publication and health row", async () => {
     mockLoadPublication.mockResolvedValue(evaluatorPublication());
     mockLoadPublicationHealth.mockResolvedValue(null);

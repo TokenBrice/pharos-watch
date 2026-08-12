@@ -1,4 +1,5 @@
 import { bytesToBase64 } from "@shared/lib/base64";
+import { compareMethodologyVersions } from "@shared/lib/methodology-versions/base";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   SafetyScoreV9CurrentResponseSchema,
@@ -12,6 +13,7 @@ import { parseJson } from "./json-parse";
 
 const PUBLICATION_STORAGE_KIND = "safety-score-v9-publication";
 const STORAGE_SCHEMA_VERSION = 1;
+const EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION = "9.19";
 
 const SAFETY_SCORE_V9_PUBLICATION_MAX_STORED_BYTES = 1_900_000;
 const SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
@@ -182,6 +184,20 @@ export async function serializeSafetyScoreV9Publication(
 ): Promise<string> {
   throwIfAborted(signal);
   const publication = SafetyScoreV9CurrentResponseSchema.parse(value);
+  if (
+    compareMethodologyVersions(
+      publication.policyVersion,
+      EVIDENCE_RESPONSIBILITY_FACTS_POLICY_VERSION,
+    ) >= 0 &&
+    publication.cards.some(
+      (card) =>
+        card.scoreTrace.evidenceResponsibility.facts === undefined,
+    )
+  ) {
+    throw new Error(
+      "Safety Score v9.19+ publications require per-fact disclosure paths",
+    );
+  }
   const canonical = stableJsonStringifyV1(publication);
   const compressed = await gzipCanonicalJson(canonical, {
     label: "Safety Score v9 publication",
