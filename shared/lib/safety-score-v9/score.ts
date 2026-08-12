@@ -6,6 +6,7 @@ import type {
   V9EvidenceLevel,
   V9ReasonCode,
   V9StructuralSignal,
+  V9UnresolvedFact,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
 import {
@@ -319,6 +320,49 @@ function scoreBearingReasons(
   ];
 }
 
+function reconcileBoundedAttributionFacts(
+  unresolvedFacts: readonly V9UnresolvedFact[],
+  scoreBearingFacts: readonly V9UnresolvedFact[],
+  attribution: readonly V9BoundedUncertaintyAttribution[],
+): V9UnresolvedFact[] {
+  const byPublicIdentity = new Map(
+    unresolvedFacts.map((fact) => [`${fact.code}\u0000${fact.path ?? ""}`, fact]),
+  );
+  for (const item of attribution) {
+    if (item.source !== "reason") continue;
+    const key = `${item.code}\u0000${item.path}`;
+    const existing = byPublicIdentity.get(key);
+    if (existing !== undefined) {
+      if (existing.responsibility !== item.responsibility) {
+        throw new Error(
+          `Safety Score v9 bounded attribution ${item.code} at ${item.path} has multiple causal owners`,
+        );
+      }
+      continue;
+    }
+    const ownedFact = scoreBearingFacts.find(
+      (fact) =>
+        fact.code === item.code &&
+        fact.path === item.path &&
+        fact.reason === item.message &&
+        fact.responsibility === item.responsibility,
+    );
+    if (ownedFact === undefined) {
+      throw new Error(
+        `Safety Score v9 bounded attribution ${item.code} at ${item.path} lacks an owned score-bearing fact`,
+      );
+    }
+    byPublicIdentity.set(key, ownedFact);
+  }
+  return [...byPublicIdentity.values()].sort(
+    (left, right) =>
+      compareText(left.code, right.code) ||
+      compareText(left.path ?? "", right.path ?? "") ||
+      compareText(left.reason, right.reason) ||
+      compareText(left.responsibility ?? "", right.responsibility ?? ""),
+  );
+}
+
 function wrapperLocalAttribution(limit: V9WrapperParentLimit | null | undefined): {
   adverse: V9AdverseAttribution[];
   bounded: V9BoundedUncertaintyAttribution[];
@@ -542,12 +586,16 @@ export function scoreV9EvaluatedAsset(
     ...trace,
     operationalResilience: input.operationalResilience ?? null,
     wrapperParentLimit: input.parent.wrapperParentLimit ?? null,
-    unresolvedFacts: normalizeReasonList(
-      [
-        ...scoreBearingReasons(input, envelope),
-        ...(input.unresolvedEvidence ?? []),
-      ],
-      envelope,
+    unresolvedFacts: reconcileBoundedAttributionFacts(
+      normalizeReasonList(
+        [
+          ...scoreBearingReasons(input, envelope),
+          ...(input.unresolvedEvidence ?? []),
+        ],
+        envelope,
+      ),
+      normalizedScoreBearingReasons,
+      trace.boundedUncertaintyAttribution,
     ),
     factSetDigest: input.identity.factSetDigest,
     baseInputGenerationId: input.identity.baseInputGenerationId,

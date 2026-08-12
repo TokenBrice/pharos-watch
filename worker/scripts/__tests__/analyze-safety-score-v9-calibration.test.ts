@@ -14,11 +14,10 @@ import {
   summarizeDistribution,
 } from "../../../scripts/maintenance/analyze-safety-score-v9-calibration.mjs";
 
-// A realistic fixed clock: the suite compiles the REAL registry, and a far-future
-// clock ages every mechanism review into bounded gaps whose attribution items
-// the 9.19 public schema rejects as unreconciled (latent invariant, see the
-// 2026-08-12 redemption-pass handoff). Keep this within the registry review
-// windows.
+// A realistic fixed clock: this suite compiles the REAL registry and should stay
+// within its review windows so calibration assertions exercise current evidence.
+// The score-trace reconciliation suite separately owns the far-future aged-review
+// regression.
 const BASE_CLOCK_SEC = 1_786_579_200; // 2026-08-13T00:00:00Z, after the newest curated review dates
 
 // The adversarial tests need to mutate a JSON replay after the production

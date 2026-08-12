@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_ATTRIBUTION_RECONCILIATION: MethodologyChangelogEntry = {
+  version: "9.191",
+  title: "Every bounded attribution keeps its owned open fact",
+  date: "2026-08-12",
+  effectiveAt: 1786554000,
+  summary:
+    "The 9.19 single-count deduplication could collide two distinct reasons that shared a gap identity, keeping the raw entry and dropping the score-bearing one whose bounded-uncertainty attribution then pointed at no owned open fact. On an asset whose mechanism reviews had aged into bounded gaps this made score publication fail its own reconciliation schema. The published fact list now restores any direct reason attribution the deduplication displaced, so every bounded-uncertainty entry reconciles to an owned open fact with its exact code, path, and responsibility.",
+  impact: [
+    "Score publication can no longer throw when a mechanism review ages past its window: the far-future regression compiles a full candidate with aged reviews and asserts every reason-sourced bounded attribution reconciles",
+    "Where the collision occurred, both colliding facts are now visible, so an asset's open-fact count can rise by the entries that were previously silently dropped — on the aged-review fixture this is one additional fact",
+    "Current-clock published output is unchanged: the reconciliation fixture pins today's USDC card byte-equal (same grade, same five open facts, same reason codes)",
+    "Attribution semantics, the reconciliation schema, pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_EVIDENCE_ATTRIBUTION: MethodologyChangelogEntry = {
   version: "9.19",
   title: "Open facts are counted once and carry the path that produced them",
