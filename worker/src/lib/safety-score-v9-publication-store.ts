@@ -400,6 +400,21 @@ export async function persistSafetyScoreV9Publication(
       "Stale or conflicting Safety Score v9 publication health update",
     );
   }
+  if (health.status === "current") {
+    const existingPublication = await loadSafetyScoreV9Publication(
+      db,
+      input.signal,
+    );
+    if (
+      existingPublication !== null &&
+      existingPublication.publicationGenerationId !== health.acceptedPublicationGenerationId &&
+      existingPublication.publishedAtSec >= input.publicationClockSec
+    ) {
+      throw new SafetyScoreV9PublicationConflictError(
+        "Stale or conflicting Safety Score v9 publication update",
+      );
+    }
+  }
 
   const cacheStatement = db.prepare(
     `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)

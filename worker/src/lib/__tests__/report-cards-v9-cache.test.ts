@@ -63,7 +63,22 @@ describe("canonical V9 report-card cache", () => {
     });
   });
 
-  it("requires matching publication and health rows", async () => {
+  it("holds the stored publication when health points at another generation", () => {
+    const publication = evaluatorPublication();
+    const health = {
+      ...makeReportCardsV9Response().publicationHealth,
+      acceptedPublicationGenerationId: "report-cards:v9:other",
+      acceptedAtSec: publication.publishedAtSec + 1,
+    };
+
+    expect(projectSafetyScoreV9PublicationToPublicSnapshot(publication, health).publicationHealth).toMatchObject({
+      status: "held",
+      acceptedPublicationGenerationId: publication.publicationGenerationId,
+      acceptedAtSec: publication.publishedAtSec,
+    });
+  });
+
+  it("requires a publication and health row", async () => {
     mockLoadPublication.mockResolvedValue(evaluatorPublication());
     mockLoadPublicationHealth.mockResolvedValue(null);
 
