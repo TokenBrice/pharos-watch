@@ -4,8 +4,6 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { SafetyScoreDataCoverageRail } from "./data-coverage-module";
-import type { DataCoverageModel } from "./data-coverage-view-model";
 import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
 import type { GradeFilter, PegFilter } from "./v9-view-model";
 
@@ -58,20 +56,17 @@ function HeroMetricRow({
  * Split hero for Safety Scores. The One Beam lights the ecosystem average score
  * (frost); the sub-slot folds the retired headline-stat tiles (supply in A/B,
  * weakest dimension) into compact rows; the right slot stages the semantic
- * grade-distribution bar; the footer rail carries the score-input coverage
- * counts. `stats` is the `buildSafetyHeadlineStats` array:
+ * grade-distribution bar. `stats` is the `buildSafetyHeadlineStats` array:
  * [ecosystem avg, supply in A/B, weakest dimension].
  */
 export function SafetyScoresHero({
   stats,
   gradeCounts,
   totalCards,
-  coverage,
 }: {
   stats: Array<{ label: string; value: string; detail: string }>;
   gradeCounts: Record<string, number>;
   totalCards: number;
-  coverage: DataCoverageModel | null;
 }) {
   const [avg, abSupply, weakest] = stats;
   if (!avg) return null;
@@ -99,7 +94,6 @@ export function SafetyScoresHero({
           </div>
         ) : null
       }
-      footer={coverage ? <SafetyScoreDataCoverageRail model={coverage} /> : undefined}
     >
       <div className="flex h-full flex-col justify-center p-5 sm:p-6 lg:p-7">
         <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} />

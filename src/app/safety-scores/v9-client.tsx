@@ -12,13 +12,13 @@ import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import { buildDataCoverageModel } from "./data-coverage-view-model";
 import {
   SafetyEmptyState,
   SafetyResultsSummary,
   SafetyScoresHero,
   SafetyScoresLoadingState,
 } from "./presentational";
+import { SafetyPillarExplainer } from "./pillar-explainer";
 import {
   GRADE_RANGES,
   buildSafetyMcapMap,
@@ -272,10 +272,6 @@ export function ReportCardsV9Client() {
     [cards, gradeFilter, mcapMap, pegFilter, pegTypeMap, sortKey],
   );
   const groupedCards = useMemo(() => groupV9CardsByGrade(filteredCards), [filteredCards]);
-  const dataCoverage = useMemo(
-    () => buildDataCoverageModel(reportCardsQuery.data),
-    [reportCardsQuery.data],
-  );
   const showGroupedCards = gradeFilter === "all" && sortKey === "overall";
   const handleRetry = useCallback(
     () => refetchQueryGroup([reportCardsQuery.refetch, stablecoinsQuery.refetch]),
@@ -324,8 +320,9 @@ export function ReportCardsV9Client() {
         stats={headlineStats}
         gradeCounts={gradeCounts}
         totalCards={totalCards}
-        coverage={dataCoverage}
       />
+
+      <SafetyPillarExplainer />
 
       <V9Controls
         gradeFilter={gradeFilter}

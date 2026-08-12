@@ -91,6 +91,7 @@ Additional page-level sources:
 | Peg/backing/governance labels in each row                                                  | `coin.flags.*` from tracked metadata, formatted through `@shared/lib/classification` short-label maps                                 |
 | Pricing-source tiles                                                                       | `usePegSummary().data.coins[].consensusSources`, grouped into market sources vs authoritative overrides in `useCoverageMatrixModel()` |
 | Snapshot insight cards (`Source target`, `Widest reach`, `Tightest reach`, `Cap skew`) | Derived from the same per-feature summaries and per-row source-depth counts used by the feature snapshot rows                         |
+| Safety Score input coverage                                                             | Canonical V9 report-card publication via `useReportCardsV9()`, summarized by `buildDataCoverageModel(...)`                            |
 
 ---
 
@@ -136,6 +137,7 @@ If a feature gains richer user-facing states, update the relevant resolver under
 ## UX Contract
 
 - The feature snapshot comes first and answers the breadth question before the page shifts into source context and per-coin inspection.
+- The expandable Safety Score input-coverage card follows the feature snapshot. Its collapsed view shows evaluated inputs and missing-data ownership; its disclosure retains owner explanations, per-pillar counts, missing-input reasons, and publication-hold context.
 - The pricing-source card renders after the feature snapshot when consensus-source data is available.
 - Search filters by name and ticker.
 - Quick filters are grouped as tier filters (`All coins`, `Fully available`, `Fully headline`), feature filters (`Redemption`, `Yield`, `Reserves`, `Flows`, `Blacklist` for the freezable-status column), and gap filters (`No Safety`, `No DEX`, `No Reserves`, `2 sources`, `Weak price`, `No Flows`, `No Dependency`). `No Dependency` now means unresolved dependency-map coverage (`Gap` or `Data n/a`), not "no upstream dependency."

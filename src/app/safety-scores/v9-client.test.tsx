@@ -58,6 +58,11 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByRole("button", { name: "Backing" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("button", { name: "Econ. Control" }).length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Safety score cards")).toBeTruthy();
+    expect(screen.queryByText(/assets are scored/)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Three questions behind every grade" })).toBeTruthy();
+    expect(screen.getByText("Is there real value behind the token?")).toBeTruthy();
+    expect(screen.getByText("Can I get my value out?")).toBeTruthy();
+    expect(screen.getByText("Who can change or break the system?")).toBeTruthy();
   });
 
   it("filters the card grid by the existing grade controls", () => {

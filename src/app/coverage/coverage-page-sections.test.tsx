@@ -3,9 +3,11 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { CoverageMatrixCard, CoverageMobileResults } from "./coverage-page-sections";
+import { CoverageMatrixCard, CoverageMobileResults, CoverageSafetyScoreDataCard } from "./coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
+import { buildDataCoverageModel } from "@/app/safety-scores/data-coverage-view-model";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinMeta } from "@shared/types";
 
 vi.mock("next/link", async () => {
@@ -147,5 +149,22 @@ describe("CoverageMatrixCard", () => {
         "A redemption route is configured, but current market or route-availability evidence contradicts strong redemption coverage.",
       ).length,
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("CoverageSafetyScoreDataCard", () => {
+  it("renders the score-input summary and expandable detail on the coverage page", () => {
+    const safetyScoreDataCoverage = buildDataCoverageModel(
+      makeReportCardsV9Response({ cards: [makeV9Card({ id: "asset-a" })] }),
+    );
+
+    const { container } = render(
+      <CoverageSafetyScoreDataCard safetyScoreDataCoverage={safetyScoreDataCoverage} />,
+    );
+
+    expect(screen.getByRole("heading", { name: "Score input coverage" })).toBeTruthy();
+    expect(container.textContent).toContain("1 asset is scored");
+    expect(screen.getByText(/Coverage detail|Which inputs are missing/)).toBeTruthy();
+    expect(screen.getByText("Inputs evaluated")).toBeTruthy();
   });
 });

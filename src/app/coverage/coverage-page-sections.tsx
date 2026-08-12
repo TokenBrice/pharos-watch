@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, Search, SearchX } from "lucide-react";
 import { getPricingSourceLabel } from "@shared/lib/pricing-sources";
 import { CoverageLensSummary } from "@/components/coverage-lens-summary";
+import { SafetyScoreDataCoverage } from "@/app/safety-scores/data-coverage-module";
 import { MatrixTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -182,6 +183,29 @@ export function CoverageFeatureSnapshotCard({
             <CoverageFeatureSnapshotRow key={summary.feature.key} summary={summary} />
           ))}
         </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function CoverageSafetyScoreDataCard({
+  safetyScoreDataCoverage,
+}: Pick<CoveragePageModel, "safetyScoreDataCoverage">) {
+  if (!safetyScoreDataCoverage) return null;
+
+  return (
+    <Card className="pharos-card-shell">
+      <CardHeader className="space-y-1.5 pb-3">
+        <p className="pharos-kicker">Safety Score Coverage</p>
+        <CardTitle as="h2" className="text-xl tracking-tight">
+          Score input coverage
+        </CardTitle>
+        <CardDescription className="max-w-3xl leading-relaxed">
+          What the current Safety Score publication evaluated, and which inputs remain open.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <SafetyScoreDataCoverage model={safetyScoreDataCoverage} />
       </CardContent>
     </Card>
   );
