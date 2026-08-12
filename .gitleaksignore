@@ -288,3 +288,5 @@ d4efe6c590e4429387ea91a9b4b73bad760042e4:shared/data/safety-score-v9/transfer-re
 56526680f1fed0f2cf877d4f7942e1db3a8d60e8:worker/src/cron/dex-discovery/__tests__/crawl-horizon-pools.test.ts:generic-api-key:180
 94639a195379b809a7262563c9d8f20c474caf16:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:4370
 94639a195379b809a7262563c9d8f20c474caf16:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:5384
+3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:739
+3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:741
