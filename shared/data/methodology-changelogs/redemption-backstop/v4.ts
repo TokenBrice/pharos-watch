@@ -2,6 +2,29 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.33",
+    title: "Three new PSM routes, four more fee bounds, and live capacity telemetry",
+    date: "2026-08-12",
+    effectiveAt: 1786528800,
+    summary:
+      "A second exit-credit pass configures three previously unconfigured PSM rails, bounds four more redemption fees against primary sources, records two routes as still unconfigurable, and switches four routes onto live capacity telemetry — including one correction that removes credit a drained contract could never have honored. Scoring weights, ladders, and the exit engine are unchanged; routes move only through better evidence.",
+    impact: [
+      "DOLA is corrected downward: its reviewed 8% PSM-share capacity was a phantom. At Ethereum block 25736814 the deployed Inverse PSM reads supply() and getTotalReserves() of zero with zero token balances and a hard-reverting sell(), the contract having been drained on 2025-12-10 and stripped of its 200k DOLA Fed float on 2025-12-11. Capacity is now live-only with no fallback, so an unavailable read leaves the route unrated instead of resurrecting the static bound; the 20 bps fee is unchanged and now confirmed by the contract's own sellFeeBps()",
+      "OUSG consumes live InstantManager router capacity as its immediate redeemable bound, replacing the full-supply model; Ondo's published $50M global instant-redemption limit across all investors in a rolling 24-hour window becomes the fallback when the router read is unavailable",
+      "USD3 (Reserve) consumes the RToken's own redemptionAvailable() throttle read and drops its documented-bound full-supply model entirely — the throttle refills over time, so no static figure represents it. Capacity is withheld when the collateral basket is not SOUND and the route is left unrated when the throttle cannot be read",
+      "USDD consumes the live Tron PSM GemJoin USDT balance, keeping the reviewed 16% PSM-share bound as fallback; its 0 bps fee is now confirmed by the module's on-chain tout()",
+      "FXD (Fathom), HOLLAR (Hydration), and USDH (Hubble) gain psm-swap routes, so coverage rises to 314 configured coins and the psm-swap family grows from 11 to 14",
+      "USDai's route is bounded at the 10 bps redemption fee its issuer notice publishes, and access is corrected from permissionless to whitelisted because the same notice restricts contract-level mint and redeem to KYC'd market makers and approved institutional depositors",
+      "ZYS (Zephyr) replaces its undisclosed-fee marker with a fixed 10 bps bound taken from the consensus RingCT source, which deducts a 0.1% conversion fee on every REDEEM_YIELD",
+      "USDnr (Nerona) is bounded at 0 bps for the modeled USDnr -> M leg: Nerona documents no protocol mint or redeem fee on USDnr itself, and the 0.01% figure belongs to the downstream wM/USDC pool rather than to the modeled route",
+      "FXD carries a 25 bps whitepaper fee with whitelisted access and an unresolved xUSDT output; USDH carries its documented 50 bps PSM fee but routeStatus unknown, because no current Hubble source proves the module still executes; HOLLAR deliberately keeps no fee bound, since its buy-back fee is a per-collateral on-chain Permill with no documented ceiling and no adapter to read it",
+      "MAI (QiDao) stays unconfigured: its Peg Stability Module, fee, and contract-address pages now return HTTP 404, so the queue route cannot be read from a live primary source. iUSD (Initia) stays unconfigured: the maintained bridge documentation does not mention iUSD at all",
+      "Route-family totals are now 147 offchain-issuer, 67 stablecoin-redeem, 38 collateral-redeem, 39 queue-redeem, 14 psm-swap, and 9 basket-redeem",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.32",
     title: "Live route-openness, live fees, and exit-credit route upgrades",
     date: "2026-08-12",

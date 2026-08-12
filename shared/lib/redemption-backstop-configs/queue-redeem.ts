@@ -11,6 +11,7 @@ import {
 } from "./shared";
 import { NEST_NAV_VAULT_CONFIGS } from "./queue-redeem-nest-nav";
 import {
+  REVIEWED_EXIT_CREDIT_WAVE2_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
@@ -639,14 +640,20 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
     outputAssets: ["m-m0"],
     settlementModel: "days",
     capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: undisclosedReviewedFee(
-      "Nerona documents permissioned 1:1 USDnr mint and redeem against underlying M; public docs reviewed do not publish a separate numeric redemption fee",
+    costModel: fixedFee(
+      0,
+      "Nerona's fee documentation states there are no mint or redeem fees on USDnr itself at the protocol level; the 1% instant fee and the four-day unwind apply to sUSDnr, not USDnr",
     ),
-    reviewedAt: "2026-04-16",
-    docs: [sourceRef("Nerona documentation", "https://docs.nerona.finance/", ["route", "capacity", "access"])],
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    docs: [
+      sourceRef("Nerona redemptions", "https://docs.nerona.xyz/redemptions", ["route", "capacity", "settlement"]),
+      sourceRef("Nerona fees and revenue", "https://docs.nerona.xyz/fees-revenue", ["fees"]),
+    ],
     notes: [
       "Permissioned M0 wrapper: KYC-gated to Nerona's private wealth platform clients; T-bill yield accrues to M0/Nerona rather than USDnr holders",
       "Fresh live reserve metadata reads the current M balance held by the USDnr extension as the directly redeemable bound and verifies the M0 SwapFacility path is not paused; if the live snapshot is unavailable, the route is left unrated instead of using a static supply heuristic",
+      "Fee bounded 2026-08-12 at 0 bps for the modeled USDnr -> M leg, which is the leg this config scores. The docs' 0.01% figure is the Uniswap V3 pool tier on the separate downstream wM -> USDC corridor, so it is not a fee of the modeled route; a holder continuing to USDC pays it plus AMM slippage on top.",
+      "Doc citations replaced 2026-08-12: the previously cited docs.nerona.finance host no longer resolves, and the current documentation lives at docs.nerona.xyz.",
     ],
   },
   "usdh-hermetica": {

@@ -168,17 +168,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: null,
   }),
   reviewed({
-    id: "fxd-fathom",
-    disposition: "defer",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Fathom documents CDP repayment and a StableSwap market, not broad FXD redemption against protocol collateral.",
-    rationale: "Debt repayment is position-specific and a swap facility is not automatically a redemption claim.",
-    evidenceNeeded: "Official ordinary-holder redemption mechanics and live capacity, fee, and settlement evidence.",
-    evidenceUrls: ["https://docs.fathom.fi/"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
-  }),
-  reviewed({
     id: "hchf-hedera-swiss-franc",
     disposition: "add",
     reasonCode: "holder-route-confirmed",
@@ -203,19 +192,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
       "Current route status, maximum capacity, claim settlement time, supported jurisdictions, and contract or operator evidence.",
     evidenceUrls: ["https://docs.stablehodl.com/product/trade-hlusd"],
     allowedRouteFamilyIfProven: "stablecoin-redeem",
-  }),
-  reviewed({
-    id: "hollar-hydrated",
-    disposition: "needs-research",
-    reasonCode: "capacity-unpublished",
-    blocker:
-      "The HSM conditionally buys HOLLAR only when its market logic permits and explicitly does not accept arbitrary amounts.",
-    rationale:
-      "The PSM family is proven, but callable capacity, trigger state, output, and fee evidence are not yet wired.",
-    evidenceNeeded:
-      "On-chain or protocol-API route status, buyback capacity, price formula, fees, and settlement certainty.",
-    evidenceUrls: ["https://docs.hydration.net/products/hollar/"],
-    allowedRouteFamilyIfProven: "psm-swap",
   }),
   reviewed({
     id: "home-homecoin",
@@ -257,13 +233,14 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://docs.indigoprotocol.io/"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-08-12", {
     id: "iusd-initia",
     disposition: "needs-research",
     reasonCode: "documentation-insufficient",
     blocker:
-      "Initia's maintained documentation does not identify an iUSD-specific unwrap, redemption contract, output asset, or capacity.",
-    rationale: "Generic bridge and DEX functionality cannot establish a redemption backstop for this specific asset.",
+      "Initia's maintained documentation does not identify an iUSD-specific unwrap, redemption contract, output asset, or capacity; the bridge page re-read on 2026-08-12 does not mention iUSD at all.",
+    rationale:
+      "The shape research suggests — burn iUSD, unlock AUSD0 locally, reverse the LayerZero route, then redeem through Agora — is assembled from generic bridge and issuer functionality, and no documented Move view or entry point exposes the vault's unlocked balance, the burn entrypoint, or a fee and settlement schedule.",
     evidenceNeeded:
       "Official iUSD product docs, contract address, holder exit mechanics, underlying asset, fees, and current status.",
     evidenceUrls: ["https://docs.initia.xyz/home/tools/bridge", "https://scan.initia.xyz"],
@@ -339,19 +316,17 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"],
     allowedRouteFamilyIfProven: "collateral-redeem",
   }),
-  reviewed({
+  reviewedOn("2026-08-12", {
     id: "mai-qidao",
     disposition: "defer",
-    reasonCode: "capacity-unpublished",
+    reasonCode: "documentation-insufficient",
     blocker:
-      "QiDao documents a permissionless three-day PSM withdrawal queue, but current withdrawable capacity is not published or wired.",
-    rationale: "A holder route exists, but without a capacity source it cannot yet receive a scoring config.",
+      "QiDao's Peg Stability Module, fee, and contract-address pages all return HTTP 404, so the three-day withdrawal queue can no longer be read from a live primary source.",
+    rationale:
+      "Search engines still serve a cached copy of the old PSM page, but a cached snapshot is not evidence that the route is documented today, and even that text describes a redemption fee without a numeric bound.",
     evidenceNeeded:
-      "Live PSM balances across active deployments, queue status, fees, and current contract verification.",
-    evidenceUrls: [
-      "https://docs.mai.finance/peg-stability-module",
-      "https://docs.mai.finance/functions/smart-contract-addresses",
-    ],
+      "A reachable official PSM page with the current queue duration and a numeric redemption fee, plus live PSM balances and contract verification for the active deployments.",
+    evidenceUrls: ["https://docs.mai.finance/"],
     allowedRouteFamilyIfProven: "queue-redeem",
   }),
   reviewed({
@@ -505,17 +480,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded: "Audited reserve evidence and binding official redemption terms backed by a live route.",
     evidenceUrls: ["https://alphapartner.vip/", "https://ap-organization-1.gitbook.io/alpha-partners"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewed({
-    id: "usdh-hubble",
-    disposition: "defer",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "Hubble documents USDH CDP repayment and liquidations but no broad holder redemption for vault collateral.",
-    rationale: "Only a borrower can use USDH to close that borrower's debt position.",
-    evidenceNeeded: "Official holder redemption docs or audited callable route available to ordinary holders.",
-    evidenceUrls: ["https://docs.hubbleprotocol.io"],
-    allowedRouteFamilyIfProven: "collateral-redeem",
   }),
   reviewed({
     id: "usdm-monetrix",
