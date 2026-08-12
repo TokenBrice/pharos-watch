@@ -1,8 +1,7 @@
 import type { ContractDeployment } from "@shared/types/core";
-import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
+import { getGeckoTerminalDiscoveryTarget } from "@shared/lib/dex-deployment-coverage";
 import { sleepWithSignal } from "../../lib/abort";
-import { CHAIN_META } from "@shared/lib/chains";
-import { GT_CHAIN_MAP } from "../../lib/chain-registry";
 import { RATE_LIMITS } from "../../lib/rate-limit";
 import { crawlTokenPools, createCrawlStats, type CrawlToken } from "../dex-liquidity/crawl-helpers";
 import { fetchGtTokenPools, getGtPoolType, parseGtPool } from "../dex-liquidity/geckoterminal-shared";
@@ -49,20 +48,22 @@ export async function crawlGeckoTerminalPoolsStage({
 }: CrawlGeckoTerminalPoolsStageOptions): Promise<GeckoTerminalPoolsStageResult> {
   const gtTokens: CrawlToken[] = [];
   const gtChainAddressToId = new Map<string, string>();
+  const deploymentAddressByQueryKey = new Map<string, string>();
   const providerChecks: DexDeploymentProviderCheck[] = [];
 
   for (const { chain, address } of coinTargets) {
-    const providers = CHAIN_META[chain]?.providers;
-    const gtNetwork = GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal;
-    if (!gtNetwork) continue;
+    const target = getGeckoTerminalDiscoveryTarget(chain, address);
+    if (!target) continue;
     if (cgPriceObservationTargets.has(buildChainAddressKey(chain, address))) continue;
     gtTokens.push({
-      sourceChain: gtNetwork,
+      sourceChain: target.network,
       ourChain: chain,
-      address: canonicalExitRouteScopedId(chain, address),
+      address: target.address,
       stablecoinId: context.stablecoinId,
     });
-    gtChainAddressToId.set(buildChainAddressKey(chain, address), context.stablecoinId);
+    const queryKey = buildChainAddressKey(chain, target.address);
+    gtChainAddressToId.set(queryKey, context.stablecoinId);
+    deploymentAddressByQueryKey.set(queryKey, address);
   }
 
   if (gtTokens.length === 0 || context.timeExceeded()) {
@@ -102,7 +103,8 @@ export async function crawlGeckoTerminalPoolsStage({
     onRequestResult: (token, status) => {
       providerChecks.push({
         chain: token.ourChain,
-        address: token.address,
+        address:
+          deploymentAddressByQueryKey.get(buildChainAddressKey(token.ourChain, token.address)) ?? token.address,
         provider: "geckoterminal",
         status,
       });

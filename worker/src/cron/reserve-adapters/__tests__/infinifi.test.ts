@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  return { ...actual, fetchOnchainMulticall3: vi.fn() };
+});
+
+import { fetchOnchainMulticall3 } from "../helpers";
 import {
   adaptInfiniFi,
   fetchInfiniFiReserves,
@@ -7,11 +14,143 @@ import {
   type InfiniFiProtocolData,
   type InfiniFiRateHistoryResponse,
 } from "../infinifi";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 
 const RATE_HISTORY_CACHE_KEY =
   "json-get:https://example.com/api/protocol/rate-history/siUSD?daysAgo=7:6000:null";
 
 const EMPTY_RATE_HISTORY: InfiniFiRateHistoryResponse = { code: "OK", data: { dataPoints: [] } };
+
+const REDEEM_CONTROLLER = "0xcb1747e89a43dedcf4a2b831a0d94859efec7601";
+const YIELD_SHARING = "0x90e91f5bfd9a0a4d925bf30b512add8cd2bbae3b";
+const BEFORE_REDEEM_HOOK = "0x4b2bfe49829de3632449928507452ee667f61395";
+const IUSD = "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c";
+const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const IUSD_ONE = 10n ** 18n;
+const USDC_ONE = 10n ** 6n;
+
+interface RouteState {
+  gatewayPaused: boolean;
+  controllerPaused: boolean;
+  yieldSharingPaused: boolean;
+  hookPaused: boolean;
+  unaccruedYield: bigint;
+  queueLength: bigint;
+  /** iUSD (18 decimals) waiting in the queue. */
+  enqueued: bigint;
+  fail?: boolean;
+}
+
+const OPEN_ROUTE: RouteState = {
+  gatewayPaused: false,
+  controllerPaused: false,
+  yieldSharingPaused: false,
+  hookPaused: false,
+  unaccruedYield: 925n * IUSD_ONE,
+  queueLength: 0n,
+  enqueued: 0n,
+};
+
+function word(value: bigint | boolean | string): `0x${string}` {
+  if (typeof value === "string") {
+    return `0x${value.replace(/^0x/, "").toLowerCase().padStart(64, "0")}` as `0x${string}`;
+  }
+  const uint = typeof value === "boolean" ? (value ? 1n : 0n) : value;
+  const unsigned = uint < 0n ? uint + (1n << 256n) : uint;
+  return `0x${unsigned.toString(16).padStart(64, "0")}` as `0x${string}`;
+}
+
+/**
+ * Answer the probe's three dependent multicall phases by label: the gateway
+ * registry resolves the controller and yield-sharing addresses before either
+ * can be read, and the hook address only exists after the controller batch.
+ */
+function primeRouteProbe(overrides: Partial<RouteState> = {}) {
+  const state = { ...OPEN_ROUTE, ...overrides };
+  vi.mocked(fetchOnchainMulticall3).mockImplementation((args: unknown) => {
+    if (state.fail) return Promise.resolve(null);
+    const { calls } = args as { calls: Array<{ label: string }> };
+    return Promise.resolve(calls.map(({ label }) => {
+      const returnData = ((): `0x${string}` => {
+        switch (label) {
+          case "gateway:paused": return word(state.gatewayPaused);
+          case "gateway:redeem-controller": return word(REDEEM_CONTROLLER);
+          case "gateway:yield-sharing": return word(YIELD_SHARING);
+          case "gateway:receipt-token": return word(IUSD);
+          case "rc:paused": return word(state.controllerPaused);
+          case "rc:asset-token": return word(USDC);
+          case "rc:hook": return word(BEFORE_REDEEM_HOOK);
+          case "rc:queue-length": return word(state.queueLength);
+          case "rc:enqueued": return word(state.enqueued);
+          case "rc:pending-claims": return word(0n);
+          case "rc:liquidity": return word(669n);
+          // 1 iUSD converts to 1 USDC at the controller's live ratio.
+          case "rc:receipt-to-asset": return word(USDC_ONE);
+          case "ys:paused": return word(state.yieldSharingPaused);
+          case "ys:unaccrued-yield": return word(state.unaccruedYield);
+          case "hook:paused": return word(state.hookPaused);
+          default: return word(0n);
+        }
+      })();
+      return { label, success: true, returnData };
+    }));
+  });
+}
+
+const ROUTE_URL = "https://example.com/infinifi";
+
+function routeResponse(overrides: {
+  liquid?: number;
+  supply?: number;
+  pendingRedemptions?: number;
+} = {}): InfiniFiProtocolData {
+  return {
+    code: "OK",
+    data: {
+      stats: {
+        asset: {
+          totalTVLAssetNormalized: 100,
+          totalLiquidAssetNormalized: overrides.liquid ?? 35,
+          ...(overrides.pendingRedemptions != null
+            ? { pendingRedemptionsAssetNormalized: overrides.pendingRedemptions }
+            : {}),
+        },
+        // The live feed nests receipt supply under stats; a payload that only
+        // carried data.receipt would leave the capacity ratio unemittable.
+        receipt: { totalSupplyNormalized: overrides.supply ?? 80 },
+      },
+      farms: [
+        {
+          name: "spark-sUSDC-refcode",
+          label: "Spark sUSDC",
+          assetsNormalized: 100,
+          type: "LIQUID",
+          underlyingAssetSymbol: "sUSDC",
+        },
+      ],
+    },
+  };
+}
+
+function fetchRouteReserves(response: InfiniFiProtocolData = routeResponse()) {
+  return fetchInfiniFiReserves(
+    { id: "infinifi" } as never,
+    {
+      adapter: "infinifi",
+      version: 1,
+      semantics: "collateral-mix",
+      inputs: { primary: { kind: "http-json", url: ROUTE_URL } },
+    },
+    new AbortController().signal,
+    {
+      requestCache: new Map<string, Promise<unknown>>([
+        [`json-get:${ROUTE_URL}:12000:null`, Promise.resolve(response)],
+        [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
+      ]),
+    } as never,
+  );
+}
 
 const SAMPLE_RESPONSE: InfiniFiProtocolData = {
   code: "OK",
@@ -53,6 +192,10 @@ const SAMPLE_RESPONSE: InfiniFiProtocolData = {
 };
 
 describe("adaptInfiniFi", () => {
+  beforeEach(() => {
+    vi.mocked(fetchOnchainMulticall3).mockReset();
+  });
+
   it("allows verified freshness (rate-history probe) with unverified fallback", () => {
     expect(LIVE_RESERVE_ADAPTER_DEFINITIONS.infinifi.validation.allowedFreshnessModes).toEqual([
       "verified",
@@ -313,64 +456,86 @@ describe("adaptInfiniFi", () => {
     });
   });
 
-  it("surfaces queue depth and route-status source from the protocol payload", async () => {
-    const url = "https://example.com/infinifi";
-    const response: InfiniFiProtocolData = {
-      code: "OK",
-      data: {
-        stats: {
-          asset: {
-            totalTVLAssetNormalized: 100,
-            totalLiquidAssetNormalized: 35,
-            pendingRedemptionsAssetNormalized: 12,
-          },
-        },
-        receipt: {
-          totalSupplyNormalized: 80,
-        },
-        farms: [
-          {
-            name: "spark-sUSDC-refcode",
-            label: "Spark sUSDC",
-            assetsNormalized: 100,
-            type: "LIQUID",
-            underlyingAssetSymbol: "sUSDC",
-          },
-        ],
-      },
-    };
+  it("reports an open route with a zero queue when every on-chain gate reads unpaused", async () => {
+    primeRouteProbe();
 
-    const result = await fetchInfiniFiReserves(
-      { id: "infinifi" } as never,
-      {
-        adapter: "infinifi",
-        version: 1,
-        semantics: "collateral-mix",
-        inputs: { primary: { kind: "http-json", url } },
-      },
-      new AbortController().signal,
-      {
-        requestCache: new Map<string, Promise<unknown>>([
-          [`json-get:${url}:12000:null`, Promise.resolve(response)],
-          [RATE_HISTORY_CACHE_KEY, Promise.resolve(EMPTY_RATE_HISTORY)],
-        ]),
-      } as never,
-    );
+    const result = await fetchRouteReserves(routeResponse({ pendingRedemptions: 0 }));
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
-      pendingRedemptionsUsd: 12,
+      pendingRedemptionsUsd: 0,
       redemption: {
         capacityUsd: 35,
         capacityRatioOfSupply: 35 / 80,
         capacityKind: "live-queue",
-        freshnessKind: "unverified",
+        freshnessKind: "same-run-api",
         routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        queueDepthUsd: 12,
-        sourceUrls: [url],
+        routeStatusSource: "onchain",
+        queueDepthUsd: 0,
+        sourceUrls: [
+          ROUTE_URL,
+          "https://docs.infinifi.xyz/dev-docs/gateway",
+          "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller",
+        ],
+      },
+      details: {
+        // The route proof is additive: it must not displace the freshness detail.
+        freshnessSource: "protocol-stats-api",
+        redeemRoute: {
+          redeemController: REDEEM_CONTROLLER,
+          yieldSharing: YIELD_SHARING,
+          beforeRedeemHook: BEFORE_REDEEM_HOOK,
+          queueLength: 0,
+          controllerLiquidityUsd: 0.000669,
+        },
       },
     });
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("infinifi") ?? undefined }).valid).toBe(true);
+  });
+
+  it("degrades the route and prices the queue when redemptions are already enqueued", async () => {
+    primeRouteProbe({ queueLength: 3n, enqueued: 1_250n * IUSD_ONE });
+
+    const result = await fetchRouteReserves();
+
+    expect(result.metadata?.redemption).toMatchObject({
+      routeStatus: "degraded",
+      routeStatusSource: "onchain",
+      queueDepthUsd: 1_250,
+      capacityUsd: 35,
+    });
+    expect(result.metadata?.redemption).toHaveProperty(
+      "routeStatusReason",
+      expect.stringContaining("queueLength() is 3"),
+    );
+  });
+
+  it("reports a paused route when a gate is closed or losses are unaccrued", async () => {
+    for (const closed of [
+      { controllerPaused: true },
+      { gatewayPaused: true },
+      { hookPaused: true },
+      { unaccruedYield: -1n },
+    ]) {
+      primeRouteProbe(closed);
+      const result = await fetchRouteReserves();
+      expect(result.metadata?.redemption).toMatchObject({
+        routeStatus: "paused",
+        routeStatusSource: "onchain",
+      });
+    }
+  });
+
+  it("withholds redemption telemetry when the route probe fails", async () => {
+    primeRouteProbe({ fail: true });
+
+    const result = await fetchRouteReserves();
+
+    expect(result.metadata).not.toHaveProperty("redemption");
+    expect(result.metadata?.details).not.toHaveProperty("redeemRoute");
+    expect(result.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "infinifi-redemption-route-unreadable", effect: "info" }),
+    ]));
   });
 
   it("falls back to unverified freshness when the optional rate-history probe has malformed data points", async () => {
@@ -412,6 +577,7 @@ describe("adaptInfiniFi", () => {
   });
 
   it("verifies freshness from the siUSD rate-history probe when it matches the live staked rate", async () => {
+    primeRouteProbe();
     const url = "https://example.com/infinifi";
     const response: InfiniFiProtocolData = {
       ...SAMPLE_RESPONSE,

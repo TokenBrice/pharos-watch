@@ -506,7 +506,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: 30 * 60,
     scheduleKey: "halfHourlyChartsOffset",
     triggerMode: "shared",
-    maxConnections: 0, // Exact V9 compiler input is D1-only after its source snapshot is built.
+    maxConnections: 3, // Transfer materiality observes up to three chains after the exact input is built.
     connectionGroup: "half-hourly-charts-chain",
   },
   {
@@ -694,7 +694,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "daily",
     scheduleKey: "daily0300Utc",
     triggerMode: "isolated",
-    maxConnections: 1, // DB duration aggregates
+    maxConnections: 0, // D1-only duration aggregates; no outbound fetches.
   },
 ] as const;
 

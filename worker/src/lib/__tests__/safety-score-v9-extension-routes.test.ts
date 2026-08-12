@@ -1054,8 +1054,8 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     const observation = dexObservation("measured-executable-depth", true);
     observation.observationHistory = {
       ...observation.observationHistory!,
-      observationWindowStartedAt: NOW - 4_000,
-      observationWindowEndedAt: NOW - 3_601,
+      observationWindowStartedAt: NOW - 7_300,
+      observationWindowEndedAt: NOW - 7_201,
     };
     (fixedInput as { dexLiqMap: Record<string, unknown> }).dexLiqMap = {
       "usdc-circle": { exitRouteObservations: [observation] },
@@ -1066,7 +1066,7 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     });
   });
 
-  it("uses the reviewed StableSwap adapter's two-hour confidence window", () => {
+  it("uses the uniform two-hour measured-adapter confidence window", () => {
     const fixedInput = fixedInputStub(undefined);
     const observation = dexObservation(
       "measured-executable-depth",
@@ -1090,6 +1090,15 @@ describe("buildDexRouteReview model-confidence derivation", () => {
     });
 
     delete observation.adapterProfileId;
+    expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
+      modelConfidence: "high",
+    });
+
+    observation.observationHistory = {
+      ...observation.observationHistory!,
+      observationWindowStartedAt: NOW - 7_300,
+      observationWindowEndedAt: NOW - 7_201,
+    };
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "usdc-circle")[0]).toMatchObject({
       modelConfidence: "medium",
     });

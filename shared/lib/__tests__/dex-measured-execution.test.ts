@@ -410,7 +410,7 @@ describe("DEX measured execution contract", () => {
   it("fails closed on stale, tampered, and price-divergent profiles", () => {
     const nowSec = 20_000;
     const tampered = profile(nowSec);
-    tampered.quotedAt = nowSec - 3_601;
+    tampered.quotedAt = nowSec - 7_201;
     tampered.marginalOutputRatio = 0.95;
     tampered.quoteProof[0]!.amountOutRaw = "1030000000";
     tampered.capacityCurve[0]!.executableUsd = 99_999;
@@ -428,7 +428,7 @@ describe("DEX measured execution contract", () => {
     ]));
   });
 
-  it("gives only the reviewed Curve StableSwap adapters a two-hour profile ceiling", () => {
+  it("gives every measured adapter the shared two-hour profile ceiling", () => {
     const nowSec = 20_000;
     const adapterProfileId = "curve-stableswap-main-registry-get-dy-v1";
     const targetId = buildDexMeasuredExecutionTargetId({
@@ -456,7 +456,7 @@ describe("DEX measured execution contract", () => {
 
     expect(getDexMeasuredExecutionFreshnessMaxSec(adapterProfileId)).toBe(7_200);
     expect(getDexMeasuredExecutionFreshnessMaxSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
-    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(3_600);
+    expect(getDexMeasuredExecutionFreshnessMaxSec("uniswap-v3-quoter-v2")).toBe(7_200);
     expect(validateDexMeasuredExecutionProfile({
       profile: retainedProfile,
       quotedTarget: currentTarget,

@@ -7,9 +7,15 @@ import {
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
+import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
+import { safetyScoreV9TransferDeploymentKey } from "./safety-score-v9-extension-transfer";
 import type { SafetyScoreV9CompilerInput } from "./safety-score-v9-native-input";
 import { safetyScoreV9ChainRows } from "./safety-score-v9-supply-attribution";
 import { normalizeReviewedDeploymentAddress } from "./safety-score-v9-supply-attribution-contract";
+import {
+  exactInputBoundTransferMaterialityPacket,
+  type SafetyScoreV9TransferMaterialityGeneration,
+} from "./safety-score-v9-transfer-materiality";
 import {
   XAUT0_ADAPTER_FAILURE_DOMAIN,
   XAUT0_COMMON_FAILURE_DOMAIN,
@@ -17,6 +23,20 @@ import {
 
 type ExtensionAsset = SafetyScoreV9FactSetExtensionV2["assets"][number];
 type SupplyReview = NonNullable<ExtensionAsset["supplyReview"]>;
+const RAW_UNIT_SHARE_SCALE = 10n ** 18n;
+
+export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze([
+  "sfrxusd-frax",
+  "wsrusd-reservoir",
+].sort(compareText));
+const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
+  SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS,
+);
+
+export interface BuildSafetyScoreV9SupplyReviewOptions {
+  meta?: V9ExtensionRegistryMeta;
+  transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+}
 
 function canonicalChainKey(raw: string): string {
   return resolveChainId(raw) ?? raw.toLowerCase();
@@ -243,6 +263,119 @@ function buildRepresentationGroupSupplyReview(
 }
 
 /**
+ * Allocates aggregate USD over exact raw totalSupply() observations only for
+ * the reviewed inventories whose routes are independent native-mint or direct
+ * burn-mint liabilities. Lock-mint and wrapped representations are excluded:
+ * their deployment totals can describe the same liability more than once.
+ */
+function buildIndependentLiabilitySupplyReview(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions,
+): SupplyReview | null {
+  if (
+    !INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET.has(assetId) ||
+    !profile ||
+    !options.meta ||
+    Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length > 0
+  ) return null;
+
+  const packet = exactInputBoundTransferMaterialityPacket({
+    assetId,
+    meta: options.meta,
+    generation: options.transferMaterialityGeneration ?? null,
+    registryFingerprint: fixedInput.registryFingerprint,
+    baseInputGenerationId: fixedInput.baseInputGenerationId,
+    clockSec: fixedInput.clockSec,
+  });
+  if (packet === null) return null;
+
+  const routes = profile.routes ?? [];
+  if (routes.length === 0 || routes.length !== packet.authoritativeDeploymentKeys.length) return null;
+  const routeByDeploymentKey = new Map<string, (typeof routes)[number]>();
+  for (const route of routes) {
+    const chainId = resolveChainId(route.destinationChain);
+    if (chainId === null || route.representationId !== undefined) return null;
+    const deploymentKey = safetyScoreV9TransferDeploymentKey(
+      chainId,
+      normalizeReviewedDeploymentAddress(chainId, route.contractAddress),
+    );
+    const independentLiabilitySemantics =
+      route.semantics === "native-mint"
+        ? route.issuanceModel === "native-issuance" && route.routeClass === "native"
+        : route.semantics === "burn-mint"
+          ? route.issuanceModel === "bridge-representation" && route.routeClass !== "native"
+          : false;
+    if (
+      route.id !== deploymentKey ||
+      route.reviewDisposition !== "reviewed" ||
+      !independentLiabilitySemantics ||
+      routeByDeploymentKey.has(deploymentKey)
+    ) return null;
+    routeByDeploymentKey.set(deploymentKey, route);
+  }
+  if (
+    packet.authoritativeDeploymentKeys.some((deploymentKey) => !routeByDeploymentKey.has(deploymentKey)) ||
+    routeByDeploymentKey.size !== packet.authoritativeDeploymentKeys.length
+  ) return null;
+
+  const aggregateSupplyUsd = Object.values(
+    fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
+  ).reduce((sum, value) => sum + value, 0);
+  if (!Number.isFinite(aggregateSupplyUsd) || aggregateSupplyUsd <= 0) return null;
+
+  const maxDecimals = Math.max(...packet.observations.map((row) => row.decimals));
+  const normalizedRawUnits = packet.observations.map(
+    (row) => BigInt(row.rawTokenUnits) * 10n ** BigInt(maxDecimals - row.decimals),
+  );
+  const normalizedTotal = normalizedRawUnits.reduce((sum, value) => sum + value, 0n);
+  if (normalizedTotal <= 0n) return null;
+  let residualIndex = normalizedRawUnits.length - 1;
+  while (residualIndex >= 0 && normalizedRawUnits[residualIndex] === 0n) residualIndex -= 1;
+  if (residualIndex < 0) return null;
+
+  let allocatedUsd = 0;
+  const supplyUsdByIndex = normalizedRawUnits.map((rawUnits, index) => {
+    if (index === residualIndex) return 0;
+    const shareScaled = (rawUnits * RAW_UNIT_SHARE_SCALE) / normalizedTotal;
+    const supplyUsd = aggregateSupplyUsd * (Number(shareScaled) / Number(RAW_UNIT_SHARE_SCALE));
+    allocatedUsd += supplyUsd;
+    return supplyUsd;
+  });
+  const residualUsd = aggregateSupplyUsd - allocatedUsd;
+  const residualToleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
+  if (!Number.isFinite(residualUsd) || residualUsd < -residualToleranceUsd) return null;
+  supplyUsdByIndex[residualIndex] = Math.max(0, residualUsd);
+
+  const failureDomains: SupplyReview["failureDomains"] = [];
+  const selectedBridgeRoutes = packet.observations.map((observation, index) => {
+    const route = routeByDeploymentKey.get(observation.deploymentKey)!;
+    for (const key of route.failureDomainKeys?.length ? route.failureDomainKeys : [route.id]) {
+      failureDomains.push({ kind: "bridge-route", key });
+    }
+    const supplyUsd = supplyUsdByIndex[index]!;
+    return {
+      deploymentRouteKey: route.id,
+      supplyUsd,
+      supplyShare: supplyUsd / aggregateSupplyUsd,
+      reviewState: "selected-reviewed" as const,
+      reviewedRouteKind: route.semantics === "native-mint" ? ("native" as const) : ("controlled" as const),
+    };
+  });
+
+  return {
+    selectedBridgeRoutes,
+    selectedRouteSupplyShare: 1,
+    unknownRouteSupplyShare: 0,
+    unreviewedRouteSupplyShare: 0,
+    failureDomains: [...new Map(failureDomains.map((domain) => [`${domain.kind}:${domain.key}`, domain])).values()].sort(
+      (left, right) => compareText(`${left.kind}:${left.key}`, `${right.kind}:${right.key}`),
+    ),
+  };
+}
+
+/**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. Chains without a unique reviewed route row stay
  * in the unknown share instead of being attributed to any route.
@@ -251,6 +384,7 @@ export function buildSafetyScoreV9SupplyReview(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
   profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
   const representationGroupReview =
     buildRepresentationGroupSupplyReview(
@@ -277,6 +411,14 @@ export function buildSafetyScoreV9SupplyReview(
   ) {
     return null;
   }
+
+  const independentLiabilityReview = buildIndependentLiabilitySupplyReview(
+    fixedInput,
+    assetId,
+    profile,
+    options,
+  );
+  if (independentLiabilityReview) return independentLiabilityReview;
 
   const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
   const chains = Object.keys(chainRows).sort(compareText);

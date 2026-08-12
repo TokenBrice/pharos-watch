@@ -12,11 +12,11 @@ import {
 } from "./shared";
 import {
   REVIEWED_DIRECT_REDEMPTION_AT,
+  REVIEWED_EXIT_CREDIT_WAVE3_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_MAY_BATCH_AT,
   REVIEWED_REMEDIATION_AT,
   REVIEWED_STABLECOIN_AUDIT_AT,
-  REVIEWED_WRAPPER_WAVE_AT,
 } from "./review-dates";
 const REVIEWED_HIVE_HBD_AT = REVIEWED_MAY_BATCH_AT;
 // Mento redemption batch: 13 coins' live reserve sync now reads direct
@@ -321,10 +321,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "ussd-sonic-labs": {
       ...collateralRedeemBase,
       ...documentedBoundSupplyFull(REVIEWED_REMEDIATION_AT),
+      capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
-      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_AT,
-      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 75971769."),
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
       docs: [
         sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
           "route",
@@ -340,7 +341,9 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         sourceRef("Sonic USSD page", "https://www.soniclabs.com/ussd", ["route", "capacity", "settlement"]),
       ],
       notes: [
-        "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 75971769 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
+        "Sonic's public page describes a broader upstream supported-USD-asset set, but the deployed direct holder route is the USSD BrandedCustodian. At Sonic block 77432523 its custodianTkn() returned Sonic frxUSD (0x80Eede496655FB9047dd39d9f418d5483ED600df).",
+        "Fresh reserve telemetry reads the BrandedCustodian's totalAssets() (its frxUSD balance) as the live executable exit bound; when the read is unavailable the route is left unrated instead of assuming full-supply immediacy.",
+        "Re-read 2026-08-12 at Sonic block 77432523: totalAssets() and frxUSD.balanceOf(custodian) both returned 2,081,316.47, confirming the escrow read measures the asset the redemption pays out; redeemFee() was still 0 and paused() reverts, so the verified source exposes no pause surface.",
       ],
     },
     "reusd-resupply": {
@@ -456,7 +459,13 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     },
     "usdp-parallel": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
+      ...documentedBoundSupplyFull("2026-08-12"),
+      // Live-only since v4.35: the escrow-balance adapter sums the
+      // Parallelizer's per-collateral getIssuedByCollateral reads (verified
+      // proportional basket redemption, so the sum is the honest bound); when
+      // the read is unavailable the route is left unrated instead of assuming
+      // full-supply immediacy.
+      capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
       outputAssetType: "mixed-collateral",
       outputAssets: [
         "asset:frxusd",
@@ -542,10 +551,12 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "satusd-river": {
       ...collateralRedeemBase,
       ...reviewedDirectRedemptionSupplyFull,
-      reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
       outputAssets: ["asset:btc", "asset:eth", "asset:bnb"],
-      costModel: undisclosedReviewedFee(
-        "Omni-CDP with $1-of-collateral redemption arbitrage; public fee schedule not disclosed",
+      costModel: documentedVariableFee(
+        "Redemption fee = redemptionFeeFloor (50 bps) + baseRate, where baseRate rises with redeemed supply and decays over time",
+        "formula",
       ),
       docs: [
         sourceRef("River satUSD redemption docs", "https://docs.river.inc/products/editor/redemption", [
@@ -554,15 +565,24 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "fees",
         ]),
         sourceRef("River FAQ", "https://docs.river.inc/intro/faq", ["route", "capacity"]),
+        sourceRef(
+          "Satoshi Protocol TroveManager source (pinned)",
+          "https://github.com/Satoshi-Protocol/satoshi-core/blob/7f5eddaed965904fde10ea1d40c4c4b3ea118ada/src/core/TroveManager.sol",
+          ["fees"],
+        ),
       ],
       notes: [
         "Output declared 2026-07-19: River docs state holders can exchange 1 satUSD for $1 worth of collateral from the least-collateralized positions, and the FAQ names the collateral classes as BTC, ETH, BNB, and other liquid staking tokens; the declared set covers the three named bluechip classes while individual LSTs (e.g. solvBTC, LBTC) are not exhaustively enumerated in public docs.",
+        "Fee model corrected 2026-08-12: the schedule is disclosed, not undisclosed. River documents the fee as `baseRate + 0.5%`, and the deployed TroveManager exposes it through `getRedemptionRate()`/`getRedemptionRateWithDecay()` as `min(redemptionFeeFloor + baseRate, maxRedemptionFee)`.",
+        "No static fee bound is declared: `maxRedemptionFee` is a per-branch governance parameter constrained only by `maxRedemptionFee <= DECIMAL_PRECISION` (100%), so the documented ceiling is two orders of magnitude above the 200 bps admissible bound. The live adapter instead reads each branch's `getRedemptionRateWithDecay()` in the same run, so the current cost comes from telemetry rather than from a reviewed ceiling.",
+        "Fresh reserve telemetry reads per-chain trove debt through the Satoshi app's `getGlobalSystemBalances()` as the executable exit bound, after checking that `debtToken()` still round-trips to this coin's own satUSD deployment and that the global TCR clears each branch MCR. The prior documented-bound full-supply model is dropped with no fallback: satUSD is largely bridged or Smart-Vault-minted rather than trove-backed, so total supply never described what the redemption engine could honor, and an unavailable read now leaves the route unrated instead of restoring that figure.",
       ],
     },
     "doc-money-on-chain": {
       ...collateralRedeemBase,
       outputAssets: ["asset:btc"],
-      ...documentedBoundSupplyFull(REVIEWED_WRAPPER_WAVE_AT),
+      capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.95, confidence: "documented-bound" },
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
       costModel: undisclosedReviewedFee(
         "Money On Chain docs describe permissionless DOC redemption into RBTC, but the reviewed public materials do not publish a single fixed numeric redemption fee schedule",
       ),
@@ -581,7 +601,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       ],
       notes: [
         "Money On Chain documents a permissionless DOC -> RBTC redemption path for the BTC-backed system, so Pharos models the direct collateral exit rather than relying only on secondary-market liquidity",
-        "The current route remains documented-bound until a dedicated Rootstock reserve adapter exposes fresh current protocol capacity and fee telemetry",
+        "Fresh reserve telemetry reads MoCState.freeDoc() — the DOC amount currently redeemable through redeemFreeDoc — identity-bound to the tracked DOC token through the MoC connector; the 95% documented ratio applies only when the live read is unavailable.",
+        "Verified 2026-08-12: MoCState 0xb9C42EFc8ec54490a37cA91c423F7285Fa01e257 returned freeDoc() = 2,874,833.75, its connector() and the connector's docToken() resolved to the tracked Rootstock DOC deployment, and the probe's pause target read false. The documented fallback stays because DOC is also deployed on Arbitrum and Ethereum while only the Rootstock-local balance is redeemable, and Rootstock exposes a single public RPC.",
       ],
     },
     "usbd-bima": {
@@ -605,23 +626,67 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     },
     "deuro-deuro": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull("2026-04-16"),
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(
-        "dEURO allows burning tokens against collateralized positions below the position's redemption threshold; public docs reviewed describe a governance-managed fee schedule without a single fixed bps number",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: "2026-08-12",
+      outputAssetType: "stable-basket",
+      unresolvedOutputAssetKeys: [
+        "asset:eurt",
+        "eurs-stasis",
+        "asset:veur",
+        "eurc-circle",
+        "eurr-stablr",
+        "europ-schuman",
+        "euri-banking-circle",
+        "asset:eure-legacy-ethereum",
+        "asset:eura",
+      ],
+      unresolvedOutputDisposition: "reviewed-external",
+      costModel: fixedFee(
+        0,
+        "Verified StablecoinBridge source burns dEURO and transfers the decimal-converted underlying amount 1:1 with no fee deduction",
       ),
       docs: [
-        sourceRef("dEURO documentation", "https://docs.deuro.com/", ["route", "capacity"]),
-        sourceRef("dEURO app", "https://app.deuro.com/", ["route"]),
+        sourceRef("dEURO contract registry", "https://docs.deuro.com/smart-contracts", [
+          "route",
+          "capacity",
+          "access",
+        ]),
+        sourceRef("dEURO stablecoin bridges", "https://docs.deuro.com/swap", [
+          "route",
+          "capacity",
+          "fees",
+          "settlement",
+        ]),
+        sourceRef(
+          "dEURO StablecoinBridge source",
+          "https://github.com/d-EURO/smartContracts/blob/develop/contracts/StablecoinBridge.sol",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Verified EURC StablecoinBridge deployment",
+          "https://eth.blockscout.com/address/0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1?tab=contract",
+          ["route", "capacity", "fees", "settlement"],
+        ),
       ],
       notes: [
-        "Frankencoin-fork CDP: dEURO is minted against position-specific collateral and burned at par against positions below their redemption threshold, without an external stablecoin target rail",
+        "The modeled holder exit is the permissionless StablecoinBridge burn rail, not position collateral: each bridge burns dEURO and atomically transfers its configured Euro stablecoin after decimal conversion.",
+        "Live reserve sync identity-gates all nine registry bridges against their exact underlying token, underlying decimals, the tracked dEURO contract, and dEURO isMinter(bridge), then sums idle underlying inventory. Any failed read or identity mismatch withholds the entire redemption telemetry block; there is no supply-ratio or fixed-USD fallback.",
+        "Verified at Ethereum block 25737329: EURT 0; EURS 0.51; VEUR 0; EURC 456,236.347273; EURR 0; EUROP 0; EURI 0.121078948117731513; EURE 56.444074572681000575; EURA 0.013878229134009314. All eur() and dEURO() identities, token decimals, and isMinter checks passed; total idle inventory was 456,293.436304749932741402 EUR.",
+        "Capacity is stored in USD as required by reserve-sync metadata. The adapter derives EUR/USD from the same dEURO price payload as price.usd / price.eur, avoiding a false 1 EUR = 1 USD assumption; the live review reference was 1.150811321981997 USD/EUR ($525,107.65 capacity).",
+        "The basket remains unresolved under the July 2026 completeness rule. EURS, EURC, EURR, EUROP, and EURI map to exact tracked deployments; EURT, VEUR, EURA, and the legacy Ethereum EURE token at 0x3231...273f do not, so publishing only the five tracked members would falsely resolve the nine-member route.",
+        "Blockscout verified six bridge deployments as StablecoinBridge with the fee-free burn path; Sourcify exact runtime/creation matches verified the three deployments absent from Blockscout source (EURR, EUROP, EURA).",
       ],
     },
     "cjpy-yamato": {
       ...collateralRedeemBase,
       outputAssets: ["asset:eth"],
-      ...documentedBoundSupplyFull("2026-04-16"),
+      ...documentedBoundSupplyFull("2026-08-12"),
+      // Live-only since v4.34: the Yamato adapter reads the priority
+      // registry's redeemable cap each run (converted JPY -> ETH -> USD
+      // through the protocol oracle and the shared ETH/USD reference); when
+      // the read is unavailable the route is left unrated instead of
+      // assuming full-supply immediacy.
+      capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "bluechip-collateral",
       costModel: documentedVariableFee(
         "Yamato docs describe on-chain CJPY-for-ETH redemption against the riskiest pledge; fee structure is set by protocol mechanics rather than a single fixed bps number",
@@ -731,8 +796,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssets: ["asset:zeph"],
       executionModel: "rules-based-nav",
       outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(
-        "Zephyr conversion fees are absorbed by reserves and depend on protocol conversion-rate mechanics rather than a single published fixed bps fee",
+      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
+      costModel: fixedFee(
+        10,
+        "Zephyr's consensus RingCT verification deducts a fixed 0.1% conversion fee from the ZSD/ZEPH exchange rate on every REDEEM_STABLE conversion",
       ),
       docs: [
         sourceRef("Zephyr repository overview", "https://github.com/ZephyrProtocol/zephyr", [
@@ -740,6 +807,11 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
           "capacity",
           "fees",
         ]),
+        sourceRef(
+          "Zephyr RingCT conversion-fee source (pinned)",
+          "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/ringct/rctSigs.cpp",
+          ["fees"],
+        ),
         sourceRef("Zephyr conversions dashboard", "https://zephyrprotocol.com/network/conversions", ["route", "fees"]),
         sourceRef("Zephyr integration documentation", "https://zephyrprotocol.com/documentation", [
           "route",
@@ -750,6 +822,8 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       notes: [
         "Zephyr implements a Djed-inspired native reserve where users can mint or redeem ZSD against ZEPH base-coin collateral, with oracle and reserve-ratio rules governing execution",
         "Modeled as protocol collateral redemption into ZEPH rather than issuer fiat redemption; Pharos does not currently have native Zephyr-chain reserve telemetry, so capacity remains source-reviewed documented-bound",
+        "Fee bound declared 2026-08-12: the pinned source computes `conversion_fee = exchange_128 / 1000` in the REDEEM_STABLE branch, a fixed 10 bps deduction enforced by consensus rather than a governance-settable parameter. The branch is gated on `hf_version >= HF_VERSION_V5` (5) and Zephyr mainnet has run hard fork 11 since block 536000 (June 2025), so 10 bps is the fee in force today; the pre-HF5 200 bps path is unreachable. This mirrors the ZYS bound shipped in v4.33 from the same consensus source.",
+        "The fee bound is separate from the reserve-ratio haircut: below full collateralization the protocol keeps redemption enabled but pays out at reserve divided by circulating ZSD, which the capacity model rather than the cost model represents.",
       ],
     },
     "usdn-smardex": {

@@ -11,6 +11,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.992",
+    title: "Aligned measured-quote freshness with the two-hour publication cadence",
+    date: "2026-08-12",
+    effectiveAt: 1786492800,
+    summary:
+      "All measured DEX exit-route adapters now share the two-hour freshness ceiling the reviewed Curve StableSwap adapters already used, matching the two-hour score-bearing publication cadence introduced in 5.991.",
+    impact: [
+      "Half-hourly Safety Score V9 preparations no longer derate measured DEX route confidence from high to medium on the runs that fall 60-120 minutes after an on-schedule liquidity publication, which had flipped several A-boundary grades on alternate score runs",
+      "A missed liquidity publication still expires measured evidence: profiles older than two hours revert to medium confidence exactly as before",
+      "Quote measurement, capacity curves, route selection, the Liquidity Score formula, and all other freshness gates are unchanged",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.991",
     title: "Separated DEX price, score, and shadow cadences",
     date: "2026-08-10",

@@ -17,6 +17,7 @@ const mockGetCacheUpdatedAt = vi.fn();
 const mockLoadStablecoinsCache = vi.fn();
 const mockCapturePegProvenance = vi.fn();
 const mockBuildV9PegProvenanceSeed = vi.fn();
+const mockObserveTransferMateriality = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", async (importOriginal) => {
   const original = await importOriginal<typeof import("@shared/lib/stablecoins/registry")>();
@@ -60,6 +61,10 @@ vi.mock("../../lib/safety-score-v9-peg-provenance", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../lib/safety-score-v9-peg-provenance")>()),
   captureSafetyScoreV9PegProvenanceById: mockCapturePegProvenance,
   buildSafetyScoreV9PegProvenanceSeedCacheEntry: mockBuildV9PegProvenanceSeed,
+}));
+
+vi.mock("../../lib/safety-score-v9-transfer-materiality-observer", () => ({
+  observeSafetyScoreV9TransferMaterialityGeneration: mockObserveTransferMateriality,
 }));
 
 const {
@@ -187,6 +192,7 @@ describe("prepareSafetyScoreV9Input", () => {
       mockLoadStablecoinsCache,
       mockCapturePegProvenance,
       mockBuildV9PegProvenanceSeed,
+      mockObserveTransferMateriality,
     ]) {
       mock.mockReset();
     }
@@ -211,6 +217,17 @@ describe("prepareSafetyScoreV9Input", () => {
       value: JSON.stringify({ seed: "v9-peg-provenance", safetyScoreIdentity }),
       storedBytes: 320,
     }));
+    mockObserveTransferMateriality.mockImplementation((input) =>
+      ({
+        schemaVersion: 1,
+        kind: "safety-score-v9-transfer-materiality-generation",
+        sourceBaseInputGenerationId: input.baseInputGenerationId,
+        registryFingerprint: input.registryFingerprint,
+        capturedAtSec: input.scoringClockSec,
+        observationsByAssetId: {},
+        generationId: `safety-score-v9-transfer-materiality:v1:${"a".repeat(64)}`,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -225,6 +242,7 @@ describe("prepareSafetyScoreV9Input", () => {
     expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
       "report-cards:fixed-input:exact",
       "report-cards:v9-peg-provenance-seed:exact",
+      "safety-score-v9:transfer-materiality-generation:v1",
     ]);
 
     const envelope = JSON.parse(entries[0].value) as Record<string, unknown>;
@@ -244,15 +262,74 @@ describe("prepareSafetyScoreV9Input", () => {
     expect(mockBuildV9PegProvenanceSeed.mock.calls[0]![0].safetyScoreIdentity).toEqual(
       envelope.safetyScoreIdentity,
     );
+    const observedTransferInput = mockObserveTransferMateriality.mock.calls[0]![0];
+    const transferMateriality = JSON.parse(entries[2].value) as Record<string, unknown>;
+    expect(transferMateriality).toMatchObject({
+      sourceBaseInputGenerationId:
+        (envelope.safetyScoreIdentity as { baseInputGenerationId: string }).baseInputGenerationId,
+      registryFingerprint: observedTransferInput.registryFingerprint,
+      capturedAtSec: observedTransferInput.scoringClockSec,
+    });
+    expect(mockObserveTransferMateriality).toHaveBeenCalledWith(expect.objectContaining({
+      baseInputGenerationId:
+        (envelope.safetyScoreIdentity as { baseInputGenerationId: string }).baseInputGenerationId,
+      registryFingerprint: observedTransferInput.registryFingerprint,
+      scoringClockSec: observedTransferInput.scoringClockSec,
+    }));
 
     const metadata = JSON.parse(String(result.metadata));
     expect(metadata.activeAssets).toBe(1);
     expect(metadata.pegAnalyticsPublished).toBe(true);
     expect(metadata.dexGenerationId).toBe(DEX_GENERATION_ID);
+    expect(metadata.transferMateriality).toMatchObject({
+      status: "published",
+      generationId: transferMateriality.generationId,
+      observedAssetCount: 0,
+      acceptedAssetCount: 0,
+      rejectedAssetCount: 0,
+    });
     expect(metadata.stablecoinsCacheReadiness).toMatchObject({
       pendingStartedAt: null,
     });
     expect(result.itemCount).toBe(1);
+  });
+
+  it("publishes the exact input without replacing transfer materiality after an unexpected observer failure", async () => {
+    mockObserveTransferMateriality.mockRejectedValueOnce(new TypeError("observer invariant failed"));
+
+    const result = await prepareSafetyScoreV9Input(makeDb());
+
+    expect(mockSetCacheMany).toHaveBeenCalledTimes(1);
+    const [, entries] = mockSetCacheMany.mock.calls[0]!;
+    expect(entries.map((entry: { key: string }) => entry.key)).toEqual([
+      "report-cards:fixed-input:exact",
+      "report-cards:v9-peg-provenance-seed:exact",
+    ]);
+    expect(result).toMatchObject({
+      status: "degraded",
+      itemCount: 1,
+    });
+    expect(result.productivity).toEqual({
+      productive: true,
+      reason: "safety-score-v9-input-published-with-transfer-materiality-unavailable",
+    });
+    expect(JSON.parse(String(result.metadata)).transferMateriality).toEqual({
+      status: "unavailable",
+      code: "TypeError",
+    });
+  });
+
+  it("propagates genuine observer cancellation without publishing a partial input batch", async () => {
+    const controller = new AbortController();
+    mockObserveTransferMateriality.mockImplementationOnce(async () => {
+      controller.abort(new Error("observer cancelled"));
+      throw new Error("observer stopped");
+    });
+
+    await expect(
+      prepareSafetyScoreV9Input(makeDb(), controller.signal),
+    ).rejects.toThrow("observer cancelled");
+    expect(mockSetCacheMany).not.toHaveBeenCalled();
   });
 
   it("captures a payload that parses under the native v4 schema and carries peg rows", async () => {

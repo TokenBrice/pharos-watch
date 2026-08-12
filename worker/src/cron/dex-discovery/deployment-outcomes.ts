@@ -1,6 +1,7 @@
 import {
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
+  getGeckoTerminalDiscoveryTarget,
   type DexDeploymentOutcome,
 } from "@shared/lib/dex-deployment-coverage";
 import {
@@ -59,10 +60,15 @@ function supersededLowercaseAddress(canonicalAddress: string): string | null {
 
 function matchesDeployment(pool: StagedPool, deployment: ContractDeployment): boolean {
   if (canonicalExitRouteChain(pool.chain) !== canonicalExitRouteChain(deployment.chain)) return false;
-  const address = canonicalExitRouteScopedId(deployment.chain, deployment.address);
+  const canonicalAddress = (address: string): string =>
+    pool.source === "gecko_terminal"
+      ? (getGeckoTerminalDiscoveryTarget(deployment.chain, address)?.address ??
+        canonicalExitRouteScopedId(deployment.chain, address))
+      : canonicalExitRouteScopedId(deployment.chain, address);
+  const address = canonicalAddress(deployment.address);
   return (
-    canonicalExitRouteScopedId(pool.chain, pool.baseToken ?? "") === address ||
-    canonicalExitRouteScopedId(pool.chain, pool.quoteToken ?? "") === address
+    canonicalAddress(pool.baseToken ?? "") === address ||
+    canonicalAddress(pool.quoteToken ?? "") === address
   );
 }
 
@@ -90,7 +96,7 @@ export function classifyDexDeploymentOutcomes(params: {
   );
 
   return params.deployments.map((deployment) => {
-    const providers = getDexDiscoveryProviders(deployment.chain);
+    const providers = getDexDiscoveryProviders(deployment.chain, deployment.address);
     const key = deploymentKey(deployment.chain, deployment.address);
     const stagedPoolCount = params.pools.filter((pool) => matchesDeployment(pool, deployment)).length;
     const providerObservedPoolCount = params.providerChecks
@@ -154,7 +160,7 @@ export function classifyDexDeploymentOutcomes(params: {
 export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDeploymentOutcomeWrite[] {
   return ACTIVE_STABLECOINS.flatMap((meta) =>
     [...(meta.contracts ?? []), ...(meta.tradedContracts ?? [])]
-      .filter((deployment) => getDexDiscoveryProviders(deployment.chain).length === 0)
+      .filter((deployment) => getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0)
       .map((deployment) => ({
         stablecoinId: meta.id,
         chain: deployment.chain,
@@ -178,7 +184,7 @@ export function buildFailedCrawlDeploymentOutcomes(params: {
     chain: deployment.chain,
     address: deployment.address,
     outcome: "provider_inaccessible",
-    providers: getDexDiscoveryProviders(deployment.chain),
+    providers: getDexDiscoveryProviders(deployment.chain, deployment.address),
     reason: "Bounded discovery crawl failed before a complete deployment census",
     observedPoolCount: 0,
     observedAt: params.nowSec,

@@ -1027,10 +1027,10 @@ Peg deviation events (≥ 100 bps for USD-pegged, ≥ 150 bps for non-USD pegs).
   "counts": { "incidents": 6, "thresholdCrossings": 13 },
   "nextCursor": null,
   "methodology": {
-    "version": "6.1",
-    "versionLabel": "v6.1",
-    "currentVersion": "6.1",
-    "currentVersionLabel": "v6.1",
+    "version": "6.21",
+    "versionLabel": "v6.21",
+    "currentVersion": "6.21",
+    "currentVersionLabel": "v6.21",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -1241,10 +1241,10 @@ Composite peg scores and aggregate statistics. Score history begins at each coin
   "coins": [PegSummaryCoin, ...],
   "summary": PegSummaryStats,
   "methodology": {
-    "version": "6.1",
-    "versionLabel": "v6.1",
-    "currentVersion": "6.1",
-    "currentVersionLabel": "v6.1",
+    "version": "6.21",
+    "versionLabel": "v6.21",
+    "currentVersion": "6.21",
+    "currentVersionLabel": "v6.21",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1772606400,
     "isCurrent": true
@@ -2356,12 +2356,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.17",
+    "methodologyVersion": "9.19",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.17",
+    "version": "9.19",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2369,7 +2369,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
     "status": "current | held",
     "acceptedAtSec": 1771977600,
     "attemptedAtSec": 1771977600,
-    "holdReasons": []
+    "reasons": []
   },
   "cards": [SafetyScoreV9Card, ...],
   "dependencyGraph": {
@@ -2380,7 +2380,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 }
 ```
 
-The endpoint reads only the accepted `report-cards:v9` publication and its matching `report-cards:v9:publication-health` row. Missing, malformed, incomplete, or identity-inconsistent state returns `503`; the handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
+The endpoint reads only the accepted `report-cards:v9` publication and its `report-cards:v9:publication-health` row. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
 
@@ -2449,14 +2449,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.32"
+      "methodologyVersion": "4.35"
     }
   },
   "methodology": {
-    "version": "4.32",
-    "versionLabel": "v4.32",
-    "currentVersion": "4.32",
-    "currentVersionLabel": "v4.32",
+    "version": "4.35",
+    "versionLabel": "v4.35",
+    "currentVersion": "4.35",
+    "currentVersionLabel": "v4.35",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,
@@ -2644,7 +2644,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.17",
+      "methodologyVersion": "9.19",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2655,7 +2655,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.17",
+      "methodologyVersion": "9.19",
       "publishedAt": 1772000700
     }
   },
@@ -3198,17 +3198,17 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
       },
       "amplifiers": { "psi": 1, "contagion": 1 },
       "computedAt": 1740000000,
-      "methodologyVersion": "6.1"
+      "methodologyVersion": "6.21"
     }
   },
   "updatedAt": 1740000000,
   "oldestComputedAt": 1740000000,
   "malformedRows": 0,
   "methodology": {
-    "version": "6.1",
-    "versionLabel": "v6.1",
-    "currentVersion": "6.1",
-    "currentVersionLabel": "v6.1",
+    "version": "6.21",
+    "versionLabel": "v6.21",
+    "currentVersion": "6.21",
+    "currentVersionLabel": "v6.21",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true
@@ -3229,7 +3229,7 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
     },
     "amplifiers": { "psi": 1, "contagion": 1 },
     "computedAt": 1740000000,
-    "methodologyVersion": "6.1"
+    "methodologyVersion": "6.21"
   },
   "history": [
     {
@@ -3246,10 +3246,10 @@ Aggregate responses are filtered to active tracked stablecoin IDs only, even if 
   ],
   "malformedRows": 0,
   "methodology": {
-    "version": "6.1",
-    "versionLabel": "v6.1",
-    "currentVersion": "6.1",
-    "currentVersionLabel": "v6.1",
+    "version": "6.21",
+    "versionLabel": "v6.21",
+    "currentVersion": "6.21",
+    "currentVersionLabel": "v6.21",
     "changelogPath": "/methodology/depeg-changelog/",
     "asOf": 1740000000,
     "isCurrent": true

@@ -181,12 +181,8 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship, not a holding of the frxUSD token itself.",
   ],
   [
-    "frax-frax::Other Frax balance-sheet assets::FRAX",
-    "Residual Frax balance-sheet bucket; names the protocol, not a holding of the FRAX token.",
-  ],
-  [
-    "frxusd-frax::Unmapped Frax balance-sheet assets::FRAX",
-    "Residual Frax balance-sheet bucket; names the protocol, not a holding of the FRAX token.",
+    "frxusd-frax::EREBOR_USD (Erebor Bank frxUSD reserve account)::FRXUSD",
+    "Erebor Bank deposit account holding frxUSD reserve cash; a banking relationship and subject self exposure, not an upstream frxUSD dependency edge.",
   ],
   [
     "usdh-hubble::kUSDH-USDC Orca kToken CDP collateral::USDC",

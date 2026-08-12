@@ -17,6 +17,7 @@ import {
 } from "../lib/depeg-helpers";
 import {
   classifyPrimaryDepegTrust,
+  getFreshIndependentPrimarySourceFamilies,
   getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
   isAuthoritativeDepegPegReference,
@@ -126,6 +127,7 @@ export interface ConfirmationPlanReady {
   nativePegQuote: NativePegQuote | undefined;
   nativeSourceKey: string;
   authoritativePrice: number | null;
+  primaryStatus: DirectionalSignalStatus;
   primarySameDirectionDepegged: boolean;
   primaryConfirmationSources: string[];
   temporalSameDirectionConfirmed: boolean;
@@ -408,16 +410,43 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
         asset.price > 0
       ? asset.price
       : null;
+  const independentPrimaryFamilies =
+    isNativeOrigin && asset
+      ? getFreshIndependentPrimarySourceFamilies(asset, now, "coingecko")
+      : new Set<string>();
+  const normalizedNativePrimaryPrice =
+    isNativeOrigin &&
+    asset?.price != null &&
+    Number.isFinite(asset.price) &&
+    asset.price > 0 &&
+    refreshedPegReferenceIsAuthoritative &&
+    Number.isFinite(refreshedPegRef) &&
+    refreshedPegRef > 0 &&
+    independentPrimaryFamilies.size > 0
+      ? asset.price / refreshedPegRef
+      : null;
+  const primarySignalPrice = isNativeOrigin ? normalizedNativePrimaryPrice : authoritativePrice;
   const currentPrimarySignal =
-    authoritativePrice != null
-      ? deriveDepegSignal(authoritativePrice, pegReference)
+    primarySignalPrice != null
+      ? deriveDepegSignal(primarySignalPrice, pegReference)
       : null;
   const currentPrimaryStatus = classifyDirectionalSignal(currentPrimarySignal, threshold, pendingState.direction);
   const primarySameDirectionDepegged = currentPrimaryStatus === "confirm";
-  const primaryConfirmationSources =
-    !isNativeOrigin && primarySameDirectionDepegged && asset && hasFreshMultiSourcePrimaryAgreement(asset, now)
-      ? [...getPrimaryDepegSourceFamilies(asset)].sort().map((family) => `primary:${family}`)
-      : [];
+  const primaryConfirmationSources = primarySameDirectionDepegged && asset
+    ? (
+        isNativeOrigin
+          ? [...independentPrimaryFamilies]
+          : hasFreshMultiSourcePrimaryAgreement(asset, now)
+            ? [...getPrimaryDepegSourceFamilies(asset)]
+            : []
+      ).sort().map((family) => `primary:${family}`)
+    : [];
+  if (isNativeOrigin && isOpposingConfirmationStatus(currentPrimaryStatus)) {
+    addSources(
+      opposingSources,
+      [...independentPrimaryFamilies].sort().map((family) => `primary:${family}`),
+    );
+  }
   const temporalSameDirectionConfirmed =
     pendingState.lastSeenAt - pendingState.firstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC &&
     now - pendingState.lastSeenAt <= DEPEG_PENDING_MIN_AGE_SEC &&
@@ -495,6 +524,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     nativePegQuote,
     nativeSourceKey,
     authoritativePrice,
+    primaryStatus: currentPrimaryStatus,
     primarySameDirectionDepegged,
     primaryConfirmationSources,
     temporalSameDirectionConfirmed,

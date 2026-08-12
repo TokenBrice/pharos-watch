@@ -40,6 +40,13 @@ const isolationDependentNodeTests = [
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",
 ];
 
+// V8 coverage can leave the full-registry native pipeline fork waiting during
+// teardown after its assertions pass. Keep only this CPU-heavy, state-local
+// suite on a thread worker; the rest of worker/ retains process isolation.
+const threadBackedWorkerTests = [
+  "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
+];
+
 export default defineConfig({
   plugins: [wasmStubPlugin()],
   test: {
@@ -78,6 +85,15 @@ export default defineConfig({
         test: {
           name: "worker",
           include: ["worker/**/*.test.?(c|m)[jt]s?(x)"],
+          exclude: [...baseTestExcludes, ...threadBackedWorkerTests],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "worker-threads",
+          include: threadBackedWorkerTests,
+          pool: "threads",
         },
       },
       {

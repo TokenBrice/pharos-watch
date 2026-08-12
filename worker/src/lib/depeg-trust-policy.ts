@@ -107,6 +107,29 @@ export function getPrimaryDepegSourceFamilies(
   return families;
 }
 
+export function getFreshIndependentPrimarySourceFamilies(
+  input: PrimaryPriceTrustInput,
+  nowSec: number,
+  excludedFamily: string,
+): Set<string> {
+  if (
+    input.price == null ||
+    !Number.isFinite(input.price) ||
+    input.price <= 0 ||
+    input.priceSource === "cached" ||
+    (input.priceConfidence !== "single-source" && input.priceConfidence !== "high") ||
+    getPrimaryPriceAgeSec(input, nowSec) > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
+  ) {
+    return new Set();
+  }
+
+  return new Set(
+    [...getPrimaryDepegSourceFamilies(input)].filter(
+      (family) => family !== excludedFamily && !family.startsWith("fallback:"),
+    ),
+  );
+}
+
 export function chooseIndependentOffchainDepegConfirmer(
   input: Pick<PrimaryPriceTrustInput, "agreeSources" | "priceSource">,
 ): OffchainDepegConfirmerKey | null {

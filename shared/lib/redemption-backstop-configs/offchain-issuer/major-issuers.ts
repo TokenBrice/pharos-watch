@@ -9,7 +9,7 @@ import {
   sourceRef,
 } from "../shared";
 import { reviewedDirectRedemptionSupplyFull } from "./shared";
-import { REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
+import { REVIEWED_EXIT_CREDIT_WAVE3_AT, REVIEWED_WRAPPER_WAVE_AT } from "../review-dates";
 
 /** usdq-quantoz and eurq-quantoz are byte-identical (same base, cost, docs). */
 const quantozBase: RedemptionBackstopConfig = {
@@ -516,6 +516,38 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: [
       "Route is modeled as the documented 1:1 issuer redemption rail into USDC; the single-asset reserve adapter remains reserve-detail telemetry only and is no longer treated as live redeemable-capacity evidence",
+    ],
+  },
+  "usdpt-western-union": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull(REVIEWED_EXIT_CREDIT_WAVE3_AT),
+    settlementModel: "days",
+    costModel: undisclosedReviewedFee(
+      "Anchorage redeems at Par Value net of any applicable fees disclosed in its Covered Stablecoin Fee Schedule, which is not published publicly",
+    ),
+    docs: [
+      sourceRef(
+        "Anchorage Digital Bank covered stablecoin terms",
+        "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef("Anchorage stablecoin issuance", "https://www.anchorage.com/platform/stablecoin-issuance", ["route"]),
+      sourceRef(
+        "Anchorage USDPT reserve attestations",
+        "https://www.anchorage.com/platform/usdpt-reserve-attestations-anchorage-digital",
+        ["capacity"],
+      ),
+      sourceRef(
+        "Anchorage and Western Union launch USDPT",
+        "https://www.anchorage.com/insights/anchorage-digital-western-union-partner-launch-usdpt-federally-regulated-stablecoin-solana",
+        ["route"],
+      ),
+    ],
+    notes: [
+      "Configured 2026-08-12: Anchorage Digital Bank N.A. is the federally regulated issuer that mints and redeems USDPT, and its Covered Stablecoin Terms state that presented tokens are redeemed at Par Value, so the issuer rail is the modeled holder exit rather than Solana secondary liquidity.",
+      "Access is client-gated, not open: the terms state ADB 'redeems Covered Stablecoins exclusively from Clients' and 'does not redeem Covered Stablecoins from Non-Clients', so an ordinary Solana holder must first onboard to Anchorage.",
+      "Settlement is modeled as days rather than the same-day issuer default because the terms commit only to 'commercially reasonable efforts to process redemption requests promptly' and publish no timeframe; the terms also let ADB 'refuse, suspend, or limit any redemption request in its discretion', including for liquidity management.",
+      "Capacity stays documented-bound on full supply: the monthly Deloitte reserve attestations evidence backing but not immediately executable settlement liquidity, and no public API or on-chain view exposes a per-token redemption buffer.",
     ],
   },
   "gyen-gyen": {

@@ -8,16 +8,16 @@ describe("liquidity coverage", () => {
     for (const meta of ACTIVE_STABLECOINS) {
       for (const c of meta.contracts ?? []) {
         classified.push(
-          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`,
+          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain, c.address).join(",") || "provider-inaccessible"}`,
         );
       }
       for (const c of meta.tradedContracts ?? []) {
         classified.push(
-          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain).join(",") || "provider-inaccessible"}`,
+          `${meta.id}:${c.chain}:${getDexDiscoveryProviders(c.chain, c.address).join(",") || "provider-inaccessible"}`,
         );
       }
     }
-    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(65);
+    expect(classified.filter((row) => row.endsWith(":provider-inaccessible"))).toHaveLength(51);
   });
 
   it("all colliding symbols have contracts for address-based disambiguation", () => {

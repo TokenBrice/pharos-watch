@@ -229,6 +229,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.db,
       expect.any(AbortSignal),
       "dex-liquidity-123",
+      scheduledRuntime.chainRpcs,
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
   });
@@ -268,6 +269,7 @@ describe("half-hourly charts scheduling", () => {
       scheduledRuntime.db,
       expect.any(AbortSignal),
       "dex-liquidity-current",
+      scheduledRuntime.chainRpcs,
     );
   });
 });

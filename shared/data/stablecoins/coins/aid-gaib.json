@@ -101,7 +101,43 @@
     },
     "params": {
       "label": "U.S. Treasury and accepted stablecoin reserves",
-      "risk": "low"
+      "risk": "low",
+      "redemptionCapacity": {
+        "chain": "ethereum",
+        "redeemer": "0x52323f33551188F170D8de14fE8d8423a839629d",
+        "payoutToken": {
+          "address": "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48",
+          "decimals": 6
+        },
+        "identityChecks": [
+          {
+            "contract": "0x52323f33551188F170D8de14fE8d8423a839629d",
+            "selector": "0xe9cbd822",
+            "expectedAddress": "0xA0b86991c6218b36c1d19D4a2e9eb0ce3606eb48"
+          },
+          {
+            "contract": "0x52323f33551188F170D8de14fE8d8423a839629d",
+            "selector": "0xb91cc136",
+            "expectedAddress": "0x18f52b3fb465118731d9e0d276d4eb3599d57596"
+          },
+          {
+            "contract": "0xc787e7f060acab38d30aceb539355b328024e8b8",
+            "selector": "0x5c60da1b",
+            "expectedAddress": "0xb835004007296f5278fbf85f090af7195361e946"
+          }
+        ],
+        "dailyLimit": {
+          "limitSelector": "0xd9d48e04",
+          "usedSelector": "0x9ac929fb",
+          "decimals": 18
+        },
+        "feeBpsSelector": "0xd68002f3",
+        "holderEligibility": "whitelisted-primary",
+        "sourceUrls": [
+          "https://docs.gaib.ai/products/gaib-products/aid-and-said-contracts",
+          "https://etherscan.io/address/0x52323f33551188F170D8de14fE8d8423a839629d#code"
+        ]
+      }
     }
   },
   "launchDate": "2025-10-31"

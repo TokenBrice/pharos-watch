@@ -6,12 +6,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.32`
+- **Current methodology version:** `v4.35`
 - **Public methodology anchor:** `/methodology/#safety-scores-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.32` update: live adapters now assert current route openness and fees where the chain proves them, and several routes gained live-direct capacity, documented fee bounds, or primary-source corrections. ERC-4626 wrapper adapters emit `routeStatus` open/paused from positive same-run redemption liquidity plus opportunistic `paused()`/`isShutdown()` probes; Mento FPMM pools read `lpFee()+protocolFee()` live; USDe reads the EthenaMinting contract's own USDT/USDC float capped by max-redeem-per-block config; Reservoir routes read the USDC PSM on-chain and base rUSD gains its own PSM route; USTB is remodeled onto its atomic on-chain RedemptionIdle USDC rail; IST's route status is unknown following Inter Protocol's sunset; eUSD and USD3 (Reserve) carry documented 0 bps fee ceilings. Scoring weights, ladders, and the exit engine are unchanged — routes move only through better evidence.
+Latest `v4.35` update: the residual exit-credit queue clears. dEURO is remodeled onto its real StablecoinBridge rail — nine identity-pinned bridges summed live (fee-free 1:1 burns; output basket honestly unresolved with only five of nine underlyings tracked); USDp gains a live proportional-basket bound from the Parallelizer's per-collateral reads; USD3 and eUSD redemption outputs are valued at same-run on-chain NAV (convertToAssets / exchangeRate) bound into the reserve snapshot per the cUSD (Cap) precedent, so basket legs like steakUSDC no longer wait on external peg rows; FDUSD's transparency staleness is recorded as a documented fail-closed condition after a first-party-only access investigation. Scoring weights, ladders, and the exit engine are unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -23,8 +23,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 311
-- **Route families:** 147 `offchain-issuer`, 67 `stablecoin-redeem`, 38 `collateral-redeem`, 39 `queue-redeem`, 11 `psm-swap`, 9 `basket-redeem`
+- **Configured coins:** 315
+- **Route families:** 148 `offchain-issuer`, 67 `stablecoin-redeem`, 38 `collateral-redeem`, 39 `queue-redeem`, 14 `psm-swap`, 9 `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.

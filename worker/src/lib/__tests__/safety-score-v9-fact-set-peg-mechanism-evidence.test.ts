@@ -2127,13 +2127,13 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
   });
 
   it("uses the measured adapter freshness window for DEX route evidence", () => {
-    const compileMeasured = (adapterProfileId: string) => {
+    const compileMeasured = (adapterProfileId: string, ageSec = 4_000) => {
       const fixed = structuredClone(exactFixedInput());
       const observation = fixed.dexLiqMap.alpha!.exitRouteObservations![0]!;
       observation.evidenceKind = "measured-executable-depth";
       observation.adapterProfileId = adapterProfileId;
-      observation.observedAt = AS_OF_SEC - 4_000;
-      observation.freshnessSeconds = 4_000;
+      observation.observedAt = AS_OF_SEC - ageSec;
+      observation.freshnessSeconds = ageSec;
       fixed.baseInputGenerationId = deriveReportCardsBaseInputGenerationId(fixed);
       const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension()).assets[0]!;
       return compiled.evidence.find((candidate) => candidate.evidenceId.includes(":route:dex:"))!;
@@ -2143,7 +2143,10 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
     });
     expect(compileMeasured("uniswap-v3-quoter-v2")).toMatchObject({
-      freshness: { state: "stale", maxAgeSec: 3_600, ageSec: 4_000 },
+      freshness: { state: "current", maxAgeSec: 7_200, ageSec: 4_000 },
+    });
+    expect(compileMeasured("uniswap-v3-quoter-v2", 7_201)).toMatchObject({
+      freshness: { state: "stale", maxAgeSec: 7_200, ageSec: 7_201 },
     });
   });
 

@@ -1,9 +1,10 @@
 import type { ContractDeployment } from "@shared/types/core";
+import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 import { CHAIN_META } from "@shared/lib/chains";
-import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "../../lib/chain-registry";
+import { CG_CHAIN_MAP, DS_CHAIN_MAP } from "../../lib/chain-registry";
 import { CIRCUIT_SOURCE, DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { fetchCgTokenPoolsWithStatus } from "../../lib/coingecko-onchain";
 import { RATE_LIMITS } from "../../lib/rate-limit";
@@ -82,7 +83,7 @@ export async function crawlCoinGeckoPoolsStage({
     const providers = CHAIN_META[chain]?.providers;
     const cgNetwork = CG_CHAIN_MAP[chain] ?? providers?.coingecko;
     if (!cgNetwork) {
-      const gtNetwork = GT_CHAIN_MAP[chain] ?? providers?.geckoTerminal;
+      const gtNetwork = getGeckoTerminalDiscoveryNetwork(chain, address);
       const dsNetwork = DS_CHAIN_MAP[chain] ?? providers?.dexscreener;
       if (!gtNetwork && !dsNetwork) {
         console.warn(

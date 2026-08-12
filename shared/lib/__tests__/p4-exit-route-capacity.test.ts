@@ -1189,7 +1189,7 @@ describe("P4 DEX exit route observations", () => {
     const observedAt = 1_752_560_000;
     const cases = [
       {
-        profile: measuredProfile(observedAt - 3_601),
+        profile: measuredProfile(observedAt - 7_201),
         extra: {},
         reason: "invalidMeasuredExecution:stale-profile",
       },

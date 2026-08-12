@@ -157,11 +157,12 @@ export default defineConfig({
 
 The config also includes a `wasmStubPlugin()` Vite plugin that stubs `.wasm` imports for Node compatibility and resolve aliases for `satori/standalone`, `satori/yoga.wasm`, `@cf-wasm/resvg/workerd`, and `@resvg/resvg-wasm`. The supported test baseline is Node 24 LTS; the `nodeMajor >= 25` branch keeps jsdom as the source of `localStorage` / `sessionStorage` under the wider engine range, and nightly validation runs a non-blocking Node 26 typecheck proof.
 
-The suite is split into four `test.projects` (all `extends: true` from the root config):
+The suite is split into five `test.projects` (all `extends: true` from the root config):
 
 - `node` — `functions/`, `scripts/`, `shared/` suites with `isolate: false` (pure-node tests reuse worker processes instead of paying a fork per file).
 - `node-isolated` — the few node-root suites that depend on per-file process isolation (module-level registry/env state); listed explicitly in `vitest.config.ts`. If a `node`-project test starts failing only in full runs, module-state leakage is the first suspect — fix the leak or move the file here.
 - `worker` — `worker/` suites with default per-file isolation (they lean on module-level state: circuit breakers, caches, D1 stubs; verified to fail without isolation).
+- `worker-threads` — the full-registry native Safety Score pipeline regression, isolated in a thread worker because V8 coverage can leave its otherwise-passing fork waiting during teardown.
 - `src` — `src/` suites with default isolation for jsdom/React state.
 
 `npm run test:all` is the full Vitest runner used by nightly/manual validation.

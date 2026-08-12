@@ -40,6 +40,36 @@ describe("check-cron-connection-budget", () => {
     expect(report.failed).toBe(false);
   });
 
+  it("models transfer materiality in the serial charts lane without counting the D1-only duration watchdog", () => {
+    const report = evaluateCronConnectionBudget();
+    const halfHourlyCharts = report.triggerReports.find(
+      (trigger) => trigger.scheduleKey === "halfHourlyChartsOffset",
+    );
+    const prepareV9Input = CRON_CONNECTION_BUDGET_ENTRIES.find(
+      (entry) => entry.job === "prepare-safety-score-v9-input",
+    );
+    const durationWatchdog = CRON_CONNECTION_BUDGET_ENTRIES.find(
+      (entry) => entry.job === "cron-duration-watchdog",
+    );
+
+    expect(prepareV9Input?.maxConnections).toBe(3);
+    expect(durationWatchdog?.maxConnections).toBe(0);
+    expect(halfHourlyCharts?.chains).toEqual([
+      {
+        chainKey: "chain-1",
+        jobs: [
+          "sync-dex-liquidity",
+          "prepare-safety-score-v9-input",
+          "sync-stablecoin-charts",
+        ],
+        peak: 3,
+      },
+    ]);
+    expect(halfHourlyCharts?.totalConnections).toBe(3);
+    expect(report.fetchCapableEntryCount).toBe(32);
+    expect(report.failed).toBe(false);
+  });
+
   it("sums independent parallel chains even when they share a connection group", () => {
     const report = evaluateCronConnectionBudget({
       budget: {

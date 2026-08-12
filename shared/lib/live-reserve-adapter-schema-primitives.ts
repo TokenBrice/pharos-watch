@@ -5,6 +5,7 @@ import {
   LIVE_RESERVE_SEMANTICS_VALUES,
   type LiveReserveInput,
 } from "../types/live-reserve-core";
+import { RedemptionHolderEligibilitySchema } from "../types/redemption";
 import { ReserveRiskSchema, ReserveSliceSchema } from "../types/reserves";
 
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
@@ -192,6 +193,16 @@ const chainlinkNavParamsSchema = z
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     maxOracleAgeSec: z.number().positive().optional(),
+    redemptionCapacity: z
+      .object({
+        managerAddress: EvmAddressSchema,
+        usdcAddress: EvmAddressSchema,
+        routerAddress: EvmAddressSchema,
+        sourceAddress: EvmAddressSchema,
+        pauseSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -252,11 +263,85 @@ const collateralPositionsRedemptionBridgeSchema = z
   })
   .strict();
 
+const collateralPositionsRedemptionBasketBridgeSchema = z
+  .object({
+    label: z.string().trim().min(1),
+    bridgeAddress: EvmAddressSchema,
+    tokenAddress: EvmAddressSchema,
+    tokenDecimals: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const collateralPositionsRedemptionBridgeBasketSchema = z
+  .object({
+    chain: z.string().min(1),
+    rpcMode: LiveReserveRpcModeSchema,
+    dEuroAddress: EvmAddressSchema,
+    eurUsdPriceAddress: EvmAddressSchema,
+    bridges: z.array(collateralPositionsRedemptionBasketBridgeSchema).nonempty().max(16),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+  })
+  .strict();
+
 const collateralPositionsParamsSchema = z
   .object({
     pricesUrl: AbsoluteUrlSchema,
     otherThresholdPct: z.number().positive().optional(),
     redemptionBridge: collateralPositionsRedemptionBridgeSchema.optional(),
+    redemptionBridgeBasket: collateralPositionsRedemptionBridgeBasketSchema.optional(),
+  })
+  .strict()
+  .refine((params) => !(params.redemptionBridge && params.redemptionBridgeBasket), {
+    message: "redemptionBridge and redemptionBridgeBasket are mutually exclusive",
+  });
+
+const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+
+/** Opt-in live redemption probe for curated coins. The shape only describes
+ *  atomic, same-block routes: a single uint256 read of what the route can pay
+ *  out right now, valued 1:1 in USD. */
+const curatedValidatedRedemptionCapacitySchema = z
+  .object({
+    chain: z.string().min(1),
+    capacityRead: z.discriminatedUnion("kind", [
+      z
+        .object({
+          kind: z.literal("selector"),
+          contract: EvmAddressSchema,
+          selector: EvmSelectorSchema,
+        })
+        .strict(),
+      z
+        .object({
+          kind: z.literal("erc20-balance-of"),
+          contract: EvmAddressSchema,
+          holder: EvmAddressSchema,
+        })
+        .strict(),
+    ]),
+    /** Address getters the route must still resolve to. Any mismatch means the
+     *  pinned contracts no longer describe this route, so nothing is emitted. */
+    identityChecks: z
+      .array(
+        z
+          .object({
+            contract: EvmAddressSchema,
+            selector: EvmSelectorSchema,
+            expectedAddress: EvmAddressSchema,
+          })
+          .strict(),
+      )
+      .nonempty()
+      .optional(),
+    pauseCheck: z
+      .object({ contract: EvmAddressSchema, selector: EvmSelectorSchema })
+      .strict()
+      .optional(),
+    decimals: z.number().int().min(0).max(36),
+    holderEligibility: RedemptionHolderEligibilitySchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
   })
   .strict();
 
@@ -264,6 +349,7 @@ const curatedValidatedParamsSchema = z
   .object({
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    redemptionCapacity: curatedValidatedRedemptionCapacitySchema.optional(),
   })
   .strict();
 
@@ -465,6 +551,90 @@ const erc4626SingleAssetParamsSchema = z
   .strict();
 
 const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+const evmAbiWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+
+const escrowBalanceIdentityCheckSchema = z
+  .object({
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    expectedAddress: EvmAddressSchema,
+  })
+  .strict();
+
+const escrowBalanceSelectorReadSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    decimals: z.number().int().nonnegative().max(36),
+    identityCheck: escrowBalanceIdentityCheckSchema.optional(),
+  })
+  .strict();
+
+const escrowBalanceErc20ReadSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    erc20BalanceOf: EvmAddressSchema,
+    decimals: z.number().int().nonnegative().max(36),
+    identityCheck: escrowBalanceIdentityCheckSchema.optional(),
+  })
+  .strict();
+
+const escrowBalancePauseCheckSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+  })
+  .strict();
+
+const escrowBalanceSharedParamsShape = {
+  slice: reserveSliceDescriptorSchema,
+  sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+  holderEligibility: RedemptionHolderEligibilitySchema.optional(),
+  settlementDelaySec: z.number().int().nonnegative().optional(),
+  rpcUrl: AbsoluteUrlSchema.optional(),
+  fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+};
+
+// One pinned escrow/reserve contract whose redemption capacity is readable as a
+// single token-denominated view call. This original shape remains unchanged for
+// existing configs. `args` are pre-encoded 32-byte ABI words and `decimals` is
+// the escrowed asset's decimals, not the tracked coin's.
+const escrowBalanceSingleParamsSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    decimals: z.number().int().nonnegative().max(36),
+    // Optional boolean view on the same contract; a true word withholds the
+    // route instead of publishing capacity as freely redeemable.
+    pausedSelector: evmSelectorSchema.optional(),
+    ...escrowBalanceSharedParamsShape,
+  })
+  .strict();
+
+// Bounded aggregation for routes whose direct capacity is split across several
+// reviewer-pinned views. Every item is either a selector call whose first ABI
+// return word is the capacity or an ERC-20 balanceOf(holder) call. Optional
+// address-returning identity checks bind a read contract to a reviewed
+// dependency. The adapter withholds the whole observation if any read or
+// identity check fails.
+const escrowBalanceMultiParamsSchema = z
+  .object({
+    reads: z
+      .array(z.union([escrowBalanceSelectorReadSchema, escrowBalanceErc20ReadSchema]))
+      .min(1)
+      .max(16),
+    pauseCheck: escrowBalancePauseCheckSchema.optional(),
+    ...escrowBalanceSharedParamsShape,
+  })
+  .strict();
+
+const escrowBalanceParamsSchema = z.union([
+  escrowBalanceSingleParamsSchema,
+  escrowBalanceMultiParamsSchema,
+]);
 
 // Same wrapper + M token contract addresses as the primary chain, deployed on
 // another EVM network (M0's native-multichain model reuses addresses across
@@ -626,6 +796,41 @@ const evmBranchBalancesParamsSchema = z
       .optional(),
     debtContract: z.string().optional(),
     debtDecimals: z.number().int().nonnegative().optional(),
+    redemptionCapacity: z
+      .object({
+        kind: z.literal("honey-factory-vaults"),
+        factoryAddress: EvmAddressSchema,
+        expectedHoneyAddress: EvmAddressSchema,
+        maxAssets: z.number().int().positive().max(32),
+        stableAssets: z
+          .array(
+            z
+              .object({
+                address: EvmAddressSchema,
+                decimals: z.number().int().nonnegative().max(36),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(32),
+        sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+      })
+      .strict()
+      .superRefine((params, ctx) => {
+        const addresses = new Set<string>();
+        params.stableAssets.forEach((asset, index) => {
+          const address = asset.address.toLowerCase();
+          if (addresses.has(address)) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["stableAssets", index, "address"],
+              message: `Duplicate stable asset: ${asset.address}`,
+            });
+          }
+          addresses.add(address);
+        });
+      })
+      .optional(),
   })
   .strict();
 
@@ -828,6 +1033,52 @@ const tetherTransparencyParamsSchema = z
   })
   .strict();
 
+/** Opt-in live redemption probe for coins whose exit is a single redeemer
+ *  contract paying one ERC20 out of its own float. Every bound the route's size
+ *  depends on is read in the same run; any mismatch or unreadable value
+ *  withholds the whole live block rather than publishing a partial route. */
+const singleAssetRedemptionCapacitySchema = z
+  .object({
+    chain: z.string().min(1),
+    /** Contract that executes the redemption and holds the payout float. */
+    redeemer: EvmAddressSchema,
+    /** ERC20 the route pays out; its `redeemer` balance is the capacity. */
+    payoutToken: z
+      .object({
+        address: EvmAddressSchema,
+        decimals: z.number().int().min(0).max(36),
+      })
+      .strict(),
+    /** Address getters the route must still resolve to. Pin the upgrade surface
+     *  (beacon/implementation) here so a retarget stops emission. */
+    identityChecks: z
+      .array(
+        z
+          .object({
+            contract: EvmAddressSchema,
+            selector: EvmSelectorSchema,
+            expectedAddress: EvmAddressSchema,
+          })
+          .strict(),
+      )
+      .nonempty(),
+    /** Per-day cap, read as `limitSelector - usedSelector(currentDay)`. */
+    dailyLimit: z
+      .object({
+        limitSelector: EvmSelectorSchema,
+        /** Takes the `block.timestamp / 86400` day index as its only argument. */
+        usedSelector: EvmSelectorSchema,
+        decimals: z.number().int().min(0).max(36),
+      })
+      .strict()
+      .optional(),
+    /** Getter returning the redemption fee already denominated in bps. */
+    feeBpsSelector: EvmSelectorSchema.optional(),
+    holderEligibility: RedemptionHolderEligibilitySchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+  })
+  .strict();
+
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
@@ -842,6 +1093,7 @@ const singleAssetParamsSchema = z
     timestampProbe: singleAssetProbeSchema.optional(),
     reserveSourceLabel: z.string().optional(),
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
+    redemptionCapacity: singleAssetRedemptionCapacitySchema.optional(),
   })
   .strict();
 
@@ -893,6 +1145,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   collateralPositions: collateralPositionsParamsSchema,
   curatedValidated: curatedValidatedParamsSchema,
   erc4626SingleAsset: erc4626SingleAssetParamsSchema,
+  escrowBalance: escrowBalanceParamsSchema,
   evmBranchBalances: evmBranchBalancesParamsSchema,
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,

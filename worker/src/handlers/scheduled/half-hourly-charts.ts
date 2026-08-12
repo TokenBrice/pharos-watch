@@ -1,7 +1,7 @@
 /**
  * Half-hourly charts trigger (16,46 * * * *):
- *   sync-dex-liquidity (0) → prepare-safety-score-v9-input (0)
- *   sync-stablecoin-charts (1), independently
+ *   sync-dex-liquidity (0) → prepare-safety-score-v9-input (3)
+ *   sync-stablecoin-charts (1), failure-independent and serial
  *
  * :16 consumes the hourly source generation (prices hourly, score every two
  * hours); :46 reuses the exact current score generation for V9 preparation.
@@ -142,6 +142,7 @@ export async function runHalfHourlyChartsSlot(runtime: ScheduledRuntimeContext) 
               runtime.db,
               signal,
               publication.generationId,
+              runtime.chainRpcs,
             );
           },
         },

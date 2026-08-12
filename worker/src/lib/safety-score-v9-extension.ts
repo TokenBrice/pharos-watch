@@ -1255,7 +1255,15 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       addReviewedStaticReserveEvidence(meta, reviewedStaticReserveRows, reviewEvidence);
       addDependencyEvidence(meta, reviewEvidence);
       addWrapperCustodyEvidence(meta, reviewEvidence);
-      const supplyReview = buildSafetyScoreV9SupplyReview(fixedInput, assetId, meta.bridgeRouteRisk);
+      const supplyReview = buildSafetyScoreV9SupplyReview(
+        fixedInput,
+        assetId,
+        meta.bridgeRouteRisk,
+        {
+          meta,
+          transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
+        },
+      );
       const deployedChainCount = Object.keys(safetyScoreV9ChainRows(fixedInput, assetId)).length;
       const assetIssuerKey = resolveSafetyScoreV9AssetIssuerKey(assetId, metaById);
       const mint = adaptMintReview(meta, prepared.dependency, reviewEvidence, clockSec);

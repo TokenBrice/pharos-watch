@@ -48,7 +48,7 @@ const EVIDENCE_ONLY_TARGETS = {
 
 const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, string>> = {
   "pgold-pleasing": "2026-08-11",
-  "usdgo-osl": "2026-08-12",
+  "usdgo-osl": "2026-08-11",
   "vnxau-vnx": "2026-08-11",
   "xaum-matrixdock": "2026-08-11",
 };

@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.17`
+- **Current methodology version:** `v9.19`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -69,7 +69,7 @@ Canonical accepted state is stored in:
 
 Both rows carry matching model, schema, methodology, policy, evaluation-build, base-input, and publication identities. The canonical writer accepts only newer publications and commits an accepted publication with its current health atomically.
 
-Publication is fail-closed at the identity and system level. Missing, malformed, stale, or incompatible score-bearing inputs hold the last accepted ratings. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected. A held attempt updates publication health only; it does not rewrite the accepted ratings or their timestamp.
+Publication is fail-closed at the identity and system level. Missing, malformed, stale, or incompatible score-bearing inputs hold the last accepted ratings. Asset-local producer failures do not freeze unrelated ratings while at least 90% of active assets remain unaffected. A held attempt updates publication health only when the retained accepted identity can be verified; an unreadable accepted ledger records a separate failed attempt and leaves publication and health untouched. Post-9.19 writes require the per-fact disclosure paths, while the reader remains compatible with authenticated pre-9.19 snapshots.
 
 Deleting the superseded D1 cache keys still requires a coordinated cleanup migration, because migrations run before the new Worker is active.
 
@@ -77,7 +77,7 @@ Deleting the superseded D1 cache keys still requires a coordinated cleanup migra
 
 `GET /api/report-cards/v9` is the only live Safety Score API.
 
-The handler reads the canonical publication and matching health row, validates the complete current response, and never recomputes or falls back to V8. Missing or incompatible state returns `503`. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
+The handler reads the canonical publication and health row, validates the complete current response, and never recomputes or falls back to V8. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
 A current response emits `X-Safety-Score-Status: current`. A held response serves the last accepted ratings, emits `X-Safety-Score-Status: held`, uses the accepted timestamp for freshness, and forces `Cache-Control: no-store`.
 

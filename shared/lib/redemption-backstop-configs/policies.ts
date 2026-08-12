@@ -99,6 +99,17 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "degraded-sync-warning-exception",
+    stablecoinId: "iusd-infinifi",
+    warningCode: "source-total-gap",
+    capacityNote:
+      "Using InfiniFi's live liquid-farm total as redemption capacity despite unreconciled TVL, which sits entirely in illiquid positions outside the redeemable slice",
+    reason:
+      "InfiniFi's 7.84% source-total gap ($3.77M at the 2026-08-12 review) is composed wholly of illiquid farm positions the redemption route cannot draw from, while the two liquid farms reconcile to totalLiquidAssetNormalized exactly, so the liquid capacity read stays a reviewed live proxy.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-08-12",
+  },
+  {
+    kind: "degraded-sync-warning-exception",
     stablecoinId: "usdf-falcon",
     warningCode: "unknown-asset",
     capacityNote:
@@ -107,14 +118,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
       "Falcon's stablecoin-bucket redemption capacity stays a reviewed live proxy when the only degraded warning is an unmapped asset in the high-risk 'other' bucket, since that exposure sits outside the immediate-redeemable stable slice the capacity is drawn from.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-06-23",
-  },
-  {
-    kind: "unused-live-redemption-telemetry",
-    stablecoinId: "cjpy-yamato",
-    reason:
-      "The Yamato adapter emits redemption route-status and settlement telemetry but no capacityUsd/capacityRatioOfSupply numbers, so a reserve-sync-metadata route would stay permanently unrated; the documented collateral-redemption model remains until the adapter exposes a capacity amount.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-06-10",
   },
   {
     kind: "unused-live-redemption-telemetry",
@@ -147,14 +150,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
       "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
-  },
-  {
-    kind: "unused-live-redemption-telemetry",
-    stablecoinId: "deuro-deuro",
-    reason:
-      "The collateral-positions-api adapter only emits redemption capacity when a redemptionBridge param is configured, and dEURO's liveReservesConfig has none, so a reserve-sync-metadata route would stay permanently unrated; the documented full-system collateral-redemption model remains until a dEURO redemption bridge or capacity feed is wired.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-06-10",
   },
 ];
 

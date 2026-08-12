@@ -12,6 +12,8 @@ import {
 } from "./shared";
 import {
   REVIEWED_EXIT_CREDIT_WAVE_AT,
+  REVIEWED_EXIT_CREDIT_WAVE3_AT,
+  REVIEWED_EXIT_CREDIT_WAVE2_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_MAY_BATCH_AT,
@@ -52,6 +54,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "honey-berachain": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     outputAssets: ["usdc-circle", "usdt-tether", "pyusd-paypal", "usde-ethena"],
     costModel: documentedVariableFee(
       "Normal redemptions are asset-specific: 0 bps for USDT/byUSD and 5 bps for USDC/USDe; stress Basket Mode returns a proportional collateral basket instead",
@@ -62,9 +66,17 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
         "capacity",
         "fees",
       ]),
+      sourceRef(
+        "Berachain HoneyFactory source",
+        "https://github.com/berachain/contracts/blob/main/src/honey/HoneyFactory.sol",
+        ["route", "capacity", "fees"],
+      ),
     ],
     notes: [
       "Modeled against Basket Mode because the stress-state redemption path turns exits into proportional basket withdrawals when collateral becomes unstable",
+      "Capacity became live-direct 2026-08-12: the gated probe enumerates the HoneyFactory's registered assets and their collateral vaults, verifying the factory's own `honey()` resolves to the tracked token before reading vault holdings, so the documented full-supply model is replaced by what the vaults actually hold.",
+      "The documented asset-specific fee schedule above is now bounded by live telemetry as well: the probe reads each asset's `redeemRates()` and takes the least favourable as the route's max fee.",
+      "Verified at Berachain block 24750999: `honey()` resolved to the tracked token, `isBasketModeEnabled()` was false for both mint and redeem, all four registered assets read `isPegged()` true, and the vaults held 7,831,557.70 against a HONEY supply of 7,831,365.98. Live `redeemRates()` were 0 bps on three assets and exactly 5 bps on the fourth, matching the documented schedule.",
     ],
   },
   "dai-makerdao": {
@@ -198,15 +210,19 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "usdd-tron-dao-reserve": {
     ...psmSwapBase,
     outputAssets: ["usdt-tether"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.16, confidence: "documented-bound" },
-    costModel: fixedFee(0, "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD"),
-    reviewedAt: REVIEWED_BASKET_REDEMPTION_AT,
+    capacityModel: { kind: "reserve-sync-metadata", fallbackRatio: 0.16, confidence: "documented-bound" },
+    costModel: fixedFee(
+      0,
+      "USDD docs describe 1:1 PSM conversions between USDD and USDT/USDC/TUSD, and the deployed Tron PSM's `tout()` reads 0 bps on-chain",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     docs: [
       sourceRef("USDD documentation", "https://docs.usdd.io", ["route", "capacity", "fees"]),
       sourceRef("USDD website", "https://usdd.io/", ["capacity"]),
     ],
     notes: [
-      "The reviewed 16% bound matches the tracked USDT PSM reserve share and does not claim the full collateralized USDD system is instantly redeemable through the PSM",
+      "Fresh live telemetry reads the Tron PSM GemJoin's current USDT balance as the direct redeemable bound, after confirming the module's identity wiring and that buying is enabled",
+      "The reviewed 16% bound is retained only as the fallback when that live read is unavailable; it matches the tracked USDT PSM reserve share and does not claim the full collateralized USDD system is instantly redeemable through the PSM",
     ],
   },
   "ist-agoric": {
@@ -235,6 +251,103 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "PSM output is an approved external stable token selected by governance; IBC transfer and venue-specific wrapper risk are outside this route score",
     ],
   },
+  "fxd-fathom": {
+    ...psmSwapBase,
+    accessModel: "whitelisted-onchain",
+    unresolvedOutputAssetKeys: ["asset:xusdt"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
+    costModel: fixedFee(
+      25,
+      "The Fathom whitepaper states a fee of 0.25% is charged for each trade in the Stable Swap module",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    docs: [
+      sourceRef("Fathom whitepaper v1.0", "https://docs.fathom.fi/whitepaper/version-1.0", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(
+        "FXD smart-contract architecture",
+        "https://docs.fathom.fi/fxd-stablecoin/fxd-smart-contract-architecture",
+        ["route", "settlement"],
+      ),
+      sourceRef("FXD XDC deployments", "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network", ["route"]),
+    ],
+    notes: [
+      "Configured 2026-08-12 as the StableSwap Module rail, not CDP repayment: the whitepaper describes trading FXD at a fixed 1 FXD = 1 counter-stablecoin rate inside a pool, which is a holder-exercisable swap rather than the position-specific debt repayment that previously kept this coin unconfigured.",
+      "Access is whitelisted because the same whitepaper states Stable Swap keeps a private list of possible participants to protect the pegging mechanism, and that the FXD Stable Swap arbitrager group is private and not publicly open.",
+      "Output is the deployed counter-stablecoin: the whitepaper names abUSDs and the smart-contract architecture page names the deployed pair FXD<->xUSDT. xUSDT has no tracked Pharos stablecoin id, so the reviewed identity is preserved as an unresolved external output rather than published as a scoreable asset.",
+      "The 10% ratio is a reviewed heuristic for StableSwap pool depth, not a published Fathom figure: no current public source exposes the module's counter-asset balance, per-account limits, or pause state on XDC, and Pharos does not model XDC contracts.",
+    ],
+  },
+  "hollar-hydrated": {
+    ...psmSwapBase,
+    unresolvedOutputAssetKeys: ["asset:ausdt", "asset:ausdc"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
+    costModel: documentedVariableFee(
+      "Hydration's HSM charges a per-collateral `buy_back_fee` held on-chain as a Permill in the pallet's Collaterals storage; the published HOLLAR documentation does not publish that fee as a number",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    docs: [
+      sourceRef("Hydration HOLLAR", "https://docs.hydration.net/products/hollar/", ["route", "capacity", "access"]),
+      sourceRef("Hydration HOLLAR quick start", "https://docs.hydration.net/quick_start/hollar/", [
+        "route",
+        "capacity",
+      ]),
+      sourceRef(
+        "Hydration HSM pallet types",
+        "https://raw.githubusercontent.com/galacticcouncil/hydration-node/master/pallets/hsm/src/types.rs",
+        ["fees", "capacity"],
+      ),
+      sourceRef(
+        "Hydration HSM pallet",
+        "https://raw.githubusercontent.com/galacticcouncil/hydration-node/master/pallets/hsm/src/lib.rs",
+        ["route", "access", "fees", "settlement"],
+      ),
+      sourceRef(
+        "Hydration referendum 367: consolidate HSM collateral",
+        "https://hydration.subsquare.io/referenda/367",
+        ["route", "capacity"],
+      ),
+    ],
+    notes: [
+      "The modeled route is the Hollar Stability Mechanism's `sell` extrinsic, which is a holder-facing PSM swap rather than CDP repayment: the pallet takes any signed origin, burns the received HOLLAR, and pays the seller the configured collateral asset atomically.",
+      "Capacity is conditional by design. Hydration's own documentation states the HSM does not blindly buy any amount of HOLLAR at any time and instead decides when and how much to buy from stableswap-pool conditions; the pallet enforces that through a per-block buyback limit, a maximum buy price coefficient, and the HSM's collateral balance. The 10% ratio is a reviewed heuristic standing in for those unpublished limits, not a Hydration figure.",
+      "Output is one configured collateral asset per sale, not a basket: governance referendum 367 consolidates HSM collateral to aUSDT and aUSDC only. Neither has a tracked Pharos stablecoin id, so both reviewed identities are preserved as unresolved external outputs.",
+      "No fee bound is declared because `buy_back_fee` is a per-collateral on-chain Permill set by governance with no documented ceiling, and Pharos has no Hydration adapter to read its current value each run.",
+    ],
+  },
+  "usdh-hubble": {
+    ...psmSwapBase,
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "psm-balance-share" },
+    costModel: fixedFee(
+      50,
+      "Hubble's Peg Stability Module documentation lists 50 bps (0.5%) for depositing USDH to redeem another stablecoin, against 0 bps to mint",
+    ),
+    routeStatus: "unknown",
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
+    docs: [
+      sourceRef(
+        "Hubble Peg Stability Module",
+        "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module",
+        ["route", "fees", "settlement"],
+      ),
+      sourceRef("Why use Hubble", "https://docs.hubbleprotocol.io/why-use-hubble", ["route", "capacity"]),
+      sourceRef("Hubble technical resources", "https://docs.hubbleprotocol.io/resources/technical-resources", [
+        "route",
+      ]),
+    ],
+    notes: [
+      "Configured 2026-08-12 as the documented PSM rail rather than CDP repayment: Hubble states USDH now maintains its peg primarily via the Peg Stability Module, which allows zero-slippage swaps between USDH and USDC, so the exit is available to holders who never opened a vault.",
+      "Route status is unknown, not open. Hubble publishes no PSM reserve-account mapping, capacity source, or pause flag, so nothing current proves the swap still executes. The USDH mint remains live on Solana — supply read 1,130,512.428495 at slot 438751843 on 2026-08-12 — which is why the route is modeled at all rather than rejected.",
+      "The 10% ratio is a reviewed heuristic for PSM USDC inventory and is not a published Hubble figure; it deliberately does not claim the overcollateralized vault system is instantly redeemable through the module.",
+    ],
+  },
   "pmusd-precious-metals": {
     ...psmSwapBase,
     outputAssets: ["susds-sky"],
@@ -254,9 +367,12 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "dola-inverse-finance": {
     ...psmSwapBase,
     outputAssets: ["usds-sky"],
-    capacityModel: { kind: "supply-ratio", ratio: 0.08, confidence: "documented-bound" },
-    costModel: fixedFee(20, "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee"),
-    reviewedAt: "2026-03-23",
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: fixedFee(
+      20,
+      "Inverse FiRM docs list a 20 bps DOLA -> USDS exit fee, and the deployed PSM's `sellFeeBps()` reads 20 on-chain",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     docs: [
       sourceRef(
         "Inverse Peg Stability Module",
@@ -266,7 +382,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       sourceRef("Inverse Finance transparency", "https://www.inverse.finance/transparency", ["capacity"]),
     ],
     notes: [
-      "Modeled against the documented USDS PSM floor rather than full-system FiRM debt unwinds; the reviewed 8% bound matches the currently published PSM share of reserves and does not claim full DOLA supply is instantly redeemable",
+      "Modeled against the USDS PSM rail rather than full-system FiRM debt unwinds; the route never claimed that full DOLA supply is instantly redeemable",
+      "Capacity correction 2026-08-12: the prior reviewed 8% PSM-share bound was stale and is removed. At Ethereum block 25736814 the deployed PSM reads `supply() = 0` and `getTotalReserves() = 0` with zero balances of both tokens, and `sell()` hard-reverts at any size — the contract was drained on 2025-12-10 and Inverse's Fed withdrew its 200k DOLA float on 2025-12-11, leaving six lifetime transactions.",
+      "Capacity is therefore live-only. Fresh telemetry reads the PSM's current reserves as the direct redeemable bound, and when that read is unavailable the route is left unrated rather than falling back to the phantom static share the empty contract cannot honor.",
     ],
   },
   "buck-bucket-protocol": {
@@ -347,8 +465,9 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   "eusd-electronic-usd": {
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
+    capacityModel: { kind: "reserve-sync-metadata" },
     outputAssets: ["usdc-circle", "usdt-tether"],
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
     costModel: {
       ...documentedVariableFee(
         "Reserve's documented DTF fee schedule has exactly two fees — a TVL fee and a mint fee charged whenever a user mints new DTF tokens — so redeeming the pro-rata basket is charged 0 bps",
@@ -372,6 +491,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     notes: [
       "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
       "Fee bound declared 2026-08-12: the Reserve fee documentation enumerates a closed schedule of a TVL fee and a mint fee applied \"whenever a user mints new DTF tokens\", and the minting-and-redeeming page describes redemption as a permissionless direct conversion back into the underlying tokens with no charge, so the reviewed ceiling is 0 bps. The previously cited reserve-index doc URLs now 404 and were repointed to their core-components successors.",
+      "Capacity became live-only 2026-08-12, matching the USD3 treatment: the route migrated to the Reserve DTF adapter, which reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed with no fallback. The throttle refills over time and shrinks as it is drawn down, so no static supply figure represents it and an unavailable read leaves the route unrated rather than restoring full supply.",
+      "Verified at Ethereum block 25737172: `redemptionAvailable()` returned exactly 5,000,000.00 against a supply of 22,834,920.56, and the basket handler reached through the RToken's own `main()` reported status SOUND (0). The throttle is therefore binding at roughly 22% of supply, which is what the full-supply model had been overstating.",
     ],
   },
   "usd3-reserve-protocol": {
@@ -380,7 +501,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    capacityModel: { kind: "reserve-sync-metadata" },
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE2_AT,
     costModel: {
       ...documentedVariableFee(
         "Reserve Yield DTF revenue is documented as onchain collateral yield and issuer revenue shares rather than a user-charged redemption fee, and redemption returns the entire backing basket, so the reviewed ceiling is 0 bps",
@@ -388,7 +510,8 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       feeBpsMax: 0,
     },
     notes: [
-      "Reserve Protocol API-backed reserve sync exposes the current basket weights, but redemption scoring remains documented-bound rather than live-direct capacity because the feed does not publish current redeemable capacity or throttle state",
+      "Capacity became live-only 2026-08-12: the adapter now reads the RToken's own `redemptionAvailable()` throttle each run as the direct redeemable bound, so the prior documented-bound full-supply model is removed. The throttle refills over time and shrinks as it is drawn down, so a static supply figure would consistently overstate what a holder can exit right now.",
+      "The read also degrades on basket state: when the collateral basket is not SOUND the measured capacity is withheld rather than published, and if the throttle cannot be read at all the route is left unrated instead of falling back to a static bound",
       "Fee bound declared 2026-08-12: the Yield DTF overview states holders can mint by depositing the complete collateral basket and that a DTF is \"redeemed for the entire basket as well\", with protocol revenue coming from \"yield from lending collateral tokens onchain, revenue shares with collateral token issuers, or any other source of onchain yield\" — no redemption charge. Throttles still bound redemption size, which the documented-bound capacity model already carries, not its cost.",
     ],
     docs: [

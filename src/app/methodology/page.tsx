@@ -51,7 +51,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How does Pharos confirm depegs and maintain DEWS history?",
     answer:
-      "Every depeg onset must remain beyond the full trigger threshold for at least 15 minutes before promotion, even when multiple sources agree. Live events resolve only after 15 minutes inside a tighter half-threshold recovery band. Pharos treats opposite-side evidence as contradiction, does not count DefiLlama's CoinGecko mirror as independent, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
+      "Every depeg onset must remain beyond the full trigger threshold for at least 15 minutes before promotion, even when multiple sources agree. A native CoinGecko quote can initiate a non-USD candidate but cannot confirm itself; a fresh canonical USD price from a non-CoinGecko family must agree after authoritative FX normalization. Live events resolve only after 15 minutes inside a tighter half-threshold recovery band. Pharos treats opposite-side evidence as contradiction, does not count DefiLlama's CoinGecko mirror as independent, and only trusts aggregate DEX confirmation when the row is fresh and backed by at least $1M of source TVL. Historical DEWS snapshots do not retain that DEX trust metadata, so the repair path refreshes current rows and prunes unrecomputable daily history back to the March 9, 2026 trust-floor boundary when needed.",
   },
   {
     question: "What is the Bank Run Gauge?",

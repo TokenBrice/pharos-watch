@@ -6,16 +6,13 @@ import type { ReserveSlice } from "@shared/types";
 const SLICE = (name: string, pct: number, risk: ReserveSlice["risk"]): ReserveSlice => ({ name, pct, risk });
 
 describe("ReserveTreemap", () => {
-  it("renders a thin basket as a compact labelled bar instead of a treemap", () => {
+  it("renders a thin basket in the treemap frame", () => {
     const html = renderToStaticMarkup(
       <ReserveTreemap reserves={[SLICE("USD deposits & T-bills", 100, "very-low")]} />,
     );
-    expect(html).toContain("Reserve composition: USD deposits &amp; T-bills 100%");
-    expect(html).toContain("USD deposits &amp; T-bills");
-    expect(html).toContain("100%");
-    // No treemap chrome: neither the aspect-ratio chart frame nor its skeleton.
-    expect(html).not.toContain("Reserve composition treemap");
-    expect(html).not.toContain("aspect-ratio");
+    expect(html).toContain("Reserve composition treemap: USD deposits &amp; T-bills 100%");
+    expect(html).toContain("aspect-ratio:6 / 5");
+    expect(html).toContain("pharos-chart-stage");
   });
 
   it("suppresses the risk legend when the basket carries a single tier", () => {

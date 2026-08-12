@@ -6,6 +6,7 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 vi.mock("../helpers", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../helpers")>();
   const fetchOnchainUint256 = vi.fn();
+  const fetchOnchainRawCall = vi.fn();
   return {
     ...actual,
     fetchErc20Balance: vi.fn(),
@@ -20,22 +21,99 @@ vi.mock("../helpers", async (importOriginal) => {
           rpcMode: input.rpcMode,
           chain: input.chain,
         }),
-      raw: vi.fn(),
+      raw: (contract: string, data: string) =>
+        fetchOnchainRawCall({
+          ...options,
+          contract,
+          data,
+          rpcMode: input.rpcMode,
+          chain: input.chain,
+        }),
     })),
+    fetchOnchainRawCall,
     probeOptionalRedemptionRateBps: vi.fn(),
   };
 });
 
 import { fetchEvmBranchBalancesReserves } from "../evm-branch-balances";
+import { validateAdapterOutput } from "../validate";
 import {
   fetchDefiLlamaPrices,
   fetchErc20Balance,
   fetchOnchainUint256,
+  fetchOnchainRawCall,
   probeOptionalRedemptionRateBps,
 } from "../helpers";
 
 const signal = AbortSignal.timeout(5000);
 const coin = { id: "test-coin" } as unknown as StablecoinMeta;
+
+const HONEY_FACTORY = "0xa4afef880f5ce1f63c9fb48f661e27f8b4216401";
+const HONEY_TOKEN = "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce";
+const HONEY_ASSET = "0x549943e04f40284185054145c6e4e9568c1d3241";
+const HONEY_VAULT = "0x90bc07408f5b5eac4de38af76ea6069e1fcee363";
+const WAD = 10n ** 18n;
+
+function addressWord(address: string): bigint {
+  return BigInt(address);
+}
+
+function abiWords(...words: bigint[]): string {
+  return `0x${words.map((word) => word.toString(16).padStart(64, "0")).join("")}`;
+}
+
+function uintArrayResult(values: bigint[]): string {
+  return abiWords(32n, BigInt(values.length), ...values);
+}
+
+function honeyRedemptionCapacity(maxAssets = 4) {
+  return {
+    kind: "honey-factory-vaults",
+    factoryAddress: HONEY_FACTORY,
+    expectedHoneyAddress: HONEY_TOKEN,
+    maxAssets,
+    stableAssets: [{ address: HONEY_ASSET, decimals: 6 }],
+    sourceUrls: ["https://docs.berachain.com/general/tokens/honey"],
+  };
+}
+
+function mockHoneyOnchain(options: { assetCount?: bigint; failVaultAsset?: boolean } = {}) {
+  const assetCount = options.assetCount ?? 1n;
+  vi.mocked(fetchOnchainUint256).mockReset();
+  vi.mocked(fetchOnchainRawCall).mockReset();
+  vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = contract.toLowerCase();
+    const selector = data.slice(0, 10);
+    if (normalizedContract === HONEY_FACTORY) {
+      if (selector === "0x36b2c4b2") return addressWord(HONEY_TOKEN);
+      if (selector === "0xbb85d15b") return assetCount;
+      if (selector === "0xa083bd3c") return addressWord(HONEY_ASSET);
+      if (selector === "0xa622ee7c") return addressWord(HONEY_VAULT);
+      if (selector === "0x5c975abb" || selector === "0x7b34b5d8" || selector === "0xde4bc640") return 0n;
+      if (selector === "0x99a2af75" || selector === "0xbdb912f3") return WAD;
+      if (selector === "0x64f76eaa") return 0n;
+      if (selector === "0x2cfb0e10") return 999_500_000_000_000_000n;
+      if (selector === "0xbc7c2902") return 1n;
+    }
+    if (normalizedContract === HONEY_VAULT) {
+      if (selector === "0x38d52e0f") return options.failVaultAsset ? null : addressWord(HONEY_ASSET);
+      if (selector === "0x5c975abb") return 0n;
+      if (selector === "0x70a08231") return 10n * WAD;
+      if (selector === "0x07a2d13a") return 10_000_000n;
+    }
+    if (normalizedContract === HONEY_ASSET && selector === "0x70a08231") return 8_000_000n;
+    if (normalizedContract === HONEY_ASSET && selector === "0x313ce567") return 6n;
+    return null;
+  });
+  vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+    const normalizedContract = contract.toLowerCase();
+    if (normalizedContract === HONEY_FACTORY && data === "0x22acb867") {
+      return uintArrayResult(Array.from({ length: Number(assetCount) }, () => WAD));
+    }
+    if (normalizedContract === HONEY_VAULT && data === "0x72d4b21a") return abiWords(0n, 0n);
+    return null;
+  });
+}
 
 function wstEthBranch(overrides: Record<string, unknown> = {}) {
   return {
@@ -81,6 +159,107 @@ beforeEach(() => {
 });
 
 describe("fetchEvmBranchBalancesReserves", () => {
+  it("keeps a non-opted-in coin byte-identical to the legacy reserve result", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(1_000_000_000_000_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["wstETH", 2000]]));
+
+    const result = await fetchEvmBranchBalancesReserves(
+      coin,
+      makeBranchConfig([wstEthBranch()]),
+      signal,
+    );
+
+    expect(JSON.stringify(result)).toBe(
+      '{"slices":[{"name":"wstETH","pct":100,"risk":"low"}],"metadata":{"branchCount":1,"freshnessMode":"not-applicable","details":{"proofKind":"onchain-branch-balances"}}}',
+    );
+    expect(fetchOnchainRawCall).not.toHaveBeenCalled();
+  });
+
+  it("emits HoneyFactory live direct capacity without changing reserve slices", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(12_000_000n);
+    vi.mocked(fetchDefiLlamaPrices).mockResolvedValue(new Map([["USDC.e", 1]]));
+    mockHoneyOnchain();
+    const config = makeBranchConfig([
+      {
+        name: "USDC.e",
+        holder: HONEY_VAULT,
+        token: { chain: "berachain", address: HONEY_ASSET, decimals: 6 },
+        risk: "low",
+        priceUsd: 1,
+      },
+    ], {
+      chain: "berachain",
+      params: { redemptionCapacity: honeyRedemptionCapacity() },
+    });
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(result.slices).toEqual([{ name: "USDC.e", pct: 100, risk: "low" }]);
+    expect(result.metadata?.redemption).toEqual(expect.objectContaining({
+      capacityUsd: 8,
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      feeBps: 5,
+    }));
+    expect(result.metadata?.redemptionFeeBps).toBe(5);
+    expect(validateAdapterOutput(result, {
+      adapter: {
+        key: "evm-branch-balances",
+        redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+      } as never,
+    })).toEqual({ valid: true, warnings: [] });
+  });
+
+  it("withholds the whole Honey capacity block when enumeration exceeds the configured bound", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(12_000_000n);
+    mockHoneyOnchain({ assetCount: 2n });
+    const config = makeBranchConfig([
+      {
+        name: "USDC.e",
+        holder: HONEY_VAULT,
+        token: { chain: "berachain", address: HONEY_ASSET, decimals: 6 },
+        risk: "low",
+        priceUsd: 1,
+      },
+    ], {
+      chain: "berachain",
+      params: { redemptionCapacity: honeyRedemptionCapacity(1) },
+    });
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "redemption-capacity-unavailable", severity: "warning" }),
+    ]);
+  });
+
+  it("withholds the whole Honey capacity block when any required vault read fails", async () => {
+    vi.mocked(fetchErc20Balance).mockResolvedValueOnce(12_000_000n);
+    mockHoneyOnchain({ failVaultAsset: true });
+    const config = makeBranchConfig([
+      {
+        name: "USDC.e",
+        holder: HONEY_VAULT,
+        token: { chain: "berachain", address: HONEY_ASSET, decimals: 6 },
+        risk: "low",
+        priceUsd: 1,
+      },
+    ], {
+      chain: "berachain",
+      params: { redemptionCapacity: honeyRedemptionCapacity() },
+    });
+
+    const result = await fetchEvmBranchBalancesReserves(coin, config, signal);
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "redemption-capacity-unavailable", severity: "warning" }),
+    ]);
+  });
+
   it("computes percentage slices from branch balances and prices", async () => {
     vi.mocked(fetchErc20Balance)
       .mockResolvedValueOnce(1_000_000_000_000_000_000n) // 1 wstETH (18 dec)

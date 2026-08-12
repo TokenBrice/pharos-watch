@@ -23,11 +23,6 @@ import {
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
   serializeSafetyScoreV9SupplyAttributionGeneration,
 } from "../lib/safety-score-v9-supply-attribution-generation";
-import { observeSafetyScoreV9TransferMaterialityGeneration } from "../lib/safety-score-v9-transfer-materiality-observer";
-import {
-  SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
-  serializeSafetyScoreV9TransferMaterialityGeneration,
-} from "../lib/safety-score-v9-transfer-materiality";
 
 const SOURCE_FIXED_INPUT_MAX_AGE_SEC = 30 * 60;
 
@@ -168,15 +163,6 @@ export async function syncSafetyScoreV9SupplyAttribution(
       notBeforeSec: startedAtSec,
     },
   );
-  const transferMaterialityGeneration =
-    await observeSafetyScoreV9TransferMaterialityGeneration({
-      activeAssetIds: fixedInput.activeAssetIds,
-      baseInputGenerationId: fixedInput.baseInputGenerationId,
-      registryFingerprint: fixedInput.registryFingerprint,
-      scoringClockSec: fixedInput.clockSec,
-      chainRpcs: chainRpcs ?? new Map(),
-      signal,
-    });
   throwIfAborted(signal);
   const capturedAtSec = Math.max(
     startedAtSec,
@@ -202,15 +188,6 @@ export async function syncSafetyScoreV9SupplyAttribution(
     db,
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY,
     serializeSafetyScoreV9SupplyAttributionGeneration(generation),
-    startedAtSec,
-    signal,
-  );
-  await setCacheIfNewer(
-    db,
-    SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
-    serializeSafetyScoreV9TransferMaterialityGeneration(
-      transferMaterialityGeneration,
-    ),
     startedAtSec,
     signal,
   );

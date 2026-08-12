@@ -37,7 +37,20 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
         status: "held" as const,
         acceptedPublicationGenerationId: publication.publicationGenerationId,
         acceptedAtSec: publication.publishedAtSec,
-        heldSinceSec: publication.publishedAtSec,
+        attemptedAtSec: Math.max(
+          publicationHealth.attemptedAtSec,
+          publication.publishedAtSec,
+        ),
+        heldSinceSec: publicationHealth.status === "held" &&
+          publicationHealth.heldSinceSec !== null
+          ? Math.max(
+              publicationHealth.heldSinceSec,
+              publication.publishedAtSec,
+            )
+          : Math.max(
+              publicationHealth.attemptedAtSec,
+              publication.publishedAtSec,
+            ),
         reasons: [{
           code: "assessment-failed" as const,
           detail: "Publication health did not match the stored snapshot; serving the last-known-good snapshot as held.",

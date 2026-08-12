@@ -116,6 +116,10 @@ type LiveReserveAdapterDescriptorDeclaration = {
   configValidation: LiveReserveAdapterConfigValidationPolicy;
   redemptionTelemetry: {
     capacity: "direct" | "proxy" | "none";
+    /** Capacity emission requires per-coin params (e.g. a redemptionCapacity
+     *  block); coins without them never emit and need no unused-telemetry
+     *  policy. */
+    capacityParamsGated?: boolean;
     fee: "current-bps" | "none";
   };
   validation?: LiveReserveAdapterValidationPolicy;
@@ -174,7 +178,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
@@ -243,7 +247,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // Redemption capacity is emitted only for coins whose params carry a
+    // redemptionCapacity block (currently OUSG); plain NAV-feed coins never
+    // emit and are not unused-telemetry candidates.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS },
   },
   "chainlink-por": {
@@ -276,7 +283,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1_V2,
-    redemptionTelemetry: { capacity: "direct", fee: "none" },
+    // Capacity is emitted only when a coin opts into either the legacy
+    // single-bridge probe or the identity-gated bridge-basket probe.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
@@ -302,7 +311,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
     configValidation: CONFIG_CURATED_VALIDATED,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // Live capacity is emitted only for curated coins whose params carry a
+    // redemptionCapacity block; every other curated coin keeps its static
+    // redemption block and is not an unused-telemetry candidate.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
   },
   "dola-inverse": {
     primaryInputKinds: ["http-json"],
@@ -311,7 +323,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // The adapter reads the Inverse PSM's own supply() and the sUSDS vault's
+    // maxWithdraw() for it, which the DOLA -> USDS sell is paid out of, so
+    // capacity is a direct measurement rather than a proxy for FiRM collateral.
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -325,6 +340,19 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "escrow-balance": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "escrowBalance",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    // The single read or bounded all-or-nothing sum measures the escrow or
+    // issuance state the redemption is actually paid against, so the result is
+    // direct capacity rather than a backing proxy.
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   ethena: {
@@ -351,7 +379,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   falcon: {
@@ -668,7 +696,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
@@ -749,7 +777,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    // Redemption capacity is emitted only for coins whose params carry a
+    // redemptionCapacity block (currently AID); the plain liveness-probe coins
+    // never emit and are not unused-telemetry candidates.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
   },
   "sky-makercore": {
     primaryInputKinds: ["http-json"],
@@ -797,7 +828,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -904,7 +935,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

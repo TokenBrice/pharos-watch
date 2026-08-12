@@ -403,12 +403,12 @@ export async function runSafetyScoreV9Publication(
       ReturnType<typeof loadSafetyScoreV9Publication>
     > = null;
     let previousHealth: V9PublicationHealth | null = null;
+    [acceptedPublication, previousHealth] = await Promise.all([
+      loadSafetyScoreV9Publication(input.db, publicationSignal),
+      loadSafetyScoreV9PublicationHealth(input.db, publicationSignal),
+    ]);
     let assessment;
     try {
-      [acceptedPublication, previousHealth] = await Promise.all([
-        loadSafetyScoreV9Publication(input.db, publicationSignal),
-        loadSafetyScoreV9PublicationHealth(input.db, publicationSignal),
-      ]);
       logPublicationGenerationDeltas(publication, acceptedPublication);
       assessment = assessV9Publication({
         inputHealth: fixedInput.v9PublicationInputHealth,

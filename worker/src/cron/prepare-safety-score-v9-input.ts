@@ -1,6 +1,7 @@
 import { getCacheUpdatedAt, setCacheMany } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
-import { sleepWithSignal, throwIfAborted } from "../lib/abort";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../lib/abort";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildNativeSafetyScoreV9Capture } from "../lib/safety-score-v9-capture";
 import { buildNativeV9InputCacheEntry } from "../lib/safety-score-v9-native-input";
@@ -10,6 +11,11 @@ import {
   buildSafetyScoreV9PegProvenanceSeedCacheEntry,
   captureSafetyScoreV9PegProvenanceById,
 } from "../lib/safety-score-v9-peg-provenance";
+import { observeSafetyScoreV9TransferMaterialityGeneration } from "../lib/safety-score-v9-transfer-materiality-observer";
+import {
+  SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+  serializeSafetyScoreV9TransferMaterialityGeneration,
+} from "../lib/safety-score-v9-transfer-materiality";
 
 export const V9_INPUT_STABLECOINS_SETTLE_MAX_WAIT_MS = 3 * 60_000;
 const V9_INPUT_STABLECOINS_SETTLE_POLL_MS = 2_500;
@@ -116,18 +122,19 @@ async function waitForStablecoinsCacheReadiness(
 }
 
 /**
- * Captures the native V9 scoring input and its ephemeral peg-provenance seed.
+ * Captures the native V9 scoring input, its ephemeral peg-provenance seed,
+ * and an exact-input-bound transfer-materiality generation.
  *
- * The cron writes exactly two cache rows, both bound to the same `v9-input`
- * identity: the envelope-v2 capture and the peg-provenance seed. It no longer
- * builds V8 report cards on the way — publishing the peg-analytics aggregate is
- * now an explicit step inside the capture rather than a side effect of the
- * report-card snapshot builder.
+ * The envelope-v2 capture and any successfully built auxiliary rows are written
+ * atomically. It no longer builds V8 report cards on the way — publishing the
+ * peg-analytics aggregate is now an explicit step inside the capture rather than
+ * a side effect of the report-card snapshot builder.
  */
 export async function prepareSafetyScoreV9Input(
   db: D1Database,
   signal?: AbortSignal,
   expectedDexGenerationId?: string,
+  chainRpcs: Map<string, ChainRpcConfig> = new Map(),
 ): Promise<CronResult> {
   throwIfAborted(signal);
 
@@ -196,20 +203,76 @@ export async function prepareSafetyScoreV9Input(
           : "Error",
     };
   }
+  let transferMaterialityEntry: {
+    key: typeof SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY;
+    value: string;
+  } | null = null;
+  let transferMateriality: Record<string, unknown>;
+  try {
+    const transferMaterialityGeneration =
+      await observeSafetyScoreV9TransferMaterialityGeneration({
+        activeAssetIds: input.activeAssetIds,
+        baseInputGenerationId: input.baseInputGenerationId,
+        registryFingerprint: input.registryFingerprint,
+        scoringClockSec: input.clockSec,
+        chainRpcs,
+        signal,
+      });
+    const transferMaterialityObservations = Object.values(
+      transferMaterialityGeneration.observationsByAssetId,
+    );
+    const transferMaterialityAcceptedCount =
+      transferMaterialityObservations.filter(
+        (observations) =>
+          observations.length > 0
+          && observations.every((observation) => observation.status === "accepted"),
+      ).length;
+    transferMaterialityEntry = {
+      key: SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY,
+      value: serializeSafetyScoreV9TransferMaterialityGeneration(
+        transferMaterialityGeneration,
+      ),
+    };
+    transferMateriality = {
+      status: "published",
+      generationId: transferMaterialityGeneration.generationId,
+      observedAssetCount: transferMaterialityObservations.length,
+      acceptedAssetCount: transferMaterialityAcceptedCount,
+      rejectedAssetCount:
+        transferMaterialityObservations.length
+        - transferMaterialityAcceptedCount,
+    };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    transferMateriality = {
+      status: "unavailable",
+      code:
+        error instanceof Error && error.name
+          ? error.name.slice(0, 160)
+          : "Error",
+    };
+  }
   await setCacheMany(
     db,
     [
       inputEntry,
       ...(v9SeedEntry ? [v9SeedEntry] : []),
+      ...(transferMaterialityEntry ? [transferMaterialityEntry] : []),
     ],
     signal,
   );
 
   return {
+    ...(transferMaterialityEntry === null
+      ? { status: "degraded" as const }
+      : {}),
     itemCount: capture.completeness.expectedCount,
     productivity: {
       productive: true,
-      reason: "safety-score-v9-input-published",
+      reason:
+        transferMaterialityEntry === null
+          ? "safety-score-v9-input-published-with-transfer-materiality-unavailable"
+          : "safety-score-v9-input-published",
     },
     metadata: JSON.stringify({
       updatedAt: input.updatedAt,
@@ -229,6 +292,7 @@ export async function prepareSafetyScoreV9Input(
       fixedInputUncompressedBytes: inputEntry.uncompressedBytes,
       safetyScoreIdentity,
       v9ExactSeed,
+      transferMateriality,
       stablecoinsCacheReadiness: {
         waitedMs: stablecoinsReadiness.waitedMs,
         pendingStartedAt: stablecoinsReadiness.pendingStartedAt,

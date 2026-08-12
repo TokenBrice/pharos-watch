@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WTGXX (WisdomTree Government Money Market)",
-      "pct": 22.2,
+      "pct": 22.5,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "WisdomTree Government Money Market Fund",
@@ -17,7 +17,7 @@
     },
     {
       "name": "FRAX",
-      "pct": 16.7,
+      "pct": 16.1,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Frax Protocol",
@@ -30,7 +30,7 @@
     },
     {
       "name": "frxUSD",
-      "pct": 13.5,
+      "pct": 13.6,
       "risk": "low",
       "coinId": "frxusd-frax",
       "assetClass": "stablecoin",
@@ -45,7 +45,7 @@
     },
     {
       "name": "sFRAX",
-      "pct": 13.2,
+      "pct": 13.3,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Frax Protocol",
@@ -89,7 +89,7 @@
     },
     {
       "name": "BUIDL (BlackRock tokenized T-bills)",
-      "pct": 5.5,
+      "pct": 5.6,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "assetClass": "fund-share",
@@ -188,7 +188,7 @@
     },
     {
       "name": "CVX",
-      "pct": 0.5,
+      "pct": 0.6,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Convex Finance",
@@ -286,7 +286,7 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "USDC",
+      "name": "USDC (Circle)",
       "pct": 0.1,
       "risk": "low",
       "coinId": "usdc-circle",
@@ -356,25 +356,23 @@
       "liquidityHorizon": "one-day"
     },
     {
-      "name": "Other Frax balance-sheet assets",
-      "pct": 0.2,
+      "name": "WBNB",
+      "pct": 0.1,
       "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "Identified AUSD, AVAX, BNB, CHR, DAI, MATIC, MULTI, OP, PYUSD, RAM, SDT, THE, USCC, USDT, VELO, WAVAX, WBNB, WPOL, ZK, ZZ, axlUSDC, axlfrxETH, crvUSD, sDAI, stkAAVE positions",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "BNB Chain WBNB contract",
       "riskFactors": [
-        "credit",
         "market",
         "liquidity",
-        "counterparty",
         "custody",
         "smart-contract"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-08",
-    "reviewer": "Pharos reserve research (R02 refresh)",
+    "reviewedAt": "2026-08-12",
+    "reviewer": "Pharos reserve research (live classification alignment refresh)",
     "confidence": "verified",
     "sources": [
       {
@@ -398,31 +396,31 @@
         "url": "https://fraxscan.com/block/39699558"
       }
     ],
-    "rationale": "The official Frax balance-sheet response observed at 2026-08-08T17:23:47Z reports $284,442,914.19 of assets and $262,985,172.46 of liabilities, itemizes 216 positive asset rows across 21 chains, and pins every chain read. Aggregating positive asset rows by symbol and normalizing to one-decimal weights yields 26 displayed slices. The residual 'Other Frax balance-sheet assets' slice (0.2%) groups 25 individually sub-display-threshold symbols whose exact USD values are published by the API.",
+    "rationale": "Reconciled to the live Frax balance-sheet adapter snapshot fetched on 2026-08-12. The reviewed scaffold mirrors all 26 captured adapter names and one-decimal weights exactly. Every displayed source symbol is now joined to a reviewed classification; WBNB is retained as its dedicated 0.1% cryptoasset slice and no residual displayed bucket remains.",
     "compositionBasis": "Official Frax balance-sheet asset rows aggregated by symbol at the response's pinned multi-chain observation blocks",
-    "compositionAsOf": "2026-08-08",
+    "compositionAsOf": "2026-08-12",
     "scope": "full-composition",
-    "knownUnknownExposure": "The API identifies every sub-threshold symbol and publishes exact raw USD values; no reserve identity is treated as undisclosed.",
+    "knownUnknownExposure": "Every slice displayed by the captured live adapter is issuer-identified and either linked to a tracked asset or explicitly classified; no residual reserve identity remains unclassified.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "FRAX",
-        "pct": 16.7,
+        "pct": 16.1,
         "disposition": "self-reserve",
         "rationale": "The subject asset cannot create a dependency edge to itself."
       },
       {
         "reserveIndex": 3,
         "reserveName": "sFRAX",
-        "pct": 13.2,
+        "pct": 13.3,
         "disposition": "self-reserve",
         "rationale": "sFRAX is a staked claim on FRAX and therefore remains self exposure rather than an upstream stablecoin edge."
       },
       {
         "reserveIndex": 0,
         "reserveName": "WTGXX (WisdomTree Government Money Market)",
-        "pct": 22.2,
+        "pct": 22.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WTGXX is a disclosed WisdomTree government money-market-fund exposure outside the active tracked stablecoin set.",
         "candidateCoinIds": [
@@ -448,10 +446,10 @@
       },
       {
         "reserveIndex": 25,
-        "reserveName": "Other Frax balance-sheet assets",
-        "pct": 0.2,
+        "reserveName": "WBNB",
+        "pct": 0.1,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The residual combines 25 individually sub-display-threshold symbols identified by the API; assigning aggregate dependency links would fabricate constituent weights."
+        "rationale": "WBNB is an identified wrapped BNB cryptoasset held on the Frax balance sheet, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 9,

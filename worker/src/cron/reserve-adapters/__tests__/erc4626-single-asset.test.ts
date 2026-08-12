@@ -79,12 +79,15 @@ function cloneConfigWithSboldSpWithdrawable(config: LiveReservesConfig): LiveRes
 
 // sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold). The
 // adapter reads word index 1 (boldAmount = compounded Stability-Pool BOLD).
-function calcFragmentsResult(boldAmountRaw: bigint | number): string {
+function calcFragmentsResult(
+  boldAmountRaw: bigint | number,
+  collInBoldRaw: bigint | number = 0,
+): string {
   return `0x${[
     uint256Result(100_000_000n).slice(2), // totalBold (unused by the adapter)
     uint256Result(boldAmountRaw).slice(2), // boldAmount — the withdrawable word
     uint256Result(0).slice(2), // collValue
-    uint256Result(0).slice(2), // collInBold (not-yet-swapped collateral)
+    uint256Result(collInBoldRaw).slice(2), // collInBold (not-yet-swapped collateral)
   ].join("")}`;
 }
 
@@ -705,6 +708,9 @@ describe("fetchErc4626SingleAssetReserves", () => {
         calcFragmentsCalls.push(call);
         return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
       }
+      if (call.data === "0xbf2428e6") {
+        return jsonResponse({ result: uint256Result(7_500_000n) });
+      }
       return null;
     });
 
@@ -732,11 +738,119 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
         routeStatus: "open",
-        routeStatusReason: expect.stringContaining("sBOLD Stability Pool withdrawable BOLD positive"),
+        routeStatusReason:
+          "sBOLD Stability Pool withdrawable BOLD positive and collateral-health gate open on-chain this run",
         routeStatusSource: "onchain",
       },
     });
     expect(calcFragmentsCalls).toHaveLength(1);
+  });
+
+  it("degrades sBOLD when collateral exceeds the maxCollInBold withdrawal gate", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      const call = body.params[0];
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114" || call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(1_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (call.data === "0x160b71df") {
+        return jsonResponse({ result: calcFragmentsResult(85_000_000n, 7_500_001n) });
+      }
+      if (call.data === "0xbf2428e6") {
+        return jsonResponse({ result: uint256Result(7_500_000n) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      redemptionCapacityRaw: "85000000",
+      redemptionCapacitySource: "sbold-sp-withdrawable",
+      sboldSpWithdrawableRaw: "85000000",
+      redemption: {
+        capacityUsd: 85,
+        capacityKind: "documented-bound",
+        routeStatus: "degraded",
+        routeStatusReason:
+          "sBOLD collateral in BOLD exceeds maxCollInBold; _maxWithdraw() and _maxRedeem() return zero",
+        routeStatusSource: "onchain",
+      },
+    });
+  });
+
+  it("keeps the existing documented-bound sBOLD telemetry when maxCollInBold is unreadable", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      const call = body.params[0];
+      if (call.data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (call.data === "0x01e1d114" || call.data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (call.data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(1_000_000n) });
+      }
+      if (call.data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (call.data === "0x160b71df") {
+        return jsonResponse({ result: calcFragmentsResult(85_000_000n) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithSboldSpWithdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata?.redemption).toEqual({
+      capacityUsd: 85,
+      capacityRatioOfSupply: 0.85,
+      capacityKind: "documented-bound",
+      routeStatusReason: "sBOLD Stability Pool withdrawable BOLD positive via calcFragments() this run",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+    });
   });
 
   it("degrades sBOLD to the idle balance when the calcFragments probe cannot be decoded", async () => {

@@ -334,12 +334,13 @@ describe("measured execution overflow admission", () => {
       ],
     );
 
-    // Normal routes expire at +3600; the StableSwap-NG route at +7200.
+    // Every measured route expires at +7200, so the older NG quote (observed
+    // at 0) expires before the normal route observed at 2000.
     expect(selected).toEqual({
-      targetIds: [normal.targetId],
-      observedAtSec: 2_000,
-      expiresAtSec: 5_600,
-      estimatedRpcRequests: 10,
+      targetIds: [stable.targetId],
+      observedAtSec: 0,
+      expiresAtSec: 7_200,
+      estimatedRpcRequests: 19,
     });
   });
 

@@ -171,7 +171,7 @@ export function classifyDexPlaceholderCoverage(params: {
   const expectedKeys = new Set<string>();
   for (const deployment of params.deployments) {
     const key = deploymentKey(deployment.chain, deployment.address);
-    if (getDexDiscoveryProviders(deployment.chain).length === 0) {
+    if (getDexDiscoveryProviders(deployment.chain, deployment.address).length === 0) {
       unsupportedChainByKey.set(key, deployment.chain);
     } else {
       expectedKeys.add(key);
