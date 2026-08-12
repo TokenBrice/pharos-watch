@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { RedemptionBackstopEntry, RedemptionBackstopMap } from "@shared/types/redemption";
 import {
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   getRedemptionBackstopVersionAt,
 } from "@shared/lib/methodology-versions/redemption-backstop";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
@@ -571,6 +572,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
 
     expect(result.methodology.version).toBe("4.04");
     expect(result.methodology.versionLabel).toBe("v4.04");
+    expect(result.methodology.changelogPath).toBe(REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH);
     expect(result.snapshotSource).toBe("run-rows");
     expect(result.coins["eurc-circle"]?.methodologyVersion).toBe("4.03");
     assertAllD1MatchesUsed(db);

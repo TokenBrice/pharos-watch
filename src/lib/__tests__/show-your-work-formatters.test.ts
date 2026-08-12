@@ -249,14 +249,15 @@ describe("show-your-work formatters", () => {
     expect(table.rows.find((r) => r.label === "Access")?.value).toBe("80");
     expect(table.rows.find((r) => r.label === "Fee (bps)")?.value).toBe("10");
     expect(table.formula).toContain("route score = weighted");
-    expect(table.formula).toContain("model-confidence discount");
-    expect(table.formula).toContain("independent-route diversification");
+    expect(table.formula).toContain("Safety Score V9");
+    expect(table.formula).toContain("exact same-notional route evidence");
+    expect(table.formula).toContain("physical-resource independence");
   });
 
-  it("pins effective-exit methodology copy to the confidence-discount pipeline", () => {
-    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("route score is first capped");
-    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("model-confidence discount");
-    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("diversification bonus");
+  it("labels effective-exit methodology copy as retired", () => {
+    expect(METHODOLOGY_CONTEXT.effectiveExit.title).toContain("Historical");
+    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("v4.3 removed");
+    expect(METHODOLOGY_CONTEXT.effectiveExit.detail).toContain("V9");
   });
 
   it("formats chain-health factors with weighted contributions", () => {

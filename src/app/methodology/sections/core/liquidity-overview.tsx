@@ -21,7 +21,7 @@ export function LiquidityPreconditions() {
     <>
       <MethodologyFacts
         facts={[
-          { label: "Update cadence", value: "30m refresh" },
+          { label: "Update cadence", value: "Score: 2h; source stage and DEX-implied prices: hourly" },
           { label: "Signal mix", value: "5 weighted liquidity components" },
           { label: "Output", value: "0-100 DEX depth score" },
         ]}
@@ -41,7 +41,7 @@ export function LiquidityPreconditions() {
             {
               label: "Failure behavior",
               value:
-                "If both DEX liquidity and eligible redemption evidence are unavailable, the report-card Liquidity / Exit dimension is NR",
+                "Standalone DEX rows can be unavailable. In V9 Exit, missing or unsupported comparable-route evidence receives the bounded floor and exit-unverified ceiling; a reviewed-complete portfolio with no viable route scores Exit 0.",
             },
           ]}
         />

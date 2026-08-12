@@ -250,7 +250,7 @@ export const PRICING_PIPELINE_V3: readonly MethodologyChangelogEntry[] = [
       version: "3.3",
       title: "Source-aware trust, observed-time freshness, and weak-price jump quarantine",
       date: "2026-03-22",
-      effectiveAt: 1774137600,
+      effectiveAt: 1774137602,
       summary:
         "Centralized pricing-source trust policy, preserved true source-observation timestamps through consensus and replay, " +
         "and hardened publication/depeg behavior so weak soft-source moves cannot silently become downstream-authoritative or self-reinforce through the DEX bridge.",
@@ -272,7 +272,7 @@ export const PRICING_PIPELINE_V3: readonly MethodologyChangelogEntry[] = [
       version: "3.2",
       title: "Identity-safe enrichment, severe-downside publication guards, and replay-safe DEX quote derivation",
       date: "2026-03-22",
-      effectiveAt: 1774195200,
+      effectiveAt: 1774137601,
       summary:
         "Closed the main pricing-integrity gaps by constraining fallback identity to tracked deployments, " +
         "requiring corroboration for severe fixed-peg downside publication, promoting only replay-safe cached prices, " +
@@ -295,7 +295,7 @@ export const PRICING_PIPELINE_V3: readonly MethodologyChangelogEntry[] = [
       version: "3.1",
       title: "Canonical DEX token identity and non-overlapping DEX consensus",
       date: "2026-03-22",
-      effectiveAt: 1774180800,
+      effectiveAt: 1774137600,
       summary:
         "Hardened DEX price intake so runtime pool parsing can no longer learn new token identities, " +
         "unknown addressed tokens cannot fall back to symbol matches in price-bearing paths, and promoted DEX bridge sources cannot self-confirm inside primary consensus.",

@@ -38,7 +38,8 @@ export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing
 
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION = "4.35";
 export const REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL = methodologyLabel(REDEMPTION_BACKSTOP_METHODOLOGY_VERSION);
-export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#safety-scores-methodology";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_PATH = "/methodology/#redemption-backstop-methodology";
+export const REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH = "/methodology/redemption-backstop-changelog/";
 
 export const SAFETY_SCORE_METHODOLOGY_VERSION = currentSafetyScoreVersion.currentVersion;
 export const SAFETY_SCORE_METHODOLOGY_VERSION_LABEL = methodologyLabel(SAFETY_SCORE_METHODOLOGY_VERSION);

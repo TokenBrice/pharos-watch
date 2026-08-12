@@ -139,7 +139,7 @@ export const YIELD_METHODOLOGY_V5: readonly MethodologyChangelogEntry[] = [
     version: "5.1",
     title: "Protocol-native BIMA savings fallback for USBD",
     date: "2026-03-24",
-    effectiveAt: 1774310402,
+    effectiveAt: 1774310405,
     summary:
       "USBD now resolves through BIMA's public earn API when DeFiLlama has no usable sUSBD wrapper pool, closing the remaining native-yield coverage gap without introducing a hand-set rate.",
     impact: [
@@ -154,7 +154,7 @@ export const YIELD_METHODOLOGY_V5: readonly MethodologyChangelogEntry[] = [
     version: "5.0",
     title: "Richer freshness provenance and curated lending source links",
     date: "2026-03-24",
-    effectiveAt: 1774310401,
+    effectiveAt: 1774310404,
     summary:
       "Yield rankings provenance now carries source-observation and comparison-anchor timing for derived sources, and the lending allowlist now has curated source-link coverage for all supported protocols.",
     impact: [

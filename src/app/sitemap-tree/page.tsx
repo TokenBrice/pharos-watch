@@ -117,6 +117,11 @@ const METHODOLOGY_CHANGELOG_ROUTE_COPY = [
     description: "Issuance-chain accounting and reconciliation",
   },
   {
+    key: "redemption-backstop",
+    label: "Redemption backstop",
+    description: "Issuer and protocol redemption-route scoring history",
+  },
+  {
     key: "yield",
     label: "Yield intelligence",
     description: "Risk-adjusted yield computation",

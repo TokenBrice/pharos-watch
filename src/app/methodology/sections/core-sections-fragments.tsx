@@ -70,8 +70,8 @@ export function ReserveRelatedSignalsMethodologyCopy() {
           </TableRow>
           <TableRow>
             <TableCell className="py-2 pr-4 text-foreground">Score-grade live reserve</TableCell>
-            <TableCell className="py-2 pr-4 whitespace-normal">The current report-card snapshot used a fresh, clean, independent live reserve snapshot for collateral quality.</TableCell>
-            <TableCell className="py-2 whitespace-normal">Can replace curated collateral slices inside Resilience.</TableCell>
+            <TableCell className="py-2 pr-4 whitespace-normal">The current V9 fact set accepted a fresh, clean, independent live reserve snapshot as Backing evidence.</TableCell>
+            <TableCell className="py-2 whitespace-normal">Can replace reviewed static reserve exposures inside V9 Backing and dependency compilation.</TableCell>
           </TableRow>
           <TableRow>
             <TableCell className="py-2 pr-4 text-foreground">Redemption telemetry</TableCell>

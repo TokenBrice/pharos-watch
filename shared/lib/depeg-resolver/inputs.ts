@@ -20,7 +20,7 @@ export interface DdrCoinStructural {
   mechanismArchetype?: string | null;
   mintPath?: string | null;
   authorityPosture?: string | null;
-  /** Reviewed Mint Authority Score band, when the registry profile is scoreable. */
+  /** Published V9 Economic Control mint-posture band, stored under the legacy field name. */
   mintAuthorityScoreBand?: string | null;
   /** Reviewed mint-authority incidents from the registry. */
   mintIncidents?: Array<{

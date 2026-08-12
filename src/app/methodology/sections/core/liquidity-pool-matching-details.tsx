@@ -75,7 +75,8 @@ export function LiquidityPoolMatchingDetails() {
           reviewed factory and QuoterV2 runtimes, proves the retained pool through the factory&apos;s exact token and
           tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained TVL
           ceiling before scoring. Mature fresh profiles remain route-only if a pool temporarily rotates out of the display
-          shortlist; they never re-enter aggregate liquidity, price consensus, target publication, or V8 scoring. Optimism
+          shortlist; they never re-enter aggregate liquidity, price consensus, or public target inventory. Any V9 Exit
+          use is limited to the current score-eligible exact-route contract. Optimism
           Uniswap V3 has been retired from the maintained source and measured-execution lanes. The reviewed wM/USDC
           Raydium direction still captures its pool state and exactly replays the direct quote, but its score eligibility is
           paused after the first post-activation scoring consumers exceeded the Worker memory limit. Generic Raydium, Orca

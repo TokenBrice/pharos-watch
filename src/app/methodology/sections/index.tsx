@@ -4,6 +4,7 @@ import { LifecyclePhasesMethodologySection } from "./core/lifecycle-phases-secti
 import { LiquidityMethodologySection } from "./core/liquidity-section";
 import { MintAuthorityScoreMethodologySection } from "./core/mint-authority-score-section";
 import { MintBurnFlowMethodologySection } from "./core/mint-burn-flow-section";
+import { RedemptionBackstopMethodologySection } from "./core/redemption-backstop-section";
 import { SafetyScoresMethodologySection } from "./core/safety-scores-section";
 import { StabilityIndexMethodologySection } from "./core/stability-index-section";
 import { BlacklistTrackerMethodologySection } from "./monitoring/blacklist-tracker-section";
@@ -23,6 +24,7 @@ export function MethodologySections() {
       <MintAuthorityScoreMethodologySection />
       <InfrastructureMethodologySection />
       <LiquidityMethodologySection />
+      <RedemptionBackstopMethodologySection />
       <MintBurnFlowMethodologySection />
       <YieldIntelligenceMethodologySection />
       <PegScoreDewsMethodologySection />

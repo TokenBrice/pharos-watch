@@ -212,7 +212,7 @@ export function ScreenerToolbar({
           defaultMin={SCREENER_FILTER_DEFAULTS.dewsMin}
         />
         <ThresholdField
-          label="Mint Authority Score"
+          label="V9 Mint Component"
           min={0}
           max={100}
           step={1}
@@ -336,7 +336,7 @@ export function ScreenerToolbar({
           onChange={(next) => update("mintAuthority", next)}
         />
         <FilterPillGroup
-          kicker="Mint Authority Score"
+          kicker="V9 Mint Component"
           options={MINT_AUTHORITY_SCORE_OPTIONS}
           selected={filters.mintAuthorityScores}
           justEntered={justEnteredMintAuthorityScores}

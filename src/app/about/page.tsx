@@ -582,9 +582,9 @@ export default function AboutPage() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos grades every stablecoin across four weighted base dimensions, with peg stability acting as a
-            multiplier on top. The methodology page covers the full grading formula, peg score computation, DEX
-            liquidity scoring, and contagion stress-test design.
+            Pharos Safety Score V9 grades stablecoins across Backing Quality, Exit Strength, and Economic Control,
+            then applies peg behavior, deployment adjustments, and binding caps. The methodology page covers the
+            full grading formula, peg score computation, DEX liquidity scoring, and contagion stress-test design.
           </p>
           <Button asChild variant="outline" className={CTA_BUTTON_CLASS}>
             <Link href="/methodology/">

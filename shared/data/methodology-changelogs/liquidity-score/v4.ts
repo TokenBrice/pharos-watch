@@ -102,7 +102,7 @@ export const LIQUIDITY_SCORE_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.3",
     title: "Fluid DexReservesResolver balance integration",
     date: "2026-03-18",
-    effectiveAt: 1773792001,
+    effectiveAt: 1773792002,
     summary:
       "Fluid pools on Ethereum, Arbitrum, Base, and Polygon now read balances and fee detail from the official " +
       "DexReservesResolver instead of staying on neutral placeholders.",
@@ -119,7 +119,7 @@ export const LIQUIDITY_SCORE_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.2",
     title: "Measured direct-API balance health and normalized pool-detail metadata",
     date: "2026-03-18",
-    effectiveAt: 1773792000,
+    effectiveAt: 1773792001,
     summary:
       "Balancer, Raydium, and Orca direct-API pools now preserve measured balance and fee metadata through scoring " +
       "instead of merging with neutral placeholders. Pool-detail fee tiers are normalized to basis points for all sources.",
@@ -137,7 +137,7 @@ export const LIQUIDITY_SCORE_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.1",
     title: "Direct API precedence, primary-grade coverage, and fetcher contract hardening",
     date: "2026-03-18",
-    effectiveAt: 1773875700,
+    effectiveAt: 1773792000,
     summary:
       "Direct API sources now replace overlapping DeFiLlama pools before scoring, run ahead of staged/fallback sources, " +
       "and count as primary-grade coverage. Raydium and Orca contract handling was hardened against live API drift, " +

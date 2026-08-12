@@ -70,6 +70,15 @@ TVL depth uses log-scale scoring so small assets can improve without requiring b
 Discovery is source-aware. Pharos stages pools from DefiLlama, direct protocol APIs, CoinGecko on-chain data, GeckoTerminal, DexScreener, and curated DEX sources, then deduplicates by exact pool identity or conservative derived identity. Thin, stale, or identity-poor pools remain visible for diagnostics but do not receive the same scoring weight as durable high-quality venues. Secondary discovery rows with non-finite, negative, or impossible pool TVL are rejected before they can enter scoring.
 
 
+## Redemption Backstop Route Score
+
+The standalone Redemption Backstop score rates an issuer or protocol redemption route from 0 to 100. It composes access (20%), settlement (15%), execution certainty (15%), capacity (25%), output-asset quality (15%), and cost (10%), then applies route-family, eligibility, delay, queue, minimum-redemption, severe-depeg, freshness, and evidence constraints.
+
+Its modeled capacity request is 5% of supply, floored at $100,000 and capped at $25 million. Capacity blends percent-of-supply coverage with absolute executable dollars so a small percentage can still receive bounded credit without pretending it satisfies the full holder request.
+
+This route score is separate from Safety Score V9 Exit. The two share reviewed route-scoring primitives, but V9 re-evaluates exact same-notional evidence under its own stress request, evidence ceilings, danger interlocks, and independent-backup policy.
+
+
 ## Mint/Burn Flow Scoring
 
 Mint/burn flow scoring tracks issuance and redemption pressure across supported token contracts. Pharos classifies transfers into mint, burn, bridge-mint, bridge-burn, atomic roundtrip, and ignored noise so the gauge reflects meaningful supply movement instead of mechanical churn.
@@ -127,6 +136,6 @@ Blacklist exposure uses the four-status report-card model: Yes, Upstream, Possib
 
 Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines supply-weighted Safety Score quality, chain environment, stablecoin concentration, peg stability, and RWA/crypto backing diversity.
 
-The score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.
+The score is computed from current stablecoin data and only a fresh, accepted V9 publication rather than a separate opaque dataset. Missing, held, stale, or invalid V9 leaves Safety quality and the composite NR; there is no V8 or stale-score fallback. A chain with large supply but one dominant issuer, weak backing, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.
 
 Chain Health is intended as market-structure context: it helps users understand whether a chain's stablecoin liquidity is deep, resilient, and diversified enough to support activity during stress.

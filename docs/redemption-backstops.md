@@ -7,7 +7,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 ## Methodology Versioning
 
 - **Current methodology version:** `v4.35`
-- **Public methodology anchor:** `/methodology/#safety-scores-methodology`
+- **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
@@ -15,7 +15,7 @@ Latest `v4.35` update: the residual exit-credit queue clears. dEURO is remodeled
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
-There is no standalone changelog page yet. The public methodology link currently points at the Safety Scores section because redemption backstops feed the report-card liquidity dimension.
+The standalone history is published at `/methodology/redemption-backstop-changelog/`. The current methodology section distinguishes this route diagnostic from V9 Exit, which re-evaluates exact same-notional route evidence under the V9 policy.
 
 ---
 
@@ -23,8 +23,8 @@ There is no standalone changelog page yet. The public methodology link currently
 
 Configured coverage is defined statically behind the thin facade in `shared/lib/redemption-backstops.ts`, with route-family modules under `shared/lib/redemption-backstop-configs/`.
 
-- **Configured coins:** 315
-- **Route families:** 148 `offchain-issuer`, 67 `stablecoin-redeem`, 38 `collateral-redeem`, 39 `queue-redeem`, 14 `psm-swap`, 9 `basket-redeem`
+- **Configured coins and family counts:** derived from `REDEMPTION_BACKSTOP_CONFIGS`; do not copy the changing roster or totals into this document
+- **Route families:** `offchain-issuer`, `stablecoin-redeem`, `collateral-redeem`, `queue-redeem`, `psm-swap`, and `basket-redeem`
 - **No discovery layer:** only coins present in `REDEMPTION_BACKSTOP_CONFIGS` are modeled
 
 The config registry is validated at module load time against `TRACKED_META_BY_ID`, so unknown IDs fail fast during build/test/runtime startup.
@@ -50,7 +50,7 @@ No external HTTP calls happen during the redemption-backstop pass itself; any li
 
 Status semantics:
 
-- `ok` when every active configured route resolves to a usable scored row and the DEX liquidity input used for effective-exit context is fresh, when the only unresolved active rows are a tiny `missing-capacity` tail within the current active-config tolerance budget (`max(1, ceil(activeConfigured * 1%))`), when current market evidence intentionally marks a route `impaired`, or when a configured route is absent from the active runtime stablecoins cache but still materialized as a diagnostic `missing-cache` row
+- `ok` when every active configured route resolves to a usable scored row and the reused DEX diagnostic input is fresh, when the only unresolved active rows are a tiny `missing-capacity` tail within the current active-config tolerance budget (`max(1, ceil(activeConfigured * 1%))`), when current market evidence intentionally marks a route `impaired`, or when a configured route is absent from the active runtime stablecoins cache but still materialized as a diagnostic `missing-cache` row. The DEX score remains backward-compatible context only; it never computes a combined exit score.
 - `degraded` when at least one row is written but any active configured route fails, hits a non-`missing-capacity`/non-`impaired`/non-`missing-cache` unresolved state, the `missing-capacity` tail exceeds that tolerance budget, the reused DEX liquidity snapshot is stale or missing, the runtime cache has no active configured route at all, a reserve-metadata or DEX-liquidity preload step failed, or the D1 write/retention step returned warnings
 - `error` when zero routes resolve to a usable scored row because of route failures, blocking unresolved states, all active configured routes missing capacity, or every configured route being absent from the active runtime stablecoins cache
 
@@ -179,7 +179,7 @@ Mento FPMM pools (`JPYm`, `CHFm`) additionally read the pool's `lpFee()` + `prot
 `LUSD` now uses the live `liquity-v1` onchain adapter for bounded current direct capacity, scoring against `TroveManager.getEntireSystemDebt()` when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model.
 `BOLD`, `feUSD`, `USDQ`, `NECT`, and `CDP` now use the live `liquity-v2-branches` onchain adapter for bounded current direct capacity, scoring against aggregate ActivePool branch debt when the 4-hourly reserve snapshot is fresh and clean rather than the old static full-supply model. The adapter can also surface branch shutdown/sunsetting as degraded route status.
 `meUSD` now uses the live `liquity-native-active-pool` onchain adapter for Mezo's native ActivePool shape, scoring against latest contract debt only when the same-run collateral, TCR/MCR, and fee telemetry is fresh and clean.
-`reUSD` now uses the live `resupply-pairs` onchain adapter for bounded current direct capacity, scoring against aggregate `RedemptionHandler.getMaxRedeemableDebt(pair)` only when the same-run handler guard state shows permissionless redemptions are open. If the guard is closed above the threshold, the route is marked cohort-limited and does not uplift Safety Score liquidity.
+`reUSD` now uses the live `resupply-pairs` onchain adapter for bounded current direct capacity, scoring against aggregate `RedemptionHandler.getMaxRedeemableDebt(pair)` only when the same-run handler guard state shows permissionless redemptions are open. If the guard is closed above the threshold, the route is marked cohort-limited and does not enter V9 Exit.
 Re Protocol `reUSD` now uses `re-metrics` instant redemption vault capacity from the official metrics payload as same-run API telemetry, retaining a reviewed fallback because redemptions above the instant vault capacity can spill to the queue.
 `fxUSD` now uses f(x)'s protocol pool API debt balances as live proxy capacity, while `USDaf` uses Asymmetry's timestamped protocol supply data as direct live capacity. `JupUSD` uses Jupiter's public transparency API for current USDC/USDtb holdings and oracle route-status context, with the previous 10% reviewed buffer retained only as fallback.
 M0 wrappers `wM` and `USDSC` now use `m0-wrapper-underlying` capacity telemetry from the underlying M token balance; USDSC also requires the reviewed Soneium SwapFacility and approved swapper route before emitting whitelisted-primary direct capacity.
@@ -242,7 +242,7 @@ Each row also carries:
 - Immutable fully on-chain systems and reviewed direct issuer / direct redeem routes can use `documented-bound` with `eventual-only` semantics when protocol mechanics or issuer terms establish full-system redeemability directly, even if no separate immediate buffer is measured
 - `capacitySemantics`:
   - `immediate-bounded` when the model is intended to represent a current redeemable buffer
-  - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Report cards generally treat these as visible-only, except documented offchain issuer routes can add a DEX-gated primary-market exit bonus under Safety Score methodology v7.05+
+  - `eventual-only` when the route is scored as eventual redeemability rather than immediate same-size liquidity. Current V9 applies the unified Exit route ladder: reliable reviewed non-atomic issuer/protocol/eventual routes require output, evidence, failure-domain, and capacity gates and receive the applicable delay/confidence discounts. The DEX-gated primary-market bonus was historical V7.05 behavior, not a current scoring path.
 - `capacityBasis` (orthogonal to `capacityConfidence`: basis describes the model shape, confidence the evidence strength — consumers must read both; a `psm-balance-share` basis can be live-measured or a heuristic guess):
   - typed evidence basis such as `issuer-term-redemption`, `full-system-eventual`, `psm-balance-share`, `strategy-buffer`, `hot-buffer`, `daily-limit`, `live-direct-telemetry`, or `live-proxy-buffer`
   - reserve-sync fallback ratios use the configured `basis` when present, otherwise route-family defaults such as `psm-balance-share`, `strategy-buffer`, or `hot-buffer`; they are not labeled `live-proxy-buffer` unless live proxy telemetry produced the capacity
@@ -262,7 +262,8 @@ Each row also carries:
   - `confidenceDetails` can expose the component evidence scores and rollup reasons
 - `routeExitCorrelation`:
   - `independent-issuer-rail`, `same-stablecoin-pool-backing`, `same-protocol-liquidity`, `wrapper-to-parent-dependency`, or `unknown`
-  - only `independent-issuer-rail` earns the v4 effective-exit diversification bonus
+  - retained as legacy diagnostic/display metadata; it has no current scoring effect
+  - V9 Exit derives route independence from disjoint failure domains and physical-resource keys instead of this tag
 
 ### Docs / Notes
 

@@ -5,7 +5,7 @@ export const YIELD_METHODOLOGY_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.9",
     title: "Publish-safe retention and deterministic adapter quarantine",
     date: "2026-03-24",
-    effectiveAt: 1774310400,
+    effectiveAt: 1774310403,
     summary:
       "Yield publication now preflights rankings payloads before mutating live rows, degraded runs retain prior rows instead of destructively pruning, and the two known-bad generic deterministic vault probes were quarantined from Tier 1 coverage.",
     impact: [
@@ -20,7 +20,7 @@ export const YIELD_METHODOLOGY_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.8",
     title: "Explicit edge-case overrides for remaining high-signal lending markets",
     date: "2026-03-24",
-    effectiveAt: 1774360200,
+    effectiveAt: 1774310402,
     summary:
       "A final selective pass added deterministic lending overrides for the remaining high-signal exact-symbol markets that were still blocked only by report-card coverage gaps or sub-C safety gating.",
     impact: [
@@ -35,7 +35,7 @@ export const YIELD_METHODOLOGY_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.7",
     title: "Early NAV fallback support and deeper long-tail lending coverage",
     date: "2026-03-24",
-    effectiveAt: 1774357200,
+    effectiveAt: 1774310401,
     summary:
       "Yield coverage widened again through lower but still curated lending floors, two additional protocol families, and price-derived fallbacks that can bootstrap younger NAV tokens before day 30.",
     impact: [
@@ -50,7 +50,7 @@ export const YIELD_METHODOLOGY_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.6",
     title: "Rate-derived treasury expansion and broader lending discovery",
     date: "2026-03-24",
-    effectiveAt: 1774346400,
+    effectiveAt: 1774310400,
     summary:
       "Yield coverage widened through new deterministic Treasury fallbacks plus a broader but still curated lending auto-discovery set for long-tail safe assets.",
     impact: [

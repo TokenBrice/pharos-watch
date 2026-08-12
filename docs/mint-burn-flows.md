@@ -76,98 +76,13 @@ UI note: when `/flows` receives a mint/burn-specific `sync.warning`, it renders 
 
 Token identity now resolves from the shared stablecoin registry in `shared/lib/stablecoins/registry.ts`, which validates the checked-in per-coin metadata assets under `shared/data/stablecoins/coins/*.json` through `shared/data/stablecoins/coins.generated.json` at module load. The mint/burn config file only keeps tracker-specific fields such as event signatures, `startBlock`, `dustThreshold`, tiering, and bridge-detection hints. There are no explicit address overrides; both `reUSD` configs (`reusd-re-protocol` and `reusd-resupply`) resolve the registered token contract and track its canonical zero-address `Transfer` events.
 
-### Representative Stablecoins
+### Registry ownership
 
-Current scope is the complete `MINT_BURN_CONFIGS` registry, including its source-owned critical and extended tiers.
-
-The table below is representative, not exhaustive. The complete active registry is `MINT_BURN_CONFIGS` in `worker/src/lib/mint-burn-contracts.ts`.
-
-| Symbol | ID | Decimals | Category | Events |
-|--------|----|----------|----------|--------|
-| USDT | usdt-tether | 6 | Safe haven | Transfer + Issue/Redeem |
-| USDC | usdc-circle | 6 | Safe haven | Transfer |
-| FDUSD | fdusd-first-digital | 18 | Safe haven | Transfer |
-| PYUSD | pyusd-paypal | 6 | Safe haven | Transfer |
-| DAI | dai-makerdao | 18 | Risky | Transfer |
-| GHO | gho-aave | 18 | Risky | Transfer |
-| USDe | usde-ethena | 18 | Risky | Transfer |
-| USDS | usds-sky | 18 | Risky | Transfer |
-| FRXUSD | frxusd-frax | 18 | Risky | Transfer |
-| BOLD | bold-liquity | 18 | Risky | Transfer |
-| USD3 | usd3-3jane | 6 | Extended | Transfer |
-| yBOLD | ybold-yearn | 18 | Extended | Transfer |
-| fxUSD | fxusd-f-x-protocol | 18 | Extended | Transfer |
-| crvUSD | crvusd-curve | 18 | Extended | Transfer |
-| AUSD | ausd-agora | 6 | Extended | Transfer |
-| ZCHF | zchf-frankencoin | 18 | Extended | Transfer |
-| EURC | eurc-circle | 6 | Extended | Transfer |
-| PAXG | paxg-paxos | 18 | Extended | Transfer |
-| XAUT | xaut-tether | 6 | Extended | Transfer |
-| USDG | usdg-paxos | 6 | Extended | Transfer |
-| USD1 | usd1-world-liberty-financial | 18 | Extended | Transfer |
-| USDf | usdf-falcon | 18 | Extended | Transfer |
-| USYC | usyc-hashnote | 6 | Extended | Transfer |
-| RLUSD | rlusd-ripple | 18 | Extended | Transfer |
-| USDY | usdy-ondo-finance | 18 | Extended | Transfer |
-| BUIDL | buidl-blackrock | 6 | Extended | Transfer |
-| USDD | usdd-tron-dao-reserve | 18 | Extended | Transfer |
-| USDTB | usdtb-ethena | 18 | Extended | Transfer |
-| M | m-m0 | 6 | Extended | Transfer |
-| USD0 | usd0-usual | 18 | Extended | Transfer |
-| TUSD | tusd-trueusd | 18 | Extended | Transfer |
-| CUSD | cusd-cap | 18 | Extended | Transfer |
-| USR | usr-resolv | 18 | Extended | Transfer |
-| FRAX | frax-frax | 18 | Extended | Transfer |
-| DOLA | dola-inverse-finance | 18 | Extended | Transfer |
-| IUSD | iusd-infinifi | 18 | Extended | Transfer |
-| GUSD | gusd-gate | 6 | Extended | Transfer |
-| avUSD | avusd-avant | 18 | Extended | Transfer |
-| pmUSD | pmusd-precious-metals | 18 | Extended | Transfer |
-| USDz | usdz-anzen | 18 | Extended | Transfer |
-| TBILL | tbill-openeden | 6 | Extended | Transfer |
-| USG | usg-tangent | 18 | Extended | Transfer |
-| USDO | usdo-openeden | 18 | Extended | Transfer |
-| EURCV | eurcv-societe-generale-forge | 18 | Extended | Transfer |
-| REUSD | reusd-resupply | 18 | Extended | Transfer |
-| EURI | euri-banking-circle | 18 | Extended | Transfer |
-| GUSD | gusd-gemini | 2 | Extended | Transfer |
-| USDP | usdp-paxos | 18 | Extended | Transfer |
-| XUSD | xusd-straitsx | 6 | Extended | Transfer |
-| MUSD | musd-metamask | 6 | Extended | Transfer |
-| YUSD | yusd-aegis | 18 | Extended | Transfer |
-| SUSD | susd-synthetix | 18 | Extended | Transfer |
-| LUSD | lusd-liquity | 18 | Extended | Transfer |
-| USDCV | usdcv-societe-generale-forge | 18 | Extended | Transfer |
-| EURE | eure-monerium | 18 | Extended | Transfer |
-| USN | usn-noon | 18 | Extended | Transfer |
-| EUSD | eusd-electronic-usd | 18 | Extended | Transfer |
-| meUSD | meusd-mezo | 18 | Extended | Transfer |
-| MSUSD | msusd-metronome | 18 | Extended | Transfer |
-| NUSD | nusd-neutrl | 18 | Extended | Transfer |
-| ALUSD | alusd-alchemix | 18 | Extended | Transfer |
-| FIDD | fidd-fidelity | 18 | Extended | Transfer |
-| MSUSD | msusd-main-street | 18 | Extended | Transfer |
-| WUSD | wusd-worldwide | 18 | Extended | Transfer |
-| SBC | sbc-brale | 18 | Extended | Transfer |
-| OUSD | ousd-origin-protocol | 18 | Extended | Transfer |
-| USP | usp-pikudao | 18 | Extended | Transfer |
-| USDR | usdr-stablr | 6 | Extended | Transfer |
-| USTB | ustb-superstate | 6 | Extended | Transfer |
-| OUSG | ousg-ondo-finance | 18 | Extended | Transfer |
-| mTBILL | mtbill-midas | 18 | Extended | Transfer |
-| wsrUSD | wsrusd-reservoir | 18 | Extended | Transfer |
-| AUDD | audd-novatti | 6 | Extended | Transfer |
-| JPYC | jpyc-jpyc | 18 | Extended | Transfer |
-| XAUm | xaum-matrixdock | 18 | Extended | Transfer |
-| EURR | eurr-stablr | 6 | Extended | Transfer |
-| EUROP | europ-schuman | 6 | Extended | Transfer |
-| DEURO | deuro-deuro | 18 | Extended | Transfer |
-| tGBP | tgbp-tokenised | 18 | Extended | Transfer |
-| syrupUSDC | syrupusdc-maple | 6 | Extended | Transfer |
-| syrupUSDT | syrupusdt-maple | 6 | Extended | Transfer |
-| AID | aid-gaib | 18 | Extended | Transfer |
-| apxUSD | apxusd-apyx | 18 | Extended | Transfer |
-| reUSD | reusd-re-protocol | 18 | Extended | Transfer (zero-address) |
+Current scope, decimals, contract identity, ingestion tier, start block, and event-decoder configuration are owned by
+the complete `MINT_BURN_CONFIGS` registry in `worker/src/lib/mint-burn-contracts.ts`. Do not copy that changing roster
+into this document. The registry distinguishes `critical` and `extended` ingestion tiers; those tiers are operational
+scheduling choices, not safe/risky classifications. USDT is the notable custom-event example because it combines
+zero-address `Transfer` events with Issue/Redeem events. Other special decoding and bridge rules remain source-owned.
 
 Public `/api/mint-burn-flows` and the daily digest collector use the same canonical V9 flight-to-quality classification. `B-` or better is `safe`; `C+`, `C`, and `C-` are neutral; grades below `C-` are `risky`. Classification requires a complete current `safety-score-v9-publication` identity and becomes unavailable when the accepted publication is missing, held, stale, malformed, or identity-mismatched instead of falling back to a hardcoded safe-haven list.
 

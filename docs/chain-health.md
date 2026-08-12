@@ -12,11 +12,11 @@ Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`,
 
 ## Inputs
 
-`GET /api/chains` loads the strict stablecoins cache, filters it to active non-frozen/non-defunct stablecoins, derives non-USD peg references with `derivePegRates(...)`, and reads the current report-card cache for Safety Score inputs. The endpoint returns `503` if the stablecoins cache is unavailable. Report-card cache misses do not fail the route; they reduce or null out the quality factor depending on coverage.
+`GET /api/chains` loads the strict stablecoins cache, restricts it to `CORE_AGGREGATE_ACTIVE_IDS`, derives non-USD peg references with `derivePegRates(...)`, and hydrates Safety Score inputs only from a fresh accepted V9 publication. The endpoint returns `503` if the stablecoins cache is unavailable. A missing, held, stale, or invalid V9 dependency does not fail the route; the score map stays empty, so quality and the composite are `null`/NR.
 
 The Chain Environment factor reads the static L2BEAT chain-risk snapshot in `shared/lib/chains/l2beat-risk.ts` before using the legacy Pharos resilience tier. The snapshot is sourced from `https://l2beat.com/api/scaling/summary` and is not fetched live at request time.
 
-The compact report-card cache carries a `degradedInputs` marker. When cached Safety Scores were computed from stale report-card inputs, Chain Health keeps the cached score map available but downgrades `_meta.dependencies.reportCards` to `degraded`, switches the response to `no-store`, and emits a freshness warning.
+The response reports the V9 dependency as degraded, stale, or unavailable as appropriate and switches to `no-store`; it never carries stale or held ratings into Chain Health.
 
 The frontend chain profile coordinates `GET /api/chains` with `GET /api/stablecoins`. It renders top-level summary data from the chain snapshot first, then shows composition, backing breakdown, and stablecoin tables only when both snapshots share the same `updatedAt` and the stablecoins snapshot includes authoritative freshness metadata.
 

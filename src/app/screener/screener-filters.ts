@@ -263,7 +263,7 @@ export interface ScreenerRow {
   blacklistable: BlacklistableValue | null;
   /** Curated mint-authority review bucket. "unknown" = no compact review. */
   mintAuthority: MintAuthorityStatusKind;
-  /** Standalone Mint Authority Score (0-100). null = not rated. */
+  /** Published Safety V9 mint-control component (0-100). null = not rated. */
   mintAuthorityScore: number | null;
   /** Score band bucket, or "nr" when unrated. */
   mintAuthorityScoreBand: MintAuthorityScoreFilterValue;

@@ -395,7 +395,7 @@ export function formatRedemption(entry: RedemptionBackstopEntry): ShowYourWorkTa
   return {
     rows,
     formula:
-      "route score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps; effective exit then applies capacity, freshness, model-confidence discount, and independent-route diversification before comparing with DEX liquidity",
+      "route score = weighted(access, settlement, execution, capacity, output, cost) with route-family caps; Safety Score V9 separately re-evaluates exact same-notional route evidence, freshness, failure domains, and physical-resource independence inside Exit",
     topic: "redemptionBackstop",
   };
 }

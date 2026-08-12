@@ -94,7 +94,7 @@ describe("createMethodologyVersion", () => {
           version: "10.0",
           title: "",
           date: "",
-          effectiveAt: 1000,
+          effectiveAt: 3000,
           summary: "",
           impact: [],
           commits: [],
@@ -104,6 +104,37 @@ describe("createMethodologyVersion", () => {
     });
 
     expect(methodology.versionLabels).toEqual(["v10.0", "v9.99"]);
+  });
+
+  it("rejects an activation timeline that rolls back to an older version", () => {
+    expect(() =>
+      createMethodologyVersion({
+        currentVersion: "2.0",
+        changelogPath: "/methodology/chronology-drift-test/",
+        changelog: [
+          {
+            version: "2.0",
+            title: "",
+            date: "",
+            effectiveAt: 1000,
+            summary: "",
+            impact: [],
+            commits: [],
+            reconstructed: false,
+          },
+          {
+            version: "1.9",
+            title: "",
+            date: "",
+            effectiveAt: 2000,
+            summary: "",
+            impact: [],
+            commits: [],
+            reconstructed: false,
+          },
+        ],
+      }),
+    ).toThrow(/activation chronology drift/i);
   });
 
   it("throws in dev/test when currentVersion drifts from the latest changelog entry", () => {

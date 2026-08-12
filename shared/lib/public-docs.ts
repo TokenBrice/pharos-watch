@@ -116,7 +116,7 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     slug: "report-cards",
     title: "Report Cards",
     summary:
-      "Stablecoin report-card methodology for safety scoring, peg risk, liquidity, reserves, resilience, decentralization, dependency exposure, and portfolios.",
+      "Stablecoin V9 report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.",
     group: "methodology",
   },
   {
@@ -124,7 +124,7 @@ export const PUBLIC_DOCS: readonly PublicDoc[] = [
     slug: "redemption-backstops",
     title: "Redemption Backstops",
     summary:
-      "Redemption Backstops methodology for exit routes, redemption terms, effective-exit scoring, operational disclosures, and stored review evidence.",
+      "Redemption Backstops methodology for standalone route scoring, redemption terms, V9 Exit evidence, operational disclosures, and stored review evidence.",
     group: "methodology",
   },
   {

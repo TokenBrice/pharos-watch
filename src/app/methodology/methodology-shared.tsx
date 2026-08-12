@@ -14,6 +14,7 @@ export const METHODOLOGY_SECTIONS = [
   { id: "mint-authority-score", label: "Mint Authority Score" },
   { id: "infrastructure-methodology", label: "Infrastructure" },
   { id: "liquidity-methodology", label: "Liquidity Score" },
+  { id: "redemption-backstop-methodology", label: "Redemption Backstop" },
   { id: "mint-burn-flow-methodology", label: "Mint/Burn Flow" },
   { id: "yield-intelligence-methodology", label: "Yield Intelligence" },
   { id: "pegscore-dews-methodology", label: "PegScore + DEWS" },

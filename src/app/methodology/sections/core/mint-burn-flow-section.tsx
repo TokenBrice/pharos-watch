@@ -267,8 +267,9 @@ export function MintBurnFlowMethodologySection() {
                   </p>
                   <ul className="list-disc list-inside space-y-1">
                     <li>
-                      <span className="text-foreground">Safe classification</span> &mdash; tracked mint/burn coins with report-card score &ge;65;
-                      risky coins are tracked mint/burn coins with score &lt;50. Classification is unavailable when the report-card cache is unavailable or stale
+                      <span className="text-foreground">Safety cohorts</span> &mdash; safe is B- or above, neutral is C-/C/C+,
+                      and risky is below C-. Classification is unavailable for inactive assets or when the canonical V9
+                      publication is missing, held, stale, invalid, or identity-incompatible
                     </li>
                     <li>
                       <span className="text-foreground">Dual threshold</span> &mdash; active when risky coins have &gt;$100M

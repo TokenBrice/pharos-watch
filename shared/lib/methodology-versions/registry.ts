@@ -34,6 +34,11 @@ import {
   PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL,
 } from "./pricing-pipeline";
 import {
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+} from "./redemption-backstop";
+import {
   SAFETY_SCORE_METHODOLOGY_CHANGELOG,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
@@ -60,7 +65,8 @@ export type MethodologyChangelogRegistryKey =
   | "yield"
   | "blacklist-tracker"
   | "mint-burn-flow"
-  | "pricing-pipeline";
+  | "pricing-pipeline"
+  | "redemption-backstop";
 
 export type MethodologyChangelogMarkdownKey =
   | "scoring"
@@ -72,7 +78,8 @@ export type MethodologyChangelogMarkdownKey =
   | "yield"
   | "blacklist-tracker"
   | "mint-burn-flow"
-  | "pricing-pipeline";
+  | "pricing-pipeline"
+  | "redemption-backstop";
 
 export interface MethodologyChangelogRegistryEntry {
   key: MethodologyChangelogRegistryKey;
@@ -140,6 +147,19 @@ export const METHODOLOGY_CHANGELOG_REGISTRY = [
     currentLabel: LIQUIDITY_METHODOLOGY_VERSION_LABEL,
     entries: LIQUIDITY_METHODOLOGY_CHANGELOG,
     citationId: "liquidity-score",
+  },
+  {
+    key: "redemption-backstop",
+    markdownKey: "redemption-backstop",
+    feedKey: "redemption-backstop",
+    feedLabel: "Redemption Backstop",
+    markdownTitle: "Redemption Backstop Changelog",
+    linkTitle: "Redemption Backstop Changelog",
+    llmsDescription: "Standalone redemption-route scoring history and V9 Exit evidence evolution.",
+    publicPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
+    currentLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+    entries: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG,
+    citationId: "redemption-backstop",
   },
   {
     key: "stability-index",

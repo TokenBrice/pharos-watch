@@ -7,7 +7,7 @@ import type { FaqItem } from "@/lib/faq";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 const screenerDescription =
-  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, and lifecycle.";
+  "Filter the screenable stablecoin catalog by DEWS, Safety Grade, V9 pillars and mint-control posture, supply, type, mechanism, peg, and lifecycle.";
 
 export const metadata = buildPageMetadata({
   title: "Pharos Screener: Filter Stablecoins by Score & Mechanism",
@@ -20,7 +20,7 @@ const FAQ_ITEMS = [
   {
     question: "What does the Pharos Screener do?",
     answer:
-      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, Safety Score dimensions, Mint Authority Score, supply, type, mechanism, peg, mint authority route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
+      "The Screener filters active, pre-launch, and frozen catalog records by DEWS, Safety Grade, the three V9 pillars, V9 mint-control component and posture, supply, type, mechanism, peg, mint route, and lifecycle. Quarantined and delisted records remain available through static detail pages. Share the URL to share the exact filter state.",
   },
   {
     question: "How is filter state shared?",
@@ -30,7 +30,7 @@ const FAQ_ITEMS = [
   {
     question: "Why are some scores empty?",
     answer:
-      "Pharos rates roughly 50–70% of tracked stablecoins on each score. Coins with insufficient history, no DEX coverage, or recent listings show a dash. Active score thresholds exclude coins missing that score.",
+      "A dash means the selected metric is not rated for that asset under its current evidence and publication state. Active score thresholds exclude coins missing that score.",
   },
   {
     question: "Why isn't jurisdiction a filter yet?",
@@ -47,9 +47,9 @@ const SCREENER_SUPPORT_SECTION = (
         <div className="space-y-2">
           <p className="pharos-kicker">Reading the Filters</p>
           <p>
-            Numeric thresholds narrow the candidate set on DEWS stress, Mint Authority Score, the five Safety Score
-            sub-dimensions, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
-            archetype, mint-authority route and score band, peg, and lifecycle.
+            Numeric thresholds narrow the candidate set on DEWS stress, the V9 mint component, the three Safety Score
+            pillars, and USD-denominated supply. Multi-select pills filter by Safety Grade, type, mechanism
+            archetype, curated mint-authority route and V9 mint-posture band, peg, and lifecycle.
           </p>
           <p>
             Cross-reference results against the{" "}

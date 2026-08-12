@@ -17,7 +17,7 @@
  * The score is rounded to one decimal place and mapped to a named condition
  * band (BEDROCK → MELTDOWN) for display.
  *
- * @see docs/plans/2026-02-25-stability-index-design.md for full algorithm spec.
+ * @see docs/stability-index.md for the verified algorithm specification.
  */
 
 import type { ConditionBand } from "@shared/lib/psi-colors";

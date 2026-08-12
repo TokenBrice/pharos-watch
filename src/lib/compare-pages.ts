@@ -348,7 +348,7 @@ export function buildComparisonFaqItems(page: StaticComparisonPage): ComparisonF
     },
     {
       question: `Which is safer: ${left.symbol} or ${right.symbol}?`,
-      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current peg behavior, liquidity / exit capacity, dependency risk, resilience, and decentralization scoring.`,
+      answer: `Safety is not decided by ticker alone. Use this static page for the structural comparison, then open the live ${page.shortTitle} compare tool and Safety Scores page for current V9 Backing, Exit, and Economic Control pillars plus peg behavior, dependency exposure, evidence quality, and structural caps.`,
     },
     {
       question: `Why does Pharos keep a static ${left.symbol} vs ${right.symbol} page?`,

@@ -4,14 +4,14 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 (detection) runs eve
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v6.2`
+- **Current methodology version:** `v6.21`
 - **Runtime/version source:** `shared/lib/methodology-versions/depeg-dews.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
 
 ## Downstream: Depeg Duration Resolver
 
-Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), which resolves them into canonical incidents and, under DDRv3, freezes one public prediction or no-call when an active incident reaches forecast readiness (`score >0.75`, strictly) or the first healthy run at/after the 72h backstop. DDR does not run its own detection — it inherits the clean confirmed-event stream described here. If the incident recovers or receives reliable terminal evidence before a healthy DDR lock, DDRR records `resolved_before_prediction` or `terminal_before_prediction` instead of creating a retroactive forecast. See [depeg-resolver.md](./depeg-resolver.md).
+Confirmed `depeg_events` are the trigger for the Depeg Duration Resolver (DDR), which resolves them into canonical incidents and, under current DDRv4 (the lock contract was introduced in DDRv3), freezes one public prediction or no-call when an active incident reaches forecast readiness (`score >0.75`, strictly) or the first healthy run at/after the 72h backstop. DDR does not run its own detection — it inherits the clean confirmed-event stream described here. If the incident recovers or receives reliable terminal evidence before a healthy DDR lock, DDRR records `resolved_before_prediction` or `terminal_before_prediction` instead of creating a retroactive forecast. See [depeg-resolver.md](./depeg-resolver.md).
 
 ## Thresholds & Constants
 

@@ -170,7 +170,7 @@ export const START_HERE_SCORES: readonly StartHereScore[] = [
     fullName: "Composite risk grade (A+ to F)",
     question: "How risky is this stablecoin overall?",
     inputs:
-      "Weighted composite: Liquidity/Exit (30%), Resilience (20%), Decentralization (15%), Dependency Risk (25%), multiplied by a peg-stability factor.",
+      "Weighted V9 composite: Backing Quality (40%), Exit Strength (35%), and Economic Control (25%), followed by peg, deployment, and binding-cap adjustments.",
     cadence: "Recomputed continuously from live inputs; bands A+ (87+) through F (0–39).",
     methodologyHref: "/methodology/#safety-scores-methodology",
     surfacedOn: "Open the Safety Scores leaderboard",
@@ -328,7 +328,7 @@ export const START_HERE_ATLAS: readonly StartHereAtlasGroup[] = [
       {
         title: "Safety Scores",
         description:
-          "A+ to F grades across every tracked stablecoin from a weighted composite of liquidity, resilience, decentralization, dependency risk, and peg stability — with live reserve feeds and redemption-backstop quality folded in.",
+          "A+ to F grades from V9 Backing Quality, Exit Strength, and Economic Control, with live reserve and redemption evidence, peg behavior, deployment adjustments, and binding caps.",
         href: "/safety-scores/",
         icon: FlaskConical,
       },

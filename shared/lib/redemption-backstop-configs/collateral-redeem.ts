@@ -369,7 +369,7 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         sourceRef("Resupply app", "https://resupply.fi/redeem", ["route", "capacity", "settlement"]),
       ],
       notes: [
-        "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not uplift Safety Score liquidity",
+        "Fresh Resupply pair telemetry reads RedemptionHandler.getMaxRedeemableDebt() and the permissionless guard state as the current executable capacity bound; when the guard is closed, the route stays visible but does not enter or uplift V9 Exit",
         "Output declared 2026-07-19: Resupply docs state all reUSD collateral backing consists of crvUSD supplied to Curve Lend or frxUSD supplied to Frax Lend, and the redeemer chooses which pools to redeem against, so the payout is the chosen pools' crvUSD/frxUSD-denominated lending collateral.",
       ],
     },

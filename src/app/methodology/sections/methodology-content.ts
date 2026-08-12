@@ -96,6 +96,16 @@ export const LIQUIDITY_SECTION_CONTENT = defineMethodologySectionContent({
   ],
 });
 
+export const REDEMPTION_BACKSTOP_SECTION_CONTENT = defineMethodologySectionContent({
+  id: "redemption-backstop-methodology",
+  title: "Redemption Backstop Route Score",
+  markdownParagraphs: [
+    "The standalone Redemption Backstop score rates an issuer or protocol redemption route from 0 to 100. It composes access (20%), settlement (15%), execution certainty (15%), capacity (25%), output-asset quality (15%), and cost (10%), then applies route-family, eligibility, delay, queue, minimum-redemption, severe-depeg, freshness, and evidence constraints.",
+    "Its modeled capacity request is 5% of supply, floored at $100,000 and capped at $25 million. Capacity blends percent-of-supply coverage with absolute executable dollars so a small percentage can still receive bounded credit without pretending it satisfies the full holder request.",
+    "This route score is separate from Safety Score V9 Exit. The two share reviewed route-scoring primitives, but V9 re-evaluates exact same-notional evidence under its own stress request, evidence ceilings, danger interlocks, and independent-backup policy.",
+  ],
+});
+
 export const MINT_BURN_FLOW_SECTION_CONTENT = defineMethodologySectionContent({
   id: "mint-burn-flow-methodology",
   title: "Mint/Burn Flow Scoring",
@@ -155,7 +165,7 @@ export const CHAIN_HEALTH_SECTION_CONTENT = defineMethodologySectionContent({
   title: "Chain Health Score",
   markdownParagraphs: [
     "Chain Health Score evaluates how healthy each chain's stablecoin stack is. It combines supply-weighted Safety Score quality, chain environment, stablecoin concentration, peg stability, and RWA/crypto backing diversity.",
-    "The score is computed from current stablecoin and report-card data rather than a separate opaque dataset. A chain with large supply but one dominant issuer, weak collateral quality, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.",
+    "The score is computed from current stablecoin data and only a fresh, accepted V9 publication rather than a separate opaque dataset. Missing, held, stale, or invalid V9 leaves Safety quality and the composite NR; there is no V8 or stale-score fallback. A chain with large supply but one dominant issuer, weak backing, poor peg behavior, or narrow backing diversity can score below a smaller but more diversified chain.",
     "Chain Health is intended as market-structure context: it helps users understand whether a chain's stablecoin liquidity is deep, resilient, and diversified enough to support activity during stress.",
   ],
 });
@@ -167,6 +177,7 @@ export const METHODOLOGY_INDEX_SECTION_CONTENT = [
   MINT_AUTHORITY_SCORE_SECTION_CONTENT,
   INFRASTRUCTURE_SECTION_CONTENT,
   LIQUIDITY_SECTION_CONTENT,
+  REDEMPTION_BACKSTOP_SECTION_CONTENT,
   MINT_BURN_FLOW_SECTION_CONTENT,
   YIELD_SECTION_CONTENT,
   PEGSCORE_DEWS_SECTION_CONTENT,

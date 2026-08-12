@@ -74,7 +74,7 @@ export const content: ArchetypeContent = {
     },
     {
       title: "Multi-collateral CDP with PSM",
-      body: "DAI/USDS and GHO. The most common modern shape; PSMs make the peg feel tighter in calm markets and import upstream-stablecoin risk during stress. Pharos tracks each PSM coupling as a `mechanism` Dependency Risk.",
+      body: "DAI/USDS and GHO. The most common modern shape; PSMs make the peg feel tighter in calm markets and import upstream-stablecoin risk during stress. Pharos tracks each PSM coupling as a `mechanism` dependency edge.",
     },
     {
       title: "Soft-liquidation and savings wrappers",
@@ -83,10 +83,10 @@ export const content: ArchetypeContent = {
   ],
   whatToWatch: [
     "Active depeg cap on the Safety Score. Severe active depegs hard-cap the grade; for CDPs this is the most common failure mode.",
-    "Chain tier and oracle dependency in the report card. Non-Ethereum CDP deployments carry an explicit chain-infra penalty on Decentralization.",
+    "Chain, deployment, bridge, and oracle evidence in the V9 report card. Unresolved or weak infrastructure evidence can constrain the affected pillar or publication instead of receiving a generic Decentralization penalty.",
     "Redemption Backstop route family. CDPs usually show `collateral-redeem` or `psm-swap`. Liquity-style forks expose `liquity-v1` and `liquity-v2-branches` live adapters with on-chain capacity.",
-    "Dependency Risk via PSMs. DAI ↔ USDC, GHO ↔ USDC/USDT, USDS ↔ USDC are tracked as `mechanism` dependencies — the upstream stablecoin's grade ceilings the CDP's.",
-    "Governance Quality tier. `immutable-code` (LUSD, BOLD) sits at the top; `dao-governance` (DAI, USDS, GHO, crvUSD) drops a band; `multisig` drops further.",
+    "V9 dependency exposure via PSMs. DAI ↔ USDC, GHO ↔ USDC/USDT, and USDS ↔ USDC are tracked as `mechanism` dependencies and bound the downstream claim under the current dependency policy.",
+    "Economic Control evidence. Review the actual upgrade, mint, freeze, governance, timelock, and key-custody surfaces; V9 does not award a generic governance-label band.",
     "Live Reserve view. Systems with live-reserve telemetry (Maker, Liquity v1/v2, GHO, crvUSD) show the 4-hourly vault and PSM composition instead of a quarterly snapshot.",
   ],
   crossLinks: [

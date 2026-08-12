@@ -1,4 +1,3 @@
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangelogTable, changelogTableClassNames } from "./content-shared";
@@ -13,7 +12,8 @@ export function ScoringChangelogSummaryTables() {
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-muted-foreground leading-relaxed">
           <div className="space-y-2">
-            <h3 className="text-foreground font-medium">Weight evolution</h3>
+            <h3 className="text-foreground font-medium">Weight evolution (V8 and earlier)</h3>
+            <p>V9 replaced these dimensions with Backing 40%, Exit 35%, and Economic Control 25%.</p>
             <ChangelogTable
               ariaLabel="Safety Score weight evolution"
               tableId="scoring-weight-evolution"
@@ -54,7 +54,7 @@ export function ScoringChangelogSummaryTables() {
                   ["v4.0", "multiplier", "25%", "\u2014", "25%", "10%", "30%"],
                   ["v4.1", "multiplier", "30%", "\u2014", "20%", "15%", "25%"],
                   [
-                    `v5.0\u2013${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL.replace(/^v/, "")}`,
+                    "v5.0\u2013v8.17",
                     "multiplier",
                     "30%",
                     "\u2014",
