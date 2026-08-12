@@ -290,7 +290,7 @@ describe("DEX placeholder deployment-census coverage", () => {
     const classification = classifyDexPlaceholderCoverage({
       deployments: [
         deployment(),
-        deployment("starknet", "0x0000000000000000000000000000000000000003"),
+        deployment("secret", "secret1unsupported"),
         deployment("tezos", "KT1TEZOSASSET"),
       ],
       outcomeRows: [outcome()],
@@ -311,7 +311,7 @@ describe("DEX placeholder deployment-census coverage", () => {
       providerInaccessibleCount: 2,
       missingOutcomeCount: 0,
       unsupportedChainDeploymentCount: 2,
-      unsupportedChains: ["starknet", "tezos"],
+      unsupportedChains: ["secret", "tezos"],
     });
   });
 
@@ -343,7 +343,7 @@ describe("DEX placeholder deployment-census coverage", () => {
 
   it("keeps an entirely unsupported footprint poisoned under the same reason key", () => {
     const classification = classifyDexPlaceholderCoverage({
-      deployments: [deployment("starknet", "0x0000000000000000000000000000000000000003")],
+      deployments: [deployment("secret", "secret1unsupported")],
       outcomeRows: [],
       nowSec: NOW_SEC,
     });
@@ -359,7 +359,7 @@ describe("DEX placeholder deployment-census coverage", () => {
     const classification = classifyDexPlaceholderCoverage({
       deployments: [
         deployment(),
-        deployment("starknet", "0x0000000000000000000000000000000000000003"),
+        deployment("secret", "secret1unsupported"),
       ],
       outcomeRows: [],
       nowSec: NOW_SEC,

@@ -52,8 +52,8 @@ export function discoveryTargetCursorKey(deployment: ContractDeployment): string
  * registered discovery provider cost nothing: no stage ever queries them and
  * their census rows are re-asserted from the static registry every run.
  */
-export function estimateDeploymentCrawlCostMs(chain: string): number {
-  const providers = getDexDiscoveryProviders(chain);
+export function estimateDeploymentCrawlCostMs(chain: string, address?: string): number {
+  const providers = getDexDiscoveryProviders(chain, address);
   if (providers.length === 0) return 0;
   for (const provider of COST_PROVIDER_ORDER) {
     if (providers.includes(provider)) return DEPLOYMENT_CRAWL_COST_MS[provider];
@@ -79,7 +79,7 @@ export function selectDiscoveryTargetWindow({
   budgetMs,
 }: SelectDiscoveryTargetWindowOptions): DiscoveryTargetWindow {
   const totalEstimatedCostMs = targets.reduce(
-    (sum, target) => sum + estimateDeploymentCrawlCostMs(target.chain),
+    (sum, target) => sum + estimateDeploymentCrawlCostMs(target.chain, target.address),
     0,
   );
   if (targets.length === 0 || totalEstimatedCostMs <= budgetMs) {
@@ -97,7 +97,7 @@ export function selectDiscoveryTargetWindow({
   const window: ContractDeployment[] = [];
   let estimatedCostMs = 0;
   for (const target of rotated) {
-    const costMs = estimateDeploymentCrawlCostMs(target.chain);
+    const costMs = estimateDeploymentCrawlCostMs(target.chain, target.address);
     if (window.length > 0 && estimatedCostMs + costMs > budgetMs) break;
     window.push(target);
     estimatedCostMs += costMs;
@@ -118,7 +118,7 @@ export function advanceDiscoveryTargetCursor(
   for (let index = window.length - 1; index >= 0; index--) {
     const target = window[index]!;
     const key = discoveryTargetCursorKey(target);
-    if (checkedDeploymentKeys.has(key) || estimateDeploymentCrawlCostMs(target.chain) === 0) {
+    if (checkedDeploymentKeys.has(key) || estimateDeploymentCrawlCostMs(target.chain, target.address) === 0) {
       return key;
     }
   }

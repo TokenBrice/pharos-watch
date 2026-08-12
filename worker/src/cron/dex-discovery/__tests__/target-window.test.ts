@@ -84,6 +84,18 @@ describe("estimateDeploymentCrawlCostMs", () => {
   it("prices a native Horizon query for Stellar", () => {
     expect(estimateDeploymentCrawlCostMs("stellar")).toBe(1_600);
   });
+
+  it("prices only EVM-shaped MANTRA deployments for GeckoTerminal", () => {
+    expect(estimateDeploymentCrawlCostMs("mantra", "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b")).toBe(
+      2_800,
+    );
+    expect(
+      estimateDeploymentCrawlCostMs(
+        "mantra",
+        "ibc/6749D16BC09F419C090C330FC751FFF1C96143DB7A4D2FCAEC2F348A3E17618A",
+      ),
+    ).toBe(0);
+  });
 });
 
 describe("selectDiscoveryTargetWindow", () => {
