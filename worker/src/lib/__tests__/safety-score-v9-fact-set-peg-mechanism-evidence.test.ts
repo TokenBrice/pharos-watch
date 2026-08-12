@@ -1671,9 +1671,12 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
           code: "material-reserve-slice-unstructured",
           responsibility: "integration-missing",
         }),
+        // Since 9.19 the unresolved output is counted once, under the exit
+        // pillar's own reason code, carrying the causal gap identity.
         expect.objectContaining({
-          code: "unresolved-exit-output",
+          code: "missing-same-notional-route",
           responsibility: "producer-failed",
+          sourceGapId: "alpha:gap:route:dex:dex-liquidity-9900:dex:primary:output",
         }),
       ]),
     );

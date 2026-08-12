@@ -62,7 +62,9 @@ describe("frozen fixture — end-to-end", () => {
   it("orphan-close skips the fixture coin", async () => {
     const { shouldCloseOrphanedDepeg } = await import("../cron/depeg-detection/repair");
     expect(shouldCloseOrphanedDepeg("fixture-frozen", new Set())).toBe(false);
-  });
+    // First dynamic import in the file pulls the whole cron graph through the
+    // transform; ~4.4s solo leaves nothing under the 5s default in a parallel run.
+  }, 20_000);
 
   it("backfill admin endpoint rejects the fixture coin", async () => {
     const { assertNotFrozen } = await import("../lib/frozen-guards");

@@ -6,7 +6,7 @@ import {
 } from "../safety-score-v9-extension-mechanism";
 
 const EVIDENCE_ONLY_TARGETS = {
-  "usdgo-osl": ["custodyContinuity"],
+  "usdgo-osl": [],
   // Reclassified 2026-08-08 from the inherited fiat-cash archetype to
   // rwa-credit-fund; custody is the reviewed nondisclosure component.
   "syrupusdc-maple": ["custody"],
@@ -48,6 +48,7 @@ const EVIDENCE_ONLY_TARGETS = {
 
 const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, string>> = {
   "pgold-pleasing": "2026-08-11",
+  "usdgo-osl": "2026-08-12",
   "vnxau-vnx": "2026-08-11",
   "xaum-matrixdock": "2026-08-11",
 };
@@ -55,7 +56,7 @@ const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, 
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
     expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(36);
-    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(65);
+    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(64);
 
     const overlayById = new Map(
       mechanismReviewOverlaysAsset.overlays.map((overlay) => [overlay.assetId, overlay]),
