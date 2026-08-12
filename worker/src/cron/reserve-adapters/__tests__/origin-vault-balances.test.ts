@@ -74,7 +74,7 @@ describe("fetchOriginVaultBalancesReserves", () => {
         freshnessKind: "same-run-onchain",
         holderEligibility: "any-holder",
         settlementDelaySec: 0,
-        sourceUrls: ["https://analytics.ousd.com"],
+        sourceUrls: ["https://analytics.originprotocol.com/"],
       },
       details: {
         proofKind: "origin-vault-check-balance",

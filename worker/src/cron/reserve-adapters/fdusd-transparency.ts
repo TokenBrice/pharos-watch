@@ -1,6 +1,5 @@
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { fetchWithRetry } from "../../lib/fetch-retry";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeHtmlEntities,
@@ -10,7 +9,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   slicesFromValues,
 } from "./helpers";
-import { ADAPTER_USER_AGENT } from "./request";
+import { fetchBinaryWithRetry } from "./request";
 import { runAdapterIo } from "./concurrency";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
@@ -240,16 +239,10 @@ async function fetchFdusdReportText(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<string> {
-  return runAdapterIo(ctx, `pdf-get:${url}`, async () => {
-    const response = await fetchWithRetry(url, {
-      signal,
-      headers: { Accept: "application/pdf", "User-Agent": ADAPTER_USER_AGENT },
-    }, 2, { timeoutMs: 15_000, returnFinalResponse: true });
-    if (!response?.ok) {
-      throw new Error(response ? `HTTP ${response.status} for ${url}` : `Fetch failed for ${url}`);
-    }
-    return extractPdfText(new Uint8Array(await response.arrayBuffer()));
+  const body = await fetchBinaryWithRetry(url, signal, 15_000, ctx, {
+    headers: { Accept: "application/pdf" },
   });
+  return extractPdfText(body);
 }
 
 export async function fetchFdusdTransparencyReserves(
