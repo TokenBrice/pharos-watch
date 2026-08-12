@@ -39,6 +39,28 @@
       "exactPaths": ["worker/src/router.ts", "src/hooks/api-hooks.ts"]
     },
     {
+      "id": "telegram",
+      "label": "Telegram bot, Mini App, or delivery pipeline",
+      "risk": "high",
+      "docsToRead": ["docs/telegram-alerts.md", "docs/telegram-architecture.md", "docs/telegram-mini-app.md", "matched docs/runbooks/telegram-*.md incident path"],
+      "docsLikelyRequired": ["affected Telegram contract doc", "affected Telegram runbook", "docs/worker-and-api-limits.md when capacity changes"],
+      "checks": ["focused Telegram API/cron/contract tests", "npm run check:telegram-load when delivery capacity changes"],
+      "hardRules": ["Preserve signed initData auth and the durable delivery evidence trail.", "Do not replace dead-letter and target-state transitions with direct pending-row deletes."],
+      "prefixes": ["worker/src/api/telegram-", "worker/src/api/telegram-store/", "worker/src/api/webhook-commands/", "worker/src/cron/dispatch-telegram-", "worker/src/cron/telegram-", "worker/src/lib/telegram-", "shared/lib/telegram-", "src/app/pharoswatchbot/"],
+      "exactPaths": ["shared/lib/telegram-delivery-policy.ts"]
+    },
+    {
+      "id": "feedback",
+      "label": "Feedback intake and verification",
+      "risk": "medium",
+      "docsToRead": ["docs/feedback-pipeline.md", "affected docs/api-reference.md feedback section"],
+      "docsLikelyRequired": ["docs/feedback-pipeline.md", "docs/api-reference.md when the HTTP contract changes"],
+      "checks": ["focused feedback API and verification tests", "npm run check:docs-api-reference when the HTTP contract changes"],
+      "hardRules": ["Use getCirculatingRaw(); cached DefiLlama circulating values are already USD-denominated.", "Feedback verification thresholds follow the shared peg-type depeg policy."],
+      "prefixes": ["worker/src/api/feedback/"],
+      "exactPaths": ["worker/src/api/feedback.ts"]
+    },
+    {
       "id": "worker-cron",
       "label": "Worker cron or scheduled pipeline",
       "risk": "high",
@@ -70,6 +92,17 @@
       "hardRules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
       "prefixes": ["src/app/", "src/components/", "src/hooks/", "src/lib/"],
       "exactPaths": ["src/app/globals.css"]
+    },
+    {
+      "id": "editorial-publishing",
+      "label": "Blog or editorial publishing",
+      "risk": "medium",
+      "docsToRead": ["docs/process/blog-publishing.md", "docs/og-images.md"],
+      "docsLikelyRequired": ["docs/process/blog-publishing.md when the publishing contract changes", "docs/og-images.md when social-image behavior changes"],
+      "checks": ["npx vitest run src/data/blog src/app/feed src/app/__tests__/sitemap-frozen.test.ts", "npm run check:commit-derived-artifacts after blog source commits"],
+      "hardRules": ["Blog registry and post bodies are source; sitemap dates are derived from committed Git history."],
+      "prefixes": ["src/data/blog/", "src/app/blog/", "src/app/feed/blog.xml/"],
+      "exactPaths": ["src/components/home-blog-banner.tsx"]
     },
     {
       "id": "design-ui",
@@ -188,6 +221,12 @@
       "notes": ["Use the source path or public route to locate the nearest route-specific contract; the listed docs are representative, not a second route inventory."]
     },
     {
+      "name": "editorial-publishing",
+      "sources": ["src/data/blog/**", "src/app/blog/**", "src/app/feed/blog.xml/**", "src/components/home-blog-banner.tsx"],
+      "docs": ["docs/process/blog-publishing.md", "docs/og-images.md"],
+      "notes": ["Registry metadata, post bodies, feed output, banner freshness, sitemap dates, and optional per-post cover/social images form one publishing contract."]
+    },
+    {
       "name": "design-system",
       "sources": ["src/app/globals.css", "src/styles/tokens/**", "src/components/**"],
       "docs": ["docs/design-context.md", "docs/design-language.md", "docs/design-tokens.md"],
@@ -206,10 +245,10 @@
       "notes": ["Versioned methodology changes update the structured changelog source; public pages and Markdown exports render from that registry."]
     },
     {
-      "name": "mint-authority-score",
-      "sources": ["shared/lib/safety-score-v9/control.ts", "shared/lib/safety-score-v9/mint-posture.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/coins/*.json"],
+      "name": "mint-authority",
+      "sources": ["shared/lib/safety-score-v9/control.ts", "shared/lib/safety-score-v9/mint-posture.ts", "src/lib/mint-authority-display.ts", "src/components/stablecoin-detail/mint-authority-section.tsx", "shared/data/stablecoins/domains/mint-authority/*.json"],
       "docs": ["docs/mint-authority-scoring.md", "docs/stablecoin-data.md", "docs/stablecoin-detail-page.md", "docs/homepage.md", "docs/coverage-page.md", "docs/report-cards.md", "docs/methodology-page.md", "docs/classification.md"],
-      "notes": ["Standalone Mint Authority Score; Safety Score V9 evaluates the underlying reviewed control facts directly."]
+      "notes": ["Safety Score V9 Economic Control owns the sole published mint score; curated route and posture metadata remain non-scoring review context."]
     },
     {
       "name": "safety-score-v9",

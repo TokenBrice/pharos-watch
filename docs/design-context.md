@@ -1,6 +1,6 @@
 # Design Context
 
-> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is the machine-readable mirror (Stitch format, for AI agents generating screens), kept faithful to the **as-built code**: frost-blue + the drawn lighthouse identity are retained, with the Figma redesign's global top-nav (the left "watch column" sidebar retired). A Figma handoff proposed a neutral/Radix repaint; the owner's final call (2026-06-27) kept frost-blue. Regenerate `DESIGN.md` with `/impeccable document` when tokens or the homepage composition change.
+> Canonical human-facing source. The root [`DESIGN.md`](../DESIGN.md) is a compact, hand-maintained machine-readable reference for AI screen generation, not a generated artifact. Keep both aligned with the **as-built code** when brand tokens, typography, or homepage composition change: frost-blue + the drawn lighthouse identity are retained, with the global top nav and the left "watch column" sidebar retired.
 
 ## Users
 

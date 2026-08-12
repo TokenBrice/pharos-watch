@@ -65,6 +65,13 @@ export const METHODOLOGY_MANIFEST: readonly MethodologyManifestEntry[] = [
     expectedLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   },
   {
+    key: "depeg-detection",
+    doc: "docs/depeg-detection.md",
+    changelogDirectory: "shared/data/methodology-changelogs/depeg-dews",
+    versionFile: "shared/lib/methodology-versions/depeg-dews.ts",
+    expectedLabel: DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
+  },
+  {
     key: "depeg-resolver",
     doc: "docs/depeg-resolver.md",
     changelogDirectory: "shared/data/methodology-changelogs/depeg-resolver",

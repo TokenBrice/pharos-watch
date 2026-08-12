@@ -349,10 +349,10 @@ Terraform/OpenTofu import remains owner-gated and out of scope.
 
 ### Session policy
 
-- UI session should be shorter than the old browser-held key fallback
+- UI session duration is manifest-owned and currently expected to be 12 hours
 - MFA should be enforced for all human operators
 - owner: Cloudflare Zero Trust Access application policy for `https://ops.pharos.watch/*`
-- observed current session duration: 4 hours on April 4, 2026
+- `scripts/ci/cloudflare-account-state-manifest.json`, its fixtures, and the Zero Trust policy must change together when that duration changes
 - repo code does not invalidate or shorten an active Cloudflare Access session; logout/session-duration changes must be made in the Zero Trust policy, not in the Pages or Worker codepaths
 
 ---

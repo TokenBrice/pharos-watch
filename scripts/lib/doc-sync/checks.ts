@@ -504,38 +504,19 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
   const file = "docs/redemption-backstops.md";
   const doc = read(file);
 
-  const familyCounts: Record<string, number> = {};
-  for (const config of Object.values(REDEMPTION_BACKSTOP_CONFIGS)) {
-    familyCounts[config.routeFamily] = (familyCounts[config.routeFamily] ?? 0) + 1;
+  const sourceOwnedLine = findLineValue(doc, /- \*\*Configured coins and family counts:\*\* ([^\n]+)/) ?? "";
+  if (!sourceOwnedLine.includes("`REDEMPTION_BACKSTOP_CONFIGS`")) {
+    failures.push({
+      file,
+      label: "configured inventory owner",
+      expected: "REDEMPTION_BACKSTOP_CONFIGS",
+      found: sourceOwnedLine || null,
+    });
   }
-  const totalExpected = Object.keys(REDEMPTION_BACKSTOP_CONFIGS).length;
-
-  const totalFound = getFirstNumberFromText(
-    findLineValue(doc, /- \*\*Configured coins:\*\* (\d+)/) ?? "",
-  );
-  expectNumber(failures, file, "configured coins total", totalFound, totalExpected);
-
   const familyLine = findLineValue(doc, /- \*\*Route families:\*\* ([^\n]+)/) ?? "";
-  const familyOrder = [
-    "offchain-issuer",
-    "stablecoin-redeem",
-    "collateral-redeem",
-    "queue-redeem",
-    "psm-swap",
-    "basket-redeem",
-  ] as const;
-  const familyCountsFromDoc = new Map(
-    Array.from(familyLine.matchAll(/(\d+)\s+`([a-z-]+)`/g), (match) => [match[2], Number(match[1])]),
-  );
-  for (const family of familyOrder) {
-    const found = familyCountsFromDoc.get(family) ?? null;
-    expectNumber(failures, file, `${family} family count`, found, familyCounts[family] ?? 0);
-  }
-
-  const seenInDoc = new Set(
-    Array.from(familyLine.matchAll(/`([a-z-]+)`/g), (m) => m[1]),
-  );
-  for (const family of Object.keys(familyCounts)) {
+  const familyNames = new Set(Object.values(REDEMPTION_BACKSTOP_CONFIGS).map((config) => config.routeFamily));
+  const seenInDoc = new Set(Array.from(familyLine.matchAll(/`([a-z-]+)`/g), (match) => match[1]));
+  for (const family of familyNames) {
     if (!seenInDoc.has(family)) {
       failures.push({
         file,
@@ -544,6 +525,14 @@ function checkRedemptionBackstopsDoc(failures: Failure[]): void {
         found: "missing",
       });
     }
+  }
+  if (/\d+\s+`[a-z-]+`/.test(familyLine)) {
+    failures.push({
+      file,
+      label: "volatile redemption family counts",
+      expected: "source-owned; no copied numeric counts",
+      found: familyLine,
+    });
   }
 }
 

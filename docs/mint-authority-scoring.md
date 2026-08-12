@@ -32,11 +32,11 @@ The historical description follows.
 
 Mint Authority Score measures how much durable stablecoin supply can be created, authorized, expanded, or routed by privileged actors. It focuses on the mint path itself: issuer minters, allowlisted minters, cap admins, proxy admins, facilitators, bridges, off-chain attestation systems, backend signers, governance, Safes/multisigs, custodians, and wrapper inheritance.
 
-Historically Mint Authority Score was a display and review-coverage methodology that never fed the canonical Safety Score. Safety `9.1` merged its distinct signals into the Economic Control pillar and closed this lane; the sections below describe the retired v1.2 formula as shipped.
+Mint Authority Score began as a display and review-coverage methodology. From Safety `8.0`, it also fed the retired V8 Decentralization dimension through a 35% penalty-only blend. Safety `9.1` removed that separate engine and now evaluates the underlying facts once inside the Economic Control pillar; the sections below describe the retired v1.2 formula as shipped.
 
 ## Inputs
 
-Scores are derived from curated `mintAuthority` metadata in `shared/data/stablecoins/coins/*.json`, projected through the slim client registry. Missing or unresolved data returns `NR`; it never implies that mint authority is safe.
+Historical scores were derived from curated `mintAuthority` metadata now authored in `shared/data/stablecoins/domains/mint-authority/<id>.json` and merged into runtime projections. Missing or unresolved data returns `NR`; it never implies that mint authority is safe.
 
 Primary fields:
 
@@ -105,7 +105,7 @@ Inheritance returns `NR` when the parent is missing, unscoreable, cyclic, or bey
 
 - Stablecoin detail pages showed the retired score, band, component breakdown, weakest controller, caps, custody labels, incident callout, reviewed date, and sources when compact review data existed.
 - The current homepage and `/screener/` mint columns read Safety Score V9's published mint component, not this retired engine. `/coverage/` still counts curated review breadth by route bucket.
-- The `Mint Authority Status` kind (`resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts`) is a label over **curated metadata** — `mintPath`, `authorityPosture`, and the reviewed `controls` list — not a re-binning of the published score. The band is derived from the score. The two are independent views of the same review, so a coin can carry a curated route kind that does not line up with its band; read the kind as "what route exists" and the band as "how well controlled it scored".
+- The `Mint Authority Status` kind (`resolveMintAuthorityStatusKind()` in `src/lib/mint-authority-display.ts`) is a label over **curated metadata** — `mintPath`, `authorityPosture`, and the reviewed `controls` list — not a re-binning of the published component score. The retired v1.x band used numeric score thresholds; the current V9 public band is derived from the published mint posture and is intentionally stable across small merged-signal score movements. Read the kind as "what route exists" and the V9 band as the posture-level control assessment.
 - Safety Score V9 compiles the underlying reviewed control evidence directly into Economic Control facts (see `docs/report-cards.md`). There is no current raw `mintAuthorityScore` input from this retired lane.
 
 ## Maintenance Checklist

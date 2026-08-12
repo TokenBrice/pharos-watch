@@ -14,11 +14,10 @@ export interface MethodologyChangelogEntry {
   title: string;
   date: string;
   /**
-   * Unix seconds when this version became active, also used as the ordering key
-   * for same-version/same-day entries (see sort in createMethodologyVersion).
-   * Convention: when multiple entries share a calendar day, bump effectiveAt by
-   * a synthetic 1-second offset (e.g. ...600, ...601, ...602) so earlier entries
-   * get the lower value and resolve first.
+   * Unix seconds when this version became active. Entries may share an activation
+   * timestamp when they were released as one batch; getVersionAt() resolves such
+   * ties to the highest numeric version. Use synthetic one-second offsets only
+   * when the activation order within a batch is itself meaningful.
    */
   effectiveAt: number;
   summary: string;
@@ -126,6 +125,31 @@ export function createMethodologyVersion(config: MethodologyVersionConfig): Meth
       if (timeDiff !== 0) return timeDiff;
       return compareMethodologyVersions(a.version, b.version);
     });
+
+  // A later activation may keep the same version (multiple editorial entries),
+  // but it must never resolve to an older version. Without this invariant,
+  // future-dated or misordered entries can silently roll runtime consumers back.
+  if (process.env.NODE_ENV !== "production") {
+    let highestActivatedVersion = windows[0]?.version;
+    for (const window of windows.slice(1)) {
+      if (
+        highestActivatedVersion &&
+        compareMethodologyVersions(window.version, highestActivatedVersion) < 0
+      ) {
+        throw new Error(
+          `Methodology activation chronology drift for ${changelogPath}: ` +
+            `v${window.version} at ${window.effectiveAt} follows newer v${highestActivatedVersion}. ` +
+            "Fix effectiveAt so activated versions never regress.",
+        );
+      }
+      if (
+        !highestActivatedVersion ||
+        compareMethodologyVersions(window.version, highestActivatedVersion) > 0
+      ) {
+        highestActivatedVersion = window.version;
+      }
+    }
+  }
 
   function getVersionAt(unixSeconds: number): string {
     if (!Number.isFinite(unixSeconds)) return currentVersion;

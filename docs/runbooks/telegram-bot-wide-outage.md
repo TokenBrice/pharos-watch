@@ -2,7 +2,7 @@
 
 Use this runbook when Telegram authentication fails, several distinct chats return systemic transport failures, or delivery is intentionally paused during an incident.
 
-`GET|POST /api/admin-telegram-delivery-control` was retired on 2026-08-09. The state it exposed is unchanged: `telegram_transport_circuit` and `telegram_delivery_pauses` are still written by `worker/src/lib/telegram-transport-control.ts` and still gate every send, so inspection and pause/resume are now direct D1 statements.
+`GET|POST /api/admin-telegram-delivery-control` was retired on 2026-08-09. The state it exposed is unchanged: `telegram_transport_circuit` and `telegram_delivery_pauses` still gate every send. Read-only inspection is available through D1, but there is currently no supported audited pause/resume mutation. Do not substitute an ad hoc direct write: the mutation must preserve generation fencing and write the keep-forever `admin_action_audit` row only when the state change succeeds.
 
 ## Inspect
 
@@ -14,7 +14,7 @@ Use this runbook when Telegram authentication fails, several distinct chats retu
    ```
 
 2. Check `state`, `cause_class`, `cause_scope`, `opened_at`, `next_probe_at`, and any half-open probe owner/expiry.
-3. Check all three pause rows. An expired row is inert even though it remains visible.
+3. Check the pause rows. The table is not seeded: an absent `fresh`, `pending`, or `admin` row means that mode is inactive with generation `0`. An existing expired row is also inert but retains its generation.
 
    ```bash
    npx --no-install wrangler d1 execute stablecoin-db --remote --command \
@@ -27,41 +27,14 @@ The controller stores only short-lived distinct-chat observations needed for out
 
 ## Pause
 
-Pause only the affected delivery mode. Modes are `fresh`, `pending`, and `admin`. Pausing admin delivery does not silence webhook replies. Use the exact `generation` returned by the SELECT above as `<expectedGeneration>`; the write is generation-fenced and changes zero rows if another actor moved the row first.
-
-```sql
-INSERT INTO telegram_delivery_pauses
-  (mode, generation, expires_at, reason, actor, created_at, updated_at)
-SELECT 'fresh', 1, <nowSec + durationSec>, 'Telegram authentication incident', '<operator>', <nowSec>, <nowSec>
- WHERE <expectedGeneration> = 0
-ON CONFLICT(mode) DO UPDATE SET
-  generation = telegram_delivery_pauses.generation + 1,
-  expires_at = excluded.expires_at,
-  reason = excluded.reason,
-  actor = excluded.actor,
-  updated_at = excluded.updated_at
- WHERE telegram_delivery_pauses.generation = <expectedGeneration>;
-```
-
-Two guarantees the retired endpoint enforced are now yours to honor by hand: keep `durationSec` between 60 seconds and 24 hours so the pause still self-expires, and record the pause yourself, because the manual write emits no `admin_action_audit` row.
+Modes are `fresh`, `pending`, and `admin`; pausing admin delivery does not silence webhook replies. The repository currently has no supported operator mutation after the audited endpoint was retired. If an emergency pause is required, restore or add a reviewed Access-protected control/script that calls the existing `setTelegramDeliveryPause()` semantics: exact mode, 60-second-to-24-hour self-expiry, captured generation (`0` for an absent row), conditional state mutation, conditional `telegram-delivery-pause` audit in the same D1 batch, zero-change conflict handling, and post-write readback. Do not run a raw `INSERT` that leaves the permanent operator audit incomplete.
 
 ## Recover
 
 1. Correct credentials or wait for Telegram recovery without manually clearing queued rows.
 2. Let the circuit reach `next_probe_at`. Exactly one owner may claim a one-to-four-distinct-chat half-open probe; other cron invocations defer.
 3. A confirmed reachable response closes the circuit. A single chat-local 429 is inconclusive and cannot establish a bot-wide failure by itself.
-4. Resume an operator pause by expiring the row with the current generation. This is exactly what the retired resume action did:
-
-```sql
-UPDATE telegram_delivery_pauses
-   SET generation = generation + 1,
-       expires_at = <nowSec>,
-       reason = 'operator resume',
-       actor = '<operator>',
-       updated_at = <nowSec>
- WHERE mode = 'fresh'
-   AND generation = <expectedGeneration>;
-```
+4. Resume an operator pause only through the same reviewed control/script, using the current generation and `resumeTelegramDelivery()` semantics so the conditional mutation and `telegram-delivery-resume` audit stay paired. A zero-row result is a conflict, not success; read the row back before retrying.
 
 5. Verify untouched work retained its original priority, expiry, and delivery lifecycle. Reconcile `execution_unknown` rows separately; there is no operator resend path since `POST /api/admin-telegram-resend` was retired on 2026-08-09.
 

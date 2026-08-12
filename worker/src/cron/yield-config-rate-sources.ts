@@ -320,8 +320,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "dusd-standx": {
     code: "no-public-yield-source",
     since: "2026-06-23",
-    nextReviewAt: "2026-07-23",
-    note: "reviewed StandX DUSD delta-neutral yield semantics; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-09-12",
+    note: "2026-08-12 review: official StandX docs still describe seven-day holder reward cycles and revenue sources, but the documented public Perps API exposes market/funding data rather than a current holder APY; keep the intentional gap pending a stable machine-readable rate contract",
   },
   "gldy-streamex": {
     code: "issuer-distributed-yield",
@@ -335,10 +335,10 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     note: "pre-launch stability-pool yield with no reliable runtime APY source yet",
   },
   "hbd-hive": {
-    code: "no-public-yield-source",
+    code: "source-family-adapter-unimplemented",
     since: "2026-06-21",
-    nextReviewAt: "2026-07-21",
-    note: "reviewed Hive Savings interest semantics; no public runtime APY feed is wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-09-12",
+    note: "2026-08-12 review: the official Hive RPC exposes the protocol-set hbd_interest_rate through dynamic global properties, but Pharos has no reviewed Hive savings-rate adapter or freshness contract yet; keep uncovered until that reusable reader is implemented",
   },
   "home-homecoin": {
     code: "issuer-distributed-yield",
@@ -384,8 +384,8 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
   "stkgho-umbrella-aave": {
     code: "external-emissions-only",
     since: "2026-04-14",
-    nextReviewAt: "2026-08-09",
-    note: "2026-07-09 review: keep intentional gap until an emissions-specific adapter is scoped; reviewed Umbrella external emissions over a 1:1 GHO staking receipt, with no public runtime APY feed wired or confirmed for holder-rate resolution",
+    nextReviewAt: "2026-09-12",
+    note: "2026-08-12 review: current Aave Umbrella docs confirm dynamic on-chain rewards plus slashing/cooldown exposure, but Pharos still lacks an emissions-aware adapter that combines every reward stream with the holder-risk contract; keep the intentional gap until that reader is scoped",
   },
   "trusd-tori": {
     code: "pre-launch",

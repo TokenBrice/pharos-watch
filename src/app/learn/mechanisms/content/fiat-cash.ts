@@ -81,7 +81,7 @@ export const content: ArchetypeContent = {
     "Proof-of-reserves attestor tier and cadence on /stablecoin/[id]/. Big 4 monthly is the gold standard; niche or quarterly is acceptable but slower to respond.",
     "Freezable status on the detail page and in /freezewatch Status Buckets. For fiat-cash this is almost always Yes; wrappers show Upstream.",
     "Redemption Backstop route family — fiat-cash tokens show offchain-issuer with banking-rail redemption. Live-direct telemetry is rare; most rows are documented-bound or heuristic.",
-    "Resilience and Collateral Quality on the Safety Score report card. very-low and low slices are normal; any medium or high slice (secured loans, Bitcoin) drops the score.",
+    "V9 Backing reserve exposures on the Safety Score report card. Cash and short-duration government assets differ materially from secured loans, Bitcoin, precious metals, or other higher-tail-risk slices.",
     "Jurisdiction badge. NYDFS, MiCA, and MAS licensed coins behave very differently in a stress event than BVI-only or El Salvador issuers.",
     "Mint and burn flow on /flows — sustained burn surge against zero mints is the on-chain footprint of a primary-market redemption queue.",
   ],

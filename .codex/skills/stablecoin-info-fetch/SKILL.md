@@ -1,17 +1,17 @@
 ---
 name: stablecoin-info-fetch
-description: Verify and populate one tracked stablecoin's metadata (collateral, peg mechanism, jurisdiction, links, geckoId, contracts, proofOfReserves) in `shared/data/stablecoins/coins/*.json`. Use when adding a coin, filling metadata gaps, or auditing one coin's entry.
+description: Verify and populate one tracked stablecoin's metadata (collateral, peg mechanism, jurisdiction, links, geckoId, contracts, proofOfReserves) in its routed per-coin source files. Use when adding a coin, filling metadata gaps, or auditing one coin's entry.
 ---
 
 # Stablecoin Info Fetch
 
-Verify one coin's metadata with structured APIs and primary sources first, then patch the matching JSON entry under `shared/data/stablecoins/coins/*.json` with the smallest defensible diff.
+Verify one coin's metadata with structured APIs and primary sources first, then patch the owning base or domain-sidecar JSON with the smallest defensible diff.
 
 ## Read First
 
 - Read the current entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
 - Treat the runtime stablecoin re-export as import-only; tracked metadata edits belong in the JSON registry and must match `shared/lib/stablecoins/schema.ts`.
-- **Field routing:** check `shared/data/stablecoins/domains/<domain>/<id>.json` first — once a sidecar exists, its fields must stay out of the base file (`mintAuthority` → mint-authority domain; reserves and risk-review fields, `mica`/`genius` → their domains). See `docs/process/stablecoin-research-sidecars.md`.
+- **Field routing:** domain-owned research always belongs in `shared/data/stablecoins/domains/<domain>/<id>.json`; create the sidecar when absent (`mintAuthority` → mint-authority domain; reserves and risk-review fields, `mica`/`genius` → their domains). Keep those fields out of the base file. See `docs/process/stablecoin-research-sidecars.md`.
 - If the asset is dead/cemetery-only, use `shared/data/dead-stablecoins.json` and `DeadStablecoinAssetSchema` instead of this tracked-metadata workflow.
 - Read `shared/lib/chains/index.ts` if contracts may change.
 - Read `docs/classification.md` or `docs/data-pipeline.md` only when those rules are directly relevant.
@@ -63,9 +63,9 @@ Verify one coin's metadata with structured APIs and primary sources first, then 
 
 7. For Mint Authority, treat `tsx scripts/maintenance/audit-mint-authority.ts --coin <id>` output as a candidate queue only. Do not copy scanner output into metadata without source review. Admin mint authority belongs in `mintAuthority`, not in `canBeBlacklisted` / FreezeWatch.
 
-8. Patch the coin's per-coin JSON file with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned and regenerate `shared/data/stablecoins/coins.generated.json`.
+8. Patch the owning base or sidecar JSON with minimal edits. If adding a new tracked coin, also keep `shared/data/stablecoins/canonical-order.json` aligned.
 
-9. Regenerate `shared/data/stablecoins/coins.generated.json` with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, run `node scripts/build-data/build-client-registry.mjs` (client-projected fields like `geckoId`/`proofOfReserves`/`reserves` flow into `coins.client.generated.json`), then `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
+9. Converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects`, then run `npm run check:stablecoin-data`; client-projected fields such as `geckoId` and `reserves` flow into `coins.client.generated.json`, while the global client registry intentionally omits `proofOfReserves`. For full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. Do not treat `npm run build` alone as sufficient.
 
 ## Guardrails
 

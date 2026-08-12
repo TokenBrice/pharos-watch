@@ -38,7 +38,7 @@ This document makes the subsystem boundaries explicit. Future changes either sta
 
 Nine seams: **Ingress**, **Command parsing**, **Callback routing**, **Action handlers**, **Dispatch / fan-out**, **Queue / rate-limit / retry**, **State / persistence**, **Outbound transport**, and **Mini App surface**. Plus a small set of **Common** modules that any seam may import.
 
-The audit asked for 6–7 seams. "Outbound transport" got its own seam because both Ingress (replies to commands) and Dispatch (alert fan-out) send through it; collapsing it into either side would force the other to reach across. **Command parsing** is kept distinct from **Action handlers** because the parser is reused by callbacks (disambiguation reply path) and `/start` deep-link payloads.
+"Outbound transport" has its own seam because both Ingress (replies to commands) and Dispatch (alert fan-out) send through it; collapsing it into either side would force the other to reach across. **Command parsing** is kept distinct from **Action handlers** because the parser is reused by callbacks (disambiguation reply path) and `/start` deep-link payloads.
 
 ---
 
@@ -267,7 +267,7 @@ The provenance correction required no D1 migration because these two tables and 
   - `telegram_alert_planning_subscribers` — detection-time subscriber cohort and durable per-chat planning outcomes (Dispatch)
   - `telegram_alert_target_plan_pages` / `telegram_alert_target_plans` / `telegram_alert_target_plan_items` — rendered manifest, immutable page bounds, target counts, and source-item lineage (Dispatch)
   - `telegram_alert_target_expiry_progress` — bounded source-expiry reconciliation debt (Dispatch)
-  - `telegram_legacy_overflow_state` — terminal audit of the retired one-time cache import; no code reads or writes it since the importer was removed, and the table drop is a separate coordinated rollout
+  - `telegram_legacy_overflow_state` — historical terminal audit for the retired one-time cache import; the importer is gone and the table was dropped from production on 2026-08-10. The pre-next-squash baseline still creates an inert copy on a fresh database, but no runtime reads or writes it.
   - `telegram_alert_job_target_items` — normalized source-item coverage for consolidated target chunks (Dispatch)
   - `telegram_alert_dead_letters` — terminal failure audit (Queue)
   - `telegram_processed_updates` — webhook idempotency (Ingress)

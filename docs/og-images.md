@@ -1,6 +1,6 @@
 # OG Images
 
-Pharos serves six classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
+Pharos serves seven classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
 
 ## 1. Static page screenshots (`public/og-*.png`)
 
@@ -147,7 +147,17 @@ Static checked-in 1200×630 profile cards for `/screener/picker/`. They are inte
 
 Ownership lives with the Stablecoin Picker route contract in [screener-picker-page.md](./screener-picker-page.md).
 
-## 6. Dynamic Worker cards (`/api/og/*`)
+## 6. Blog cards (`public/og-blog.png`, `public/blog/*-cover.png`)
+
+The `/blog/` hub uses the authored shared `public/og-blog.png` card. Individual posts use their optional `BlogPost.coverImage` for Open Graph and Twitter metadata as well as the article and hub-card image; posts without a cover fall back to `og-blog.png`. Cover images are authored 1200×630 assets, not generator outputs. The registry and route behavior live in `src/data/blog/index.ts` and `src/app/blog/[slug]/page.tsx`; follow [process/blog-publishing.md](./process/blog-publishing.md) when adding or changing one.
+
+### When to renew
+
+- After deliberately changing the shared blog identity card.
+- When publishing or revising a post whose registry entry selects a cover image.
+- Do not add blog covers to the screenshot or editorial-card generators; their lifecycle belongs to the post source.
+
+## 7. Dynamic Worker cards (`/api/og/*`)
 
 Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached 15 minutes via `API_CACHE_PROFILES.ogImage`. The shared frame follows the current light product shell and semantic status colors. **Self-renewing — no manual step.**
 

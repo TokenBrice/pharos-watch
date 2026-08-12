@@ -63,9 +63,10 @@ export function SafetyScoresOverview() {
         branches. External oracle tiers keep their existing scores.
       </p>
       <p>
-        Publication is fail-closed. If a score-bearing producer is stale, unavailable, or would create a new
-        infrastructure-attributed downgrade or NR transition, Pharos retains the last accepted V9 ratings and exposes
-        the publication as held. Active consumers do not recompute or fall back to V8.
+        Publication is fail-closed. Global, stale, or identity failures retain the last accepted V9 ratings and expose
+        the publication as held. Attributable asset-local producer failures instead quarantine affected assets to NR
+        and can publish while at least 90% of active assets remain unaffected. Active consumers do not recompute or
+        fall back to V8.
       </p>
       <p className="text-xs text-muted-foreground">
         See also:{" "}

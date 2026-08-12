@@ -4,13 +4,13 @@ import { REDEMPTION_BACKSTOP_V3 } from "../../data/methodology-changelogs/redemp
 import { REDEMPTION_BACKSTOP_V4 } from "../../data/methodology-changelogs/redemption-backstop/v4";
 import { createMethodologyVersion } from "./base";
 import {
-  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
 } from "./constants";
 
 const redemptionBackstop = createMethodologyVersion({
   currentVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
-  changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   changelog: [
     ...REDEMPTION_BACKSTOP_V4,
     ...REDEMPTION_BACKSTOP_V3,
@@ -20,7 +20,7 @@ const redemptionBackstop = createMethodologyVersion({
 });
 
 export {
-  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
 } from "./constants";

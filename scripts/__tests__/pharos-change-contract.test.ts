@@ -54,6 +54,32 @@ describe("classifyChangedFiles", () => {
     expect(contract.hardRules).toContain("Cron jobs share Cloudflare's per-trigger 6-connection pool.");
   });
 
+  it("routes blog publishing changes to the editorial process and history-derived checks", () => {
+    const contract = classifyChangedFiles(["src/data/blog/posts/example.md"]);
+
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("editorial-publishing");
+    expect(contract.docsToRead).toContain("docs/process/blog-publishing.md");
+    expect(contract.checks).toContain("npm run check:commit-derived-artifacts after blog source commits");
+  });
+
+  it("routes Telegram auth and delivery changes to Telegram contracts and runbooks", () => {
+    const contract = classifyChangedFiles([
+      "worker/src/lib/telegram-mini-app-auth.ts",
+      "shared/lib/telegram-delivery-policy.ts",
+    ]);
+
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("telegram");
+    expect(contract.docsToRead).toContain("docs/telegram-mini-app.md");
+    expect(contract.docsToRead).toContain("docs/telegram-alerts.md");
+  });
+
+  it("routes feedback verification changes to the feedback contract", () => {
+    const contract = classifyChangedFiles(["worker/src/api/feedback/verification.ts"]);
+
+    expect(contract.families.map((family: { id: string }) => family.id)).toContain("feedback");
+    expect(contract.docsToRead).toContain("docs/feedback-pipeline.md");
+  });
+
   it("routes repo-local agent config changes to agent process guidance", () => {
     const contract = classifyChangedFiles([
       ".codex/config.toml",

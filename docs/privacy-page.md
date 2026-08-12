@@ -39,8 +39,10 @@ Pharos has no website account or wallet connection. Browser-local functional sta
 
 - homepage shortcut hrefs in `localStorage` under `pharos-shortcuts`
 - portfolio holdings in `localStorage` under `pharos:portfolio`
+- the user-authored watchlist in `localStorage` under `pharos-watchlist-v1`
 - Picker callout dismissal in `localStorage` under `pharos.selector.callout.v1`
 - optional live Picker result recovery in `sessionStorage` under `pharos.selector.sessionResult.v1`
+- presentation preferences such as table columns, show-your-work mode, command history, motion, and timeline display settings
 
 Portfolio and shortcut state is not sent to the API. Picker snapshot sharing is a separate server-side feature described below.
 
@@ -58,6 +60,8 @@ Authoritative sources:
 ### Stablecoin Picker snapshots
 
 Picker share links point to Pages KV snapshots recomputed from submitted answers and canonical site data. The artifact contains the normalized input, stablecoin output fields, methodology/version binding, dataset hash, and provenance; it does not contain an account, wallet address, raw IP address, or browser fingerprint. Anyone with the URL can view it.
+
+Unread snapshots expire after 90 days. The first successful read extends retention to five years; a snapshot that is never opened does not receive that long retention.
 
 Snapshot write quotas use a keyed IP-derived value in the short-lived limiter and D1 quota table. The Pages Function, shared snapshot schema, and migration are authoritative for payload, expiry, and quota behavior:
 

@@ -36,7 +36,7 @@ The leaderboard is public and indexable. The profile routes are statically gener
 - methodology pill wired from `CHAIN_HEALTH_METHODOLOGY_VERSION` and `CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH`
 - lead copy describing chain ranking by stablecoin supply and health
 - `CollectionPage` + `ItemList` JSON-LD over every crawlable `/chains/[chain]/` profile route, with each item typed as `WebPage`
-- FAQ structured data from the route-local `CHAINS_FAQ_JSON_LD`
+- FAQ structured data emitted by the route's `FaqSection includeJsonLd`
 - a visible `ChainDirectory` section after the FAQ, listing every generated `/chains/[chain]/` profile route
 
 `src/app/chains/client.tsx` consumes `useChains()` plus `useStablecoins()` and renders:

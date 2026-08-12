@@ -4,7 +4,7 @@ export const SAFETY_SCORE_V9_ATTRIBUTION_RECONCILIATION: MethodologyChangelogEnt
   version: "9.191",
   title: "Every bounded attribution keeps its owned open fact",
   date: "2026-08-12",
-  effectiveAt: 1786554000,
+  effectiveAt: 1786528422,
   summary:
     "The 9.19 single-count deduplication could collide two distinct reasons that shared a gap identity, keeping the raw entry and dropping the score-bearing one whose bounded-uncertainty attribution then pointed at no owned open fact. On an asset whose mechanism reviews had aged into bounded gaps this made score publication fail its own reconciliation schema. The published fact list now restores any direct reason attribution the deduplication displaced, so every bounded-uncertainty entry reconciles to an owned open fact with its exact code, path, and responsibility.",
   impact: [
@@ -21,7 +21,7 @@ export const SAFETY_SCORE_V9_EVIDENCE_ATTRIBUTION: MethodologyChangelogEntry = {
   version: "9.19",
   title: "Open facts are counted once and carry the path that produced them",
   date: "2026-08-12",
-  effectiveAt: 1786838400,
+  effectiveAt: 1786500893,
   summary:
     "An asset's open-fact mass double-counted every mechanism gap: once through its pillar reason and again through a generic re-emission under a different path, which no consumer could reconcile back to a single gap. The duplicate entries also carried no usable fact path, so a reader could not tell what to disclose to clear them. Separately, a DEX surface on a chain with no registered discovery provider stops being reported as a method floor.",
   impact: [
@@ -40,7 +40,7 @@ export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_OBSERVATION: MethodologyChange
   version: "9.18",
   title: "A reviewed transfer scope no longer depends on third-party chain supply",
   date: "2026-08-11",
-  effectiveAt: 1786752000,
+  effectiveAt: 1786500892,
   summary:
     "The transfer scope test proves a review covers material deployments from per-chain supply, which only the DefiLlama list provides. An asset absent from that list had no supply rows, so the test could never be satisfied and an authored transfer review was withheld as unreviewed. A materiality-only on-chain observation now establishes deployment scope for a bounded cohort, and it is structurally walled off from circulating supply and market cap.",
   impact: [
@@ -59,7 +59,7 @@ export const SAFETY_SCORE_V9_ORACLE_APPLICABILITY: MethodologyChangelogEntry = {
   version: "9.17",
   title: "Oracle applicability no longer implies oracle safety",
   date: "2026-08-11",
-  effectiveAt: 1786672801,
+  effectiveAt: 1786458344,
   summary:
     "Economic Control now separates a genuinely oracleless mechanism from privileged internal pricing, while a reviewed not-applicable oracle path is neutral and emits no scored component instead of manufacturing a green 95.",
   impact: [
@@ -324,7 +324,7 @@ export const SAFETY_SCORE_V9_STRESS_STATE_DIGEST_REMOVAL: MethodologyChangelogEn
   version: "9.15",
   title: "Stress-state digest removed from published cards",
   date: "2026-08-09",
-  effectiveAt: 1786233604,
+  effectiveAt: 1786304559,
   summary:
     "The published card drops `stressStateDigest`. The what-if stress evaluator it identified was never wired into any published surface, and no consumer read the digest.",
   impact: [
@@ -341,7 +341,7 @@ export const SAFETY_SCORE_V9_ACCESS_STRUCTURAL_APPLICABILITY: MethodologyChangel
   version: "9.16",
   title: "A reviewed access fact stops being reported as unreviewed",
   date: "2026-08-10",
-  effectiveAt: 1786672800,
+  effectiveAt: 1786319466,
   summary:
     "Two engine mechanisms made the access branch publish 'we never looked' about assets it had looked at. The transfer scope test is contract-addressed, so a chain-native asset with no contracts by design could never satisfy it; and an inherited freeze verdict whose upstream is not a tracked asset was deleted rather than measured. Both now resolve to an explicit structural fact, and neither invents data where no current review exists.",
   impact: [

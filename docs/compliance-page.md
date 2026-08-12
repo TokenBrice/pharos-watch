@@ -12,7 +12,7 @@ The tracker is informational and source-backed, not legal advice. Missing regime
 - MiCA labels/presentation: `shared/lib/mica.ts`
 - GENIUS labels/presentation: `shared/lib/genius.ts`
 - Effective-state owner: `shared/lib/compliance-regime-state.ts`
-- Metadata source: `shared/data/stablecoins/coins/*.json` and generated client projections
+- Metadata source: `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader into generated client/compliance projections
 
 The route is statically exported, indexable, and included in the sitemap. It uses checked-in editorial metadata and does not require a Worker endpoint, D1 table, cron job, or API hook.
 
@@ -23,7 +23,7 @@ The page composes two regimes:
 - EU MiCA authorization rows projected from each assessed coin's `mica` metadata
 - U.S. GENIUS rows projected from the dedicated compliance client projection
 
-`src/app/compliance/model.ts` is the authority for which rows appear in the main authorization table versus Implementation Watch. The main table excludes frozen and pre-launch assets. GENIUS placement also depends on the centralized effective-state contract.
+`src/app/compliance/model.ts` is the authority for which rows appear in the main authorization table versus Implementation Watch. The main table contains active assets only; pre-launch GENIUS rows may appear in Implementation Watch, while frozen, quarantined, and delisted rows are excluded. GENIUS placement also depends on the centralized effective-state contract.
 
 The route includes:
 

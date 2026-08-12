@@ -103,6 +103,7 @@ Approval is **per coin**, not bulk. For each coin with proposed changes, wait fo
 4. Add new featured content to `featuredContent[]`
 5. Update AI summaries in `data/ai-summaries.json` only for coins that meet the Material Change Definition (follow `write-ai-summaries` voice guidelines)
 6. Verify:
+   - `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects` — regenerates the aggregate and all dependent stablecoin projections from the approved source edit. **Required.**
    - `npm run check:stablecoin-data` — validates the zod schema for the tracked registry (including pre-launch entries). **Required.**
    - If the approved changes will be published, use `pharos-release-runner` after the focused checks. GitHub's required `PR gate` is authoritative; the heavy local merge gate is optional rehearsal work.
    - `npm run build` alone is not sufficient — it does not enforce the pre-launch schema.

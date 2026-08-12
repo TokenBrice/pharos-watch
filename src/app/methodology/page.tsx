@@ -17,7 +17,7 @@ import { METHODOLOGY_READING_STEPS, METHODOLOGY_SECTIONS, READER_GUIDE_COPY } fr
 export const metadata: Metadata = buildPageMetadata({
   title: "Methodology: How Pharos Grades Stablecoins",
   description:
-    "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
+    "Full methodology behind Pharos V9 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
   canonical: "/methodology/",
   ogImage: `${SITE_URL}/og-editorial-methodology.png`,
 });
@@ -77,14 +77,14 @@ export default function MethodologyPage() {
               additionalType: "https://schema.org/TechArticle",
               headline: "Methodology: How Pharos Grades Stablecoins",
               description:
-                "Full methodology behind Pharos V9 safety grades, mint authority scores, peg scores, liquidity scores, and dependency analysis.",
+                "Full methodology behind Pharos V9 safety grades and mint-control evidence, peg scores, liquidity scores, and dependency analysis.",
               author: "person",
               image: `${SITE_URL}/og-editorial-methodology.png`,
               mainEntityOfPage: `${SITE_URL}/methodology/`,
               keywords: [
                 "stablecoin methodology",
                 "safety score",
-                "mint authority score",
+                "V9 mint-control component",
                 "PegScore",
                 "DEWS",
                 "PSI",
@@ -102,7 +102,7 @@ export default function MethodologyPage() {
             <div className="space-y-2">
               <h1 className="pharos-page-title">Methodology</h1>
               <p className="pharos-page-lead max-w-3xl">
-                How Pharos grades stablecoins: transparent scoring across safety, peg stability, mint authority,
+                How Pharos grades stablecoins: transparent scoring across safety, peg stability, V9 mint control,
                 liquidity, yield, and dependency risk.
               </p>
               <p className="pharos-lead max-w-3xl">

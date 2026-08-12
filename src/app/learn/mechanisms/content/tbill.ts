@@ -92,7 +92,7 @@ export const content: ArchetypeContent = {
     },
     {
       href: "/methodology/#safety-scores-methodology",
-      label: "Safety Scores methodology — how RWA collateral is weighted in Resilience",
+      label: "Safety Scores methodology — how RWA reserve evidence enters V9 Backing",
     },
     { href: "/yield/", label: "Yield-bearing stablecoins ranked by PYS" },
     {

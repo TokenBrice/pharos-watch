@@ -22,7 +22,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 
 - `BLUECHIP_SLUG_MAP` maps supported Bluechip slugs to canonical Pharos IDs.
 - Only coins present in both systems are fetched.
-- The daily sync applies `excludeFrozenIds()` before fetching, so any mapped asset that later becomes frozen is skipped at runtime instead of being refreshed into the active ratings cache.
+- The daily sync applies `includeActiveTrackedIds()`, so only explicitly active mapped assets are fetched; every inactive lifecycle state is excluded from the refreshed ratings cache.
 - Missing or unrated Bluechip rows are skipped rather than synthesized.
 
 ---

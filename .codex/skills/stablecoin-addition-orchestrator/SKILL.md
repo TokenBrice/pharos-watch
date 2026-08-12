@@ -30,7 +30,7 @@ Use `stablecoin-runtime-price-marketcap-gate` before editing active metadata. Pr
 - Stop if no price + market-cap path exists.
 
 3. **Build the research packet**
-- **Field routing:** several research domains live in sidecars under `shared/data/stablecoins/domains/` (reserves, mint-authority, compliance, risk-review). Once a sidecar exists for a coin/domain, those fields must stay out of the base file — route per `docs/process/stablecoin-research-sidecars.md`.
+- **Field routing:** research domains live in sidecars under `shared/data/stablecoins/domains/` (reserves, mint-authority, compliance, risk-review). Author domain-owned fields there from the start, creating the sidecar when absent; they must not enter the base file. Route per `docs/process/stablecoin-research-sidecars.md`.
 - Use `stablecoin-info-fetch` for identity, collateral, peg mechanism, jurisdiction, links, IDs, PoR, and basic contracts.
 - Use `coingecko-id-verif` before saving or changing `geckoId`.
 - Use `contract-populate` or `contract-enrich` for verified contract coverage.

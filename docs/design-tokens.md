@@ -56,7 +56,7 @@ Purpose-driven aliases that map primitives to meaning. These switch between ligh
 
 #### Hex Companion Variables
 
-Recharts (and other SVG/canvas libraries) require literal hex color strings — CSS `var()` doesn't work in SVG attributes rendered by React. Selected semantic status/chart colors have `-hex` companions when CSS and JS both need the same token:
+DOM SVG and Recharts paths rendered by the browser can use CSS variables. Literal values remain necessary for JS/runtime or external-renderer paths that cannot resolve the CSS cascade. Selected semantic status/chart colors have `-hex` companions when CSS and those non-CSS consumers both need the same token:
 
 ```css
 --psi-bedrock: var(--p-green-500); /* CSS usage */
@@ -123,7 +123,7 @@ These maps use the same hex values as the `--*-hex` CSS custom properties in `se
 
 ### Don't
 
-- Reference primitives (`--p-blue-500`) directly in components only when a documented local visualization intentionally needs a primitive ramp before a semantic token exists.
+- Reference primitives (`--p-blue-500`) directly in components, except when a documented local visualization intentionally needs a primitive ramp before a semantic token exists
 - Hardcode hex values in chart components — use the JS token maps
 - Edit shadcn/ui primitives in `src/components/ui/` to use tokens
 - Define one-off color variables in individual component files
@@ -132,5 +132,5 @@ These maps use the same hex values as the `--*-hex` CSS custom properties in `se
 
 1. If it's a raw color/spacing value → add to `primitives.css`
 2. If it maps a primitive to a purpose → add to `semantic.css` (both `:root` and `.dark`)
-3. If it's used in Recharts → add a `-hex` companion in `semantic.css` AND update the JS token map
+3. If a non-CSS chart/runtime consumer needs it → add a `-hex` companion in `semantic.css` AND update the JS token map
 4. If it's scoped to one component type → add as a component token in `semantic.css`

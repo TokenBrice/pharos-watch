@@ -28,6 +28,7 @@
 - [Depeg + DEWS Changelog](https://pharos.watch/methodology/depeg-changelog/)
 - [Depeg Duration Resolver Changelog](https://pharos.watch/methodology/depeg-resolver-changelog/)
 - [Liquidity Score Changelog](https://pharos.watch/methodology/liquidity-score-changelog/)
+- [Redemption Backstop Changelog](https://pharos.watch/methodology/redemption-backstop-changelog/): Standalone redemption-route scoring history and V9 Exit evidence evolution.
 - [Stability Index Changelog](https://pharos.watch/methodology/stability-index-changelog/)
 - [Chain Health Changelog](https://pharos.watch/methodology/chain-health-changelog/)
 - [Yield Intelligence Changelog](https://pharos.watch/methodology/yield-changelog/)
@@ -118,8 +119,8 @@
 - [DEWS](https://pharos.watch/docs/dews/): Depeg Early Warning System methodology: DEWS formula, stress sub-signals, bands, downgrade gates, and API response contract.
 - [DEX Liquidity](https://pharos.watch/docs/dex-liquidity/): DEX Liquidity Score methodology for stablecoins: pool discovery, depth scoring, durability, pair diversity, cross-validation, and risk bands.
 - [Pharos Stability Index](https://pharos.watch/docs/stability-index/): Pharos Stability Index methodology explaining the PSI formula, active universe, stress bands, storage model, API surface, and replay rules.
-- [Report Cards](https://pharos.watch/docs/report-cards/): Stablecoin report-card methodology for safety scoring, peg risk, liquidity, reserves, resilience, decentralization, dependency exposure, and portfolios.
-- [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption Backstops methodology for exit routes, redemption terms, effective-exit scoring, operational disclosures, and stored review evidence.
+- [Report Cards](https://pharos.watch/docs/report-cards/): Stablecoin V9 report-card methodology for Backing, Exit, Economic Control, peg behavior, dependency exposure, evidence constraints, and portfolios.
+- [Redemption Backstops](https://pharos.watch/docs/redemption-backstops/): Redemption Backstops methodology for standalone route scoring, redemption terms, V9 Exit evidence, operational disclosures, and stored review evidence.
 - [Chain Health](https://pharos.watch/docs/chain-health/): Chain Health Score methodology for stablecoin networks: supply concentration, venue health, deployment coverage, risk factors, and score bands.
 - [Mint Burn Flows](https://pharos.watch/docs/mint-burn-flows/): Mint and burn flow methodology covering issuance-chain ingestion, pressure scoring, Bank Run Gauge inputs, reconciliation, and backfills.
 - [Yield Intelligence](https://pharos.watch/docs/yield-intelligence/): Yield Intelligence methodology for stablecoin APY resolution, Pharos Yield Score, source confidence, reward warnings, and risk-adjusted ranking.

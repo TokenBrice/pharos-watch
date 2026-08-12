@@ -55,10 +55,10 @@ describe("createMethodologyVersion", () => {
       changelog: [
         {
           version: "2.9",
-          title: "Older minor",
+          title: "Middle minor",
           date: "2026-03-01",
           effectiveAt: 900,
-          summary: "Older version",
+          summary: "Middle version",
           impact: [],
           commits: [],
           reconstructed: false,
@@ -75,10 +75,10 @@ describe("createMethodologyVersion", () => {
         },
         {
           version: "2.10",
-          title: "Newest minor",
-          date: "2026-03-03",
-          effectiveAt: 1100,
-          summary: "Newest version",
+          title: "Oldest minor",
+          date: "2026-02-28",
+          effectiveAt: 800,
+          summary: "Oldest version",
           impact: [],
           commits: [],
           reconstructed: false,

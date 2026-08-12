@@ -13,6 +13,7 @@ import {
   PSI_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_VERSION_LABEL,
   REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
   SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
@@ -136,8 +137,8 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
   },
   resilience: {
     title: "Resilience",
-    summary: "Three-factor score for collateral quality, custody model, and blacklist capability.",
-    detail: "Chain infrastructure is not scored here. It now lives in Decentralization to avoid double-counting.",
+    summary: "Historical V8 context for collateral quality, custody model, and blacklist capability.",
+    detail: "V9 replaced this dimension with Backing Quality, Exit Strength, and Economic Control; current scores do not consume the retired Resilience dimension.",
     methodologyPath: "/methodology/#safety-scores-methodology",
     versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL,
     changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH,
@@ -192,15 +193,17 @@ export const METHODOLOGY_CONTEXT: Record<MethodologyContextKey, MethodologyConte
       "This route score is separate from Safety Score V9 Exit, which re-evaluates exact same-notional route evidence under the V9 policy.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+    changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   },
   effectiveExit: {
-    title: "Effective Exit",
+    title: "Historical Effective Exit",
     summary:
-      "Best-path exit score that preserves the strongest exit path while giving modest credit for a second viable route.",
+      "Retired pre-V9 blend that compared the best redemption and DEX exit paths.",
     detail:
-      "The route score is first capped by route family and current capacity, then the effective-exit model applies freshness gates, the model-confidence discount, and the independent-route diversification bonus before comparing against DEX liquidity.",
+      "Redemption v4.3 removed this combined score. Current publication keeps standalone route diagnostics while Safety Score V9 evaluates exact same-notional evidence inside its Exit pillar.",
     methodologyPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
     versionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
+    changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   },
   mintAuthorityScore: {
     title: "Mint Authority Score",

@@ -14,7 +14,7 @@ SELECT
   COUNT(*) AS rows,
   MIN(created_at) AS oldest_created_at,
   MAX(? - created_at) AS oldest_age_sec,
-  SUM(CASE WHEN COALESCE(expires_at, created_at + 3600) <= ? THEN 1 ELSE 0 END) AS expired,
+  SUM(CASE WHEN COALESCE(expires_at, created_at + 7200) <= ? THEN 1 ELSE 0 END) AS expired,
   SUM(CASE WHEN processing_owner IS NOT NULL AND COALESCE(processing_expires_at, 0) > ? THEN 1 ELSE 0 END) AS claimed
 FROM telegram_pending_alerts
 GROUP BY 1, 2, 3

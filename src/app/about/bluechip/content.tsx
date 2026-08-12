@@ -28,7 +28,7 @@ export const BLUECHIP_GATES: readonly BluechipGate[] = [
   {
     id: "pharos-report-card-tier",
     title: "Pharos report-card tier",
-    body: "The same asset must also hold an A-tier Pharos report-card grade (A-, A, or A+). This independent filter reflects Pharos's exit liquidity, resilience, decentralization, dependency-risk, and peg-stability view.",
+    body: "The same asset must also hold an A-tier Pharos V9 grade (A-, A, or A+). This independent filter reflects Backing, Exit, and Economic Control, constrained by peg behavior, dependency exposure, evidence quality, and structural caps.",
   },
   {
     id: "tracked-asset-match",

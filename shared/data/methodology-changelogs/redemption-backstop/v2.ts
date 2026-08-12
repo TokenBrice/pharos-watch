@@ -50,7 +50,7 @@ export const REDEMPTION_BACKSTOP_V2: readonly MethodologyChangelogEntry[] = [
       version: "2.6",
       title: "Moderate-effort redemption confidence tranche",
       date: "2026-03-23",
-      effectiveAt: 1774224000,
+      effectiveAt: 1774306801,
       summary:
         "A moderate-effort tranche reviews a final group of already-modeled lower-confidence routes where Pharos now has stronger primary redemption semantics, but not yet protocol-native live instant-buffer telemetry across the full set.",
       impact: [

@@ -264,31 +264,29 @@ This prevents false positive depeg events for systemically important stablecoins
 
 ## Stale Data Monitoring (Frontend)
 
-The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from selected critical queries is degraded or stale. Frontend freshness uses the shared `FRESHNESS_RATIOS` thresholds from `shared/lib/status-thresholds.ts`: fresh through `8x staleTime`, degraded through `12x staleTime`, then stale. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`_meta.status`, `X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. The table below lists the page-level banner coverage; some routes also render additional detail queries that are handled locally rather than by the page-level banner:
+The `StaleDataBanner` component (`src/components/stale-data-banner.tsx`) warns users when data from selected critical queries is degraded or stale. Its named budgets come from `DATA_HEALTH_PRESETS` in `src/lib/data-health-config.ts`, which projects `API_FRESHNESS_MAX_AGE_SEC`; they are endpoint/UI health budgets, not necessarily producer intervals. Frontend freshness uses the shared `FRESHNESS_RATIOS` thresholds from `shared/lib/status-thresholds.ts`: fresh through `8x staleTime`, degraded through `12x staleTime`, then stale. When a hook uses `apiFetchWithMeta()`, backend freshness metadata (`_meta.status`, `X-Data-Age`, stale `Warning`) takes precedence over browser fetch time so a fresh client refetch cannot mask stale server data. The table below lists the page-level banner coverage and preset budgets; some routes also render additional detail queries that are handled locally rather than by the page-level banner:
 
-| Page                  | Queries monitored                                   | staleTime constants                                                |
-| --------------------- | --------------------------------------------------- | ------------------------------------------------------------------ |
-| **Homepage**          | Prices, Peg Data, Liquidity, Report Cards           | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`             |
-| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards, Redemption Backstops | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_RESERVE_SYNC` |
-| **Depeg**             | Peg Data, DEWS, Depeg Events                        | `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`                           |
-| **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | `CRON_15MIN`, `CRON_15MIN`, `CRON_30MIN`, `CRON_15MIN`, `CRON_24H` |
-| **Safety scores**     | Grades, Prices                                      | `CRON_15MIN`, `CRON_15MIN`                                         |
-| **Liquidity**         | Liquidity                                           | `CRON_30MIN`                                                       |
-| **Yield**             | Yield Rankings                                      | `sync-yield-data` descriptor interval (1 hour)                     |
-| **Flows**             | Mint/Burn Flows                                     | `CRON_MINT_BURN`                                                   |
-| **Blacklist**         | Blacklist                                           | `CRON_BLACKLIST`                                                   |
-| **Coverage**          | Coverage matrix inputs                             | route model stale-query set                                        |
-| **Portfolio**         | Grades                                              | `CRON_15MIN`                                                       |
-| **Chains**            | Chain Data                                          | `CRON_30MIN` freshness budget from `/api/chains`                   |
-| **Chain detail**      | Chain Data, Prices                                  | `CRON_30MIN`, `CRON_15MIN`                                         |
-| **Stability Index**   | Stability Index                                     | `CRON_30MIN`                                                       |
-| **Digest archive**    | Digests                                             | `CRON_24H`                                                         |
+| Page                  | Queries monitored                                   | Banner freshness budgets                                      |
+| --------------------- | --------------------------------------------------- | ------------------------------------------------------------- |
+| **Homepage**          | Prices, Peg Data, Liquidity, Report Cards           | 10 min, 15 min, 4 h, 15 min                                  |
+| **Stablecoin detail** | Prices, Peg Data, Liquidity, Report Cards, Redemption Backstops | 10 min, 15 min, 4 h, 15 min, 8 h                  |
+| **Depeg**             | Peg Data, DEWS, Depeg Events                        | 15 min, 30 min, 15 min                                       |
+| **Compare**           | Prices, Peg Data, Liquidity, Report Cards, Bluechip | 10 min, 15 min, 4 h, 15 min, 12 h                            |
+| **Safety scores**     | Grades, Prices                                      | 15 min, 10 min                                                |
+| **Liquidity**         | Liquidity                                           | 4 h                                                           |
+| **Yield**             | Yield Rankings                                      | 1 h                                                           |
+| **Flows**             | Mint/Burn Flows                                     | 1 h                                                           |
+| **Blacklist**         | Blacklist                                           | 6 h                                                           |
+| **Coverage**          | Coverage matrix inputs                              | Route model stale-query set                                   |
+| **Portfolio**         | Grades                                              | 15 min                                                        |
+| **Chains**            | Chain Data                                          | 30 min                                                        |
+| **Chain detail**      | Chain Data, Prices                                  | 30 min, 10 min                                                |
+| **Stability Index**   | Stability Index                                     | 1 h                                                           |
+| **Digest archive**    | Digests                                             | 24 h                                                          |
 
 Homepage KPI cards also consume PSI, mint/burn, and DEWS data, while Compare can fetch supply-history and per-coin mint/burn detail queries. Those additional queries are not part of the current page-level stale banner contract.
 
-Constants defined in `src/lib/cron-intervals.ts`: `CRON_1MIN` (1 min), `CRON_15MIN` (15 min, stablecoins list), `CRON_30MIN` (30 min, DEX liquidity), `CRON_MINT_BURN` (30 min, mint/burn), `CRON_1H` (1 hour, generic budget), `CRON_RESERVE_SYNC` (4 hours, live reserves + redemption backstops), `CRON_BLACKLIST` (6 hours), `CRON_24H` (24 hours). Yield queries use the canonical `sync-yield-data` interval from `FRONTEND_API_QUERY_DESCRIPTORS`.
-
-The `staleTime` value for each query matches the cron interval of the backend job that produces the data. TanStack Query's `refetchInterval` is always 2x the `staleTime`. Local browser age becomes degraded after `8x staleTime` and stale after `12x staleTime`, while hook-level freshness metadata can mark data degraded/stale sooner when the worker explicitly reports old cache age or stale-table warnings.
+Cron-backed hooks normally derive polling from `FRONTEND_API_QUERY_DESCRIPTORS`: `staleTime` uses the producer interval and `refetchInterval` uses twice that interval. Endpoint and banner freshness budgets can intentionally be tighter or looser—for example, prices warn after 10 minutes, Report Cards after 15 minutes despite a 30-minute V9 producer, and Liquidity after four hours despite a two-hour scoring producer. Local browser age becomes degraded after `8x` the selected banner preset and stale after `12x`, while hook-level freshness metadata can mark data degraded/stale sooner when the Worker explicitly reports old cache age or stale-table warnings.
 
 ## Blacklist Sync State Semantics
 

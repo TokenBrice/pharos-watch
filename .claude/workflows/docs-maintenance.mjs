@@ -5,7 +5,7 @@ export const meta = {
     { title: "Load", detail: "read the doc manifest (path, category, depth, source hints)" },
     { title: "Verify", detail: "one agent per doc: extract code-checkable claims, locate code, surface discrepancies" },
     { title: "Adjudicate", detail: "opus skeptic re-verifies each finding against code; default REJECTED" },
-    { title: "Synthesize", detail: "dedupe, split auto-fixable vs needs-decision, write report.md + findings.json" },
+    { title: "Synthesize", detail: "dedupe, split auto-fixable vs needs-decision, and return structured findings" },
     { title: "Apply", detail: "mode=remediate only: one agent per doc applies adjudicated auto-fixable findings" },
   ],
 };
@@ -15,8 +15,8 @@ export const meta = {
 //  - file-path citations in docs            (check:doc-source-paths, passing)
 //  - internal doc link targets              (check:verified-doc-links, passing)
 //  - methodology version STRINGS            (check:doc-sync, passing) e.g. "v8.0"
-//  - AGENTS.md <-> CLAUDE.md sync            (check:agent-doc-sync, passing)
-//  - the generated HTTP contract in api-reference.md (check:docs-api-reference: current)
+//  - AGENTS.md <-> CLAUDE.md sync            (check:generated-artifacts -- --only=agents-doc, passing)
+//  - the generated quick-reference block in api-reference.md (check:docs-api-reference: current)
 // The workflow targets SEMANTIC / BEHAVIORAL claims that no CI guards.
 // ---------------------------------------------------------------------------
 
@@ -148,8 +148,8 @@ const OUT_OF_SCOPE = `OUT OF SCOPE — CI already guards these, do NOT report th
 - existence of file paths cited in the doc (check:doc-source-paths passes)
 - internal markdown link targets (check:verified-doc-links passes)
 - methodology version STRINGS like "v8.0"/"v5.91" (check:doc-sync passes) — but DO check the formulas/weights/thresholds/bands those versions describe
-- AGENTS.md vs CLAUDE.md wording sync (check:agent-doc-sync passes)
-- the generated HTTP request/response catalogue in api-reference.md (it is generated and verified current)`;
+- AGENTS.md vs CLAUDE.md wording sync (check:generated-artifacts -- --only=agents-doc passes)
+- the generated quick-reference block between GENERATED-START/END in api-reference.md (it is generated and verified current); hand-written API prose remains in scope`;
 
 const VERIFY_RULES = `WHAT COUNTS AS A DISCREPANCY (in scope):
 - a stated formula, weight, threshold, band boundary, cap, default value, or constant that differs from the code
@@ -163,7 +163,7 @@ const VERIFY_RULES = `WHAT COUNTS AS A DISCREPANCY (in scope):
 - a claim that a function/symbol/module does Z when it actually does something else
 
 METHOD:
-1. Read your assigned doc fully.
+1. Read your assigned doc to the depth specified above. For targeted oversized docs, use the navigation block and focused Grep/offset reads instead of a wholesale read.
 2. Use the source hints, then Grep/Glob/Read (and 'rg' via Bash) to locate the AUTHORITATIVE code for each concrete claim. shared/lib and worker/src are runtime truth; shared/data is data truth.
 3. Only flag a claim when you have OPENED the code and it clearly contradicts the doc. Quote file:line as evidence.
 4. Set classification: doc-wrong (code is right, doc is stale/incorrect) | code-wrong (doc describes intended behavior, code looks buggy/divergent) | ambiguous.
@@ -179,7 +179,9 @@ function buildVerifyPrompt(item) {
   const depthNote =
     item.depth === "light"
       ? `DEPTH = LIGHT. This is a timeline/version-history or generated map. Do NOT verify historical entries (immutable record). Verify ONLY: (a) the "current"/"latest" version's described formula/behavior matches code, and (b) any "as of today / currently" claims. Sample a few representative entries; skip the rest.`
-      : `DEPTH = DEEP. Verify every concrete code-checkable claim in the doc.`;
+      : item.depth === "targeted"
+        ? `DEPTH = TARGETED. This doc exceeds the wholesale-read limit. Use its Agent navigation block plus Grep/offset reads; never read it wholesale. Skip content between GENERATED-START/END markers, but verify semantic claims in the hand-written sections against handlers, endpoint registries, auth/cache policy, and migrations.`
+        : `DEPTH = DEEP. Verify every concrete code-checkable claim in the doc.`;
   return `You are verifying ONE Pharos documentation file against the ACTUAL code. Do not trust the prose — prove each factual claim against the implementation.
 
 DOC: ${item.path}  (category: ${item.category}, ${item.lines} lines)
@@ -257,18 +259,19 @@ if (expectedDocs && loaded.docs.length < expectedDocs) {
   throw new Error(`manifest load incomplete: got ${loaded.docs.length}, expected >= ${expectedDocs}`);
 }
 
-// Honor the manifest's per-doc depth; keep the generated-map/light + api-reference-skip guards.
+// Honor the manifest's per-doc depth; keep timeline archives light and audit
+// the oversized, mostly hand-written API reference through targeted reads.
 const items = loaded.docs
   .map((d) => {
     let depth = d.depth || "deep";
     if (d.category === "timeline-archive") depth = "light";
-    if (d.path.endsWith("api-reference.md")) depth = "skip";
+    if (d.path.endsWith("api-reference.md")) depth = "targeted";
     return { ...d, depth };
   })
   .filter((d) => d.depth !== "skip");
 
 log(
-  `Loaded ${loaded.docs.length} docs; verifying ${items.length} (api-reference.md skipped: generated + CI-current). deep=${items.filter((i) => i.depth === "deep").length} light=${items.filter((i) => i.depth === "light").length}`,
+  `Loaded ${loaded.docs.length} docs; verifying ${items.length}. deep=${items.filter((i) => i.depth === "deep").length} targeted=${items.filter((i) => i.depth === "targeted").length} light=${items.filter((i) => i.depth === "light").length}`,
 );
 
 // ===========================================================================

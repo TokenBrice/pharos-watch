@@ -51,7 +51,7 @@ Summaries must be grounded in Pharos's own data, not just external research. The
 
 ### Process
 
-1. **Read metadata**: Find the coin's entry in `shared/data/stablecoins/coins/*.json` (or its generated runtime in `coins.generated.json`). Read all fields — classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, collateralQuality, governanceQuality), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
+1. **Read metadata**: Read the coin's base entry in `shared/data/stablecoins/coins/*.json` plus any domain sidecars under `shared/data/stablecoins/domains/`, or use its merged generated runtime entry in `coins.generated.json`. Read all fields — classification, collateral description, pegMechanism, reserves, jurisdiction, dependencies, resilience sub-factors (custodyModel, collateralQuality, governanceQuality), notices, yield config, blacklist status, and deployment footprint. Load `data/ai-summaries.json` to see existing summaries and avoid repeating patterns
 2. **Check live data** (for refreshes and high-profile coins): Open `https://pharos.watch/stablecoin/{id}` with the browser tool (claude-in-chrome or Playwright in Claude Code; `agent-browser` in Codex) to check the report card, peg score, liquidity score, redemption backstop, and DEWS band. Note anything the raw metadata doesn't capture — particularly depeg event history, safety grade trends, and exit liquidity quality
 3. **Research if needed**: Use web search for recent events (depegs, regulatory actions, governance changes) that would make the summary more current and specific. Check the coin's `links` for official sources
 4. **Write the summary**: Follow voice guidelines. Weave Pharos-specific insights into the narrative where they add editorial value. Don't just describe the coin generically — interpret what our data reveals about its risks, strengths, and contradictions
@@ -67,7 +67,7 @@ PHAROS_API_KEY=... npm run candidates:ai-summaries
 
 It writes `agents/ai-summary-candidates.{md,json}` and never edits summaries. Process `high` findings first, then `medium`; leave `low` findings for a deliberate full sweep. For each candidate:
 
-1. Read its `findings[]`, the current summary, and `shared/data/stablecoins/coins/<id>.json`.
+1. Read its `findings[]`, the current summary, and the merged `shared/data/stablecoins/coins.generated.json` entry (or the base file plus every domain sidecar for that ID).
 2. Correct each stale claim using the candidate's `current` value, then de-brittle the prose so the same volatile number does not immediately go stale again.
 3. Preserve still-correct claims and the existing title unless the title itself is stale. Do not rewrite sound prose for variety.
 4. Re-run the producer and confirm refreshed entries no longer appear as `high` or `medium`.
@@ -100,7 +100,7 @@ When choosing what to highlight, consider these angles (pick the most interestin
 - **Scope adoption claims**: Any static adoption, funding, address/holder, TVL, supply, or market-cap figure requires a displayed source and fact date. State the chain scope and denominator. Never call an address count "users" or "holders" without a defined method that distinguishes contracts and EOAs and deduplicates cross-chain controllers.
 - **Keep quantities economically comparable**: Do not divide parent or project financing by one product's token supply, market cap, or circulation unless both quantities measure the same economic concept. Token supply is not capital "used."
 - **Do not inherit provenance**: `factsAsOf` is the date the body was actually researched. Formatting, disclosure, or model-field edits do not justify carrying forward or adding `reviewedBy`/`reviewedAt`; those fields require approval of the exact text by the named reviewer.
-- **Don't duplicate the dashboard**: The page already displays report card grades, peg scores, and liquidity metrics as data visualizations. The summary should _interpret_ what those numbers mean in context, not restate them as raw figures. "Pharos rates it B+" is useless — "the B+ overall grade hides a D in dependency risk, which tells you everything about who's really backing this dollar" is editorial
+- **Don't duplicate the dashboard**: The page already displays report card grades, peg scores, and liquidity metrics as data visualizations. The summary should _interpret_ what those numbers mean in context, not restate them as raw figures. "Pharos rates it B+" is useless — "the B+ overall grade hides a D in economic control, which tells you where the design still concentrates power" is editorial
 - **Don't ignore our data**: When Pharos has scored, graded, or analyzed a stablecoin, the summary should reflect that analysis. The reader sees the scores alongside the summary — connect the dots. A summary that could appear on CoinGecko with zero modification is a wasted opportunity
 - **Don't write thin summaries**: Three short, vague sentences do not meet the bar. If you can't find enough material for 3-6 substantive sentences after reading the metadata and checking the live page, the coin may need more research, not less text
 

@@ -33,7 +33,7 @@ import {
   RedemptionRouteStatusSourceSchema,
 } from "@shared/types/redemption";
 import {
-  REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+  REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
   REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
   getRedemptionBackstopVersionAt,
@@ -586,7 +586,7 @@ export async function buildRedemptionBackstopsSnapshot(db: D1Database): Promise<
         versionLabel: snapshotMethodology.versionLabel,
         currentVersion: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION,
         currentVersionLabel: REDEMPTION_BACKSTOP_METHODOLOGY_VERSION_LABEL,
-        changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_PATH,
+        changelogPath: REDEMPTION_BACKSTOP_METHODOLOGY_CHANGELOG_PATH,
         asOf: updatedAt,
       }),
       componentWeights: { ...REDEMPTION_BACKSTOP_COMPONENT_WEIGHTS },

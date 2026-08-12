@@ -7,10 +7,10 @@ name: Shock Coverage Refresh
 # fails closed to legacy LCR, dropping LUSD to `unsafe-backing:high` (~77/B+ ->
 # 59/C) and taking BOLD's rating down with it.
 #
-# Cadence is every other day at 03:41 UTC. Worst-case gap between runs is 48h,
-# leaving ~24h of slack against the 72h bound for one failed run. The freshness
-# clock runs on the measured BLOCK timestamp, not on merge time, so the PR this
-# opens must be merged promptly to bank the refresh.
+# Cadence is every other day at 03:41 UTC. The 48h gap leaves a roughly 24h
+# manual/rerun remediation window after one scheduled failure; the next automatic
+# attempt at 96h would be too late. The freshness clock runs on the measured BLOCK
+# timestamp, not on merge time, so the PR this opens must be merged promptly.
 #
 # The 72h bound itself lives in
 # shared/data/safety-score-v9/methodology-policy-candidate-v1.json and is not

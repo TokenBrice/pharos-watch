@@ -5,7 +5,7 @@ export const YIELD_METHODOLOGY_V8: readonly MethodologyChangelogEntry[] = [
     version: "8.38",
     title: "One safety-resolution ladder and one venue-risk derivation",
     date: "2026-08-10",
-    effectiveAt: 1786665600,
+    effectiveAt: 1786314613,
     summary:
       "The hourly yield publisher and the API's live-safety hydration now resolve a row's published safety score, grade, provenance, and reason through one shared engine, and both yield engines price venue risk from the continuous weighted score with the coarse tier derived from it — closing four drifted guards without moving any live grade.",
     impact: [

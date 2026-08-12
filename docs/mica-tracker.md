@@ -10,7 +10,7 @@ The data foundation already exists in the tracked registry: many coins carry a `
 
 ## Architectural keystone
 
-MiCA status is **static editorial metadata, not pipeline data**. It lives in the per-coin JSON files (`shared/data/stablecoins/coins/*.json`), is bundled into the client registry at build, and renders client-side exactly like `/screener`.
+MiCA status is **static editorial metadata, not pipeline data**. It is authored in `shared/data/stablecoins/domains/compliance/<id>.json`, merged by the catalog loader, bundled into the client registry at build, and rendered client-side exactly like `/screener`.
 
 **No Worker endpoint, no D1 migration, no cron job, no API hook, no `next.config.ts` change.** This is the decision that keeps complexity at Medium. Every Worker/connection-pool/cache gotcha in `CLAUDE.md` is out of scope for this feature.
 
@@ -146,7 +146,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 - `src/app/compliance/page.tsx` — server shell via `createClientFeaturePage()`; metadata, breadcrumb, static intro + FAQ.
 - `src/app/compliance/client.tsx` — filters + table, reads the bundled registry through `@shared/lib/stablecoins/client-registry`.
-- `src/app/compliance/model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows, filtering out coins with no regime metadata and frozen/pre-launch assets from the main table.
+- `src/app/compliance/model.ts` — `buildComplianceViewModel()` mapping registry rows → MiCA and GENIUS table rows. The main table contains active assets only; pre-launch GENIUS rows may enter Implementation Watch, while frozen, quarantined, and delisted rows are excluded.
 - `src/app/compliance/loading.tsx`, `error.tsx` — match the `/liquidity` skeleton/boundary pattern.
 - `public/_redirects` — legacy `/mica` traffic redirects to `/compliance/`.
 
@@ -156,7 +156,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Status presentation:** MiCA-specific labels, descriptions, and static Tailwind badge classes live in `shared/lib/mica.ts`. Keep the status vocabulary in `shared/types/core.ts`; do not duplicate labels or colors inside route components.
 
-**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile drawer, desktop top nav, legacy sidebar, and command palette auto-index from `NAV_GROUPS`.
+**Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
 
 **Detail-page surfacing:** `src/components/key-info-card-root.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance/?regime=mica`. It reuses the established badge styling; no new component is required.
 
@@ -203,7 +203,7 @@ These illustrate the model only — confirm each against the ESMA/EBA/NCA regist
 
 MiCA labels, descriptions, and badge classes live in `shared/lib/mica.ts`; status values remain in `shared/types/core.ts`. Ongoing work is data refresh through the `mica-research` skill plus normal route/build checks.
 
-- Data refresh: update per-coin `mica` blocks with sourced register references, then run `npm run check:stablecoin-data`.
+- Data refresh: update or create the compliance sidecar's `mica` block with sourced register references, then run `npm run bootstrap:generated`, `npm run check:stablecoin-data`, and `npm run check:generated-artifacts`.
 - Route verification: run `npm run lint`, `npm run typecheck`, `npm run build`, and `npm run seo:check` when route/UI behavior changes.
 - Timeline layer remains optional and can use existing `LaunchMilestone` `type: "regulatory"` and TAPE primitives.
 - **Not a methodology-version bump:** MiCA status is a tracked attribute, not a score. Assignment criteria live in this doc, not in `/methodology` versioning.

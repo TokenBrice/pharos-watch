@@ -13,7 +13,7 @@ Cloudflare's paid-plan limit is 10 GB per D1 database and cannot be raised. Phar
 | 75% to below 90% | `warning` | Schedule retention/index remediation and confirm a current Time Travel bookmark. |
 | 90% or above | `critical` | Stop nonessential write amplification and execute the approved capacity plan. |
 
-`d1_capacity_observations` retains at most one observation per UTC hour. The calculation uses linear regression over the latest 30 days only after at least three samples span 24 hours. Until then, or when the measured slope is flat/negative, `exhaustionAt` remains null. A D1 `DELETE` reducing reported file size is evidence for that run only, not a general compaction guarantee.
+`d1_capacity_observations` retains at most one observation per UTC hour and raw observations for 180 days. Forecasting evaluates 24-hour, 72-hour, 7-day, and 30-day regression windows, each with at least three samples and at least 90% of its named span, then selects the shortest valid window. Until a window qualifies, or when the measured slope is flat/negative, `exhaustionAt` remains null. A D1 `DELETE` reducing reported file size is evidence for that run only, not a general compaction guarantee.
 
 The scheduled `status-self-check` lane refreshes the Cloudflare control-plane size observation. A 60% crossing opens a warning watch, 75% makes public/admin health degraded, and 90% makes capacity health stale. A control-plane failure is logged and returned as a monitoring error without replacing the last cached assessment. Public `/api/health` exposes only the resulting status and machine-readable warnings; admin `/api/status.d1Usage.capacity` exposes the detailed assessment. An uninitialized observation cache remains compatible because the admin field is nullable.
 
@@ -40,7 +40,7 @@ Rollback by restoring the prior Worker version or reverting only the compatibili
 
 ## Read-Replication Experiment
 
-D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Restore it from git history (`worker/experiments/`, last present at `831d75a8f`) before repeating the experiment, keep it read-only, and keep it out of the production Worker's imports. Its driver script (`scripts/maintenance/`, benchmark-d1-read-replication.mjs) and the `ops:benchmark-d1-read-replication` alias were removed with it; restore the script from git history (last present at `5eefc2cc2`) in the same step and run it directly rather than through an npm alias.
+D1 read replication is currently beta. It only serves reads from replicas when code uses the D1 Sessions API. The isolated benchmark Worker that ran this experiment was removed from the repository because its Wrangler config bound the production D1 database with `workers_dev = true`. Before repeating it, restore the complete compatible snapshot from commit `831d75a8f`: `git:831d75a8f:worker/experiments/d1-read-replication-benchmark.ts`, its test in the same historical directory, `git:831d75a8f:worker/experiments/tsconfig.json`, `git:831d75a8f:worker/experiments/wrangler.d1-read-replication.toml`, and `git:831d75a8f:scripts/maintenance/benchmark-d1-read-replication.mjs`. The `git:<revision>:<path>` notation is verified by the documentation source-path check. Keep the Worker read-only and outside production imports. The deleted npm alias is not required; run the restored driver directly.
 
 Prerequisites:
 
@@ -66,8 +66,8 @@ curl -X PUT "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_
 ```
 
 Run paired primary/session reads from the same experiment Worker. The original
-benchmark harness (`benchmark-d1-read-replication.mjs`) was retired in `5eefc2cc2`
-with the 2026-08 cleanup; recover it from Git history for a rerun, or issue paired
+benchmark harness (`benchmark-d1-read-replication.mjs`) was removed with the
+2026-08 cleanup; recover the verified `831d75a8f` snapshot for a rerun, or issue paired
 `curl` reads against the experiment Worker's primary/session endpoints and compare
 payload hashes and `servedByPrimary` manually.
 

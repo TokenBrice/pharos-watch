@@ -10,7 +10,7 @@ Until now the measurement was produced by hand. The [Shock Coverage Refresh](../
 
 `.github/workflows/shock-coverage-refresh.yml` runs at **03:41 UTC every other day** (`41 3 */2 * *`), plus `workflow_dispatch` for a manual refresh.
 
-Worst-case gap between runs is 48h, which leaves ~24h of slack against the 72h bound — enough to absorb one failed run, not two. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
+Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/rerun remediation window after one scheduled failure; the next automatic attempt at 96h would be too late. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
 
 ## What the workflow does
 

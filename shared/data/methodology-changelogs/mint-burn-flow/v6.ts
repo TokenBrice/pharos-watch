@@ -5,7 +5,7 @@ export const MINT_BURN_FLOW_V6: readonly MethodologyChangelogEntry[] = [
     version: "6.19",
     title: "Bank Run Gauge: one producer, one universe",
     date: "2026-08-10",
-    effectiveAt: 1786665600,
+    effectiveAt: 1786314652,
     summary:
       "The Bank Run Gauge is now computed once, by the /api/mint-burn-flows publication, and the daily digest re-bins that publication instead of recomputing a second composite from mint_burn_hourly over a narrower coin set with global peg-bucket supply weights.",
     impact: [

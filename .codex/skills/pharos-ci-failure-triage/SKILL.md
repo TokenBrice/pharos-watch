@@ -79,7 +79,7 @@ npm run validate:pages-smoke
 npm run validate:worker-smoke
 ```
 
-Use the exact `.nvmrc` runtime in the current shell. `check:pr` runs the committed-diff adaptive contract; use its failing leaf command for fast iteration. `check:release` is the optional Pages build plus Worker bundle rehearsal. `coverage:critical` is a report-only weekly/manual lane, while `test:all`, full lint, and test typechecking belong to nightly/manual validation.
+Use the exact `.nvmrc` runtime in the current shell. `check:pr` runs the committed-diff adaptive contract; use its failing leaf command for fast iteration. `check:release` is the optional Pages build plus Worker bundle rehearsal. `coverage:critical` is blocking in its weekly/manual workflow and runs on pull requests only when an enrolled critical source changes; `test:all`, full lint, and test typechecking belong to nightly/manual validation.
 
 Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contract.mjs` when deploy-surface classification is unclear.
 
@@ -127,13 +127,13 @@ gh workflow run "Deploy to Cloudflare" --repo TokenBrice/pharos-watch --ref main
 gh workflow run "Rebuild Pages" --repo TokenBrice/pharos-watch --ref main
 ```
 
-`pages-release` is `workflow_call`-only — it runs solely as a child of Deploy to Cloudflare; retrigger it via `-f surface=pages`, never directly.
+`pages-release` is `workflow_call`-only and cannot be dispatched directly. It is called by both Deploy to Cloudflare and Rebuild Pages: use Deploy with `-f surface=pages` for a code-surface release, or dispatch Rebuild Pages for the API-backed snapshot refresh path.
 
 Then watch the new run with `gh run list` and `gh run watch`.
 
 ### 6. Scheduled Automation Failures
 
-Most workflows in `.github/workflows/` are scheduled bots, several of which open PRs (shock-coverage refresh, protocol-API mechanism refresh, OG refresh, maintenance candidates, nightly validation, coverage ratchet, security scans). A failure there is not a push/merge-gate failure — triage the bot's own run and branch.
+Most workflows in `.github/workflows/` are scheduled automation. Shock-coverage refresh, protocol-API mechanism refresh, and OG refresh can open PRs; maintenance candidates opens or updates an issue, while nightly validation, coverage ratchets, and security scans report through their workflow runs. A failure there is not automatically a push/merge-gate failure — triage the automation's own run and any branch or issue it owns.
 
 The shock-coverage refresh is the urgent one: its PR arms auto-merge at creation (repo-level auto-merge is enabled but per-PR opt-in; this is the one automation that opts in), so it self-merges the moment its gate goes green — and the underlying measurements carry a hard 72h freshness bound past which the V9 engine fails closed to degraded backing scores. If that loop is broken, check `scripts/ci/check-shock-coverage-freshness.mjs` and follow `docs/process/shock-coverage-refresh.md`.
 

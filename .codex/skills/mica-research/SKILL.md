@@ -1,16 +1,16 @@
 ---
 name: mica-research
-description: Research and populate EU MiCA compliance data (the `mica` field) for a tracked stablecoin in the Pharos dashboard. Use when adding or auditing MiCA authorization status, token type, competent authority, or issuer authorization in `shared/data/stablecoins/coins/*.json`.
+description: Research and populate EU MiCA compliance data (the `mica` field) for a tracked stablecoin in the Pharos dashboard. Use when adding or auditing MiCA authorization status, token type, competent authority, or issuer authorization in its compliance sidecar.
 ---
 
 # MiCA Research
 
-Research a stablecoin's standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114) and write a sourced `mica` object into the coin's per-coin JSON entry when the evidence supports it.
+Research a stablecoin's standing under the EU Markets in Crypto-Assets Regulation (MiCA, Regulation (EU) 2023/1114) and write a sourced `mica` object into its routed compliance source when the evidence supports it.
 
 ## Read First
 
 - Read `docs/mica-tracker.md` — the **source of truth** for the `mica` schema, the status criteria table, EMT/ART rules, sourcing requirements, and legal framing. Defer to it for classification; this skill is the workflow only. `docs/compliance-page.md` covers the shared `/compliance/` page contract (the old `/mica/` route moved there).
-- Read the coin's entry in `shared/data/stablecoins/coins/*.json` (or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view). Treat the runtime stablecoin re-export as import-only; `mica` edits must match `shared/lib/stablecoins/schema.ts`. **Routing:** if `shared/data/stablecoins/domains/compliance/<id>.json` exists, `mica`/`genius` belong in that sidecar and must stay out of the base file (`docs/process/stablecoin-research-sidecars.md`); otherwise edit the per-coin JSON.
+- Read the coin's base entry plus `shared/data/stablecoins/domains/compliance/<id>.json` when present (or `shared/data/stablecoins/coins.generated.json` for a merged runtime view). Treat the runtime stablecoin re-export as import-only; `mica` edits must match `shared/lib/stablecoins/schema.ts`. **Routing:** compliance research always belongs in the compliance sidecar; create it when absent and keep `mica`/`genius` out of the base file (`docs/process/stablecoin-research-sidecars.md`).
 - Treat existing `jurisdiction` free text (`regulator`, `license` e.g. `"EMI (MiCA)"`, `"ACPR"`) as a starting hypothesis, not truth — verify against a register.
 
 ## Schema
@@ -34,12 +34,11 @@ The `mica` object (exact field names): `status`, `tokenType`, `authorizationType
 
 4. Assign `status` per the criteria table in `docs/mica-tracker.md`. Set `tokenType`: **EMT** = single official currency (most EUR/USD fiat-backed coins); **ART** = basket/commodity/other value (rare). When uncertain between two statuses, pick the more conservative one and explain why.
 
-5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit the routed file (compliance sidecar if present, else the per-coin JSON — in the base file place `mica` immediately after `jurisdiction`, after `genius` if both are present) — then regenerate and validate:
+5. Present the proposed `mica` object with sources, access date, and confidence. If research-only, stop here. Otherwise, after approval, edit or create the compliance sidecar, then regenerate and validate:
 
 ```bash
 export PATH="$PWD/node_modules/.bin:$PATH"
-tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts
-node scripts/build-data/build-client-registry.mjs
+npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects
 npm run check:stablecoin-data
 ```
 

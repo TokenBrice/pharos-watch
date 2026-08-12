@@ -41,7 +41,7 @@ curl -s "https://api.coingecko.com/api/v3/coins/${GECKO_ID}?localization=false&t
 
 7. Patch only `contracts` in the matching `shared/data/stablecoins/coins/*.json` entry
 
-8. Regenerate `shared/data/stablecoins/coins.generated.json` and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
+8. Converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects`, then run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
 
 ## Batch Mode
 

@@ -114,7 +114,7 @@ When `type === "data-correction"` and a valid `stablecoinId` is provided, the wo
 | Output | Source |
 |--------|--------|
 | Cached price | `coin.price` from the normalized stablecoins cache payload |
-| Circulating supply | Sum of `coin.circulating` values |
+| USD circulating market cap | `getCirculatingRaw(coin)` from the normalized cache payload; DefiLlama list values are already USD-denominated |
 | Peg deviation | `((price - pegReference) / pegReference) * 100` using the tracked peg currency |
 | Cache age | `now - cache.updatedAt` in seconds |
 
@@ -122,8 +122,8 @@ The verification result produces one of three GitHub labels:
 
 | Label | Meaning |
 |-------|---------|
-| `verified: confirmed` | `\|deviation\| > 1%` — the data issue is likely real |
-| `verified: unconfirmed` | Price absent, or present and within 1% of peg — data is not confirmed wrong |
+| `verified: confirmed` | A positive cached price is at or beyond the configured depeg threshold: 100 bps for USD pegs or 150 bps for non-USD pegs |
+| `verified: unconfirmed` | Price is absent/non-positive, or its absolute deviation is below the applicable threshold — the data is not confirmed wrong |
 | `verified: pending` | Cache unavailable at submission time |
 
 The full snapshot block is embedded in the GitHub issue body as a `**--- Auto-Verification Snapshot (at time of submission) ---**` section.

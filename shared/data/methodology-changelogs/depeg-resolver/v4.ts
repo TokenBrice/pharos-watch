@@ -5,7 +5,7 @@ export const DEPEG_RESOLVER_V4: readonly MethodologyChangelogEntry[] = [
     version: "4.2",
     title: "Mint-posture predicates unified; mint-scoped non-inflatability recognised",
     date: "2026-08-10",
-    effectiveAt: 1786665600,
+    effectiveAt: 1786314551,
     summary:
       "DDR's mint-posture tests now read shared predicates instead of per-engine literal sets, and the mint-scoped `none-resolved-mint` posture earns the weak R1 non-inflatable-supply anchor it previously fell through entirely. No resolution tier, factor weight, duration landmark, or stratum assignment changes.",
     impact: [

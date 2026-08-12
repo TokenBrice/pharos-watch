@@ -45,7 +45,7 @@ This persisted flag retires the shell-level `Start Here` shortcut in the mobile 
 - `title = "Start Here"`
 - `containerClassName = "mx-auto max-w-6xl"`
 
-Unlike the homepage, `/start/` is a guided long-form route with standard breadcrumb/title chrome above the route-specific onboarding content.
+Unlike the homepage, `/start/` is a guided long-form route with the standard title/lead shell and Breadcrumb JSON-LD above the route-specific onboarding content; it does not render a visible breadcrumb.
 
 ---
 
@@ -151,7 +151,7 @@ Update this doc when any of these change:
 - section order
 - the curated goal/atlas/shortcut route structure
 - the homepage-callout retirement handshake
-- the shared sidebar/mobile-nav retirement handshake
+- the shared desktop/mobile navigation contract
 - the shared-shell contract for `/start/`
 
-When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.
+When changing onboarding copy or destinations, update `src/lib/start-here-content.ts` in the same change. Safety Score explanations must stay aligned with the current V9 pillar/policy contract in [report-cards.md](./report-cards.md), without retired dimension copy. If the homepage CTA behavior changes too, update [Homepage](./homepage.md) alongside this document.

@@ -299,13 +299,13 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 
 ## Rollback Procedure
 
-If a migration corrupts data:
+If a deployed migration corrupts data:
 
-1. **Get bookmark:** `cd worker && npx wrangler d1 time-travel info stablecoin-db`
-2. **Restore:** `cd worker && npx wrangler d1 time-travel restore stablecoin-db --bookmark=<BOOKMARK>`
-3. **Remove bad migration** from `worker/migrations/` directory
-4. **Re-apply remaining:** `cd worker && npx wrangler d1 migrations apply stablecoin-db --remote`
-5. **Redeploy worker:** use the standard protected production deploy workflow after the database is restored and the corrective migration set is reviewed. Emergency manual deployment bypasses the protected validation and activation proof and therefore requires an explicit operator decision.
+1. **Select a last-good point:** use a previously captured pre-migration bookmark, or run `cd worker && npx --no-install wrangler d1 time-travel info stablecoin-db --timestamp=<LAST_GOOD_RFC3339> --json`. Verify that the timestamp/bookmark predates the migration apply; the unqualified current bookmark is not a rollback point.
+2. **Restore:** `cd worker && npx --no-install wrangler d1 time-travel restore stablecoin-db --bookmark=<LAST_GOOD_BOOKMARK>` (or `--timestamp=<LAST_GOOD_RFC3339>`) and coordinate a compatible prior Worker version when the new runtime cannot read the restored schema.
+3. **Preserve the deployed ledger:** never delete, rename, or rewrite a migration that reached production. Author a next-numbered forward repair and add its rollback note here. Only an undeployed migration may be removed before release.
+4. **Validate the repair:** run `npm run check:migrations`, replay the full migration set against a fresh local database, and run focused tests for the affected schema and runtime path.
+5. **Release and verify:** use the standard protected production deploy workflow after the database restore and corrective migration are reviewed, then verify the affected production path. Emergency manual deployment bypasses the protected validation and activation proof and therefore requires an explicit operator decision.
 
 Cloudflare D1 Time Travel retention is account-plan dependent. Verify the current retention window in Cloudflare before relying on a rollback bookmark.
 

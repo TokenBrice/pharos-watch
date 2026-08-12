@@ -59,6 +59,8 @@ Share creation posts only the allowlisted selector input. `functions/lib/selecto
 
 Snapshot identifiers are content-addressed. Verified schema-v3 artifacts require matching trusted KV metadata and render as Pharos-verified. Legacy bodies without trusted metadata remain client-unverified. A missing sid-only snapshot shows not found rather than silently substituting current output.
 
+An unread snapshot expires after 90 days. Its first successful `GET` extends retention to five years; subsequent reads do not keep sliding the expiry.
+
 Loaded snapshots remain frozen by default. The user can compare the frozen input with current data, including shortlist/rank, dataset hash, engine version, and methodology-version differences, without overwriting the stored artifact.
 
 The exact schema, canonicalization, size limit, origin checks, quota reservation, TTL extension, and HTTP error mapping are owned by:

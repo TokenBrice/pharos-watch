@@ -30,7 +30,7 @@ Use this skill to identify coins whose resilience defaults are wrong and to add 
 - `collateralQuality`: what is the riskiest significant backing component?
 - `custodyModel`: is collateral onchain, institutionally custodied, or effectively exchange/counterparty held?
 
-6. Apply only fields that differ from defaults in the matching per-coin JSON file, keeping the diff minimal. Then regenerate with `npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts`, run `npm run check:stablecoin-data`, and run `npm run check:generated-artifacts` so dependent projections converge; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`.
+6. Apply only fields that differ from defaults in the matching per-coin JSON file, keeping the diff minimal. Then converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects` and run `npm run check:stablecoin-data`; for full additions, follow the commit-derived artifact sequence and full validation in Phase 7 of `docs/process/adding-a-stablecoin.md`.
 
 ## Tiers
 

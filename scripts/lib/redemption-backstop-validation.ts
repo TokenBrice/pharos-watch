@@ -250,25 +250,33 @@ export function validateRedemptionBackstopRegistry(
   ) as Record<RedemptionRouteFamily, number>;
 
   if (options.docsText != null) {
-    const expectedConfiguredLine = `- **Configured coins:** ${mergedIds.length}`;
-    if (!options.docsText.includes(expectedConfiguredLine)) {
+    const expectedOwnerLine = "- **Configured coins and family counts:** derived from `REDEMPTION_BACKSTOP_CONFIGS`";
+    if (!options.docsText.includes(expectedOwnerLine)) {
       addFinding(
         findings,
         "error",
-        "docs-configured-count-out-of-sync",
-        `docs/redemption-backstops.md is out of sync. Expected line: ${expectedConfiguredLine}`,
+        "docs-configured-owner-missing",
+        `docs/redemption-backstops.md must name the source-owned inventory. Expected prefix: ${expectedOwnerLine}`,
       );
     }
 
-    const expectedRouteLine = `- **Route families:** ${ROUTE_FAMILY_ORDER.map(
-      (routeFamily) => `${routeFamilyCounts[routeFamily]} \`${routeFamily}\``,
-    ).join(", ")}`;
-    if (!options.docsText.includes(expectedRouteLine)) {
+    const routeFamilyLine = options.docsText.match(/^- \*\*Route families:\*\* (.+)$/m)?.[1] ?? "";
+    for (const routeFamily of ROUTE_FAMILY_ORDER) {
+      if (!routeFamilyLine.includes(`\`${routeFamily}\``)) {
+        addFinding(
+          findings,
+          "error",
+          "docs-route-family-missing",
+          `docs/redemption-backstops.md must list source-owned route family ${routeFamily}.`,
+        );
+      }
+    }
+    if (/\d+\s+`[a-z-]+`/.test(routeFamilyLine)) {
       addFinding(
         findings,
         "error",
-        "docs-route-count-out-of-sync",
-        `docs/redemption-backstops.md is out of sync. Expected line: ${expectedRouteLine}`,
+        "docs-route-count-copied",
+        "docs/redemption-backstops.md must not copy volatile per-family counts; the registry summary owns them.",
       );
     }
   }
