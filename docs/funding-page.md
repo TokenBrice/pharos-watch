@@ -24,7 +24,7 @@ The page keeps an honest, prose-forward register:
 
 Two hand-maintained JSON files:
 
-- `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; reviewed on the 1st of each month. `last_reviewed_at` (UTC unix seconds) is surfaced in the Monthly costs card footer/details text so readers see freshness.
+- `shared/data/funding/costs.json` — monthly cost line items. Owned by @TokenBrice; the 1st of each month is the review target. `last_reviewed_at` (UTC unix seconds) is surfaced in the Monthly costs card footer/details text so readers can see a missed review instead of the page implying freshness.
 - `shared/data/funding/donations.json` — every inbound donation, one row each. Populated via the Pharos `funding-update` skill on a ~weekly cadence.
 
 The Monthly costs card separately discloses $5,800 in exceptional, one-time design expenses for the full website redesign and logo. TokenBrice paid and sponsored those expenses, so they are not included in the recurring monthly total.
@@ -43,7 +43,7 @@ Automation is intentionally deferred while the review volume remains small. Any 
 
 ## Ownership & cadence
 
-- `costs.json` — reviewed 1st of each month; bump `last_reviewed_at` every time you edit.
+- `costs.json` — target review date is the 1st of each month; if it is missed, leave the stale `last_reviewed_at` visible and complete the review before describing costs as current. Bump the timestamp every time you edit.
 - `donations.json` — `funding-update` skill invoked ~weekly, or ad-hoc on alert. `last_updated_at` is bumped automatically by the skill.
 
 ## Voice

@@ -18,25 +18,25 @@ colors:
   severity-severe: "#ef4444"
 typography:
   display:
-    fontFamily: '"ABC Whyte Inktrap", Bricolage Grotesque, system-ui, -apple-system, sans-serif'
+    fontFamily: '"Bricolage Grotesque", system-ui, -apple-system, sans-serif'
     fontSize: "1.875rem"
     fontWeight: 800
     lineHeight: 1.05
     letterSpacing: "-0.025em"
   headline:
-    fontFamily: '"ABC Whyte Inktrap", Bricolage Grotesque, system-ui, sans-serif'
+    fontFamily: '"Bricolage Grotesque", system-ui, sans-serif'
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.15
     letterSpacing: "-0.01em"
   title:
-    fontFamily: "Geist Sans, system-ui, sans-serif"
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.18
     letterSpacing: "-0.01em"
   body:
-    fontFamily: "Geist Sans, system-ui, sans-serif"
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -48,7 +48,7 @@ typography:
     lineHeight: 1.4
     fontFeature: "tabular-nums slashed-zero"
   label:
-    fontFamily: "Geist Sans, system-ui, sans-serif"
+    fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.2

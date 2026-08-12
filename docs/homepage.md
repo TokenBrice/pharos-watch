@@ -11,12 +11,16 @@ Route contract for `/`, the main Pharos dashboard.
 - **Core top rail:** `src/components/core-top-rail.tsx` + `src/components/homepage-tape.tsx`
 - **Main dashboard client:** `src/components/home-alt-client.tsx`
 - **Upcoming horizon module:** `src/components/home-alt-upcoming-horizon-constellation.tsx`
+- **First-paint query bootstrap:** `src/components/homepage-bootstrap-script.tsx`
+- **Fresh-post banner:** `src/components/home-blog-banner.tsx`, rendered only while the latest post is within its 14-day window
 
 The route does not use `FeaturePageShell`. Instead, the server page renders:
 
 1. `CollectionPage` + `ItemList` JSON-LD payloads for the top 20 core stablecoins and cash equivalents
-2. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
-3. `HomeAltClient`
+2. `HomepageBootstrapScript` for nonvisual first-paint query seeding
+3. conditional `HomeBlogBanner` while the latest post is fresh
+4. `HomeAltHero`, which owns the visible `h1` (exactly one raw `<h1>` in built HTML)
+5. `HomeAltClient`
 
 Metadata is authored directly in `src/app/page.tsx` with canonical `/` and the shared `/og-card.png` Open Graph image.
 
@@ -51,7 +55,7 @@ The hero's first-paint text summary is server-rendered from `getHomepageHeroSnap
 - `usePegSummary()`
 - `usePinnedStablecoins()` for local pinned-watchlist state
 - `useDexLiquidity()`
-- `useReportCards()`
+- `useReportCardsV9()`
 - `useStressSignals()`
 
 Before the client-only rankings workbench hydrates, its server-rendered fallback exposes a visible directory of the
@@ -123,7 +127,7 @@ Under the fold (`HomeAltClient`):
 
 1. `HomeAltMiniCardGrid`
 2. `ShortcutsSection`
-3. `HomeAltRankingsSection` (`PegBrowseStrip` + `StablecoinTable`)
+3. `HomeAltRankingsSection` (`StablecoinTable` + `PegBrowseStrip`)
 4. `HomeAltUpcomingHorizonConstellation`
 5. `HomeAltDdrOverview`
 6. `HomeAltYieldOverview`
@@ -137,8 +141,8 @@ The directory table is the product's workbench, so it sits directly after shortc
 
 This section contains:
 
-- `PegBrowseStrip`
 - `StablecoinTable`
+- `PegBrowseStrip`
 
 The homepage table seeds a curated default column set (`HOME_ALT_DEFAULT_COLUMNS`, which omits Mint Authority and Flags), keeps its own capped vertical scroll viewport, and lets users persist column changes through Table settings.
 

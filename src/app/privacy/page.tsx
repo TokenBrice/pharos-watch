@@ -77,15 +77,15 @@ export default function PrivacyPage() {
             Cloudflare Pages KV snapshot of the form answers and resulting output. Snapshot IDs are content-addressed,
             so identical answers against an identical dataset produce the same ID. Anyone with the link can view the
             frozen artifact. Snapshots do not include IP addresses, browser fingerprints, or account identifiers, and
-            are retained for five years.
+            expire after 90 days if never opened; the first successful read extends retention to five years.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="pharos-section-title">Telegram Data and Retention</h2>
           <p>
-            PharosWatchBot stores only what is required to deliver alerts and keep the bot reliable. The full list of
-            Telegram-owned tables and how long each one is retained:
+            PharosWatchBot stores only what is required to deliver alerts and keep the bot reliable. Storage categories
+            include:
           </p>
           <ul className="list-disc space-y-1 pl-5">
             <li>
@@ -209,7 +209,8 @@ export default function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="pharos-section-title">Data Retention</h2>
           <p>
-            When GA4 is enabled, analytics data is retained for 14 months per Google&apos;s default settings. We do not
+            When GA4 is enabled, analytics retention is controlled by the externally configured GA4 property rather than
+            guaranteed by repository code. We do not
             maintain user-account databases. Feedback submissions are sent to GitHub Issues for product support and
             issue tracking; optional follow-up contact details are included there when you provide them. The worker
             stores rate-limit metadata for feedback abuse prevention. The current submission path does not persist a
@@ -217,8 +218,8 @@ export default function PrivacyPage() {
             enforcement; verification tokens are stored only as hashes and expire after 30 minutes. Issued self-serve
             API keys expire after 60 days by default. Homepage shortcut
             preferences remain until reset or browser site data is cleared. Picker localStorage remains until browser
-            site data is cleared. Picker KV snapshots are retained for five years because they are content-addressed
-            analytical records rather than user-account records.
+            site data is cleared. Unread Picker KV snapshots expire after 90 days; the first successful read extends
+            retention to five years because they are content-addressed analytical records rather than user-account records.
           </p>
         </section>
 

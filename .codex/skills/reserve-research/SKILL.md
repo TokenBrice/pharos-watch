@@ -9,7 +9,7 @@ Research the reserve composition and write a sourced `reserves` array (with the 
 
 ## Read First
 
-- **Route the write first:** if `shared/data/stablecoins/domains/reserves/<id>.json` exists, every reserves-domain field (`reserves`, `reserveReview`, `custodyProfile`) belongs in that sidecar and must stay out of the base file; otherwise edit the base per-coin JSON. See `docs/process/stablecoin-research-sidecars.md` and `shared/data/stablecoins/AGENTS.md`.
+- **Route the write first:** every reserves-domain field (`reserves`, `reserveReview`, `custodyProfile`) belongs in `shared/data/stablecoins/domains/reserves/<id>.json` and must stay out of the base file. Create the sidecar when absent. See `docs/process/stablecoin-research-sidecars.md` and `shared/data/stablecoins/AGENTS.md`.
 - Read the coin's current entry (base JSON + any reserves sidecar, or `shared/data/stablecoins/coins.generated.json` for a canonical runtime view).
 - Treat the runtime stablecoin re-export as import-only; reserve metadata edits belong in the JSON registry and must match `shared/lib/stablecoins/schema.ts`.
 - Read `docs/report-cards.md` (Safety Score V9) for how the backing pillar consumes reserve slices.
@@ -24,7 +24,7 @@ Research the reserve composition and write a sourced `reserves` array (with the 
 - `flags.backing`
 - `flags.governance`
 - `proofOfReserves`
-- existing `reserves`, `reserveReview`, and `custodyProfile` (sidecar or base)
+- existing `reserves`, `reserveReview`, and `custodyProfile` from the reserves sidecar or merged runtime entry
 
 2. Gather primary sources first:
 - official transparency dashboard or proof-of-reserves page
@@ -52,7 +52,7 @@ A slice with no `assetClass` and no `coinId` scores as bounded-unknown quality: 
 
 7. Author or refresh `reserveReview` alongside the composition (reviewer, review date, confidence, sources, composition basis, scope; `nonLinkDispositions` for reviewed unlinked slices — the sidecars doc and `shared/lib/stablecoins/schema.ts` define the required shape).
 
-8. If the user asked for implementation, patch the routed file (sidecar or base), regenerate `shared/data/stablecoins/coins.generated.json`, and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. If the request is research-only, stop after presenting the proposed array with sources and confidence.
+8. If the user asked for implementation, patch or create the reserves sidecar, converge the aggregate and dependent projections with `npm run prebuild -- --only stablecoin-client-registry,report-card-registry-fingerprint,legacy-stablecoin-redirects`, and run `npm run check:stablecoin-data`; for full additions, follow Phase 7 in `docs/process/adding-a-stablecoin.md`. If the request is research-only, stop after presenting the proposed array with sources and confidence.
 
 ## Risk Tiers (legacy field — still schema-required)
 

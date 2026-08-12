@@ -16,6 +16,8 @@ const DATE = args && args.date
 const AUDIT_COINS = (args && args.auditCoins) || []
 const GENIUS_GAP_POOL_PATH = (args && args.geniusGapPoolPath) || null
 const MICA_GAP_POOL_PATH = (args && args.micaGapPoolPath) || null
+const COIN_DIR = 'shared/data/stablecoins/coins'
+const COMPLIANCE_DIR = 'shared/data/stablecoins/domains/compliance'
 
 if (!/^20\d\d-\d\d-\d\d$/.test(DATE || '')) {
   throw new Error('args.date must be the current ISO date')
@@ -245,7 +247,9 @@ const auditItems = AUDIT_COINS.map((c) => ({
   status: c.status || 'active',
   peg: c.peg,
   regimes: c.regimes || [],
-  file: c.file || `shared/data/stablecoins/coins/${c.id}.json`,
+  baseFile: `${COIN_DIR}/${c.id}.json`,
+  complianceFile: `${COMPLIANCE_DIR}/${c.id}.json`,
+  sourceHint: c.file || '',
   isGap: false,
 }))
 const auditById = new Map(auditItems.map((c) => [c.id, c]))
@@ -263,7 +267,7 @@ function researchPrompt(coin) {
     : `This coin currently HAS data for: ${regimes.join(', ')}. Re-verify and refresh it against live sources; correct errors; tighten precision; add/fix source references. Read reviewedAt from the current object instead of assuming a shared review date.`
   return [
     `Today is ${DATE}. You are auditing the compliance metadata for the tracked stablecoin "${coin.name}" (${coin.symbol}), id="${coin.id}", peg=${coin.peg}, lifecycle status=${coin.status}.`,
-    `STEP 1: Read the per-coin JSON at ${coin.file} to see current jurisdiction, genius, and mica blocks. Also Read docs/genius-tracker.md and docs/mica-tracker.md if you need the full criteria.`,
+    `STEP 1: Read the base coin JSON at ${coin.baseFile} for identity and jurisdiction. Check whether the compliance sidecar at ${coin.complianceFile} exists and read it when present; that sidecar owns current genius/mica data and is the write target for any proposed regime object. Also read docs/genius-tracker.md and docs/mica-tracker.md if you need the full criteria.${coin.sourceHint && coin.sourceHint !== coin.baseFile && coin.sourceHint !== coin.complianceFile ? ` The caller also supplied this legacy source hint: ${coin.sourceHint}.` : ''}`,
     `STEP 2: Assess these regimes: ${regimes.join(', ')}. ${gapLine}`,
     'STEP 3: For EACH regime, research the issuer against authoritative sources and decide: no-change (current data is correct & sourced), correct (refine fields/sources/enums), add-new-row (gap, warranted), remove-row (current row is wrong/unwarranted), or unable-to-verify (sources unreachable / inconclusive — make NO change, explain).',
     'OUTPUT per regime: set assessed (does the regime apply?), changeKind, consequential (true for new/upgraded authorization claims, status escalations, removals, or downgrades of an existing strong claim), confidence, a one-line summary (current vs proposed + why), proposedJson = the FULL schema-valid regime object as compact JSON text (only when changeKind is correct/add-new-row; otherwise ""), and sources (URLs consulted + what each showed).',
@@ -279,7 +283,7 @@ function researchPrompt(coin) {
 function verifyPrompt(coin, research) {
   return [
     `Today is ${DATE}. You are the INDEPENDENT ADVERSARIAL VERIFIER for the compliance audit of "${coin.name}" (${coin.symbol}), id="${coin.id}". Your job is to be skeptical and protect against fabricated or overstated regulatory claims.`,
-    `STEP 1: Read the current per-coin JSON at ${coin.file} (current genius/mica/jurisdiction).`,
+    `STEP 1: Read ${coin.baseFile} for identity/jurisdiction and the compliance sidecar ${coin.complianceFile} when it exists for current genius/mica data. The compliance sidecar is the write target for any final regime object.`,
     'STEP 2: Here is the researcher\'s proposal (JSON):\n' + JSON.stringify(research),
     'STEP 3: For EACH regime, independently check the proposal. Re-verify the HIGHEST-STAKES claims against primary sources yourself (especially any authorization/approval/authorized status and any new row). Confirm every reference URL resolves and names THIS token\'s issuer (not a same-name affiliate). Confirm the proposed object satisfies ALL Zod cross-field rules and enum constraints. Default to REJECT for any unsupported upgrade.',
     'STEP 4: Produce a verdict per regime: confirm-no-change | apply-correction | flag-for-approval | reject-proposal | unable-to-verify | not-applicable. Set finalJson = the FINAL schema-valid regime object to write (compact JSON text), or "" if nothing should be written.',
@@ -315,7 +319,9 @@ const gapPromise = (async () => {
           name: pick.id,
           status: 'active',
           peg: undefined,
-          file: `shared/data/stablecoins/coins/${pick.id}.json`,
+          baseFile: `${COIN_DIR}/${pick.id}.json`,
+          complianceFile: `${COMPLIANCE_DIR}/${pick.id}.json`,
+          sourceHint: '',
           regimes: [],
           isGap: true,
           gapReasons: {},
@@ -331,7 +337,7 @@ const gapPromise = (async () => {
   return { gapItems: items, gapVerify: gv }
 })()
 
-log(`Audit: ${auditItems.length} coins researching now (concurrency cap 14); gap discovery running concurrently.`)
+log(`Audit: ${auditItems.length} coins researching now under the workflow concurrency cap; gap discovery running concurrently.`)
 
 const [auditVerify, gap] = await Promise.all([auditPromise, gapPromise])
 const gapItems = gap.gapItems

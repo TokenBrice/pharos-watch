@@ -6,7 +6,7 @@ Route contract for the public `/timeline/` surface. The codebase term "tape" per
 
 ## Purpose
 
-`/timeline/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, DEWS / PSI band shifts, mint/burn, yield, methodology bumps, and lifecycle entries in one digestible view. Reserve, redemption, and liquidity classes are reserved filter-chip slots until their projectors ship.
+`/timeline/` is the cross-class chronological event feed for tracked stablecoins: depegs, freezes, score changes, DEWS / PSI band shifts, mint/burn, yield, methodology bumps, and lifecycle entries in one digestible view. A class enters the filter roster only when its live projector ships.
 
 The dedicated trackers (`/depeg/`, `/freezewatch/`, `/flows/`, `/safety-scores/`) remain the canonical surfaces for any single class. `/timeline/` is the unified view for users who want everything for one coin, everything in one severity tier, or a cross-class read across event classes.
 
@@ -39,7 +39,7 @@ Metadata is authored directly in `src/app/timeline/page.tsx` with canonical `/ti
 
 ## Visual Identity
 
-`/timeline/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/tape/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
+`/timeline/` is a deliberate **wire-service / terminal stream** carve-out from the standard `pharos-card-shell` analytics aesthetic. It is the wire dispatch sibling to `/digest/`'s broadsheet editorial: both lean on mono typography, but `/timeline/` is syslog, not newsprint. The general design ground truth lives in [design-language.md](./design-language.md); this section is the canonical contract for this route, mirrored as `### Tape (Special)` in that doc.
 
 1. **No `pharos-card-shell`** on event rows, day groups, the currently-open band, the pinned linked-event block, or the empty state. The whole stream is a flat typographic surface.
 2. **Hairline dividers** (`border-b border-border/30`) between rows — no rounded card boxes.

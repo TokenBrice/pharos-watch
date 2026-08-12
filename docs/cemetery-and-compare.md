@@ -83,7 +83,7 @@ Each appendix includes the epitaph (when present) for every newly added coin plu
 ### UI behavior
 
 - `CemeteryClient` maintains an `expanded` coin-id set for obituary panels plus a local sort toggle (`newest` default, `oldest` fallback).
-- Tombstones render newest death-year first by default even though `DEAD_STABLECOINS` remains curated in oldest-first order in-repo.
+- Tombstones render newest death-year first by default. Source-file order is non-contractual; the UI sort helper owns newest/oldest presentation.
 - `CemeteryTombstones` renders all year sections inside one continuous atmospheric cemetery scene with shared ground, horizon, fog, and a central path; size still reflects peak market cap.
 - Tombstone logos come from each row's `logo` field and render both on the grave marker and in the hover/focus memorial plaque. Curated dead-coin rows usually point under `public/logos/cemetery/`; frozen tracked rows prefer the canonical `data/logos.json` path and fall back to the legacy cemetery filename heuristic only when no tracked logo is registered.
 - Tombstone hover and keyboard focus reveal an over-grave plaque with the stablecoin name, symbol, cause, death date, peak market cap, peg currency, archive status, and obituary lead (or up to the first two sentences, capped at 380 characters, for the top-20 entries by peak market cap).
@@ -174,4 +174,4 @@ The matrix uses the shared contextual methodology labels for Peg Score, Liquidit
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare reliability depends on the eight global datasets listed above plus the shared mint/burn dataset and per-coin supply-history and flow queries. The global stale/error UI covers every global comparison source. Per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.
+- Compare reliability depends on the eight core global datasets listed above plus the aggregate mint/burn dataset and per-coin supply-history and flow queries. The blocking global error and stale notices cover the eight core sources; aggregate flow has no dedicated global notice today. Per-coin flow panels degrade by omission unless all selected flow queries fail, in which case the page shows a flow-specific error notice.

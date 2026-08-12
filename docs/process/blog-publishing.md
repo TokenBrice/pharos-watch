@@ -54,8 +54,10 @@ notes). Keep posts editorial: what shipped, what's next, and why.
 
 ## Notes
 
-- **OG image:** all posts share `public/og-blog.png` (one card, "Blog" kicker).
-  Per-post cards are intentionally not generated.
+- **Social image:** a post with `coverImage` uses that asset for Open Graph and
+  Twitter metadata as well as the article and hub card. A post without one
+  falls back to the shared `public/og-blog.png` card with the "Blog" kicker.
+  Cover images are authored assets; Pharos does not generate per-post cards.
 - **llms.txt (optional):** `scripts/maintenance/generate-llms-txt.ts` can list
   the `/blog/` hub and `/feed/blog.xml`; if you add them, regenerate and run
   `npm run check:llms-txt`. Keep it to the hub — do not add per-post entries, so
