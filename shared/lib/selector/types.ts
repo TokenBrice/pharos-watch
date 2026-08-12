@@ -8,7 +8,17 @@
  *
  * Binding: see `docs/screener-picker-page.md` for the maintained type contract.
  */
-import type { BluechipGrade, PegCurrency, ReportCardGrade, YieldType } from "../../types";
+import type {
+  BluechipGrade,
+  CustodyModel,
+  GovernanceType,
+  PegCurrency,
+  ReportCardGrade,
+  SafetyScoreV9Cap,
+  V9EvidenceLevel,
+  V9QualityPillar,
+  YieldType,
+} from "../../types";
 
 // ---------------------------------------------------------------------------
 // Inputs
@@ -275,6 +285,8 @@ export const BASE_CONFIDENCE_REASON_KEYS = [
   "source-risk-missing",
   "relaxed-fallback",
   "narrow-margin",
+  "limited-v9-evidence",
+  "v9-binding-cap",
 ] as const;
 export type BaseConfidenceReasonKey = (typeof BASE_CONFIDENCE_REASON_KEYS)[number];
 export type MissingCriticalConfidenceReason = `missing-critical-${WeightKey}`;
@@ -449,8 +461,25 @@ export interface ScreenerDivergenceWarning {
  * constraints the Screener cannot filter on (e.g. yield warning signals).
  */
 export interface SelectorScreenerHandoff {
-  filters: Record<string, unknown>;
+  filters: SelectorScreenerFilterProjection;
   divergenceWarnings: ScreenerDivergenceWarning[];
+}
+
+/** Shared-side mirror of the Screener URL fields the Picker is allowed to emit. */
+export interface SelectorScreenerFilterProjection {
+  coins?: readonly string[];
+  dewsMax?: number;
+  supplyMin?: number;
+  safetyGrades?: readonly ReportCardGrade[];
+  safetyBackingMin?: number;
+  safetyExitMin?: number;
+  pegScoreMin?: number;
+  liquidityScoreMin?: number;
+  custodyModels?: readonly CustodyModel[];
+  types?: readonly GovernanceType[];
+  pegs?: readonly SelectorEligiblePegCurrency[];
+  lifecycle?: readonly ["active"];
+  blacklistable?: readonly ("no" | "possible")[];
 }
 
 // ---------------------------------------------------------------------------
@@ -568,6 +597,11 @@ export interface MergedRow {
    * must never reach a shortlist card unlabelled.
    */
   safetyProvenance: "safety-score-v9" | "yield-opportunity";
+  /** Public V9 evidence context; absent on frozen historical fixtures. */
+  safetyEvidenceLevel?: V9EvidenceLevel | null;
+  safetyWeakestPillar?: { pillar: V9QualityPillar; score: number } | null;
+  safetyBindingCap?: SafetyScoreV9Cap | null;
+  safetyNrReasons?: readonly string[];
   /**
    * Published V9 pillars. They are read by exclusion gates, why-keys, and the
    * "what to watch" axis — surfaces that re-bin a published output — and are

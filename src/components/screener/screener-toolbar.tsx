@@ -7,11 +7,13 @@ import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import {
   BLACKLISTABLE_VALUES,
   PEG_VALUES,
+  SAFETY_EVIDENCE_VALUES,
   SAFETY_GRADE_VALUES,
   SCREENER_LIFECYCLE_VALUES,
   SCREENER_FILTER_DEFAULTS,
   hasActiveFilters,
   type BlacklistableValue,
+  type SafetyEvidenceValue,
   type ScreenerFilters,
 } from "@/app/screener/screener-filters";
 import {
@@ -27,8 +29,8 @@ import {
   MECHANISM_ARCHETYPE_LABELS,
   PEG_METADATA,
 } from "@shared/lib/classification";
-import { GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import type { GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
+import { CUSTODY_MODEL_VALUES, GOVERNANCE_TYPE_VALUES, MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import type { CustodyModel, GovernanceType, MechanismArchetype, PegCurrency, StablecoinStatus } from "@shared/types";
 
 const LIFECYCLE_LABELS: Record<StablecoinStatus, string> = {
   active: "Active",
@@ -42,6 +44,22 @@ const BLACKLISTABLE_LABELS: Record<BlacklistableValue, string> = {
   yes: "Yes",
   no: "No",
   possible: "Possible",
+};
+
+const SAFETY_EVIDENCE_LABELS: Record<SafetyEvidenceValue, string> = {
+  strong: "Strong",
+  adequate: "Adequate",
+  limited: "Limited",
+  nr: "NR",
+};
+
+const CUSTODY_MODEL_LABELS: Record<CustodyModel, string> = {
+  onchain: "On-chain",
+  "institutional-top": "Top-tier institution",
+  "institutional-regulated": "Regulated institution",
+  "institutional-unregulated": "Unregulated institution",
+  "institutional-sanctioned": "Sanctioned institution",
+  cex: "Exchange",
 };
 
 type FilterPillOption<V extends string> = { value: V; label: string; title?: string };
@@ -72,6 +90,10 @@ const PEG_OPTIONS: readonly FilterPillOption<PegCurrency>[] = PEG_VALUES.map((va
   label: PEG_METADATA[value].filterLabel,
   title: PEG_METADATA[value].label,
 }));
+const SAFETY_EVIDENCE_OPTIONS: readonly FilterPillOption<SafetyEvidenceValue>[] =
+  SAFETY_EVIDENCE_VALUES.map((value) => ({ value, label: SAFETY_EVIDENCE_LABELS[value] }));
+const CUSTODY_MODEL_OPTIONS: readonly FilterPillOption<CustodyModel>[] =
+  CUSTODY_MODEL_VALUES.map((value) => ({ value, label: CUSTODY_MODEL_LABELS[value] }));
 
 function toggleFilterValue<V>(current: readonly V[], value: V): V[] {
   return current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value];
@@ -107,6 +129,8 @@ export function ScreenerToolbar({
   // M8 — track chip additions per group so newly-active filters spring in
   // via `pharos-chip-animate-in`. Set clears after the keyframe completes.
   const justEnteredSafety = useJustEntered(filters.safetyGrades);
+  const justEnteredEvidence = useJustEntered(filters.safetyEvidence);
+  const justEnteredCustody = useJustEntered(filters.custodyModels);
   const justEnteredTypes = useJustEntered(filters.types);
   const justEnteredMechanisms = useJustEntered(filters.mechanisms);
   const justEnteredBlacklistable = useJustEntered(filters.blacklistable);
@@ -146,6 +170,12 @@ export function ScreenerToolbar({
           </Button>
         </div>
       </div>
+
+      {filters.coins.length > 0 ? (
+        <p className="rounded-md border border-frost-blue/25 bg-frost-blue/5 px-3 py-2 text-sm text-foreground">
+          Showing the exact {filters.coins.length}-coin Picker shortlist. Reset filters to restore the full universe.
+        </p>
+      ) : null}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1.35fr)_minmax(12rem,0.8fr)_minmax(12rem,0.8fr)_minmax(14rem,1fr)]">
         <div className="space-y-2">
@@ -228,6 +258,41 @@ export function ScreenerToolbar({
           minValue={filters.safetyControlMin}
           onMinChange={(v) => update("safetyControlMin", v)}
           defaultMin={SCREENER_FILTER_DEFAULTS.safetyControlMin}
+        />
+      </div>
+
+      <div className="grid gap-3 lg:grid-cols-[minmax(10rem,0.6fr)_minmax(10rem,0.6fr)_minmax(14rem,0.8fr)_minmax(20rem,1.4fr)]">
+        <ThresholdField
+          label="PegScore"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.pegScoreMin}
+          onMinChange={(v) => update("pegScoreMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.pegScoreMin}
+        />
+        <ThresholdField
+          label="Liquidity Score"
+          min={0}
+          max={100}
+          step={1}
+          minValue={filters.liquidityScoreMin}
+          onMinChange={(v) => update("liquidityScoreMin", v)}
+          defaultMin={SCREENER_FILTER_DEFAULTS.liquidityScoreMin}
+        />
+        <FilterPillGroup
+          kicker="V9 Evidence"
+          options={SAFETY_EVIDENCE_OPTIONS}
+          selected={filters.safetyEvidence}
+          justEntered={justEnteredEvidence}
+          onChange={(next) => update("safetyEvidence", next)}
+        />
+        <FilterPillGroup
+          kicker="Custody Model"
+          options={CUSTODY_MODEL_OPTIONS}
+          selected={filters.custodyModels}
+          justEntered={justEnteredCustody}
+          onChange={(next) => update("custodyModels", next)}
         />
       </div>
 
@@ -377,10 +442,10 @@ function ThresholdField({
       </span>
       <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
         <span className="rounded-md border border-border/60 bg-background px-2 py-1.5 text-sm font-semibold text-muted-foreground" aria-hidden="true">
-          &gt;
+          ≥
         </span>
         <label htmlFor={inputId} className="sr-only">
-          {label} greater than
+          {label} greater than or equal to
         </label>
         <input
           id={inputId}

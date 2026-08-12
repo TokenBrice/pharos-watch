@@ -334,18 +334,21 @@ export function evaluateExclusions(
 export const REQUIRED_SIGNALS_BY_PROFILE: Record<SelectorProfile, readonly (keyof MergedRow)[]> = {
   treasury: [
     "safetyGrade",
+    "safetyScore",
     "safetyResilienceScore",
     "dewsScore",
     "pegScore",
   ],
   yield: [
     "safetyGrade",
+    "safetyScore",
     "pharosYieldScore",
     "pegScore",
     "apy30d",
   ],
   trading: [
     "safetyGrade",
+    "safetyScore",
     "liquidityScore",
     "pegScore",
     "dewsScore",
@@ -362,6 +365,17 @@ export function hasRequiredSignals(
   profile: SelectorProfile,
 ): CoverageResult {
   const missing: string[] = [];
+  if (row.safetyProvenance !== "safety-score-v9") {
+    missing.push("safety-score-v9");
+  }
+  if (row.safetyGrade === "NR") {
+    const reasons = row.safetyNrReasons ?? [];
+    if (reasons.length === 0) {
+      missing.push("safety-score-v9-nr");
+    } else {
+      for (const reason of reasons) missing.push(`safety-nr: ${reason}`);
+    }
+  }
   for (const signal of REQUIRED_SIGNALS_BY_PROFILE[profile]) {
     if (row[signal] == null) {
       missing.push(String(signal));

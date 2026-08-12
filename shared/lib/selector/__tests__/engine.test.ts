@@ -703,6 +703,91 @@ describe("runSelector — universal properties", () => {
     }
   });
 
+  it("never recommends an NR asset across the combinatorial route suite", () => {
+    const data = buildFixtureData();
+    for (const input of routeInputs()) {
+      const out = runSelector(input, data, FIXTURE_DATASET);
+      expect(
+        out.recommended.some((recommendation) => recommendation.safetyGrade === "NR"),
+        `${input.pegCurrency}/${input.profile}/${input.horizon}/${input.depegTolerance}/${input.composability}/${input.exitSpeed}`,
+      ).toBe(false);
+    }
+
+    const treasury = runSelector(makeInput({ profile: "treasury" }), data, FIXTURE_DATASET);
+    expect(treasury.coverageWarnings.skippedForCoverage).toContainEqual({
+      id: "yzusd-yuzu",
+      symbol: "YZUSD",
+      missingSignals: [
+        "safety-nr: Critical V9 evidence remains unresolved.",
+        "safetyScore",
+      ],
+    });
+  });
+
+  it("does not re-admit an NR row through relaxed fallback", () => {
+    const base = buildFixtureData().rows.get("yzusd-yuzu");
+    expect(base).toBeDefined();
+    const row = { ...base!, pegScore: 60 };
+    const out = runSelector(
+      makeInput({ profile: "yield", depegTolerance: "zero" }),
+      { rows: new Map([[row.id, row]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended).toEqual([]);
+    expect(out.usedRelaxedFallback).toBe(false);
+    expect(out.exclusionSummary).toContainEqual(
+      expect.objectContaining({ reason: "peg-score-floor", sampleIds: ["yzusd-yuzu"] }),
+    );
+  });
+
+  it("carries limited V9 evidence and binding caps into confidence and watch text", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const row: MergedRow = {
+      ...base!,
+      safetyEvidenceLevel: "limited",
+      safetyWeakestPillar: { pillar: "backing", score: 72 },
+      safetyBindingCap: {
+        kind: "evidence",
+        limit: 80,
+        source: "evidence",
+        reason: "Reserve evidence is bounded.",
+        binding: true,
+      },
+    };
+    const out = runSelector(
+      makeInput({ profile: "treasury" }),
+      { rows: new Map([[row.id, row]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended[0]?.confidence).toBeLessThanOrEqual(80);
+    expect(out.recommended[0]?.confidenceReasons).toEqual(
+      expect.arrayContaining(["limited-v9-evidence", "v9-binding-cap"]),
+    );
+    expect(out.recommended[0]?.watchText).toContain("capped at 80");
+    expect(out.recommended[0]?.watchText).toContain("Reserve evidence is bounded.");
+  });
+
+  it("surfaces the published weakest V9 pillar when no binding cap applies", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const row: MergedRow = {
+      ...base!,
+      safetyEvidenceLevel: "adequate",
+      safetyWeakestPillar: { pillar: "control", score: 40 },
+      safetyBindingCap: null,
+    };
+    const out = runSelector(
+      makeInput({ profile: "treasury" }),
+      { rows: new Map([[row.id, row]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended[0]?.watchText).toContain("Economic Control at 40");
+  });
+
   it("howey-uncertain coins are pre-excluded", () => {
     const out = runSelector(makeInput(), buildFixtureData(), FIXTURE_DATASET);
     for (const rec of out.recommended) {

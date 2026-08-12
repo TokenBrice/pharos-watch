@@ -4,6 +4,7 @@ import {
   selectorAnswersToScreenerFilters,
   type SelectorInput,
   type SelectorOutput,
+  type SelectorScreenerFilterProjection,
 } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import type { SelectorResultSummaryProps } from "@/components/selector/selector-result-summary";
@@ -29,11 +30,21 @@ type ResultSummaryCoordinationProps = Pick<
 export function buildScreenerHandoff(output: SelectorOutput | null): ScreenerHandoffView {
   if (!output) return { url: "/screener/", filterChips: [] };
   try {
-    const { url } = buildScreenerUrl(output.input, "/screener/");
-    const { filters } = selectorAnswersToScreenerFilters(output.input);
+    const recommendedIds = output.recommended.map((recommendation) => recommendation.id);
+    const { url, divergenceWarnings } = buildScreenerUrl(output.input, "/screener/", recommendedIds);
+    const { filters } = selectorAnswersToScreenerFilters(output.input, recommendedIds);
     return {
       url,
-      filterChips: readableScreenerFilterChips(filters),
+      filterChips: [
+        ...readableScreenerFilterChips(filters),
+        ...divergenceWarnings.map((warning) => ({
+          label: "Picker-only",
+          value: DIVERGENCE_LABELS[warning.reason] ?? warning.reason,
+        })),
+        ...(output.usedRelaxedFallback
+          ? [{ label: "Picker-only", value: "Relaxed PegScore fallback" }]
+          : []),
+      ],
     };
   } catch {
     return { url: "/screener/", filterChips: [] };
@@ -172,7 +183,7 @@ function venueLabelFor(input: SelectorInput, state: SelectorWizardState): string
 
 function priorityLabelsFor(input: SelectorInput): string[] {
   if (input.profile === "treasury") {
-    return ["Safety", "Resilience", "Dependency risk", "Peg discipline"];
+    return ["Safety", "Backing", "Economic Control", "Peg discipline"];
   }
   if (input.profile === "yield") {
     return ["Yield score", "Source risk", "Variance", "Safety", "Peg discipline"];
@@ -180,22 +191,32 @@ function priorityLabelsFor(input: SelectorInput): string[] {
   return ["Liquidity", "Current peg quality", "DEWS", "Exit speed", "Market depth"];
 }
 
-function readableScreenerFilterChips(filters: Record<string, unknown>): Array<{ label: string; value: string }> {
+const DIVERGENCE_LABELS: Record<string, string> = {
+  "active-depeg-gate": "Active-depeg gate",
+  "howey-uncertain-exclusion": "Legal uncertainty exclusion",
+  "bluechip-grade-floor": "Bluechip D/F exclusion",
+  "inherited-blacklist-status": "Inherited blacklist exposure",
+  "yield-native-only": "Native yield rail",
+  minApy: "Minimum APY",
+  "yield-warning-signals": "Yield score, source risk, variance, and warnings",
+  "effective-tvl-floor-1h": "One-hour effective TVL floor",
+};
+
+function readableScreenerFilterChips(filters: SelectorScreenerFilterProjection): Array<{ label: string; value: string }> {
   const labels: Record<string, string> = {
+    coins: "Exact shortlist",
     safetyGrades: "Safety grades",
     lifecycle: "Lifecycle",
     pegs: "Peg",
-    safetyPegStabilityMin: "Peg stability min",
-    safetyResilienceMin: "Resilience min",
-    safetyDependencyRiskMin: "Dependency risk min",
-    safetyLiquidityMin: "Liquidity min",
+    supplyMin: "Supply min",
+    pegScoreMin: "PegScore min",
+    safetyBackingMin: "Backing min",
+    safetyExitMin: "Exit min",
+    liquidityScoreMin: "Liquidity min",
     dewsMax: "DEWS max",
     types: "Type",
     blacklistable: "Blacklistable",
-    mintAuthority: "Mint authority route",
-    mintAuthorityScoreMin: "Mint Authority Score min",
-    mintAuthorityScores: "Mint Authority Score bands",
-    mechanisms: "Mechanism",
+    custodyModels: "Custody",
   };
   return Object.entries(filters).map(([key, value]) => {
     const label = labels[key] ?? key;

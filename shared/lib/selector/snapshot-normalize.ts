@@ -40,7 +40,11 @@ const SUPPORTED_ENGINE_VERSIONS = new Set<string>(SELECTOR_SNAPSHOT_SUPPORTED_EN
  * contract; a version that re-bases weights or critical sets starts a new
  * generation and needs its own branch.
  */
-const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>(["selector-v2.0", SELECTOR_VERSION]);
+const CURRENT_GENERATION_ENGINE_VERSIONS = new Set<string>([
+  "selector-v2.0",
+  "selector-v2.1",
+  SELECTOR_VERSION,
+]);
 
 function isCurrentGenerationEngine(engineVersion: string): boolean {
   return CURRENT_GENERATION_ENGINE_VERSIONS.has(engineVersion);
@@ -48,6 +52,9 @@ function isCurrentGenerationEngine(engineVersion: string): boolean {
 
 const KNOWN_MISSING_SIGNALS = new Set([
   "safetyGrade",
+  "safetyScore",
+  "safety-score-v9",
+  "safety-score-v9-nr",
   "safetyResilienceScore",
   "safetyDependencyRiskScore",
   "dewsScore",
@@ -490,7 +497,9 @@ export function normalizeSelectorSnapshot(snapshot: SelectorOutput): SelectorOut
       !identity
       || recommendedIds.has(skipped.id)
       || hasDuplicates(skipped.missingSignals)
-      || skipped.missingSignals.some((signal) => !KNOWN_MISSING_SIGNALS.has(signal))
+      || skipped.missingSignals.some(
+        (signal) => !KNOWN_MISSING_SIGNALS.has(signal) && !signal.startsWith("safety-nr: "),
+      )
     ) {
       return null;
     }

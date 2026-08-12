@@ -570,4 +570,27 @@ describe("hasRequiredSignals", () => {
     const row = makeRow({ liquidityScore: null });
     expect(hasRequiredSignals(row, "trading").missing).toContain("liquidityScore");
   });
+
+  it("treats V9 NR as a coverage skip and preserves the public reason", () => {
+    const row = makeRow({
+      safetyGrade: "NR",
+      safetyScore: null,
+      safetyNrReasons: ["Critical V9 evidence remains unresolved."],
+    });
+
+    for (const profile of ["treasury", "yield", "trading"] as const) {
+      expect(hasRequiredSignals(row, profile)).toEqual(expect.objectContaining({
+        ok: false,
+        missing: expect.arrayContaining([
+          "safetyScore",
+          "safety-nr: Critical V9 evidence remains unresolved.",
+        ]),
+      }));
+    }
+  });
+
+  it("requires V9 provenance even when another model supplies a score", () => {
+    const row = makeRow({ safetyProvenance: "yield-opportunity" });
+    expect(hasRequiredSignals(row, "yield").missing).toContain("safety-score-v9");
+  });
 });

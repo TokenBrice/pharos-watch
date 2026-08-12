@@ -62,10 +62,10 @@ export const TEMPLATES: TemplateMatrix = {
       oneLineExplanation: "DEX depth lags peers; size exits against current order books.",
     },
     resilience: {
-      oneLineExplanation: "Structural resilience is the weak axis; chain and custody add risk.",
+      oneLineExplanation: "Backing is the weak pillar; review reserves, custody, and dependencies.",
     },
     decentralization: {
-      oneLineExplanation: "Issuer holds privileged controls; the coin is not censorship-resistant.",
+      oneLineExplanation: "Economic Control is weak; review issuer and governance permissions.",
     },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze or dilute supply; review blacklisting policy.",
@@ -88,10 +88,10 @@ export const TEMPLATES: TemplateMatrix = {
       oneLineExplanation: "Exit liquidity is the weak axis; size the position to DEX depth.",
     },
     resilience: {
-      oneLineExplanation: "Underlying resilience lags peers; the yield rail inherits that risk.",
+      oneLineExplanation: "Backing lags peers; the yield rail inherits the underlying risk.",
     },
     decentralization: {
-      oneLineExplanation: "Issuer holds privileged controls; the rail is not censorship-resistant.",
+      oneLineExplanation: "Economic Control is weak; the yield rail inherits those permissions.",
     },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze the yield-bearing wrapper; review redemption rights.",
@@ -114,10 +114,10 @@ export const TEMPLATES: TemplateMatrix = {
       oneLineExplanation: "DEX depth is the soft spot; size each leg against current order books.",
     },
     resilience: {
-      oneLineExplanation: "Structural resilience is the weak axis; check chain tier before routing.",
+      oneLineExplanation: "Backing is the weak pillar; check reserve and chain risk before routing.",
     },
     decentralization: {
-      oneLineExplanation: "Issuer holds privileged controls; track freeze and dilute history.",
+      oneLineExplanation: "Economic Control is weak; track freeze and supply permissions.",
     },
     governanceOverride: {
       oneLineExplanation: "Issuer can freeze tokens mid-trade; check the blacklisting policy.",
@@ -185,6 +185,22 @@ export function renderWatchText(
   profile: SelectorProfile,
   row: MergedRow,
 ): string | undefined {
+  if (row.safetyBindingCap != null) {
+    return `V9 Safety is capped at ${Math.round(row.safetyBindingCap.limit)}: ${row.safetyBindingCap.reason}`;
+  }
+
+  if (row.safetyEvidenceLevel === "limited" || row.safetyEvidenceLevel === "insufficient") {
+    const weakest = row.safetyWeakestPillar?.pillar;
+    const label = weakest === "control" ? "Economic Control" : weakest === "exit" ? "Exit" : "Backing";
+    return `V9 evidence is ${row.safetyEvidenceLevel}; review the ${label} pillar and score trace.`;
+  }
+
+  if (row.safetyWeakestPillar != null) {
+    const { pillar, score } = row.safetyWeakestPillar;
+    const label = pillar === "control" ? "Economic Control" : pillar === "exit" ? "Exit" : "Backing";
+    return `V9 weakest pillar is ${label} at ${Math.round(score)}; review its evidence and score trace.`;
+  }
+
   if (lowest.key === "pegStability" && row.currentDeviationBps != null) {
     const deviation = roundedBps(row.currentDeviationBps);
     if (deviation >= 25) {
@@ -245,8 +261,8 @@ export function renderWatchText(
 const LOWER_REASON_LABELS: Readonly<Record<string, string>> = {
   "active-depeg": "the current peg-deviation gate",
   "peg-score-floor": "the PegScore floor",
-  "safety-resilience-floor": "the resilience floor",
-  "safety-dependency-risk-floor": "the dependency-risk floor",
+  "safety-resilience-floor": "the Backing floor",
+  "safety-dependency-risk-floor": "the V9 dependency context",
   "dews-ceiling": "the stress-signal ceiling",
   "bluechip-d-or-f": "the third-party bluechip floor",
   "custody-regulated-only-violation": "the regulated-custody rail",

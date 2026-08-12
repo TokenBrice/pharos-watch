@@ -5,6 +5,7 @@ import type {
   GovernanceType,
   ReserveRisk,
 } from "../types";
+import type { StablecoinClientMeta } from "../types/stablecoin-client-meta";
 
 type ResilienceDefaults = {
   collateralQuality: CollateralQuality;
@@ -60,4 +61,12 @@ export const RESERVE_QUALITY_SCORE: Record<ReserveRisk, number> = {
 
 export function inferResilienceDefaults(backing: BackingType, governance: GovernanceType): ResilienceDefaults {
   return DEFAULT_RESILIENCE_FACTORS[`${backing}:${governance}`];
+}
+
+/** Curated custody review first, with the legacy backing/governance table as fallback. */
+export function resolveCustodyModel(meta: StablecoinClientMeta): CustodyModel {
+  return meta.custodyModel ?? inferResilienceDefaults(
+    meta.flags.backing,
+    meta.flags.governance,
+  ).custodyModel;
 }

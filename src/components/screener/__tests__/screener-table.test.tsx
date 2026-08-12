@@ -26,6 +26,11 @@ const row: ScreenerRow = {
   safetyBackingScore: 78,
   safetyExitScore: 86,
   safetyControlScore: 42,
+  safetyEvidence: "adequate",
+  safetyWeakestPillar: "control",
+  safetyWeakestScore: 42,
+  safetyBindingCapReason: null,
+  custodyModel: "institutional-regulated",
   blacklistable: "yes",
   mintAuthority: "issuer-or-backend-mint",
   mintAuthorityScore: 42,
@@ -89,7 +94,8 @@ describe("ScreenerTable mobile cards", () => {
     expect(screen.getAllByText(/Peg/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/DEWS/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Liq/).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("42/100").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Adequate").length).toBeGreaterThan(0);
+    expect(screen.getByText("Mint authority")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Supply" }));
 
@@ -108,8 +114,8 @@ describe("ScreenerTable desktop table", () => {
       expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy();
     });
     expect(screen.queryByText("Sort Results")).toBeNull();
-    expect(screen.getByText("Mint Score")).toBeTruthy();
-    expect(screen.getByText("42/100")).toBeTruthy();
+    expect(screen.getByText("V9 Profile")).toBeTruthy();
+    expect(screen.getByText("Adequate")).toBeTruthy();
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {
