@@ -7,6 +7,7 @@ import {
   expectedWmDeploymentIdentity,
   reviewedDeploymentAttributionValidationError,
   reviewedDeploymentObservationTimingIssue,
+  reviewedDeploymentIdentityValidationError,
   type ReviewedDeploymentSupplyObservation,
 } from "../safety-score-v9-supply-attribution-contract";
 import {
@@ -96,6 +97,28 @@ function derive(rows = observations(), clockSec = CLOCK_SEC) {
 }
 
 describe("reviewed deployment supply attribution contract", () => {
+  it("checks only the pinned deployment identity when an expected deployment is supplied", () => {
+    const row = observations()[0]!;
+    expect(
+      reviewedDeploymentIdentityValidationError(row, "wm-m0", {
+        chainId: row.chainId,
+        contractAddress: row.contractAddress.toUpperCase(),
+      }),
+    ).toBeNull();
+    expect(
+      reviewedDeploymentIdentityValidationError(row, "wm-m0", {
+        chainId: row.chainId,
+        contractAddress: "0x000000000000000000000000000000000000dead",
+      }),
+    ).toBe(`reviewed deployment identity mismatch for ${row.routeId}`);
+    expect(
+      reviewedDeploymentIdentityValidationError(row, "wm-m0", {
+        chainId: "base",
+        contractAddress: row.contractAddress,
+      }),
+    ).toBe(`reviewed deployment identity mismatch for ${row.routeId}`);
+  });
+
   it("allocates the accepted aggregate by exact route units and retains explicit zero", () => {
     const attribution = derive();
     expect(attribution).not.toBeNull();
