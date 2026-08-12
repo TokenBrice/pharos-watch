@@ -53,7 +53,6 @@ applyTrackedReviewedDocs(OFFCHAIN_ISSUER_BACKSTOP_CONFIGS, [
   "usdtb-ethena",
   "gusd-gate",
   "usyc-hashnote",
-  "ustb-superstate",
   "buidl-blackrock",
   "usdy-ondo-finance",
   "paxg-paxos",

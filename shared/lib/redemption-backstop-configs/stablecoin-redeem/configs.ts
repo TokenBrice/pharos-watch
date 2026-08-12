@@ -12,6 +12,7 @@ import {
   defineStablecoinRedeemConfig,
   gauntletMorphoConfig,
   REVIEWED_DIRECT_REDEMPTION_AT,
+  REVIEWED_EXIT_CREDIT_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_FXSAVE_LIVE_REDEMPTION_AT,
   REVIEWED_REMEDIATION_AT,
@@ -133,6 +134,41 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: ["Token transfers restricted to KYC-verified whitelisted addresses on-chain"],
   }),
+  "ustb-superstate": defineStablecoinRedeemConfig({
+    accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "reserve-sync-metadata" },
+    costModel: fixedFee(
+      0,
+      "Superstate's smart-contract docs state that for the USTB RedemptionIdle contract fees are set to 0 and only USDC is supported",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    docs: [
+      sourceRef("Superstate USTB", "https://superstate.com/assets/ustb", ["route", "capacity"]),
+      sourceRef("Superstate liquidity API", "https://api.superstate.com/v1/funds/liquidity", ["capacity"]),
+      sourceRef("Superstate smart contracts", "https://docs.superstate.com/investors/smart-contracts", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef(
+        "Invesco USTB fund page",
+        "https://docs.superstate.com/investors/tokenized-funds/available-funds/invesco-ustb",
+        ["route", "settlement"],
+      ),
+      sourceRef("Superstate redemptions", "https://docs.superstate.com/investors/tokenized-funds/redeem", [
+        "route",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Route remodeled 2026-08-12 from the same-day fiat issuer rail to the on-chain rail the live adapter already measures: Superstate's smart-contract docs describe the USTB RedemptionIdle `redeem` function burning USTB and returning USDC in one transaction, and the fund page states USDC proceeds are delivered immediately including on non-business days, subject to available liquidity.",
+      "Access stays whitelisted rather than permissionless because every holder must sit on Superstate's AllowlistV3 contract, which only admits addresses that cleared KYC and the investment agreement.",
+      "Fresh live reserve telemetry uses the on-chain USDC balance of Superstate's RedemptionIdle contract as the bounded current direct capacity, with the liquidity API's Circle USD availability kept as context",
+      "NAV/AUM remains reserve evidence only and is not used as immediate redemption capacity",
+    ],
+  }),
   "usde-ethena": defineStablecoinRedeemConfig({
     outputAssetType: "stable-basket",
     outputAssets: ["usdt-tether", "usdc-circle"],
@@ -212,12 +248,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       confidence: "documented-bound",
       basis: "hot-buffer",
     },
-    costModel: documentedVariableFee("ERC-4626 unwrap to rUSD, then PSM exit to USDC; no separate fee disclosed"),
-    reviewedAt: "2026-04-04",
+    costModel: documentedVariableFee(
+      "The wsrUSD ERC-4626 unwrap and the rUSD-to-USDC PSM redeem are both free, but the srUSD leg between them burns through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%",
+      "formula",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
     docs: [
-      sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd", [
+      sourceRef("Reservoir Savings (srUSD & wsrUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
         "route",
         "capacity",
+        "fees",
       ]),
       sourceRef(
         "Reservoir Peg Stability Module",
@@ -228,8 +268,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "The modeled route composes the ERC-4626 unwrap into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
-      "Fresh live reserve telemetry uses the current USDC position as the immediate redeemable lower bound",
-      "When the timestamp-less Reservoir balance-sheet feed cannot meet scoring-grade freshness requirements, the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
+      "Fresh live reserve telemetry uses the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) as the immediate redeemable lower bound; the balance-sheet USDC bucket is parked in lending vaults and stays diagnostic-only",
+      "When the PSM read is unavailable the adapter withholds telemetry entirely, and the route falls back to the reviewed 25 bps minimum USDC PSM balance documented by Reservoir",
+      "No static fee bound declared 2026-08-12 despite the doc line \"wsrUSD carries no fees\": verified Etherscan-published source shows the wrapper (Savingcoin, ERC-4626 pure conversion) and the PSM (`_redeem` burns rUSD 1:1 and transfers USDC) are both free, but the srUSD leg in between burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6` in SavingModule.redeem. That `redeemFee` is charged on exit, read 134/1e6 = 1.34 bps at block 25735375, and the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
     ],
   }),
   "susds-sky": defineStablecoinRedeemConfig({
@@ -870,6 +911,37 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle USDD balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
+  "rusd-reservoir": defineStablecoinRedeemConfig({
+    outputAssets: ["usdc-circle"],
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      fallbackRatio: 0.0025,
+      confidence: "documented-bound",
+      basis: "hot-buffer",
+    },
+    costModel: fixedFee(
+      0,
+      "The rUSD-to-USDC Peg Stability Module redeem burns rUSD 1:1 and transfers USDC; the verified PSM source contains no fee logic",
+    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    docs: [
+      sourceRef(
+        "Reservoir Peg Stability Module",
+        "https://docs.reservoir.xyz/protocol-architecture/peg-stability-module",
+        ["route", "capacity", "fees", "access", "settlement"],
+      ),
+      sourceRef(
+        "Reservoir smart-contract addresses",
+        "https://docs.reservoir.xyz/security-and-compliance/smart-contract-addresses",
+        ["route"],
+      ),
+      sourceRef("Reservoir Proof of Reserves", "https://docs.reservoir.xyz/products/proof-of-reserves", ["capacity"]),
+    ],
+    notes: [
+      "Added 2026-08-12: base rUSD redeems directly through Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D). Its redeem(uint256) and redeem(address,uint256) are `external whenNotPaused` with no role gate in the verified source, so the route is permissionless while the PSM is unpaused.",
+      "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
+    ],
+  }),
   "srusd-reservoir": defineStablecoinRedeemConfig({
     outputAssets: ["usdc-circle"],
     capacityModel: {
@@ -880,9 +952,10 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     },
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
-      "srUSD exits to rUSD, then Reservoir PSM liquidity provides stablecoin redemption when available",
+      "srUSD exits to rUSD through SavingModule.redeem at `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`; redeemFee is a live on-chain parameter read each run (1.34 bps on 2026-08-12), governance-settable below 100%, and the downstream rUSD-to-USDC PSM redeem is 1:1 with no fee",
+      "formula",
     ),
-    reviewedAt: "2026-05-17",
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
     docs: [
       sourceRef("Reservoir Savings (srUSD)", "https://docs.reservoir.xyz/products/savings-srusd-and-wsrusd", [
         "route",
@@ -900,7 +973,8 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "The modeled route composes the srUSD exit into rUSD with the downstream Reservoir PSM exit, so its final output is USDC",
-      "Fresh reserve telemetry uses Reservoir's balance-sheet feed; when it is unavailable, the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
+      "Fresh reserve telemetry reads the USDC balance of Reservoir's USDC PSM (0x4809010926aec940b550D34a46A52739f996D75D) on-chain; when that read is unavailable the adapter withholds telemetry and the route falls back to Reservoir's documented 25 bps minimum USDC PSM balance",
+      "No static fee bound declared 2026-08-12: verified Etherscan-published source shows SavingModule.redeem burns `previewRedeem(amount) * (1e6 + redeemFee) / 1e6`, so the docs' \"micro burn fee ... one day's worth of interest\" is charged on exit rather than entry. It read 134/1e6 = 1.34 bps at block 25735375, but the MANAGER role may set it anywhere below 100%, so no reviewed ceiling is defensible. The fee model is therefore formula-confidence and scores against the adapter's per-run `redeemFee()` read instead of a static number.",
     ],
   }),
   "steakusdc-steakhouse": steakhousePrimeInstantConfig("USDC"),

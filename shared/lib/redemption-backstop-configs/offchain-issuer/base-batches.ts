@@ -154,7 +154,6 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
       "pusd-plume",
       "gusd-gate",
       "usyc-hashnote",
-      "ustb-superstate",
       "usdn-noble",
       "reur-royal-euro",
       "kgst-kyrgyz-som",
@@ -246,7 +245,7 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
   })),
   ...addDocumentedBoundSourceRefs(
     defineBatch(
-      ["usyc-hashnote", "ustb-superstate", "a7a5-old-vector", "gusd-gate"],
+      ["usyc-hashnote", "a7a5-old-vector", "gusd-gate"],
       {
         ...issuerBase,
         ...reviewedDirectRedemptionSupplyFull,

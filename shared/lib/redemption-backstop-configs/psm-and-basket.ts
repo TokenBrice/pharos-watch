@@ -11,6 +11,7 @@ import {
   sourceRef,
 } from "./shared";
 import {
+  REVIEWED_EXIT_CREDIT_WAVE_AT,
   REVIEWED_FIRST_WAVE_AT,
   REVIEWED_FOLLOWUP_REMEDIATION_AT,
   REVIEWED_MAY_BATCH_AT,
@@ -215,15 +216,22 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     costModel: undisclosedReviewedFee(
       "Inter Protocol docs describe 1:1 PSM trades between IST and approved external stable tokens, but public docs reviewed do not publish a numeric redemption fee",
     ),
-    reviewedAt: REVIEWED_STABLECOIN_AUDIT_AT,
+    routeStatus: "unknown",
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
     docs: [
       sourceRef(
         "Inter Protocol Parity Stability Module",
         "https://docs.inter.trade/inter-protocol-system-documentation/parity-stability-module",
         ["route", "capacity", "fees", "access", "settlement"],
       ),
+      sourceRef(
+        "Sunset Inter Protocol and Begin Wind-Down Process",
+        "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
+        ["route", "capacity", "settlement"],
+      ),
     ],
     notes: [
+      "Route status set to unknown 2026-08-12: the DCF signaling proposal to sunset Inter Protocol (posted 2025-04-16, voting 2025-04-26 to 2025-04-29) disables new IST vault minting, escalates vault liquidation ratios weekly through 2025-06-26, and targets full shutdown by 2025-06-30, so the reviewed PSM terms below can no longer be assumed open.",
       "The reviewed 60% bound matches tracked metadata's PSM stablecoin-reserve share and does not claim the overcollateralized vault portion is instantly redeemable through the PSM",
       "PSM output is an approved external stable token selected by governance; IBC transfer and venue-specific wrapper risk are outside this route score",
     ],
@@ -341,16 +349,21 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ...basketRedeemBase,
     ...reviewedBasketRedemptionSupplyFull,
     outputAssets: ["usdc-circle", "usdt-tether"],
-    costModel: documentedVariableFee(
-      "Reserve Index docs describe mint and TVL fees, but do not document a separate redemption fee",
-    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    costModel: {
+      ...documentedVariableFee(
+        "Reserve's documented DTF fee schedule has exactly two fees — a TVL fee and a mint fee charged whenever a user mints new DTF tokens — so redeeming the pro-rata basket is charged 0 bps",
+      ),
+      feeBpsMax: 0,
+    },
     docs: [
-      sourceRef("Reserve Index minting & redeeming", "https://docs.reserve.org/reserve-index/mint-redeem", [
-        "route",
-        "capacity",
-        "access",
-      ]),
-      sourceRef("Reserve Index fees", "https://docs.reserve.org/reserve-index/fees", ["fees"]),
+      sourceRef(
+        "Reserve DTF minting & redeeming",
+        "https://docs.reserve.org/core-components/index-dtfs/minting-and-redeeming",
+        ["route", "capacity", "access"],
+      ),
+      sourceRef("Reserve DTF fees", "https://docs.reserve.org/core-components/index-dtfs/fees", ["fees"]),
+      sourceRef("Reserve DTF mint fee", "https://docs.reserve.org/core-components/index-dtfs/fees/mint-fee", ["fees"]),
       sourceRef(
         "Reserve Electronic USD overview",
         "https://app.reserve.org/ethereum/token/0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f/overview",
@@ -359,6 +372,7 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Redemption requires receiving the underlying basket composition rather than selecting a single stablecoin output",
+      "Fee bound declared 2026-08-12: the Reserve fee documentation enumerates a closed schedule of a TVL fee and a mint fee applied \"whenever a user mints new DTF tokens\", and the minting-and-redeeming page describes redemption as a permissionless direct conversion back into the underlying tokens with no charge, so the reviewed ceiling is 0 bps. The previously cited reserve-index doc URLs now 404 and were repointed to their core-components successors.",
     ],
   },
   "usd3-reserve-protocol": {
@@ -367,18 +381,25 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     outputAssets: ["susds-sky", "usdc-circle", "steakusdc-steakhouse"],
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    costModel: undisclosedReviewedFee(
-      "Reserve Protocol DTF redemptions return the backing basket subject to protocol throttles and basket mechanics; public docs reviewed do not publish a separate fixed USD3 redemption fee",
-    ),
+    reviewedAt: REVIEWED_EXIT_CREDIT_WAVE_AT,
+    costModel: {
+      ...documentedVariableFee(
+        "Reserve Yield DTF revenue is documented as onchain collateral yield and issuer revenue shares rather than a user-charged redemption fee, and redemption returns the entire backing basket, so the reviewed ceiling is 0 bps",
+      ),
+      feeBpsMax: 0,
+    },
     notes: [
       "Reserve Protocol API-backed reserve sync exposes the current basket weights, but redemption scoring remains documented-bound rather than live-direct capacity because the feed does not publish current redeemable capacity or throttle state",
+      "Fee bound declared 2026-08-12: the Yield DTF overview states holders can mint by depositing the complete collateral basket and that a DTF is \"redeemed for the entire basket as well\", with protocol revenue coming from \"yield from lending collateral tokens onchain, revenue shares with collateral token issuers, or any other source of onchain yield\" — no redemption charge. Throttles still bound redemption size, which the documented-bound capacity model already carries, not its cost.",
     ],
     docs: [
-      sourceRef(
-        "Reserve Yield DTF overview",
-        "https://docs.reserve.org/core-components/yield-dtfs/yield-dtf-overview",
-        ["route", "capacity", "access", "settlement"],
-      ),
+      sourceRef("Reserve Yield DTF overview", "https://docs.reserve.org/core-components/yield-dtfs/overview", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
       sourceRef("Reserve DTF API", "https://api.reserve.org/discover/dtfs", ["capacity"]),
       sourceRef(
         "Reserve USD3 app",

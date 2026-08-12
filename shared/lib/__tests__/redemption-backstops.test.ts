@@ -601,12 +601,13 @@ describe("getRedemptionBackstopConfig", () => {
 
   it("uses live Superstate liquidity for USTB redemption capacity", () => {
     expect(getRedemptionBackstopConfig("ustb-superstate")).toMatchObject({
-      routeFamily: "offchain-issuer",
-      accessModel: "issuer-api",
-      settlementModel: "same-day",
+      routeFamily: "stablecoin-redeem",
+      accessModel: "whitelisted-onchain",
+      settlementModel: "atomic",
+      outputAssets: ["usdc-circle"],
       capacityModel: { kind: "reserve-sync-metadata" },
       costModel: { kind: "fee-bps", feeBps: 0 },
-      reviewedAt: "2026-04-15",
+      reviewedAt: "2026-08-12",
     });
     expect(getRedemptionBackstopConfig("ustb-superstate")?.docs?.length).toBeGreaterThan(0);
   });
@@ -811,7 +812,7 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("eusd-electronic-usd")).toMatchObject({
       routeFamily: "basket-redeem",
       capacityModel: { kind: "supply-full", confidence: "documented-bound" },
-      reviewedAt: "2026-03-23",
+      reviewedAt: "2026-08-12",
     });
 
     expect(getRedemptionBackstopConfig("aid-gaib")).toMatchObject({
