@@ -3864,20 +3864,35 @@
     {
       "assetId": "kag-kinesis",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-07-15",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Kinesis trust and security disclosure (legal title, off-balance-sheet allocation, ABX custody, and April 2026 audit)",
           "url": "https://kinesis.money/trust-security/"
+        },
+        {
+          "label": "KMS Labs binding KAU and KAG ERC-20 terms (exact token addresses, discretionary wrapper redemption, reserve rights, and mandatory two-step physical-redemption route)",
+          "url": "https://kmslabs.money/kms-labs-tcs/"
+        },
+        {
+          "label": "Kinesis physical bullion redemption instructions (200 KAG increments, account workflow, and 1-2 working-day operations response)",
+          "url": "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver-bullion"
+        },
+        {
+          "label": "Ethereum KAG wrapper contract (onchain identity anchor for the KMS Labs ERC-20 first leg)",
+          "url": "https://etherscan.io/address/0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e"
         }
       ],
-      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Kinesis self-reports that KAG holders legally own fully allocated bullion outside the Kinesis balance sheet, identifies ABX as custodian, and lists an April 2026 Bureau Veritas audit. This issuer disclosure supports limited claim and segregation and limited custody continuity. The operative trust/custody agreements, vault allocations, replacement and failure process, and reserve-wide rehypothecation prohibition were not public; Brinks and Loomis logistics references were not treated as custodians.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption evidence pin: the binding KMS Labs terms govern the exact Pharos-tracked ERC-20 KAG contract and document a mandatory two-step route. KMS Labs may, in its sole discretion, redeem ERC-20 KAG 1:1 only into native Kinesis KAG, gives no warranty that the first leg will remain available or complete within any timeframe, and states that physical redemption cannot occur directly from the wrapper. Current Kinesis operational disclosures then specify native-KAG redemption in 200-KAG increments through the account dashboard, an operations response within 1-2 working days, and a fee of 0.45% plus $100 and delivery costs through Brinks or Loomis. These exact-class structured terms plus the onchain identity anchor support limited physicalRedemption only. They do not establish an unconditional ERC-20-to-bullion right, an independently observed completed redemption, a settlement guarantee, or binding native-layer redemption terms; native KAG's allocated-bullion title must not be attributed to ERC-20 KAG holders. Supplemental re-verification on 2026-08-12 re-opened the same current terms and operating disclosures and confirmed at Ethereum block 25,737,315 that 0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e still has deployed code and identifies itself as Kinesis Silver (KAG); it did not introduce a new basis for the grade.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
+          "quality": "limited"
+        },
+        "physicalRedemption": {
           "quality": "limited"
         }
       }
@@ -5388,19 +5403,35 @@
     {
       "assetId": "xagm-matrixdock",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Matrixdock XAGm product disclosure (LBMA Good Delivery silver, live supply/bullion reconciliation, FRS mint budget)",
           "url": "https://www.matrixdock.com/xagm"
         },
         {
-          "label": "Bureau Veritas July 2026 Matrixdock physical audit (100% inspection of 66 XAGm silver bars at Brink's Hong Kong/Singapore and Malca-Amit Singapore; holdings date 2026-06-30)",
+          "label": "Bureau Veritas July 2026 Matrixdock physical audit (100% inspection of 66 XAGm silver bars at Brink's Hong Kong and Malca-Amit Singapore; holdings date 2026-06-30)",
           "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FVaFEA9CzGKo22HcojuSO%2FMatrixdock%20Gold%20Bureau%20Veritas%20Audit%20Jul%202026.pdf?alt=media&token=54e9714e-c65f-4b0c-8bcf-c7869956dd20"
         },
         {
           "label": "Matrixdock announcement of first XAGm independent physical audit, 2026-07-16",
           "url": "https://www.matrixdock.com/blog/announcements/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification"
+        },
+        {
+          "label": "Matrixdock Silver XAGm whitepaper, 2026-03-17 (physical-redemption design, fee, inventory conditions, and non-binding notice)",
+          "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FTRQNUC7Hw1k5EyWrxUrR%2FMatrixdock%20Silver%20XAGm%20Whitepaper.pdf?alt=media&token=cad709b6-47f1-427d-ad14-443fa5cd76e1"
+        },
+        {
+          "label": "Matrixdock XAGm minting and redemption procedure (2100-XAGm minimum, KYC, burn, pickup or secured delivery)",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/minting-and-redeeming"
+        },
+        {
+          "label": "Matrixdock XAGm FAQ (prevailing ozPerToken amount, inventory availability, and 0.50% redemption fee)",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/silver-token-xagm/faq"
+        },
+        {
+          "label": "Matrixdock documentation index (reviewed legal-document perimeter; no XAGm-specific token terms listed)",
+          "url": "https://matrixdock.gitbook.io/matrixdock-docs/llms.txt"
         }
       ],
       "metrics": {},
@@ -5413,9 +5444,12 @@
         },
         "assuranceAndReconciliation": {
           "quality": "limited"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       },
-      "notes": "Matrixdock discloses LBMA Good Delivery silver backing, live token-supply-versus-bullion accounting, FRS mint controls, and KYC redemption. The July 2026 Bureau Veritas certificate independently inspected all 66 XAGm silver bars held at Brink's Hong Kong, Brink's Singapore, and Malca-Amit Singapore as of 2026-06-30 with no anomalies. Claim and segregation remains limited because no reviewed binding trust or bankruptcy-remoteness instrument grants tokenholders beneficial ownership of the bullion. Assurance and reconciliation remains limited because the independent audit is assets-only and does not reconcile the inspected silver to multi-chain XAGm liabilities; the liability comparison remains issuer-operated. Custody continuity is now limited rather than unavailable because the audit names all three physical vault providers, but per-vault economic shares, anti-rehypothecation terms, and failure or successor-custody mechanics remain unpublished.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact."
+      "notes": "Matrixdock discloses LBMA Good Delivery silver backing, live token-supply-versus-bullion accounting, FRS mint controls, and KYC redemption. The July 2026 Bureau Veritas certificate independently inspected all 66 XAGm silver bars as of 2026-06-30 with no anomalies: 64 were at Brink's Hong Kong and two were at Malca-Amit Singapore; Brink's Singapore held inspected gold, not XAGm silver. Claim and segregation remains limited because no reviewed binding trust or bankruptcy-remoteness instrument grants tokenholders beneficial ownership of the bullion. Assurance and reconciliation remains limited because the independent audit is assets-only and does not reconcile the inspected silver to multi-chain XAGm liabilities; the liability comparison remains issuer-operated. Custody continuity is limited because the audit independently names the two silver vault providers, but per-vault economic shares, anti-rehypothecation terms, and failure or successor-custody mechanics remain unpublished.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption evidence pin: Matrixdock's current XAGm procedure specifies a 2,100-XAGm minimum, KYC and identity re-verification, token burn during custodian-vault release, and customer pickup or secured delivery. The current FAQ adds a 0.50% fee, delivery at the prevailing ozPerToken amount, and bar availability constraints. The 2026-03-17 whitepaper records the same fee and inventory-conditioned route. These structured operational terms, externally anchored by Bureau Veritas's observation of the named silver vaults and inventory, support limited physicalRedemption only. The whitepaper expressly is not legally binding and permits unilateral changes, the live procedure contains unresolved gold copy-paste errors, the legal-document index lists no XAGm-specific token terms, and no public completed XAGm physical redemption or independently observed handover was found; no enforceable delivery right, service level, or execution history is claimed. Supplemental re-verification on 2026-08-12 confirmed that the current procedure and FAQ retained those terms, that the whitepaper still hashes to e7a9429884b966217cb2c69feff0822f9a2d9483633eda569accc57fcbce209c, and that the Bureau Veritas PDF available from both reviewed GitBook embeds still hashes to ee6eb7b6e2001d4997cf0bbcc2892a9eaa3c0e84d74d536a4d0a63c55004646b; it did not introduce a new basis for the grade."
     },
     {
       "assetId": "kgst-kyrgyz-som",
@@ -6586,7 +6620,7 @@
     {
       "assetId": "ggbr-goldfish-gold",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Goldfish GGBR whitepaper (1/1000 oz claim, over-collateralization, segregated I-ON treasury portion, UCC-1 lien, in-situ model)",
@@ -6599,9 +6633,25 @@
         {
           "label": "Goldfish Cyfrin smart-contract audit report v2.0 (2025-10-10, contract-security scope only)",
           "url": "https://goldfishgold.com/Goldfish-Cyfrin.pdf"
+        },
+        {
+          "label": "Goldfish production redemption app bundle (mainnet proxy and ABI, timing, delivery options, and KYC/shipping caveats)",
+          "url": "https://app.goldfishgold.com/assets/index-B3kIYSDK.js"
+        },
+        {
+          "label": "Ethereum mainnet Goldfish RedemptionProxy (fresh parameter, eligibility, implementation-slot, and lifetime-activity reads)",
+          "url": "https://etherscan.io/address/0x7856001E687694212697d67e810b0E05E0d4A046"
+        },
+        {
+          "label": "I-ON Digital Q1 2026 Form 10-Q (MTLCA continuation and GGBR responsibility for Goldfish minting, issuance, and redemption)",
+          "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315226024603/form10-q.htm"
+        },
+        {
+          "label": "Goldfish Terms of Service (reviewed legal surface contains no holder redemption or physical-delivery clause)",
+          "url": "https://goldfishgold.com/terms-of-service"
         }
       ],
-      "notes": "Goldfish's whitepaper and collateral pages state that each GGBR is 1/1000th of a troy ounce of gold, over-collateralized (up to 5:1) by a segregated portion of I-ON Digital Corp's (OTCQB: IONI) treasury of ION.au asset-backed securities, with I-ON's perfected UCC-1 lien on the mineral asset rights giving ION.au holders a secured-creditor position and redemption marketed as available; that issuer-published structure, with an indirect claim chain (GGBR to ION.au security to in-situ gold lien) and no cited trust or segregation statute, supports limited claim and segregation. The collateral page publishes the on-chain reserve wallets, including the 'Goldfish Collateral Wallet from ION' (0x2F371Ba19F89874689a91bA322194F9967Cb640D) and a 'Fireblocks Reserve Wallet' (0x590c0d2fEb641136984EC250c7287C27fA1A05bB), placing collateral custody in Fireblocks MPC wallets while the underlying gold deliberately stays in-situ under the UCC-1 lien rather than with any vault custodian; named but self-reported arrangements support limited custody continuity. CertiK and Cyfrin audit only the smart contracts (Cyfrin report v2.0 dated 2025-10-10 reviewed; it covers token, factory, staking and redemption contract security, not reserves), and NI 43-101 technical reports audit the geology of the in-situ gold, not token-versus-reserve reconciliation, so assurance and reconciliation is weak as an issuer-only assurance claim. Not established: any independent financial attestation reconciling GGBR supply to gold reserves, vault or custodian identities for physical metal (none exists by design in the in-situ model), provider shares, no-rehypothecation or replacement terms, and direct review of the NI 43-101 reports themselves, which were not obtained.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence. physicalRedemption is the one newly asked backing question and is curated only from evidence already pinned in this entry's sources; where those sources do not record redemption terms it is left uncurated (bounded), which matches the compiler fallback and projects no mechanism exit fact.",
+      "notes": "Goldfish's whitepaper and collateral pages state that each GGBR is 1/1000th of a troy ounce of gold, over-collateralized (up to 5:1) by a segregated portion of I-ON Digital Corp's (OTCQB: IONI) treasury of ION.au asset-backed securities, with I-ON's perfected UCC-1 lien on the mineral asset rights giving ION.au holders a secured-creditor position and redemption marketed as available; that issuer-published structure, with an indirect claim chain (GGBR to ION.au security to in-situ gold lien) and no cited trust or segregation statute, supports limited claim and segregation. The collateral page publishes the on-chain reserve wallets, including the 'Goldfish Collateral Wallet from ION' (0x2F371Ba19F89874689a91bA322194F9967Cb640D) and a 'Fireblocks Reserve Wallet' (0x590c0d2fEb641136984EC250c7287C27fA1A05bB), placing collateral custody in Fireblocks MPC wallets while the underlying gold deliberately stays in-situ under the UCC-1 lien rather than with any vault custodian; named but self-reported arrangements support limited custody continuity. CertiK and Cyfrin audit only the smart contracts (Cyfrin report v2.0 dated 2025-10-10 reviewed; it covers token, factory, staking and redemption contract security, not reserves), and NI 43-101 technical reports audit the geology of the in-situ gold, not token-versus-reserve reconciliation, so assurance and reconciliation is weak as an issuer-only assurance claim. Not established: any independent financial attestation reconciling GGBR supply to gold reserves, vault or custodian identities for physical metal (none exists by design in the in-situ model), provider shares, no-rehypothecation or replacement terms, and direct review of the NI 43-101 reports themselves, which were not obtained.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption evidence pin: the production bundle (sha256 63961e31a6114daec0fa5c67a512133a4a45dfd04ddca6b6e9a3fcc6cd19e046) pins the mainnet RedemptionProxy and ABI and publishes a 5-7-business-day process, vault storage or physical delivery, KYC, and possible shipping and insurance charges. Reads at Ethereum block 25,731,416 returned a minimumRedemption of 8,818.5 GGBR, a 300-basis-point fee, lifetime statistics of zero requests, zero completions, zero rejections, zero GGBR redeemed or locked, and nextRequestId 1. I-ON's Form 10-K independently confirmed the MTLCA and assigned Goldfish redemption to GGBR. The itemized issuer route plus onchain and regulatory anchors supports limited physicalRedemption only. The route remains wholly admin-mediated and unexercised, the reviewed Terms of Service grants no holder redemption or delivery right, no executed dealer or fulfillment agreement is public, and the in-situ reserve cannot itself be delivered: any physical gold must be sourced off-reserve. Cyfrin documents the intended KYC-gated flow and centralization but does not attest execution or delivery. Supplemental re-verification on 2026-08-12 confirmed the same parameters and all-zero activity at block 25,737,294 and confirmed through I-ON's newer Q1 2026 Form 10-Q that the MTLCA and GGBR redemption responsibility continued. It also corrected the implementation caveat: the proxy's EIP-1967 slot resolves to unverified implementation 0x1bc1370b0347d51a52e66c5279cece365f5b7359, while the unchanged app configuration still labels historical address 0xcfd90207497A04B75913165052260c46b2807D0e as RedemptionImpl, so no deployed-source equivalence is claimed. The supplemental check did not introduce a new basis for the grade.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
@@ -6612,6 +6662,9 @@
         },
         "assuranceAndReconciliation": {
           "quality": "weak"
+        },
+        "physicalRedemption": {
+          "quality": "limited"
         }
       }
     },
@@ -15380,7 +15433,7 @@
     {
       "assetId": "usdh-hubble",
       "archetype": "cdp",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Hubble technical resources and mainnet program/account registry",
@@ -15395,6 +15448,14 @@
           "url": "https://docs.hubbleprotocol.io/why-use-hubble"
         },
         {
+          "label": "Hubble redistribution documentation (empty Stability Vault fallback and protocol-wide bad-debt socialization)",
+          "url": "https://docs.hubbleprotocol.io/faq/liquidations/redistribution"
+        },
+        {
+          "label": "Hubble hybrid liquidation model (USDH Vault and market-liquidator paths)",
+          "url": "https://docs.hubbleprotocol.io/faq/liquidations/hybrid-liquidation-model"
+        },
+        {
           "label": "Hubble Peg Stability Module documentation",
           "url": "https://docs.hubbleprotocol.io/faq/usdh-peg-stability/peg-stability-module"
         },
@@ -15407,7 +15468,7 @@
           "url": "https://hermes.pyth.network/v2/updates/price/latest"
         }
       ],
-      "notes": "Reviewed 2026-08-08. This replacement retains the journaled 2026-07-27 measurement because no newer complete same-pin collateral valuation was available: CDP debt was 62,934.843447 USDH, collateral was $306,918.95, and the USDH Vault held 37,109.801234 USDH, producing collateralizationRatio 4.877 and liquidationCapacityRatio 0.590. The later reserve-composition review confirms that the PSM and the distinct CDP borrowing markets remain the active issuance branches. Program parameters and vault accounts support limited collateralizationParameters; documented liquidations at an approximately 10% spread support adequate liquidationMechanics; and the directly measured stability-pool coverage supports adequate backstop. Separate market/vault accounts provide some operational branch separation, but all branches issue the same USDH and rely on shared program control and the common USDH Vault, so branchIsolation is limited. Redemption-queue accounts exist in the official config, but holder-facing redemption conditions remain incompletely documented, so structuralRedemption is limited. Searches of the technical resources, mainnet config, PSM documentation, and product documentation found no defined shutdown, deficit-elimination, or bad-debt allocation procedure; that component is unavailable rather than weak. No runtime inheritance applies: the coin directly resolves to cdp and variantOf is null.",
+      "notes": "Reviewed 2026-08-11. This replacement retains the journaled 2026-07-27 measurement because no newer complete same-pin collateral valuation was available: CDP debt was 62,934.843447 USDH, collateral was $306,918.95, and the USDH Vault held 37,109.801234 USDH, producing collateralizationRatio 4.877 and liquidationCapacityRatio 0.590. The later reserve-composition review confirms that the PSM and the distinct CDP borrowing markets remain the active issuance branches. Program parameters and vault accounts support limited collateralizationParameters; documented liquidations at an approximately 10% spread support adequate liquidationMechanics; and the directly measured stability-pool coverage supports adequate backstop. Separate market/vault accounts provide some operational branch separation, but all branches issue the same USDH and rely on shared program control and the common USDH Vault, so branchIsolation is limited. Hubble's official redistribution documentation defines the bad-debt path: an empty Stability Vault redistributes debt and collateral across active loans, and an undercollateralized loan bypasses the Stability Vault and socializes 100% of its USDH debt and remaining collateral across all loans. This is a documented loss-allocation mechanism, so shutdownAndBadDebt is limited rather than unavailable; the grade remains limited because the reviewed sources publish no global settlement, wind-down, or unconditional deficit-recapitalization facility. Redemption-queue accounts exist in the official config, but holder-facing redemption conditions remain incompletely documented, so structuralRedemption is limited. No runtime inheritance applies: the coin directly resolves to cdp and variantOf is null.",
       "metrics": {
         "collateralizationRatio": 4.877,
         "liquidationCapacityRatio": 0.59
@@ -15426,9 +15487,7 @@
           "quality": "limited"
         },
         "shutdownAndBadDebt": {
-          "applicability": "unavailable",
-          "rationale": "The Hubble technical-resources registry, pinned mainnet configuration, PSM documentation, and product documentation publish no shutdown, wind-down, bad-debt allocation, or deficit-elimination procedure. Absence of a published design is an evidence gap, not affirmative evidence of a weak design.",
-          "sourceUrl": "https://docs.hubbleprotocol.io/resources/technical-resources"
+          "quality": "limited"
         },
         "structuralRedemption": {
           "quality": "limited"
@@ -16519,7 +16578,7 @@
     {
       "assetId": "nopal-nest",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Nest vault mechanics and hourly NAV checks",
@@ -16566,7 +16625,7 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "notes": "Reviewed 2026-08-08. nOPAL is a NAV-accreting Nest vault share whose dominant asset is BlackOpal LiquidStone II/OALS2T Brazilian card receivables, with nTBILL and liquid sleeves. Nest's live APIs reported NAV $62,237,425.00 and disclosed the position mix. At finalized Ethereum block 25,711,825, accountantState on 0x2Ed2... returned minimumUpdateDelayInSeconds=3600 and the current exchange rate, corroborating the documented hourly checking process; valuationCadenceDays is therefore 1/24 and valuationCadence is limited because marks remain issuer-operated. The T+1 estimate and 3%-10% buffer support limited maturityAndLiquidity; the non-custodial vault plus disclosed third-party-custodian flow supports limited custody. Nest/BlackOpal assert short-duration receivables, a Ba2 CMS rating, true-sale treatment, and card-network backstops, but publish no independent portfolio rating or capital-stack filing, so creditQuality and seniority are limited. No public holder legal instrument or recovery waterfall was found, so those components are unavailable rather than weak. nOPAL is a yield-bearing vault share rather than a par stablecoin, but rwa-credit-fund is the closest current mechanism archetype.",
+      "notes": "Reviewed 2026-08-11. nOPAL is a NAV-accreting Nest vault share whose dominant asset is BlackOpal LiquidStone II/OALS2T Brazilian card receivables, with nTBILL and liquid sleeves. Nest's live APIs reported NAV $62,237,425.00 and disclosed the position mix. At finalized Ethereum block 25,711,825, accountantState on 0x2Ed2... returned minimumUpdateDelayInSeconds=3600 and the current exchange rate, corroborating the documented hourly checking process; valuationCadenceDays is therefore 1/24 and valuationCadence is limited because marks remain issuer-operated. The T+1 estimate and 3%-10% buffer support limited maturityAndLiquidity; the non-custodial vault plus disclosed third-party-custodian flow supports limited custody. Nest/BlackOpal assert short-duration receivables, a Ba2 CMS rating, true-sale treatment, and card-network backstops, but publish no independent portfolio rating or capital-stack filing, so creditQuality and seniority are limited. Nest's binding terms govern use of the vault-token protocol, assign all losses while assets are supplied to users, disclaim warranties, and disclaim responsibility for integrated third-party custody providers. Those affirmative terms establish weak legal enforceability for the nOPAL holder path even though BlackOpal separately markets true-sale treatment at the underlying fund level; no public nOPAL-specific prospectus, priority instrument, or direct claim on LiquidStone II receivables was found. No public recovery waterfall was found, so recovery remains unavailable rather than weak-from-missing. nOPAL is a yield-bearing vault share rather than a par stablecoin, but rwa-credit-fund is the closest current mechanism archetype.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0.041666666666666664
@@ -16586,9 +16645,7 @@
           "quality": "limited"
         },
         "legalEnforceability": {
-          "applicability": "unavailable",
-          "rationale": "Searched https://docs.nest.credit/security-and-compliance/terms-and-conditions/, https://docs.nest.credit/about/assets/, and https://www.blackopal.finance/. No public prospectus, trust deed, subscription agreement, or other holder instrument establishes an enforceable nOPAL claim on LiquidStone II receivables; the linked risk assessment is not publicly pinnable.",
-          "sourceUrl": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+          "quality": "weak"
         },
         "valuationCadence": {
           "quality": "limited"
@@ -17362,15 +17419,15 @@
     {
       "assetId": "mapollo-midas",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Midas mAPOLLO product page",
           "url": "https://midas.app/mapollo"
         },
         {
-          "label": "Midas docs llms index (transparency/risk entries listed; body CF-walled)",
-          "url": "https://docs.midas.app/llms.txt"
+          "label": "Midas risk monitoring (1Token PMS fund-level stress scenarios, IM/MM, leverage, and market-neutrality surveillance; re-opened 2026-08-11)",
+          "url": "https://docs.midas.app/investment-risk-management/risk-monitoring"
         },
         {
           "label": "CoinGecko product listing",
@@ -17381,11 +17438,15 @@
           "url": "https://2732961456-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FsPjk0ggBxEJCCnVFFkDR%2Fuploads%2FR6VP6Ks07fXMOC9Bg4qK%2FMidas_Final_Terms_mAPOLLO_2025.pdf?alt=media"
         },
         {
+          "label": "Signed Midas mAPOLLO Final Terms dated 14 July 2026 (market-neutral basis strategy, 8.0x leverage cap, and daily/emergency rebalancing rules)",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2F7sSYvDMJYrWvBsvKGQFI%2F20260714_mAPOLLO_FT_signed_final.pdf?alt=media"
+        },
+        {
           "label": "Midas Issuance & Redemption (instant mode and 1-7 business-day standard queue)",
           "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption"
         }
       ],
-      "notes": "mAPOLLO: Midas docs CF-walled; wrote honest unavailable SDN metrics without component grades (insufficient dual-source for limited+). 2026-07-29 candidate: the binding Final Terms were recovered from Midas's legal-document index. venueAndCustody is weak because the terms rely on public wallet-address NAV tracking while listing Custodian, Collateral, and Security Agent as n/a, with no product-specific account-control evidence. lossAbsorption is weak because holders have a qualified-subordinated debt claim and no collateral/security-agent layer; this is positive adverse legal evidence, not a missing-evidence inference. unwindCapacity is limited because redemption is available at any time but valued through hypothetical best-efforts asset liquidation, and the Midas operational route can fall back from instant liquidity to a 1-7 business-day queue. Hedge reconciliation, funding stress, and margin/liquidation remain bounded; all required metrics remain null and unavailable.",
+      "notes": "mAPOLLO review updated 2026-08-11. venueAndCustody is weak because the binding terms rely on public wallet-address NAV tracking while listing Custodian, Collateral, and Security Agent as n/a, with no product-specific account-control evidence. lossAbsorption is weak because holders have a qualified-subordinated debt claim and no collateral/security-agent layer; this is positive adverse legal evidence, not a missing-evidence inference. unwindCapacity is limited because redemption is available at any time but valued through hypothetical best-efforts asset liquidation, and the Midas operational route can fall back from instant liquidity to a 1-7 business-day queue. The signed 14 July 2026 Final Terms now define a market-neutral strategy using basis trading, derivatives, and centralized and decentralized venues; require delta neutrality, cap gross leverage at 8.0x, require daily limit rebalancing, and require immediate exits under counterparty distress, systemic exchange outages, extreme market stress, or severe liquidity impairment. The Midas risk-monitoring disclosure independently describes fund-level credit/depeg/systemic-default stress scenarios and automated Initial/Maintenance Margin, leverage, and market-neutrality surveillance through 1Token PMS. This supports limited fundingBasisStress and marginAndLiquidation design quality, but not adequate quality: no mAPOLLO-specific stress output, funding tolerance, margin balance, maintenance utilization, liquidation threshold, or distance-to-liquidation is published. hedgeCoverageRatio, marginBufferPct, and lossAbsorptionShare therefore remain null and explicitly unavailable; component quality is not converted into invented numeric metrics.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -17394,13 +17455,13 @@
       "metricApplicability": {
         "hedgeCoverageRatio": {
           "state": "unavailable",
-          "rationale": "mAPOLLO is a Midas NAV liquid-yield token tracking a market-neutral/manager strategy. No reconciled hedge notional or net-delta inventory is public. Searched: midas.app product page, docs.midas.app llms-listed transparency/risk pages (HTTP 403 Cloudflare at write time), CoinGecko listing. Do not invent policy-1 coverage.",
+          "rationale": "mAPOLLO is a Midas NAV liquid-yield token tracking a market-neutral manager strategy. The signed 2026 Final Terms require delta neutrality and the risk-monitoring disclosure describes market-neutrality surveillance, but neither publishes a reconciled hedge notional, current long-versus-short inventory, or observed net delta. Do not convert the policy mandate into hedgeCoverageRatio=1.",
           "sourceUrl": "https://midas.app/mapollo"
         },
         "marginBufferPct": {
           "state": "unavailable",
-          "rationale": "No product-specific published excess-margin or overcollateralization figure (NAV feed is not excess collateral). Same search surfaces; Midas risk-monitoring docs CF-blocked.",
-          "sourceUrl": "https://docs.midas.app/llms.txt"
+          "rationale": "The Midas risk-monitoring disclosure describes Initial/Maintenance Margin and leverage surveillance, and the signed 2026 Final Terms cap gross leverage at 8.0x, but neither publishes mAPOLLO's venue margin balances, maintenance utilization, excess-margin headroom, or distance-to-liquidation. NAV and the leverage cap are not a numeric marginBufferPct.",
+          "sourceUrl": "https://docs.midas.app/investment-risk-management/risk-monitoring"
         },
         "lossAbsorptionShare": {
           "state": "unavailable",
@@ -17418,14 +17479,10 @@
           "sourceUrl": "https://midas.app/mapollo"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed mAPOLLO disclosures publish no quantified funding/basis stress scenario, tolerance, historical stress result, or independently tested adverse-funding control.",
-          "sourceUrl": "https://docs.midas.app/llms.txt"
+          "quality": "limited"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed mAPOLLO disclosures publish no venue margin balances, maintenance requirements, liquidation thresholds, distance-to-liquidation, or tested closeout capacity.",
-          "sourceUrl": "https://docs.midas.app/llms.txt"
+          "quality": "limited"
         },
         "unwindCapacity": {
           "quality": "limited"
@@ -18234,7 +18291,7 @@
     {
       "assetId": "hlscope-hamilton-lane",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Hamilton Lane SCOPE current strategy page (monthly valuation and liquidity; 2026-06-30 performance snapshot)",
@@ -18249,11 +18306,19 @@
           "url": "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
         },
         {
+          "label": "Hamilton Lane SCOPE S.A. SICAV-RAIF private placement memorandum dated December 2025 (fund share rights, BBH depositary duties, liability, and replacement)",
+          "url": "https://www.hamiltonlane.com/getContentAsset/f266e02e-c9a9-42f7-a85a-4d5ece6100bf/dfc3d011-8f63-43f6-9ed8-4b444333a1d0/HL-SCOPE-SA-SICAV-RAIF-PPM-December-2025.pdf?language=en-US"
+        },
+        {
+          "label": "SEC Form D/A for Hamilton Lane SCOPE Securitize Tokenized Feeder, LP dated 1 August 2025",
+          "url": "https://www.sec.gov/Archives/edgar/data/1976710/000197671025000002/primary_doc.xml"
+        },
+        {
           "label": "RedStone HLScope FUNDAMENTAL Ethereum feed (24-hour delivery heartbeat)",
           "url": "https://app.redstone.finance/push-feeds/HLScope_FUNDAMENTAL/ethereumMultiFeed"
         }
       ],
-      "notes": "Hamilton Lane's current page states monthly valuation by its valuation team with valuation-committee approval and monthly liquidity; the dated April 2026 report shows 99% first-lien senior-secured exposure, 42% weighted company-level LTV, and 100% floating-rate exposure. Those issuer materials support limited credit quality, seniority, valuation cadence, and maturity/liquidity, but do not provide independent portfolio verification or a measured stressed-redemption test. RedStone's 24-hour feed heartbeat is transport cadence, not a fresh underlying appraisal, so valuationCadenceDays remains 30. Public searches of the Hamilton Lane strategy/archive and Securitize HLSCOPE product/news surfaces did not recover feeder legal terms, named custody arrangements, or a recovery waterfall; those three components remain explicitly unavailable rather than weak.",
+      "notes": "Reviewed 2026-08-11. Hamilton Lane's current page states monthly valuation by its valuation team with valuation-committee approval and monthly liquidity; the dated April 2026 report shows 99% first-lien senior-secured exposure, 42% weighted company-level LTV, and 100% floating-rate exposure. Those issuer materials support limited credit quality, seniority, valuation cadence, and maturity/liquidity, but do not provide independent portfolio verification or a measured stressed-redemption test. RedStone's 24-hour feed heartbeat is transport cadence, not a fresh underlying appraisal, so valuationCadenceDays remains 30. The December 2025 SCOPE main-fund memorandum names Brown Brothers Harriman (Luxembourg) S.C.A. as AIFMD depositary and administrator; enumerates custody, ownership-verification, cash-monitoring and share-issuance duties; assigns depositary liability; and requires orderly replacement while preserving shareholder interests. This supports limited custody quality because the separate Delaware tokenized feeder's custody of its main-fund interest is not publicly documented. The same memorandum gives each issued share equal participation in its class assets on liquidation, while the SEC Form D/A independently identifies Hamilton Lane SCOPE Securitize Tokenized Feeder, LP as a Delaware limited partnership with Securitize Capital, LLC as general partner and a Section 3(c)(7) offering. Together these establish the fund/feeder legal stack and a holder economic path, supporting limited legal enforceability, but no public feeder LPA, subscription agreement, governing priority waterfall, or enforceability opinion supports a higher grade. No HLSCOPE-specific recovery waterfall is public, so recovery remains unavailable.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 30
@@ -18273,9 +18338,7 @@
           "quality": "limited"
         },
         "legalEnforceability": {
-          "applicability": "unavailable",
-          "rationale": "Hamilton Lane's public strategy page, monthly report, and Securitize announcement do not publish the HLSCOPE feeder offering memorandum, subscription agreement, tokenholder claim terms, governing waterfall, or enforceability opinion.",
-          "sourceUrl": "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+          "quality": "limited"
         },
         "valuationCadence": {
           "quality": "limited"
@@ -18284,9 +18347,7 @@
           "quality": "limited"
         },
         "custody": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed public Hamilton Lane and Securitize surfaces do not name the feeder's asset custodian or publish account-control, segregation, rehypothecation, concentration, or replacement arrangements.",
-          "sourceUrl": "https://investors.securitize.io/news/news-details/2025/Hamilton-Lane-and-Securitizes-SCOPE-Gains-Instant-RLUSD-Liquidity-by-integrating-with-VBILLs-Onchain-Facility-11-05-2025/default.aspx"
+          "quality": "limited"
         },
         "recovery": {
           "applicability": "unavailable",
