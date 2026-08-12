@@ -1238,12 +1238,19 @@ describe("Safety Score v9 economic control", () => {
     });
     expect(named.reasons).toEqual([]);
 
-    // A named unmatched row without a joined control still fails the proof.
+    // 9.192: a named unmatched row independently below the 10% deployment
+    // floor is accepted without a joined identity control, same as the
+    // unrecognized-label pool. At or above the floor it still fails closed.
     const namedOpen = resultFor(0.0999, {
       withPoolControl: false,
       namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.02, withControl: false }],
     });
-    expect(namedOpen.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
+    expect(namedOpen.reasons).toEqual([]);
+    const namedOpenAtFloor = resultFor(0.0999, {
+      withPoolControl: false,
+      namedUnmatched: [{ key: `unmatched-chain:${ASSET_ID}:bsc`, share: 0.1, withControl: false }],
+    });
+    expect(namedOpenAtFloor.reasons.map((reason) => reason.code)).toEqual(["material-bridge-supply-unmatched"]);
   });
 
   it.each(MEASURED_CHAIN_LABEL_POOLS)(

@@ -224,6 +224,17 @@ function hasCompleteSubthresholdBridgeInventory(
     ) {
       continue;
     }
+    // Same shape as D-J, applied to a resolved chain that has no reviewed
+    // route: each unmatched row has its own deployment failure domain, so a
+    // share independently below the deployment floor is accepted supply
+    // evidence rather than an unknown-identity control.
+    if (
+      row.reviewState === "unmatched" &&
+      !row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
+      row.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD
+    ) {
+      continue;
+    }
     const control = controlsByDeployment.get(row.deploymentRouteKey);
     if (
       control === undefined ||
@@ -374,12 +385,13 @@ export function adaptBridgeReview(
   // accepted supply evidence, not an unresolved deployment-control identity.
   // At the floor it keeps the ordinary synthetic control and fails closed.
   const unmatchedControls = (supplyReview?.selectedBridgeRoutes ?? [])
-    .filter(
-      (route) =>
-        route.reviewState === "unmatched" &&
-        (!route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) ||
-          route.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD),
-    )
+    .filter((route) => {
+      if (route.reviewState !== "unmatched") return false;
+      if (route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) {
+        return route.supplyShare >= COMMON_MODE_MATERIAL_SHARE_THRESHOLD;
+      }
+      return route.supplyShare >= DEPLOYMENT_MATERIAL_SHARE_THRESHOLD;
+    })
     .map((route) => unmatchedBridgeControl(meta.id, route));
   const controls = [
     ...profileControls,
@@ -406,6 +418,12 @@ export function adaptBridgeReview(
       route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
       route.supplyShare < COMMON_MODE_MATERIAL_SHARE_THRESHOLD,
   );
+  const hasToleratedUnmatchedDust = (supplyReview?.selectedBridgeRoutes ?? []).some(
+    (route) =>
+      route.reviewState === "unmatched" &&
+      !route.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX) &&
+      route.supplyShare < DEPLOYMENT_MATERIAL_SHARE_THRESHOLD,
+  );
   const onlyZeroShareUnroutedControls =
     routes.length === 0 &&
     controls.length > 0 &&
@@ -414,7 +432,7 @@ export function adaptBridgeReview(
   // while every selected supply route is reviewed native issuance. It does not
   // make the asset bridge-exposed or require a synthetic bridge route row.
   if (
-    (controls.length === 0 && !hasToleratedUncanonicalizedPool) ||
+    (controls.length === 0 && !hasToleratedUncanonicalizedPool && !hasToleratedUnmatchedDust) ||
     (allMaterialRoutesReviewed && onlyZeroShareUnroutedControls)
   ) {
     return {

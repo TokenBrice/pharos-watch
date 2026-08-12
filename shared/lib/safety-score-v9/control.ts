@@ -367,6 +367,13 @@ function hasCompleteSubthresholdUnresolvedBridgeJoins(
     if (isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) && route.supplyShare < commonModeShareThreshold) {
       return true;
     }
+    if (
+      route.reviewState === "unmatched" &&
+      !isV9UncanonicalizedChainPoolRoute(route.deploymentRouteKey) &&
+      route.supplyShare < materialShareThreshold
+    ) {
+      return true;
+    }
     const joined = bridgeControlsByDeployment.get(route.deploymentRouteKey) ?? [];
     if (route.reviewState === "selected-reviewed") {
       if (route.reviewedRouteKind === "native") return joined.length === 0;

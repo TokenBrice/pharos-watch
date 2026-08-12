@@ -327,6 +327,7 @@ const WORK_TYPE_BY_REASON: Partial<Record<string, V9MissingDataWorkType>> = {
   "incomplete-dex-route-coverage": "EXIT_DEX_COVERAGE",
   "incomplete-oracle-liquidation-branch": "ORACLE_BRANCH",
   "inherited-access-exposure": "ACCESS_REVIEW",
+  "reviewed-possible-access": "ACCESS_REVIEW",
   "material-reserve-slice-unstructured": "RESERVE_SLICE",
   "material-unknown-reserve-exposure": "RESERVE_COMPOSITION",
   "missing-archetype": "ARCHETYPE_CLASSIFICATION",

@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_REVIEWED_BOUNDED_RESIDUALS: MethodologyChangelogEntry = {
+  version: "9.192",
+  title: "Reviewed bounded residuals stop publishing as missing data",
+  date: "2026-08-12",
+  effectiveAt: 1786569600,
+  summary:
+    "Two reviewed-but-unproven residuals stop appearing as missing inputs. A current freeze review whose honest verdict is `possible` is measured as `reviewed-possible-access` instead of `missing-access-review`. Independently subthreshold unmatched bridge-supply rows on a resolved chain no longer mint unknown-identity controls, extending the 9.03 D-J dust rule from unrecognized labels to recognized deployments below the 10% floor.",
+  impact: [
+    "Twelve assets whose freeze review is current `possible` leave the open-data census for freeze/blacklist; scoring stays bounded-unknown and the verdict is not rewritten to true or false",
+    "Transfer access facts are unchanged: they still require a material-scope bind and do not inherit the freeze disposition",
+    "USDT's 27 unmatched resolved-chain identity facts (Starknet, Metis, Aurora, and the rest of the dust book, each well below 10% of supply) stop publishing as `unresolved-control-identity`; a row at or above the deployment floor still fails closed",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_ATTRIBUTION_RECONCILIATION: MethodologyChangelogEntry = {
   version: "9.191",
   title: "Every bounded attribution keeps its owned open fact",

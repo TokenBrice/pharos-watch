@@ -67,7 +67,7 @@ describe("Safety Score v9 methodology policy", () => {
     // mechanisms (95) from privileged internal pricing (45); reviewed
     // not-applicable paths emit no scored component.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "dfbb5ba7b967dac28970578b7b15c7bdc19483c4f354f58d8ba5fc572bfe5cb5",
+      "43ce2b262d68e82e13982140f6a96c32a0c6345309eebdc684a7641e5c572128",
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
