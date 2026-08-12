@@ -1963,8 +1963,8 @@ Cache freshness in `/api/health` separates producer cadence, endpoint freshness,
       "maxAge": 43200,
       "healthy": true,
       "producerJob": "sync-dex-liquidity",
-      "producerIntervalSec": 1800,
-      "endpointMaxAge": 3600,
+      "producerIntervalSec": 7200,
+      "endpointMaxAge": 14400,
       "availabilityMaxAge": 43200
     },
     "yield-data": {
@@ -2356,12 +2356,12 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
-    "methodologyVersion": "9.19",
+    "methodologyVersion": "9.191",
     "publicationGenerationId": "report-cards:v9:v1:<sha256>",
     ...
   },
   "methodology": {
-    "version": "9.19",
+    "version": "9.191",
     "policy": { "id": "safety-score-v9", "semanticDigest": "<sha256>" }
   },
   "completeness": { ... },
@@ -2644,7 +2644,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.19",
+      "methodologyVersion": "9.191",
       "publishedAt": 1771999800
     },
     "liveSafetyHydration": {
@@ -2655,7 +2655,7 @@ Set `projection=summary` for the compact workbench contract. It preserves leader
       "reason": null,
       "source": "safety-score-v9-publication",
       "publicationGenerationId": "report-cards:v9:v1:<sha256>",
-      "methodologyVersion": "9.19",
+      "methodologyVersion": "9.191",
       "publishedAt": 1772000700
     }
   },
