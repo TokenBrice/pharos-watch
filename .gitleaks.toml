@@ -63,3 +63,16 @@ regexes = ['''^ibc/[A-F0-9]{64}$''']
 description = "GitBook public file-download tokens in cited source URLs are not credentials"
 regexTarget = "line"
 regexes = ['''gitbook(-x-prod)?\.(io|appspot\.com)/[^"'\s]*[?&]alt=media&token=''']
+
+# Falcon publishes asset labels such as `ARIA_B71VABWJ_T8GB`. Artifact V2
+# records those labels as allocation `key` values, and the default
+# generic-api-key rule mistakes the high-entropy suffixes for credentials.
+# Match the finding itself, not the whole canonical one-line artifact, so a
+# real credential elsewhere in the same file remains visible to the scanner.
+[[allowlists]]
+description = "Falcon public allocation labels in protocol API evidence are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^key":"[A-Z][A-Z0-9]{2,10}(?:_[A-Z0-9]{4,8}){1,2}"$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/[^/]+-protocol-api\.json$''']

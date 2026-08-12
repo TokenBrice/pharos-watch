@@ -12,6 +12,8 @@ Observation hashes bind the source ID, URL, observation time, and raw-body hash.
 
 Numeric source values and derived ratios use canonical decimal strings and fixed-point arithmetic. Metrics distinguish `measured`, `documented-only`, `unavailable`, and `not-applicable`; qualitative claims never become quantitative ratios. Offline replay starts from the recorded raw bytes, verifies their hashes, reparses the source schemas, recomputes every derivation and identity, and requires byte-identical canonical output. Latest selection compares the full target-ordered vector of source observation times; two different snapshots with the same vector are ambiguous and fail closed.
 
+Live capture consumes each response body once, then requires a successful HTTP response, a JSON media type, and an object- or array-shaped body before schema parsing. Every response emits bounded transport provenance: source ID, query-free configured and final URLs, status, redirect state, normalized media type, byte length, body SHA-256, a coarse body class, and selected length-bounded edge headers. Response bytes, decoded text, query strings, cookies, authorization material, and arbitrary headers are never logged. Edge diagnostics remain capture logs only and do not enter Artifact V2 transport headers or evidence identity.
+
 ## Target Semantics
 
 ### Ethena USDe

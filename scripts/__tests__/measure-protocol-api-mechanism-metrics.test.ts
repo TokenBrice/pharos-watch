@@ -4,7 +4,9 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import { fetchProtocolApiObservation } from "../maintenance/measure-protocol-api-mechanism-metrics";
 
 import {
   buildProtocolApiMeasurement,
@@ -80,6 +82,137 @@ function falconInput(body = falconBody(), headers: Record<string, string> = {}) 
 function metric(artifact: ProtocolApiMechanismMeasurement, id: string) {
   return artifact.metrics.find((candidate) => candidate.id === id)!;
 }
+
+function response(
+  body: BodyInit | null,
+  init: ResponseInit & { redirected?: boolean; url?: string } = {},
+): Response {
+  const { redirected = false, url = "", ...responseInit } = init;
+  const result = new Response(body, responseInit);
+  Object.defineProperties(result, {
+    redirected: { configurable: true, value: redirected },
+    url: { configurable: true, value: url },
+  });
+  return result;
+}
+
+function transportRecord(message: string): Record<string, unknown> {
+  const marker = "transport=";
+  return JSON.parse(message.slice(message.indexOf(marker) + marker.length)) as Record<string, unknown>;
+}
+
+describe("protocol API response transport", () => {
+  const source = {
+    sourceId: "ethena-collateralization-status",
+    url: ETHENA_PROTOCOL_API_URLS.collateralizationStatus,
+  };
+
+  it.each([
+    ["text/html", "<!doctype html><title>body-sentinel</title>", "non-JSON media type"],
+    ["application/json", "<html>body-sentinel</html>", "unexpected html-like body"],
+    ["application/json", "   \n\t", "unexpected empty body"],
+  ])("rejects %s non-JSON responses without logging body bytes", async (contentType, body, expected) => {
+    const logs: string[] = [];
+    let error = "";
+    try {
+      await fetchProtocolApiObservation(source, {
+        fetchImpl: async () => response(body, { headers: { "content-type": contentType }, status: 200 }),
+        log: (message) => logs.push(message),
+      });
+    } catch (caught) {
+      error = caught instanceof Error ? caught.message : String(caught);
+    }
+
+    expect(error).toContain(expected);
+    expect(error).toContain(source.sourceId);
+    expect(`${logs.join("\n")}\n${error}`).not.toContain("body-sentinel");
+    expect(transportRecord(logs[0]!)).toMatchObject({
+      bodyBytes: Buffer.byteLength(body),
+      sourceId: source.sourceId,
+      status: 200,
+    });
+  });
+
+  it("consumes non-success responses once and reports bounded provenance", async () => {
+    const upstream = response("upstream-body-sentinel", {
+      headers: { "content-type": "text/html", server: "Vercel" },
+      status: 403,
+    });
+    const arrayBuffer = vi.spyOn(upstream, "arrayBuffer");
+    const logs: string[] = [];
+
+    await expect(
+      fetchProtocolApiObservation(source, {
+        fetchImpl: async () => upstream,
+        log: (message) => logs.push(message),
+      }),
+    ).rejects.toThrow(/HTTP 403/);
+
+    expect(arrayBuffer).toHaveBeenCalledTimes(1);
+    expect(logs.join("\n")).not.toContain("upstream-body-sentinel");
+    expect(transportRecord(logs[0]!)).toMatchObject({
+      bodyClass: "other",
+      headers: { server: "Vercel" },
+      status: 403,
+    });
+  });
+
+  it.each(["application/json; charset=utf-8", "application/problem+json"])(
+    "accepts %s and preserves the exact response bytes",
+    async (contentType) => {
+      const body = '{"exact":"bytes"}\n';
+      const observation = await fetchProtocolApiObservation(source, {
+        fetchImpl: async () => response(body, { headers: { "content-type": contentType }, status: 200 }),
+        log: () => undefined,
+      });
+      expect(Buffer.from(observation.rawBody)).toEqual(Buffer.from(body));
+    },
+  );
+
+  it("sanitizes URLs and bounds the allowlisted edge headers", async () => {
+    const logs: string[] = [];
+    const configured = { ...source, url: `${source.url}?configured-secret=value#fragment` };
+    const observation = await fetchProtocolApiObservation(configured, {
+      fetchImpl: async () =>
+        response('{"ok":true}', {
+          headers: {
+            authorization: "body-sentinel",
+            "content-type": "application/json",
+            "x-vercel-id": "v".repeat(300),
+          },
+          redirected: true,
+          status: 200,
+          url: `${source.url}?redirect-secret=value#fragment`,
+        }),
+      log: (message) => logs.push(message),
+    });
+
+    const provenance = transportRecord(logs[0]!) as {
+      configuredUrl: string;
+      finalUrl: string;
+      headers: Record<string, string>;
+      redirected: boolean;
+    };
+    expect(provenance).toMatchObject({
+      configuredUrl: source.url,
+      finalUrl: source.url,
+      redirected: true,
+    });
+    expect(provenance.headers["x-vercel-id"]).toHaveLength(160);
+    expect(logs[0]).not.toMatch(/configured-secret|redirect-secret|body-sentinel/);
+    expect(observation.url).toBe(configured.url);
+  });
+
+  it("leaves malformed JSON rejection with the existing lossless parser", async () => {
+    const observation = await fetchProtocolApiObservation(source, {
+      fetchImpl: async () => response("{broken", { headers: { "content-type": "application/json" }, status: 200 }),
+      log: () => undefined,
+    });
+    expect(() => buildProtocolApiMeasurement("usde-ethena", [observation, usdeInputs()[1]!], CAPTURED_AT)).toThrow(
+      /JSON|value|quoted|symbol/i,
+    );
+  });
+});
 
 describe("protocol API Artifact V2", () => {
   it("derives exact USDe metrics from raw numeric tokens and replays byte-identically", () => {

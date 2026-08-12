@@ -5,19 +5,22 @@ import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  mkdtempSync,
   mkdirSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { arch, platform } from "node:os";
-import { resolve } from "node:path";
+import { arch, platform, tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export const GITLEAKS_VERSION = "8.30.0";
 export const GITLEAKS_LINUX_X64_TARBALL_SHA256 = "79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e";
 const ZERO_SHA = /^0+$/;
+const FALCON_SELF_TEST_PATH =
+  "shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2099-01-01T00-00-00.000Z-a1b2c3d4e5f6-protocol-api.json";
 
 function sha256File(path) {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
@@ -113,6 +116,50 @@ export async function ensurePinnedGitleaks({
   }
 }
 
+export function runGitleaksConfigSelfTest(binaryPath, { runBinary = spawnSync } = {}) {
+  const root = mkdtempSync(join(tmpdir(), "pharos-gitleaks-self-test-"));
+  const fixturePath = resolve(root, FALCON_SELF_TEST_PATH);
+  const configPath = resolve(process.cwd(), ".gitleaks.toml");
+  const scan = () =>
+    runBinary(
+      binaryPath,
+      [
+        "dir",
+        "--no-banner",
+        "--redact",
+        "--exit-code",
+        "1",
+        `--config=${configPath}`,
+        "--gitleaks-ignore-path=/dev/null",
+        root,
+      ],
+      { encoding: "utf8", stdio: "pipe" },
+    );
+
+  try {
+    mkdirSync(dirname(fixturePath), { recursive: true });
+    const falconLabel = ["ARIA", "B71VABWJ", "T8GB"].join("_");
+    writeFileSync(fixturePath, `${JSON.stringify({ key: falconLabel })}\n`);
+    const publicLabelResult = scan();
+    if (publicLabelResult.status !== 0) {
+      throw new Error(
+        `Falcon public-label allowlist self-test failed with status ${publicLabelResult.status ?? "unknown"}`,
+      );
+    }
+
+    const credential = ["A1b2C3d4E5f6G7h8", "I9j0K1l2M3n4O5p6"].join("");
+    writeFileSync(fixturePath, `${JSON.stringify({ api_key: credential })}\n`);
+    const credentialControl = scan();
+    if (credentialControl.status !== 1) {
+      throw new Error(
+        `Credential-shaped Falcon-path control was not detected (status ${credentialControl.status ?? "unknown"})`,
+      );
+    }
+  } finally {
+    rmSync(root, { force: true, recursive: true });
+  }
+}
+
 /**
  * @param {{
  *   argv?: string[],
@@ -131,6 +178,7 @@ export async function runGitleaks({
 } = {}) {
   const options = parseOptions(argv, env);
   const binaryPath = await ensureBinary();
+  runGitleaksConfigSelfTest(binaryPath, { runBinary });
   const worktreeMode = options.mode === "worktree";
   const args = worktreeMode
     ? [
