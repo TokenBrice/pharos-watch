@@ -94,7 +94,7 @@ const ROLE_TITLES: Record<OracleRiskRole, string> = {
  * reviewed liquidation branches, or an unresolved crypto-backed CDP, price
  * borrower collateral; everything else prices the coin or its backing.
  */
-export function resolveOracleRiskRole(coin: StablecoinMeta): OracleRiskRole {
+function resolveOracleRiskRole(coin: StablecoinMeta): OracleRiskRole {
   const profile = coin.oracleRisk;
   if (profile?.role) return profile.role;
   if (profile?.branchApplicability?.disposition === "branches-required") return "collateral-pricing";

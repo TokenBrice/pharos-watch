@@ -10,7 +10,7 @@ import { reviewedDeploymentObservationTimingIssue } from "./safety-score-v9-supp
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_CACHE_KEY =
   "safety-score-v9:transfer-materiality-generation:v1";
-export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = 1_800;
+const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_MAX_AGE_SEC = 1_800;
 
 export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS = Object.freeze([
   "aa-falconx-mev-capital", "asusdf-astherus", "bbqusdc-steakhouse", "dusd-dialectic",
