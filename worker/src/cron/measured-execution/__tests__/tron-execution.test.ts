@@ -392,7 +392,7 @@ describe("Tron SunSwap measured execution", () => {
       currentTarget: target(),
       expectedTargetGenerationId: "targets-1",
       expectedQuoteGenerationId: "quotes-1",
-      nowSec: 4_701,
+      nowSec: 8_301,
     })).toContain("stale-observation");
     const tampered = structuredClone(profile);
     tampered.quoteProof[0]!.route.reserve0Raw = "1413348535104140";

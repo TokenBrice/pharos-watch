@@ -396,7 +396,7 @@ describe("Solana measured execution join", () => {
     const diagnostics = joinSolanaMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["usdc", [pool]]]),
       evidence,
-      nowSec: 4_611,
+      nowSec: 8_211,
     });
 
     expect(diagnostics).toMatchObject({

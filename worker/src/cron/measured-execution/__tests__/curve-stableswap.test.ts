@@ -219,7 +219,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
         ),
       },
     })).toEqual({ ok: false, reason: "token-decimals-mismatch" });
-    expect(evaluate(base, BLOCK_TIMESTAMP + 3_601)).toEqual({
+    expect(evaluate(base, BLOCK_TIMESTAMP + 7_201)).toEqual({
       ok: false,
       reason: "stale-pinned-block",
     });
@@ -238,7 +238,7 @@ describe("Curve legacy StableSwap 3pool policy", () => {
 
     await expect(verify({
       blockNumber: BLOCK_NUMBER,
-      nowSec: BLOCK_TIMESTAMP + 3_601,
+      nowSec: BLOCK_TIMESTAMP + 7_201,
       chainRpcs: new Map(),
     })).resolves.toEqual({ ok: false, reason: "stale-pinned-block" });
     expect(fetchCodeStatus).not.toHaveBeenCalled();

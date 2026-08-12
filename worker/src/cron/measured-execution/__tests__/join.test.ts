@@ -1406,7 +1406,7 @@ describe("measured execution join activation", () => {
       buildDexMeasuredExecutionRetainedRoutePools({
         poolsByStablecoin: new Map([[measuredTarget.stablecoinId, []]]),
         evidence,
-        nowSec: 4_661,
+        nowSec: 8_261,
       }).size,
     ).toBe(0);
   });
@@ -1470,7 +1470,7 @@ describe("measured execution join activation", () => {
           ],
         ]),
       },
-      nowSec: 4_661,
+      nowSec: 8_261,
     });
 
     expect(pool.extra?.measuredExecution).toBeUndefined();

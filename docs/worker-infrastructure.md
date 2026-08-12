@@ -87,10 +87,10 @@ and the actual pinned block timestamp before quoting. USDT and USDC each publish
 an atomic pair of counter-stablecoin directions; a missing or invalid sibling
 leaves the existing reserve simulation in place. Retained route-only evidence
 reconstructs both siblings from the same packet or admits neither. Selected
-quotes still expire after two hours for this adapter, preserving the original
-quote timestamp and block; every other measured adapter keeps the one-hour
-ceiling. The same two-hour history window lets three jittered half-hour cycles
-coexist. Only after both directions have at least three complete cycles and
+quotes expire after two hours, preserving the original quote timestamp and
+block; since methodology v5.992 every measured adapter shares that two-hour
+ceiling, matching the two-hour score-bearing publication cadence. The same
+two-hour history window lets three jittered half-hour cycles coexist. Only after both directions have at least three complete cycles and
 three successful observations does the measured packet become score-facing;
 until then P4 keeps the reserve simulation. An exact absent-bytecode response is
 semantic drift and cannot retain last-known-good evidence, while RPC

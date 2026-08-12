@@ -398,10 +398,10 @@ function evidenceDb(input: {
 }
 
 describe("measured execution publication", () => {
-  it("retains a two-hour StableSwap history window without changing legacy freshness", () => {
+  it("retains a two-hour history window for every measured adapter", () => {
     expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-main-registry-get-dy-v1")).toBe(7_200);
     expect(getDexMeasuredHistoryFreshnessSec("curve-stableswap-ng-factory-get-dy-v2")).toBe(7_200);
-    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(3_600);
+    expect(getDexMeasuredHistoryFreshnessSec("uniswap-v3-quoter-v2")).toBe(7_200);
   });
 
   it("classifies StableSwap transport outages as operational but not semantic drift", () => {
