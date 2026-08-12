@@ -495,7 +495,11 @@ export const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
   .object({
     semantics: z.literal("limiting-fact-owner-v1"),
     totalFactCount: z.number().int().nonnegative(),
-    facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
+    // Publications written before methodology 9.19 do not carry the
+    // per-fact disclosure paths. Keep the reader compatible with those
+    // already-authenticated last-known-good snapshots; newly generated
+    // publications always include this field.
+    facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema).optional(),
     summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
   })
   .strict()
