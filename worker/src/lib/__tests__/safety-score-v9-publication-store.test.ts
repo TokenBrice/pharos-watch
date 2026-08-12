@@ -29,6 +29,52 @@ afterEach(() => {
 });
 
 describe("Safety Score V9 publication store", () => {
+  it("rejects a health advance when the publication row is already newer", async () => {
+    const { db } = database();
+    const newer = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 200 });
+    const incoming = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 150 });
+    const health = {
+      schemaVersion: 1 as const,
+      status: "current" as const,
+      acceptedPublicationGenerationId: newer.publicationGenerationId,
+      acceptedAtSec: newer.publishedAtSec,
+      attemptedAtSec: newer.publishedAtSec,
+      heldSinceSec: null,
+      reasons: [],
+    };
+    await persistSafetyScoreV9Publication(db, {
+      publication: newer,
+      publicationHealth: health,
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: 200,
+        outcome: "published-clean",
+        publicationGenerationId: newer.publicationGenerationId,
+        quarantines: [],
+        affectedAssetIds: [],
+      },
+      publicationClockSec: 200,
+    });
+    await expect(persistSafetyScoreV9Publication(db, {
+      publication: incoming,
+      publicationHealth: {
+        ...health,
+        acceptedPublicationGenerationId: incoming.publicationGenerationId,
+        acceptedAtSec: incoming.publishedAtSec,
+        attemptedAtSec: incoming.publishedAtSec,
+      },
+      publicationAttempt: {
+        schemaVersion: 1,
+        attemptedAtSec: 150,
+        outcome: "published-clean",
+        publicationGenerationId: incoming.publicationGenerationId,
+        quarantines: [],
+        affectedAssetIds: [],
+      },
+      publicationClockSec: 150,
+    })).rejects.toThrow(/Stale or conflicting Safety Score v9 publication/);
+  });
+
   it("publishes canonical ratings and advances held health without replacing them", async () => {
     const { sqlite, db } = database();
     const publication = makeWorkerSafetyScoreV9Publication({
