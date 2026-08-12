@@ -101,6 +101,7 @@ export const CRITICAL_TEST_FILES = [
   "worker/src/lib/__tests__/safety-score-v9-extension-shock.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-extension-supply.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-extension-transfer.test.ts",
+  "worker/src/lib/__tests__/safety-score-v9-transfer-supply-review.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-fact-set-control.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-fact-set-dependencies.test.ts",
   "worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts",

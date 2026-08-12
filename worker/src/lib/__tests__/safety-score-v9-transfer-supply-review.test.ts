@@ -5,7 +5,11 @@ import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import { describe, expect, it } from "vitest";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9-extension";
-import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9-fact-set";
+import {
+  compileSafetyScoreV9FactSetFromFixedInput,
+  compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
+  materializeSafetyScoreV9FactSetExtension,
+} from "../safety-score-v9-fact-set";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9-native-input";
 import {
   buildSafetyScoreV9SupplyReview,
@@ -160,6 +164,61 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(before.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(1);
     expect(after.gaps.filter((gap) => gap.reasonCode === "missing-bridge-routes")).toHaveLength(0);
     expect(after.supply.selectedBridgeRoutes).toHaveLength(8);
+  });
+
+  it.each([
+    [
+      "route USD totals",
+      (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
+        supplyReview.selectedBridgeRoutes[0]!.supplyUsd += 1;
+      },
+    ],
+    [
+      "aggregate shares",
+      (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
+        supplyReview.selectedRouteSupplyShare = 0.9;
+      },
+    ],
+    [
+      "route shares",
+      (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
+        supplyReview.selectedBridgeRoutes[0]!.supplyShare -= 0.1;
+      },
+    ],
+    [
+      "route review categories",
+      (supplyReview: NonNullable<ReturnType<typeof buildSafetyScoreV9SupplyReview>>) => {
+        supplyReview.selectedBridgeRoutes[0]!.reviewState = "selected-unresolved";
+        delete supplyReview.selectedBridgeRoutes[0]!.reviewedRouteKind;
+      },
+    ],
+  ])("quarantines malformed aggregate bridge %s", (_label, corrupt) => {
+    const assetId = "sfrxusd-frax";
+    const replayInput = makeV9FixedInput({
+      assetId,
+      clockSec: CLOCK_SEC,
+      chainSupplyByChain: {},
+      aggregateCirculating: { peggedUSD: AGGREGATE_SUPPLY_USD },
+      omitLiveReserve: true,
+    });
+    const exactGeneration = createSafetyScoreV9TransferMaterialityGeneration({
+      schemaVersion: 1,
+      kind: "safety-score-v9-transfer-materiality-generation",
+      sourceBaseInputGenerationId: replayInput.baseInputGenerationId,
+      registryFingerprint: replayInput.registryFingerprint,
+      capturedAtSec: replayInput.clockSec - 60,
+      observationsByAssetId: { [assetId]: observationsFor(assetId) },
+    });
+    const extension = buildSafetyScoreV9BaselineExtension(replayInput, {
+      metaById: new Map([[assetId, ACTIVE_META_BY_ID.get(assetId)!]]),
+      transferMaterialityGeneration: exactGeneration,
+    });
+    const supplyReview = extension.assets[0]!.supplyReview!;
+    corrupt(supplyReview);
+    const materialized = materializeSafetyScoreV9FactSetExtension(replayInput, extension);
+    const result = compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension(replayInput, materialized);
+
+    expect(result.quarantines).toEqual([{ assetId, code: "fact-build-failed" }]);
   });
 
   it.each([
