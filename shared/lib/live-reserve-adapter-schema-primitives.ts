@@ -271,10 +271,59 @@ const collateralPositionsParamsSchema = z
   })
   .strict();
 
+const EvmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+
+/** Opt-in live redemption probe for curated coins. The shape only describes
+ *  atomic, same-block routes: a single uint256 read of what the route can pay
+ *  out right now, valued 1:1 in USD. */
+const curatedValidatedRedemptionCapacitySchema = z
+  .object({
+    chain: z.string().min(1),
+    capacityRead: z.discriminatedUnion("kind", [
+      z
+        .object({
+          kind: z.literal("selector"),
+          contract: EvmAddressSchema,
+          selector: EvmSelectorSchema,
+        })
+        .strict(),
+      z
+        .object({
+          kind: z.literal("erc20-balance-of"),
+          contract: EvmAddressSchema,
+          holder: EvmAddressSchema,
+        })
+        .strict(),
+    ]),
+    /** Address getters the route must still resolve to. Any mismatch means the
+     *  pinned contracts no longer describe this route, so nothing is emitted. */
+    identityChecks: z
+      .array(
+        z
+          .object({
+            contract: EvmAddressSchema,
+            selector: EvmSelectorSchema,
+            expectedAddress: EvmAddressSchema,
+          })
+          .strict(),
+      )
+      .nonempty()
+      .optional(),
+    pauseCheck: z
+      .object({ contract: EvmAddressSchema, selector: EvmSelectorSchema })
+      .strict()
+      .optional(),
+    decimals: z.number().int().min(0).max(36),
+    holderEligibility: RedemptionHolderEligibilitySchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+  })
+  .strict();
+
 const curatedValidatedParamsSchema = z
   .object({
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    redemptionCapacity: curatedValidatedRedemptionCapacitySchema.optional(),
   })
   .strict();
 
@@ -662,6 +711,41 @@ const evmBranchBalancesParamsSchema = z
       .optional(),
     debtContract: z.string().optional(),
     debtDecimals: z.number().int().nonnegative().optional(),
+    redemptionCapacity: z
+      .object({
+        kind: z.literal("honey-factory-vaults"),
+        factoryAddress: EvmAddressSchema,
+        expectedHoneyAddress: EvmAddressSchema,
+        maxAssets: z.number().int().positive().max(32),
+        stableAssets: z
+          .array(
+            z
+              .object({
+                address: EvmAddressSchema,
+                decimals: z.number().int().nonnegative().max(36),
+              })
+              .strict(),
+          )
+          .min(1)
+          .max(32),
+        sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+      })
+      .strict()
+      .superRefine((params, ctx) => {
+        const addresses = new Set<string>();
+        params.stableAssets.forEach((asset, index) => {
+          const address = asset.address.toLowerCase();
+          if (addresses.has(address)) {
+            ctx.addIssue({
+              code: "custom",
+              path: ["stableAssets", index, "address"],
+              message: `Duplicate stable asset: ${asset.address}`,
+            });
+          }
+          addresses.add(address);
+        });
+      })
+      .optional(),
   })
   .strict();
 
@@ -864,6 +948,52 @@ const tetherTransparencyParamsSchema = z
   })
   .strict();
 
+/** Opt-in live redemption probe for coins whose exit is a single redeemer
+ *  contract paying one ERC20 out of its own float. Every bound the route's size
+ *  depends on is read in the same run; any mismatch or unreadable value
+ *  withholds the whole live block rather than publishing a partial route. */
+const singleAssetRedemptionCapacitySchema = z
+  .object({
+    chain: z.string().min(1),
+    /** Contract that executes the redemption and holds the payout float. */
+    redeemer: EvmAddressSchema,
+    /** ERC20 the route pays out; its `redeemer` balance is the capacity. */
+    payoutToken: z
+      .object({
+        address: EvmAddressSchema,
+        decimals: z.number().int().min(0).max(36),
+      })
+      .strict(),
+    /** Address getters the route must still resolve to. Pin the upgrade surface
+     *  (beacon/implementation) here so a retarget stops emission. */
+    identityChecks: z
+      .array(
+        z
+          .object({
+            contract: EvmAddressSchema,
+            selector: EvmSelectorSchema,
+            expectedAddress: EvmAddressSchema,
+          })
+          .strict(),
+      )
+      .nonempty(),
+    /** Per-day cap, read as `limitSelector - usedSelector(currentDay)`. */
+    dailyLimit: z
+      .object({
+        limitSelector: EvmSelectorSchema,
+        /** Takes the `block.timestamp / 86400` day index as its only argument. */
+        usedSelector: EvmSelectorSchema,
+        decimals: z.number().int().min(0).max(36),
+      })
+      .strict()
+      .optional(),
+    /** Getter returning the redemption fee already denominated in bps. */
+    feeBpsSelector: EvmSelectorSchema.optional(),
+    holderEligibility: RedemptionHolderEligibilitySchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+  })
+  .strict();
+
 const singleAssetParamsSchema = z
   .object({
     label: z.string(),
@@ -878,6 +1008,7 @@ const singleAssetParamsSchema = z
     timestampProbe: singleAssetProbeSchema.optional(),
     reserveSourceLabel: z.string().optional(),
     redemptionRateProbe: redemptionRateProbeSchema.optional(),
+    redemptionCapacity: singleAssetRedemptionCapacitySchema.optional(),
   })
   .strict();
 

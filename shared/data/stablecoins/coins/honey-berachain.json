@@ -84,6 +84,35 @@
     },
     "params": {
       "rpcUrl": "https://rpc.berachain.com",
+      "redemptionCapacity": {
+        "kind": "honey-factory-vaults",
+        "factoryAddress": "0xA4aFef880F5cE1f63c9fb48F661E27F8B4216401",
+        "expectedHoneyAddress": "0xfcbd14dc51f0a4d49d5e53c2e0950e0bc26d0dce",
+        "maxAssets": 4,
+        "stableAssets": [
+          {
+            "address": "0x549943e04f40284185054145c6e4e9568c1d3241",
+            "decimals": 6
+          },
+          {
+            "address": "0x688e72142674041f8f6af4c808a4045ca1d6ac82",
+            "decimals": 6
+          },
+          {
+            "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+            "decimals": 6
+          },
+          {
+            "address": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+            "decimals": 18
+          }
+        ],
+        "sourceUrls": [
+          "https://docs.berachain.com/general/tokens/honey",
+          "https://github.com/berachain/contracts/blob/main/src/honey/HoneyFactory.sol",
+          "https://github.com/berachain/contracts/blob/main/src/honey/CollateralVault.sol"
+        ]
+      },
       "branches": [
         {
           "name": "USDe (Ethena)",

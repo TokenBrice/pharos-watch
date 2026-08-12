@@ -165,10 +165,17 @@ export async function resolveReserveSyncCapacity(
       liveMetadata.immediateRedeemableUsd != null
         ? liveMetadata.immediateRedeemableUsd
         : (supplyUsd as number) * (liveMetadata.immediateRedeemableRatio as number);
-    // A config may downgrade the adapter-derived live confidence when the live
-    // read is a bounded proxy for redeemability (e.g. sBOLD SP-withdrawable BOLD);
-    // the measured capacity value is still used, only its confidence label changes.
-    const liveCapacityConfidence = model.liveCapacityConfidence ?? liveMetadata.capacityConfidence;
+    // Confidence resolution, most conservative source first: an adapter that
+    // marks this run's capacity documented-bound (e.g. sBOLD when its
+    // collateral-health gate is restricted or unreadable) always downgrades,
+    // then a config override may downgrade a bounded-proxy read (e.g. Makina
+    // dUSD), and only then does the adapter-derived live confidence apply.
+    // The measured capacity value is used in all three cases; only its
+    // confidence label changes.
+    const liveCapacityConfidence =
+      liveMetadata.capacityKind === "documented-bound"
+        ? ("documented-bound" as const)
+        : (model.liveCapacityConfidence ?? liveMetadata.capacityConfidence);
     const {
       hasSupplyCeiling,
       hasPositiveSupply,

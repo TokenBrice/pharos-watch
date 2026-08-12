@@ -178,7 +178,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
@@ -309,7 +309,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "static-validated",
     sharedSourceMode: "none",
     configValidation: CONFIG_CURATED_VALIDATED,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // Live capacity is emitted only for curated coins whose params carry a
+    // redemptionCapacity block; every other curated coin keeps its static
+    // redemption block and is not an unused-telemetry candidate.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
   },
   "dola-inverse": {
     primaryInputKinds: ["http-json"],
@@ -373,7 +376,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   falcon: {
@@ -771,7 +774,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
-    redemptionTelemetry: { capacity: "none", fee: "current-bps" },
+    // Redemption capacity is emitted only for coins whose params carry a
+    // redemptionCapacity block (currently AID); the plain liveness-probe coins
+    // never emit and are not unused-telemetry candidates.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
   },
   "sky-makercore": {
     primaryInputKinds: ["http-json"],
@@ -819,7 +825,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "weak-live-probe",
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

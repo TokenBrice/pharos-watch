@@ -73,5 +73,42 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "launchDate": "2026-03-09"
+  "launchDate": "2026-03-09",
+  "liveReservesConfig": {
+    "adapter": "escrow-balance",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "ussd-sonic-labs",
+    "display": {
+      "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+      "label": "USSD BrandedCustodian frxUSD"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "sonic",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "contract": "0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03",
+      "selector": "0x01e1d114",
+      "decimals": 18,
+      "slice": {
+        "name": "Sonic frxUSD held by the USSD BrandedCustodian",
+        "risk": "low",
+        "coinId": "frxusd-frax",
+        "depType": "wrapper"
+      },
+      "sourceUrls": [
+        "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code",
+        "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian",
+        "https://docs.soniclabs.com/sonic/ussd"
+      ],
+      "holderEligibility": "any-holder",
+      "settlementDelaySec": 0,
+      "rpcUrl": "https://rpc.soniclabs.com",
+      "fallbackRpcUrl": "https://sonic-rpc.publicnode.com"
+    }
+  }
 }

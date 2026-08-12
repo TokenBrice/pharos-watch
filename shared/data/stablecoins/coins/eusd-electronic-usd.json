@@ -46,7 +46,7 @@
   "collateralQuality": "exotic",
   "governanceQuality": "multisig",
   "liveReservesConfig": {
-    "adapter": "evm-branch-balances",
+    "adapter": "reserve-protocol-dtf",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "eusd-electronic-usd",
@@ -58,67 +58,30 @@
       "primary": {
         "kind": "onchain-evm",
         "chain": "ethereum",
-        "rpcMode": "alchemy"
+        "rpcMode": "public-rpc"
       }
     },
     "params": {
-      "branches": [
+      "rpcUrl": "https://ethereum-rpc.publicnode.com",
+      "fallbackRpcUrl": "https://eth.llamarpc.com",
+      "assets": [
         {
-          "name": "Static Aave USDC (saEthUSDC) — Primary BM",
-          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
-            "decimals": 6
-          },
+          "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
+          "name": "Static Aave Ethereum USDC",
           "risk": "low",
           "coinId": "usdc-circle",
           "depType": "collateral"
         },
         {
-          "name": "Static Aave USDC (saEthUSDC) — Secondary BM",
-          "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x0adc69041a2b086f8772acce2a754f410f211bed",
-            "decimals": 6
-          },
+          "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+          "name": "Wrapped Compound USDCv3",
           "risk": "low",
           "coinId": "usdc-circle",
           "depType": "collateral"
         },
         {
-          "name": "Wrapped Compound USDC (wcUSDCv3) — Primary BM",
-          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-            "decimals": 6
-          },
-          "risk": "low",
-          "coinId": "usdc-circle",
-          "depType": "collateral"
-        },
-        {
-          "name": "Wrapped Compound USDC (wcUSDCv3) — Secondary BM",
-          "holder": "0x4B0b3d40b0623f3a9eac09d2E01F592710ee59F0",
-          "token": {
-            "chain": "ethereum",
-            "address": "0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-            "decimals": 6
-          },
-          "risk": "low",
-          "coinId": "usdc-circle",
-          "depType": "collateral"
-        },
-        {
-          "name": "Wrapped Compound USDT (wcUSDTv3)",
-          "holder": "0xF014FEF41cCB703975827C8569a3f0940cFD80A4",
-          "token": {
-            "chain": "ethereum",
-            "address": "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
-            "decimals": 6
-          },
+          "address": "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce",
+          "name": "Wrapped Compound USDTv3",
           "risk": "low",
           "coinId": "usdt-tether",
           "depType": "collateral"

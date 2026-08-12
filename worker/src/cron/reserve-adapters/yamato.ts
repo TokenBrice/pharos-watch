@@ -1,20 +1,26 @@
 import { CANONICAL_ETH_RESERVE_RISK } from "@shared/lib/reserve-asset-risk";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decimalNumberFromBigInt,
+  fetchDefiLlamaPrices,
   isReserveRisk,
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveInfoWarning,
 } from "./helpers";
+import { rethrowIfAborted } from "../../lib/abort";
 
 const ADAPTER_KEY = "yamato";
 const YAMATO_VALUE_DECIMALS = 18;
 const YAMATO_PERCENT_DENOMINATOR = 100;
 const PERTENK_DENOMINATOR = 10_000;
+// Same DefiLlama ETH/USD proxy the Liquity V1 adapter uses; Yamato's own oracle
+// only quotes ETH in JPY, so the payout leg needs one external USD reference.
+const WETH_ETHEREUM_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 
 const DEFAULT_ETH_SLICE: YamatoSliceConfig = {
   name: "ETH",
@@ -26,6 +32,14 @@ const YAMATO_ABI = parseAbi([
   "function priceFeed() view returns (address)",
 ]);
 const YAMATO_PRICE_FEED_ABI = parseAbi(["function getPrice() view returns (uint256)"]);
+const YAMATO_REDEMPTION_ABI = parseAbi([
+  "function paused() view returns (bool)",
+  "function priorityRegistry() view returns (address)",
+]);
+const PRIORITY_REGISTRY_ABI = parseAbi([
+  "function yamato() view returns (address)",
+  "function getRedeemablesCap() view returns (uint256)",
+]);
 
 export const YAMATO_GET_STATES_SELECTOR = encodeFunctionData({
   abi: YAMATO_ABI,
@@ -38,6 +52,22 @@ export const YAMATO_PRICE_FEED_SELECTOR = encodeFunctionData({
 export const YAMATO_GET_PRICE_SELECTOR = encodeFunctionData({
   abi: YAMATO_PRICE_FEED_ABI,
   functionName: "getPrice",
+});
+export const YAMATO_PAUSED_SELECTOR = encodeFunctionData({
+  abi: YAMATO_REDEMPTION_ABI,
+  functionName: "paused",
+});
+export const YAMATO_PRIORITY_REGISTRY_SELECTOR = encodeFunctionData({
+  abi: YAMATO_REDEMPTION_ABI,
+  functionName: "priorityRegistry",
+});
+export const PRIORITY_REGISTRY_YAMATO_SELECTOR = encodeFunctionData({
+  abi: PRIORITY_REGISTRY_ABI,
+  functionName: "yamato",
+});
+export const PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR = encodeFunctionData({
+  abi: PRIORITY_REGISTRY_ABI,
+  functionName: "getRedeemablesCap",
 });
 
 export interface YamatoStates {
@@ -64,11 +94,19 @@ interface YamatoParams {
   slice: YamatoSliceConfig;
 }
 
+export interface YamatoRedemptionProbe {
+  paused: boolean;
+  priorityRegistryAddress: string;
+  redeemableCapJpyRaw: bigint;
+}
+
 interface YamatoAdaptOptions {
   yamatoAddress?: string;
   priceFeedAddress?: string;
   ethJpyPriceRaw?: bigint;
   slice?: YamatoSliceConfig;
+  redemption?: YamatoRedemptionProbe;
+  ethPriceUsd?: number;
 }
 
 function asHex(raw: string, context: string): `0x${string}` {
@@ -163,6 +201,66 @@ function decodeYamatoEthJpyPrice(raw: string): bigint {
   });
 }
 
+/**
+ * Same-run read of what `redeem(amount, false)` could actually pay a holder now.
+ *
+ * `redeem()` only touches pledges whose live ICR is under MCR, so system
+ * collateral is not capacity: the protocol's own `getRedeemablesCap()` sums the
+ * per-pledge redeemable fragments over the priority queue and is the only
+ * aggregate bound the deployed contracts expose. The registry is resolved from
+ * the Yamato proxy and then bound back to it through `yamato()`, so a swapped
+ * registry withholds telemetry instead of publishing a foreign contract's cap.
+ * Returns `null` when any leg fails, and the caller then omits the whole
+ * capacity surface rather than guessing.
+ */
+export async function probeYamatoRedemption(
+  onchain: ReturnType<typeof makeOnchainCallers>,
+  yamatoAddress: string,
+  signal: AbortSignal,
+): Promise<YamatoRedemptionProbe | null> {
+  try {
+    const [pausedRaw, registryRaw] = await Promise.all([
+      onchain.raw(yamatoAddress, YAMATO_PAUSED_SELECTOR),
+      onchain.raw(yamatoAddress, YAMATO_PRIORITY_REGISTRY_SELECTOR),
+    ]);
+    if (!pausedRaw || !registryRaw) return null;
+
+    const paused = decodeFunctionResult({
+      abi: YAMATO_REDEMPTION_ABI,
+      functionName: "paused",
+      data: asHex(pausedRaw, "yamato paused()"),
+    });
+    const priorityRegistryAddress = decodeFunctionResult({
+      abi: YAMATO_REDEMPTION_ABI,
+      functionName: "priorityRegistry",
+      data: asHex(registryRaw, "yamato priorityRegistry()"),
+    }).toLowerCase();
+
+    const registryOwnerRaw = await onchain.raw(priorityRegistryAddress, PRIORITY_REGISTRY_YAMATO_SELECTOR);
+    if (!registryOwnerRaw) return null;
+    const registryOwner = decodeFunctionResult({
+      abi: PRIORITY_REGISTRY_ABI,
+      functionName: "yamato",
+      data: asHex(registryOwnerRaw, "priorityRegistry yamato()"),
+    }).toLowerCase();
+    if (registryOwner !== yamatoAddress.toLowerCase()) return null;
+
+    const capRaw = await onchain.raw(priorityRegistryAddress, PRIORITY_REGISTRY_GET_REDEEMABLES_CAP_SELECTOR);
+    if (!capRaw) return null;
+    const redeemableCapJpyRaw = decodeFunctionResult({
+      abi: PRIORITY_REGISTRY_ABI,
+      functionName: "getRedeemablesCap",
+      data: asHex(capRaw, "priorityRegistry getRedeemablesCap()"),
+    });
+    if (redeemableCapJpyRaw < 0n) return null;
+
+    return { paused, priorityRegistryAddress, redeemableCapJpyRaw };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return null;
+  }
+}
+
 export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOptions = {}): AdapterResult {
   if (states.totalCollateralRaw <= 0n) {
     throw new Error("yamato getStates() returned zero collateral");
@@ -189,7 +287,7 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
   };
 
   let priceMetadata: Record<string, unknown> = {};
-  let routeStatus: "open" | "degraded" = "open";
+  let routeStatus: "open" | "degraded" | "paused" = "open";
   let routeStatusReason: string | undefined;
   if (options.ethJpyPriceRaw != null) {
     if (options.ethJpyPriceRaw <= 0n) {
@@ -209,6 +307,51 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       collateralizationRatio,
       collateralizationRatioPct: collateralizationRatio * YAMATO_PERCENT_DENOMINATOR,
       collateralizationRatioPerTenThousand: Math.round(collateralizationRatio * PERTENK_DENOMINATOR),
+    };
+  }
+
+  const probe = options.redemption;
+  if (probe?.paused) {
+    routeStatus = "paused";
+    routeStatusReason = "Yamato paused() is true in the same run and redeem() is guarded by whenNotPaused";
+  }
+
+  // Capacity is the protocol's own redeemable cap, converted through the price
+  // redeem() itself uses and then floored by the collateral actually measured.
+  let capacityMetadata: Record<string, unknown> = {};
+  let redemptionCapacityMetadata: Record<string, unknown> = {};
+  if (probe && options.ethJpyPriceRaw != null && options.ethJpyPriceRaw > 0n) {
+    const redeemableCapJpy = decimalNumberFromBigInt(probe.redeemableCapJpyRaw, YAMATO_VALUE_DECIMALS);
+    const capacityEthRaw =
+      (probe.redeemableCapJpyRaw * 10n ** BigInt(YAMATO_VALUE_DECIMALS)) / options.ethJpyPriceRaw;
+    const capacityEth = Math.min(decimalNumberFromBigInt(capacityEthRaw, YAMATO_VALUE_DECIMALS), totalCollateralEth);
+    // A zero cap needs no price to be worth zero, so a missing ETH/USD quote
+    // still publishes the honest "nothing is redeemable right now" reading.
+    const capacityUsd =
+      capacityEth === 0
+        ? 0
+        : options.ethPriceUsd != null && options.ethPriceUsd > 0
+          ? capacityEth * options.ethPriceUsd
+          : undefined;
+
+    capacityMetadata = {
+      priorityRegistryAddress: probe.priorityRegistryAddress,
+      redeemableCapJpyRaw: probe.redeemableCapJpyRaw.toString(),
+      redeemableCapJpy,
+      redeemableCapEth: capacityEth,
+      ...(options.ethPriceUsd != null ? { ethPriceUsd: options.ethPriceUsd } : {}),
+      ...(capacityUsd != null ? { immediateRedeemableUsd: capacityUsd } : {}),
+    };
+    redemptionCapacityMetadata = {
+      ...(capacityUsd != null
+        ? {
+            capacityUsd,
+            // Each redeem() call stops at maxRedeemableCount pledges, so the
+            // aggregate cap is a bounded rather than single-transaction number.
+            capacityKind: "live-direct-bounded" as const,
+          }
+        : {}),
+      capacityRatioOfSupply: redeemableCapJpy / totalDebtJpy,
     };
   }
 
@@ -235,7 +378,9 @@ export function adaptYamatoStates(states: YamatoStates, options: YamatoAdaptOpti
       totalDebtJpy,
       ...thresholdMetadata,
       ...priceMetadata,
+      ...capacityMetadata,
       redemption: {
+        ...redemptionCapacityMetadata,
         freshnessKind: "same-run-onchain",
         routeStatus,
         routeStatusSource: "onchain",
@@ -282,15 +427,49 @@ export async function fetchYamatoReserves(
     throw new Error("yamato getStates() call failed");
   }
 
-  const priceRaw = await onchain.raw(priceFeedAddress, YAMATO_GET_PRICE_SELECTOR);
+  const [priceRaw, redemption] = await Promise.all([
+    onchain.raw(priceFeedAddress, YAMATO_GET_PRICE_SELECTOR),
+    probeYamatoRedemption(onchain, params.yamatoAddress, signal),
+  ]);
   if (!priceRaw) {
     throw new Error("yamato priceFeed.getPrice() call failed");
   }
 
-  return adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
-    yamatoAddress: params.yamatoAddress,
-    priceFeedAddress,
-    ethJpyPriceRaw: decodeYamatoEthJpyPrice(priceRaw),
-    slice: params.slice,
-  });
+  // Only a non-zero cap needs an external price, so a healthy system with
+  // nothing redeemable costs no extra request.
+  let ethPriceUsd: number | undefined;
+  if (redemption != null && redemption.redeemableCapJpyRaw > 0n) {
+    ethPriceUsd = (
+      await fetchDefiLlamaPrices([{ key: "ETH", chain: "ethereum", address: WETH_ETHEREUM_ADDRESS }], signal, ctx)
+    ).get("ETH");
+  }
+
+  const warnings: LiveReserveWarning[] = [];
+  if (redemption == null) {
+    warnings.push(
+      reserveInfoWarning(
+        "yamato-redeemables-cap-unreadable",
+        `Yamato ${params.yamatoAddress} did not return a matching paused()/priorityRegistry()/getRedeemablesCap() set this run; redemption capacity withheld`,
+      ),
+    );
+  } else if (redemption.redeemableCapJpyRaw > 0n && ethPriceUsd == null) {
+    warnings.push(
+      reserveInfoWarning(
+        "yamato-eth-price-unavailable",
+        "Yamato adapter could not fetch ETH/USD from DefiLlama; redemption capacity withheld",
+      ),
+    );
+  }
+
+  return {
+    ...adaptYamatoStates(decodeYamatoGetStates(statesRaw), {
+      yamatoAddress: params.yamatoAddress,
+      priceFeedAddress,
+      ethJpyPriceRaw: decodeYamatoEthJpyPrice(priceRaw),
+      slice: params.slice,
+      ...(redemption ? { redemption } : {}),
+      ...(ethPriceUsd != null ? { ethPriceUsd } : {}),
+    }),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }

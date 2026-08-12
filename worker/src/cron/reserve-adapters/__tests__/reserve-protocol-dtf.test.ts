@@ -60,6 +60,14 @@ const SUSDS = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd";
 const WCUSDCV3 = "0x27f2f159fe990ba83d57f39fd69661764bebf37a";
 const SUSDS_ASSET = "0x4fd189996b5344eb4cf9c749b97c7424d399d24e";
 const WCUSDCV3_ASSET = "0x4d6f9a0f0f57a8179a146f37dd93d558073b814f";
+const EUSD_RTOKEN = "0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f";
+const EUSD_MAIN = "0x7697ae4def3c3cd52493ba3a6f57fc6d8c59108a";
+const EUSD_ASSET_REGISTRY = "0x9b85ac04a09c8c813c37de9b3d563c2d3f936162";
+const EUSD_BASKET_HANDLER = "0x6d309297dddfea104a6e89a132e2f05ce3828e07";
+const WCUSDT_V3 = "0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce";
+const STATIC_AAVE_USDC = "0x0adc69041a2b086f8772acce2a754f410f211bed";
+const WCUSDT_V3_ASSET = "0xa52f93e61edf1b77b2d680945f3ea4e84bb825d3";
+const STATIC_AAVE_USDC_ASSET = "0x56bcd730040417b871cdf2549564ebb3c88730c9";
 const ONE = 1_000_000_000_000_000_000n;
 
 const signal = AbortSignal.timeout(5_000);
@@ -384,6 +392,133 @@ describe("reserve-protocol-dtf adapter", () => {
       settlementDelaySec: 0,
     });
     expect(result.metadata?.redemption?.routeStatusReason).toContain("redemptionAvailable() throttle read");
+  });
+
+  it("reads eUSD's three-token basket and emits its RToken redemption throttle", async () => {
+    const eusdCoin = {
+      id: "eusd-electronic-usd",
+      symbol: "EUSD",
+      contracts: [{ chain: "ethereum", address: EUSD_RTOKEN, decimals: 18 }],
+    };
+    const config: LiveReservesConfig = {
+      adapter: "reserve-protocol-dtf",
+      version: 1,
+      semantics: "collateral-mix",
+      breakerScope: "eusd-electronic-usd",
+      display: {
+        url: `https://app.reserve.org/ethereum/token/${EUSD_RTOKEN}/overview`,
+        label: "Reserve Protocol",
+      },
+      inputs: {
+        primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
+      },
+      params: {
+        rpcUrl: "https://ethereum-rpc.publicnode.com",
+        fallbackRpcUrl: "https://eth.llamarpc.com",
+        assets: [
+          {
+            address: STATIC_AAVE_USDC,
+            name: "Static Aave Ethereum USDC",
+            risk: "low",
+            coinId: "usdc-circle",
+            depType: "collateral",
+          },
+          {
+            address: WCUSDCV3,
+            name: "Wrapped Compound USDCv3",
+            risk: "low",
+            coinId: "usdc-circle",
+            depType: "collateral",
+          },
+          {
+            address: WCUSDT_V3,
+            name: "Wrapped Compound USDTv3",
+            risk: "low",
+            coinId: "usdt-tether",
+            depType: "collateral",
+          },
+        ],
+      },
+    };
+    const totalSupply = 22_834_920_564_803_451_236_744_370n;
+
+    vi.mocked(fetchOnchainRawCall).mockImplementation(async ({ contract, data }) => {
+      const normalizedContract = normalizeAddress(contract);
+      if (normalizedContract === EUSD_RTOKEN && data === MAIN_SELECTOR) return encodeAddressResult(EUSD_MAIN);
+      if (normalizedContract === EUSD_MAIN && data === ASSET_REGISTRY_SELECTOR)
+        return encodeAddressResult(EUSD_ASSET_REGISTRY);
+      if (normalizedContract === EUSD_MAIN && data === BASKET_HANDLER_SELECTOR)
+        return encodeAddressResult(EUSD_BASKET_HANDLER);
+      if (normalizedContract === EUSD_BASKET_HANDLER && data === FULLY_COLLATERALIZED_SELECTOR)
+        return encodeBoolResult(true);
+      if (normalizedContract === EUSD_BASKET_HANDLER && data.startsWith(QUOTE_SELECTOR)) {
+        return encodeAbiParameters(
+          [{ type: "address[]" }, { type: "uint256[]" }],
+          [
+            [WCUSDCV3, WCUSDT_V3, STATIC_AAVE_USDC],
+            [33_000_000n, 33_000_000n, 34_000_000n],
+          ],
+        );
+      }
+      const assetByToken = new Map([
+        [WCUSDCV3, WCUSDCV3_ASSET],
+        [WCUSDT_V3, WCUSDT_V3_ASSET],
+        [STATIC_AAVE_USDC, STATIC_AAVE_USDC_ASSET],
+      ]);
+      if (normalizedContract === EUSD_ASSET_REGISTRY && data.startsWith(TO_ASSET_SELECTOR)) {
+        for (const [token, asset] of assetByToken) {
+          if (data === `${TO_ASSET_SELECTOR}${encodeAddress(token)}`) return encodeAddressResult(asset);
+        }
+      }
+      if ([WCUSDCV3_ASSET, WCUSDT_V3_ASSET, STATIC_AAVE_USDC_ASSET].includes(normalizedContract)) {
+        if (data === PRICE_SELECTOR) {
+          return encodeAbiParameters([{ type: "uint256" }, { type: "uint256" }], [ONE, ONE]);
+        }
+      }
+      return null;
+    });
+
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+      const normalizedContract = normalizeAddress(contract);
+      if (normalizedContract === EUSD_RTOKEN && data === BASKETS_NEEDED_SELECTOR) return 100n * ONE;
+      if (normalizedContract === EUSD_RTOKEN && data === REDEMPTION_AVAILABLE_SELECTOR) return 5_000_000n * ONE;
+      if (normalizedContract === EUSD_RTOKEN && data === TOTAL_SUPPLY_SELECTOR) return totalSupply;
+      if (normalizedContract === EUSD_BASKET_HANDLER && data === COLLATERAL_STATUS_SELECTOR) return 0n;
+      if ([WCUSDCV3, WCUSDT_V3, STATIC_AAVE_USDC].includes(normalizedContract) && data === DECIMALS_SELECTOR)
+        return 6n;
+      if (
+        [WCUSDCV3_ASSET, WCUSDT_V3_ASSET, STATIC_AAVE_USDC_ASSET].includes(normalizedContract) &&
+        data === COLLATERAL_STATUS_SELECTOR
+      )
+        return 0n;
+      return null;
+    });
+
+    const result = await fetchReserveProtocolDtfReserves(eusdCoin as never, config, signal);
+
+    expect(result.slices).toEqual([
+      { name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+    ]);
+    expect(result.metadata).toMatchObject({
+      componentCount: 3,
+      fullyCollateralized: true,
+      basketStatus: "0",
+      details: {
+        rTokenAddress: EUSD_RTOKEN,
+        mainAddress: EUSD_MAIN,
+        assetRegistry: EUSD_ASSET_REGISTRY,
+        basketHandler: EUSD_BASKET_HANDLER,
+      },
+      redemption: {
+        capacityUsd: 5_000_000,
+        capacityRatioOfSupply: 5_000_000 / 22_834_920.56480345,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+      },
+    });
   });
 
   it("emits zero capacity when the redemption throttle is exhausted", async () => {

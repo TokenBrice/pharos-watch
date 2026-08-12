@@ -66,7 +66,37 @@
       }
     },
     "params": {
-      "rpcUrl": "https://public-node.rsk.co"
+      "rpcUrl": "https://public-node.rsk.co",
+      "redemptionCapacity": {
+        "chain": "rootstock",
+        "capacityRead": {
+          "kind": "selector",
+          "contract": "0xb9C42EFc8ec54490a37cA91c423F7285Fa01e257",
+          "selector": "0xa8ba1d18"
+        },
+        "identityChecks": [
+          {
+            "contract": "0xb9C42EFc8ec54490a37cA91c423F7285Fa01e257",
+            "selector": "0x83f3084f",
+            "expectedAddress": "0xce2a128cc73e5d98355aafb2595647f2d3171faa"
+          },
+          {
+            "contract": "0xce2a128cc73e5d98355aafb2595647f2d3171faa",
+            "selector": "0x99c6fe73",
+            "expectedAddress": "0xe700691da7b9851f2f35f8b8182c69c53ccad9db"
+          }
+        ],
+        "pauseCheck": {
+          "contract": "0xf773B590aF754D597770937Fa8ea7AbDf2668370",
+          "selector": "0x5c975abb"
+        },
+        "decimals": 18,
+        "holderEligibility": "any-holder",
+        "sourceUrls": [
+          "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/getting-docs/redeeming-docs/redeemfreedocvendors",
+          "https://docs.moneyonchain.com/main-rbtc-contract/integration-with-moc-platform/introduction-to-moc/the-moc-state-contract"
+        ]
+      }
     }
   },
   "launchDate": "2019-10-05"

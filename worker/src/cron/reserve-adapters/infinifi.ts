@@ -1,17 +1,25 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
+import { PAUSED_SELECTOR, encodeUint256 } from "../../lib/evm-selectors";
+import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
+import { rethrowIfAborted } from "../../lib/abort";
 import {
   buildRedemptionSnapshotMetadata,
   buildUnknownExposureWarning,
   catchAndWarn,
+  decimalNumberFromBigInt,
   fetchJsonWithRetry,
+  fetchOnchainMulticall3,
   normalizeSlices,
   parseTimestampLikeToUnixSeconds,
   requireJsonInputFromConfig,
+  reserveInfoWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
+  type OnchainMulticall3Call,
 } from "./helpers";
+import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
 
 interface InfiniFiFarm {
@@ -35,12 +43,20 @@ export interface InfiniFiProtocolData {
       staked?: {
         exchangeRateNormalized?: number;
       };
+      receipt?: {
+        totalSupplyNormalized?: number;
+      };
     };
+    /** Pre-2026-08 payload shape; the live feed nests receipt under `stats`. */
     receipt?: {
       totalSupplyNormalized?: number;
     };
     farms: InfiniFiFarm[];
   };
+}
+
+function readReceiptSupply(payload: InfiniFiProtocolData): number | undefined {
+  return payload.data.stats.receipt?.totalSupplyNormalized ?? payload.data.receipt?.totalSupplyNormalized;
 }
 
 export interface InfiniFiRateHistoryResponse {
@@ -179,7 +195,7 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
       excludedProtocolFarms: [],
       activeFarmCount: 0,
       immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
-      ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
+      ...(readReceiptSupply(payload) != null ? { supplyUsd: readReceiptSupply(payload) } : {}),
     };
   }
 
@@ -235,9 +251,223 @@ export function adaptInfiniFi(payload: InfiniFiProtocolData): AdaptInfiniFiResul
     excludedProtocolFarms: excludedProtocolFarms.map((farm) => farm.name).sort(),
     activeFarmCount: activeFarms.length,
     immediateRedeemableUsd: payload.data.stats.asset.totalLiquidAssetNormalized ?? 0,
-    ...(payload.data.receipt?.totalSupplyNormalized != null ? { supplyUsd: payload.data.receipt.totalSupplyNormalized } : {}),
+    ...(readReceiptSupply(payload) != null ? { supplyUsd: readReceiptSupply(payload) } : {}),
   };
 }
+
+// The redemption route is Gateway.redeem() -> RedeemController.redeem(). The
+// controller's own USDC balance is dust (~$0.0007) because BeforeRedeemHook
+// unwinds liquid farms into it inside the same transaction, so no single view
+// reads the route's capacity. What the chain does expose same-run is whether
+// the route is passable at all, and how much is already queued ahead of a new
+// redeemer — which is what this probe reads.
+const INFINIFI_GATEWAY = "0x3f04b65ddbd87f9ce0a2e7eb24d80e7fb87625b5";
+const INFINIFI_RECEIPT_TOKEN = "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c"; // iUSD
+const INFINIFI_ASSET_TOKEN = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"; // USDC
+const INFINIFI_RECEIPT_DECIMALS = 18;
+const INFINIFI_ASSET_DECIMALS = 6;
+const ROUTE_PROBE_TIMEOUT_MS = 10_000;
+
+const GATEWAY_REDEEM_CONTROLLER_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000001072656465656d436f6e74726f6c6c657200000000000000000000000000000000";
+const GATEWAY_YIELD_SHARING_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000000c7969656c6453686172696e670000000000000000000000000000000000000000";
+const GATEWAY_RECEIPT_TOKEN_CALLDATA =
+  "0xbf40fac10000000000000000000000000000000000000000000000000000000000000020"
+  + "000000000000000000000000000000000000000000000000000000000000000c72656365697074546f6b656e0000000000000000000000000000000000000000";
+
+const ASSET_TOKEN_SELECTOR = "0x1083f761"; // assetToken()
+const BEFORE_REDEEM_HOOK_SELECTOR = "0xce25b2c6"; // beforeRedeemHook()
+const QUEUE_LENGTH_SELECTOR = "0xab91c7b0"; // queueLength()
+const TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR = "0x3f3b03ca"; // totalEnqueuedRedemptions()
+const TOTAL_PENDING_CLAIMS_SELECTOR = "0x70bf2381"; // totalPendingClaims()
+const LIQUIDITY_SELECTOR = "0x1a686502"; // liquidity()
+const RECEIPT_TO_ASSET_SELECTOR = "0xf308cf65"; // receiptToAsset(uint256)
+const UNACCRUED_YIELD_SELECTOR = "0xf843336c"; // unaccruedYield()
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+export interface InfiniFiRouteProbe {
+  redeemController: string;
+  yieldSharing: string;
+  beforeRedeemHook: string | null;
+  gatewayPaused: boolean;
+  controllerPaused: boolean;
+  yieldSharingPaused: boolean;
+  hookPaused: boolean | null;
+  /** Gateway.redeem() reverts with PendingLossesUnapplied when unaccruedYield() < 0. */
+  hasUnaccruedLosses: boolean;
+  queueLength: number;
+  /** Enqueued iUSD converted at the controller's live receipt/asset ratio. */
+  queuedUsd: number;
+  /** Already-funded claims the controller holds for earlier redeemers. */
+  pendingClaimsUsd: number;
+  controllerLiquidityUsd: number;
+}
+
+/** int256 word -> bigint. unaccruedYield() is signed and negative closes the route. */
+function decodeInt256Word(raw: string | null | undefined): bigint | null {
+  const unsigned = decodeUint256Word(raw);
+  if (unsigned == null) return null;
+  return unsigned >= 1n << 255n ? unsigned - (1n << 256n) : unsigned;
+}
+
+function readMulticallResults(
+  results: Awaited<ReturnType<typeof fetchOnchainMulticall3>>,
+): Map<string, `0x${string}`> | null {
+  if (!results) return null;
+  const byLabel = new Map<string, `0x${string}`>();
+  for (const result of results) {
+    if (!result.success) return null;
+    byLabel.set(result.label, result.returnData);
+  }
+  return byLabel;
+}
+
+/**
+ * Same-run read of the iUSD redemption route. Every read is resolved from the
+ * Gateway's own address registry rather than pinned, and the run is dropped
+ * unless the registry still points at the tracked iUSD and USDC — a migrated
+ * gateway reports nothing rather than stale gate state.
+ */
+export async function probeInfiniFiRedeemRoute(
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<InfiniFiRouteProbe | null> {
+  const chain = "ethereum";
+  const rpcUrl = getPublicRpcUrl(chain);
+  if (!rpcUrl) return null;
+  const multicall = (calls: OnchainMulticall3Call[]) =>
+    fetchOnchainMulticall3({ calls, chain, signal, ctx, rpcUrl, timeoutMs: ROUTE_PROBE_TIMEOUT_MS });
+
+  try {
+    const gateway = readMulticallResults(await multicall([
+      { label: "gateway:paused", contract: INFINIFI_GATEWAY, data: PAUSED_SELECTOR },
+      { label: "gateway:redeem-controller", contract: INFINIFI_GATEWAY, data: GATEWAY_REDEEM_CONTROLLER_CALLDATA },
+      { label: "gateway:yield-sharing", contract: INFINIFI_GATEWAY, data: GATEWAY_YIELD_SHARING_CALLDATA },
+      { label: "gateway:receipt-token", contract: INFINIFI_GATEWAY, data: GATEWAY_RECEIPT_TOKEN_CALLDATA },
+    ]));
+    if (!gateway) return null;
+
+    const gatewayPaused = decodeStrictBoolWord(gateway.get("gateway:paused"));
+    const redeemController = decodeStrictAddressWord(gateway.get("gateway:redeem-controller"));
+    const yieldSharing = decodeStrictAddressWord(gateway.get("gateway:yield-sharing"));
+    if (gatewayPaused == null || !redeemController || !yieldSharing) return null;
+    if (redeemController === ZERO_ADDRESS || yieldSharing === ZERO_ADDRESS) return null;
+    if (decodeStrictAddressWord(gateway.get("gateway:receipt-token")) !== INFINIFI_RECEIPT_TOKEN) return null;
+
+    const controller = readMulticallResults(await multicall([
+      { label: "rc:paused", contract: redeemController, data: PAUSED_SELECTOR },
+      { label: "rc:asset-token", contract: redeemController, data: ASSET_TOKEN_SELECTOR },
+      { label: "rc:hook", contract: redeemController, data: BEFORE_REDEEM_HOOK_SELECTOR },
+      { label: "rc:queue-length", contract: redeemController, data: QUEUE_LENGTH_SELECTOR },
+      { label: "rc:enqueued", contract: redeemController, data: TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR },
+      { label: "rc:pending-claims", contract: redeemController, data: TOTAL_PENDING_CLAIMS_SELECTOR },
+      { label: "rc:liquidity", contract: redeemController, data: LIQUIDITY_SELECTOR },
+      {
+        label: "rc:receipt-to-asset",
+        contract: redeemController,
+        data: `${RECEIPT_TO_ASSET_SELECTOR}${encodeUint256(10n ** BigInt(INFINIFI_RECEIPT_DECIMALS))}`,
+      },
+      { label: "ys:paused", contract: yieldSharing, data: PAUSED_SELECTOR },
+      { label: "ys:unaccrued-yield", contract: yieldSharing, data: UNACCRUED_YIELD_SELECTOR },
+    ]));
+    if (!controller) return null;
+
+    const controllerPaused = decodeStrictBoolWord(controller.get("rc:paused"));
+    const yieldSharingPaused = decodeStrictBoolWord(controller.get("ys:paused"));
+    const unaccruedYield = decodeInt256Word(controller.get("ys:unaccrued-yield"));
+    const queueLengthRaw = decodeUint256Word(controller.get("rc:queue-length"));
+    const enqueuedRaw = decodeUint256Word(controller.get("rc:enqueued"));
+    const pendingClaimsRaw = decodeUint256Word(controller.get("rc:pending-claims"));
+    const liquidityRaw = decodeUint256Word(controller.get("rc:liquidity"));
+    const receiptToAssetRaw = decodeUint256Word(controller.get("rc:receipt-to-asset"));
+    if (
+      controllerPaused == null || yieldSharingPaused == null || unaccruedYield == null
+      || queueLengthRaw == null || enqueuedRaw == null || pendingClaimsRaw == null
+      || liquidityRaw == null || receiptToAssetRaw == null || receiptToAssetRaw <= 0n
+    ) {
+      return null;
+    }
+    if (decodeStrictAddressWord(controller.get("rc:asset-token")) !== INFINIFI_ASSET_TOKEN) return null;
+
+    // The hook is optional in the controller; when set, its own pause reverts
+    // redeem() before any liquidity is reached.
+    const hook = decodeStrictAddressWord(controller.get("rc:hook"));
+    if (hook == null) return null;
+    let hookPaused: boolean | null = null;
+    if (hook !== ZERO_ADDRESS) {
+      const hookResults = readMulticallResults(await multicall([
+        { label: "hook:paused", contract: hook, data: PAUSED_SELECTOR },
+      ]));
+      if (!hookResults) return null;
+      hookPaused = decodeStrictBoolWord(hookResults.get("hook:paused"));
+      if (hookPaused == null) return null;
+    }
+
+    return {
+      redeemController,
+      yieldSharing,
+      beforeRedeemHook: hook === ZERO_ADDRESS ? null : hook,
+      gatewayPaused,
+      controllerPaused,
+      yieldSharingPaused,
+      hookPaused,
+      hasUnaccruedLosses: unaccruedYield < 0n,
+      queueLength: Number(queueLengthRaw),
+      queuedUsd: decimalNumberFromBigInt(
+        (enqueuedRaw * receiptToAssetRaw) / 10n ** BigInt(INFINIFI_RECEIPT_DECIMALS),
+        INFINIFI_ASSET_DECIMALS,
+      ),
+      pendingClaimsUsd: decimalNumberFromBigInt(pendingClaimsRaw, INFINIFI_ASSET_DECIMALS),
+      controllerLiquidityUsd: decimalNumberFromBigInt(liquidityRaw, INFINIFI_ASSET_DECIMALS),
+    };
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    return null;
+  }
+}
+
+/**
+ * A closed gate anywhere on the path makes redeem() revert. With every gate
+ * open the route still degrades once the queue is non-empty: the controller
+ * enqueues a new redeemer outright instead of paying from liquidity.
+ */
+export function resolveInfiniFiRouteStatus(
+  probe: InfiniFiRouteProbe,
+): { routeStatus: "open" | "degraded" | "paused"; routeStatusReason: string } {
+  const closedGates = [
+    ...(probe.gatewayPaused ? ["Gateway paused()"] : []),
+    ...(probe.controllerPaused ? ["RedeemController paused()"] : []),
+    ...(probe.yieldSharingPaused ? ["YieldSharing paused()"] : []),
+    ...(probe.hookPaused ? ["BeforeRedeemHook paused()"] : []),
+    ...(probe.hasUnaccruedLosses ? ["YieldSharing unaccruedYield() below zero"] : []),
+  ];
+  if (closedGates.length > 0) {
+    return {
+      routeStatus: "paused",
+      routeStatusReason: `InfiniFi redemption is closed this run: ${closedGates.join(", ")}`,
+    };
+  }
+  const openGates =
+    "Gateway, RedeemController, YieldSharing and BeforeRedeemHook all read unpaused with non-negative unaccruedYield()";
+  return probe.queueLength > 0
+    ? {
+        routeStatus: "degraded",
+        routeStatusReason:
+          `${openGates}, but queueLength() is ${probe.queueLength}: RedeemController enqueues new redemptions `
+          + "instead of settling them from liquidity until the queue is funded",
+      }
+    : {
+        routeStatus: "open",
+        routeStatusReason: `${openGates}, and queueLength() is zero so redemptions settle from hook-unwound liquidity`,
+      };
+}
+
+const INFINIFI_GATEWAY_DOC_URL = "https://docs.infinifi.xyz/dev-docs/gateway";
+const INFINIFI_REDEEM_CONTROLLER_DOC_URL = "https://docs.infinifi.xyz/dev-docs/funding/redeem-controller";
 
 /** Fetch + adapt infiniFi protocol data. Uses fetchWithRetry for resilience. */
 export async function fetchInfiniFiReserves(
@@ -274,18 +504,27 @@ export async function fetchInfiniFiReserves(
   // budget (including retries) so a slow probe can never push the attempt past
   // the orchestrator's 20s wall and cost us an otherwise-good snapshot.
   const rateHistoryUrl = new URL(INFINIFI_RATE_HISTORY_PATH, url).toString();
-  const rateHistory = await catchAndWarn(
-    fetchJsonWithRetry<InfiniFiRateHistoryResponse>(
-      rateHistoryUrl,
-      AbortSignal.any([signal, AbortSignal.timeout(RATE_HISTORY_PROBE_TIMEOUT_MS)]),
-      RATE_HISTORY_PROBE_TIMEOUT_MS,
-      ctx,
+  const [rateHistory, routeProbe] = await Promise.all([
+    catchAndWarn(
+      fetchJsonWithRetry<InfiniFiRateHistoryResponse>(
+        rateHistoryUrl,
+        AbortSignal.any([signal, AbortSignal.timeout(RATE_HISTORY_PROBE_TIMEOUT_MS)]),
+        RATE_HISTORY_PROBE_TIMEOUT_MS,
+        ctx,
+      ),
+      "freshness-probe-failed",
+      "InfiniFi siUSD rate-history freshness probe",
+      warnings,
     ),
-    "freshness-probe-failed",
-    "InfiniFi siUSD rate-history freshness probe",
-    warnings,
-  );
+    probeInfiniFiRedeemRoute(signal, ctx),
+  ]);
   const freshness = resolveInfiniFiFreshness(payload, rateHistory);
+  if (routeProbe == null) {
+    warnings.push(reserveInfoWarning(
+      "infinifi-redemption-route-unreadable",
+      "InfiniFi redemption gates and queue state were unreadable this run; redemption telemetry withheld",
+    ));
+  }
 
   const totalReserveUsd = payload.data.stats.asset.totalTVLAssetNormalized;
   const illiquidReserveUsd = payload.data.stats.asset.totalIlliquidAssetNormalized ?? 0;
@@ -310,24 +549,42 @@ export async function fetchInfiniFiReserves(
       pendingRedemptionsUsd:
         payload.data.stats.asset.pendingRedemptionsAssetNormalized,
       ...(adapted.supplyUsd != null ? { supplyUsd: adapted.supplyUsd } : {}),
-      ...buildRedemptionSnapshotMetadata({
-        capacityUsd: adapted.immediateRedeemableUsd,
-        ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
-          ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
-          : {}),
-        capacityKind: "live-queue",
-        ...(freshness.freshnessMode === "verified"
-          ? { freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: freshness.sourceTimestamp }
-          : { freshnessKind: "unverified" as const }),
-        // infiniFi redemption is permissionless and instant from the liquid
-        // buffer; pendingRedemptions sits at ~$0, so the queue route is open.
-        routeStatus: "open",
-        routeStatusSource: "protocol-api",
-        ...(payload.data.stats.asset.pendingRedemptionsAssetNormalized != null
-          ? { queueDepthUsd: payload.data.stats.asset.pendingRedemptionsAssetNormalized }
-          : {}),
-        sourceUrls: [url],
-      }),
+      ...(routeProbe != null
+        ? {
+            ...buildRedemptionSnapshotMetadata({
+              // The honest bound is the liquid farm total the BeforeRedeemHook
+              // can unwind into the controller, not the controller's own idle
+              // balance and not a queue measurement — so this stays a proxy the
+              // same-run gate reads validate, never a live-direct capacity.
+              capacityUsd: adapted.immediateRedeemableUsd,
+              ...(adapted.supplyUsd != null && adapted.supplyUsd > 0
+                ? { capacityRatioOfSupply: adapted.immediateRedeemableUsd / adapted.supplyUsd }
+                : {}),
+              capacityKind: "live-queue",
+              ...(freshness.freshnessMode === "verified"
+                ? { freshnessKind: "verified-source-timestamp" as const, sourceTimestamp: freshness.sourceTimestamp }
+                : { freshnessKind: "same-run-api" as const }),
+              ...resolveInfiniFiRouteStatus(routeProbe),
+              routeStatusSource: "onchain",
+              queueDepthUsd: routeProbe.queuedUsd,
+              sourceUrls: [url, INFINIFI_GATEWAY_DOC_URL, INFINIFI_REDEEM_CONTROLLER_DOC_URL],
+            }),
+            details: {
+              ...(freshness.freshnessMode === "unverified" ? freshness.details : {}),
+              redeemRoute: {
+                proofKind: "infinifi-gateway-registry-gates-and-queue",
+                gateway: INFINIFI_GATEWAY,
+                redeemController: routeProbe.redeemController,
+                yieldSharing: routeProbe.yieldSharing,
+                beforeRedeemHook: routeProbe.beforeRedeemHook,
+                queueLength: routeProbe.queueLength,
+                queuedUsd: routeProbe.queuedUsd,
+                pendingClaimsUsd: routeProbe.pendingClaimsUsd,
+                controllerLiquidityUsd: routeProbe.controllerLiquidityUsd,
+              },
+            },
+          }
+        : {}),
     },
   };
 }

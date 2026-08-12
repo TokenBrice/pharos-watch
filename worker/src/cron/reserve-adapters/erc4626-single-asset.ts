@@ -89,6 +89,7 @@ interface YearnV3WithdrawableLiquidityTelemetry {
 interface SboldSpWithdrawableLiquidityTelemetry {
   source: SboldSpWithdrawableLiquiditySource;
   withdrawableRaw: bigint;
+  collateralHealthGate: "open" | "restricted" | "unreadable";
 }
 
 interface SfrxusdCrosschainWithdrawableLiquidityTelemetry {
@@ -118,7 +119,7 @@ interface RedemptionCapacityTelemetry {
   blockNumber?: number;
   sourceUrls?: string[];
   sourceTimestamp?: number;
-  capacityKind?: "live-direct" | "live-direct-bounded";
+  capacityKind?: "live-direct" | "live-direct-bounded" | "documented-bound";
   holderEligibility?: "any-holder";
   routeStatus?: "open" | "paused" | "degraded";
   routeStatusReason?: string;
@@ -236,6 +237,10 @@ const MAX_YEARN_V3_QUEUE_LENGTH = 10;
 // vault (see sbold-k3-capital redemption config evidence note).
 const SBOLD_CALC_FRAGMENTS_SELECTOR = "0x160b71df";
 const SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX = 1;
+const SBOLD_CALC_FRAGMENTS_COLL_IN_BOLD_WORD_INDEX = 3;
+// BaseSBold.maxCollInBold(); sBOLD._checkCollHealth() permits withdrawals only
+// while calcFragments().collInBold <= this owner-configured threshold.
+const SBOLD_MAX_COLL_IN_BOLD_SELECTOR = "0xbf2428e6";
 
 const MORPHO_VAULT_V1_LIQUIDITY_QUERY = `
 query PharosVaultV1Liquidity($address: String!, $chainId: Int!) {
@@ -465,7 +470,10 @@ async function fetchSboldSpWithdrawableLiquidityTelemetry(args: {
   telemetry: SboldSpWithdrawableLiquidityTelemetry | null;
   warnings: LiveReserveWarning[];
 }> {
-  const result = await args.call(SBOLD_CALC_FRAGMENTS_SELECTOR);
+  const [result, maxCollInBoldResult] = await Promise.all([
+    args.call(SBOLD_CALC_FRAGMENTS_SELECTOR),
+    args.call(SBOLD_MAX_COLL_IN_BOLD_SELECTOR),
+  ]);
   const withdrawableRaw = decodeUint256Word(
     decodeAbiWordAt(result, SBOLD_CALC_FRAGMENTS_LIQUID_BOLD_WORD_INDEX),
   );
@@ -480,8 +488,18 @@ async function fetchSboldSpWithdrawableLiquidityTelemetry(args: {
       ],
     };
   }
+  const collInBoldRaw = decodeUint256Word(
+    decodeAbiWordAt(result, SBOLD_CALC_FRAGMENTS_COLL_IN_BOLD_WORD_INDEX),
+  );
+  const maxCollInBoldRaw = decodeUint256Word(decodeAbiWordAt(maxCollInBoldResult, 0));
+  const collateralHealthGate =
+    collInBoldRaw == null || maxCollInBoldRaw == null
+      ? "unreadable"
+      : collInBoldRaw <= maxCollInBoldRaw
+        ? "open"
+        : "restricted";
   return {
-    telemetry: { source: "sbold-sp-withdrawable", withdrawableRaw },
+    telemetry: { source: "sbold-sp-withdrawable", withdrawableRaw, collateralHealthGate },
     warnings: [],
   };
 }
@@ -850,7 +868,25 @@ function buildRedemptionCapacityTelemetry(
   const usesProtocolApiCapacity =
     capacitySource === "morpho-vault-v1-liquidity" || capacitySource === "morpho-vault-v2-liquidity";
   const usesYearnV3Capacity = capacitySource === "yearn-v3-withdrawable";
+  const usesSboldSpWithdrawable = sboldSpWithdrawableLiquidity != null;
   const usesSfrxusdCrosschainCapacity = capacitySource === "fraxtal-hop-withdrawable";
+  const defaultRouteOpenness = resolveRouteOpenness(capacitySource, capacityRaw, pauseProbe);
+  const sboldRouteOpenness =
+    usesSboldSpWithdrawable && pauseProbe.paused !== true
+      ? sboldSpWithdrawableLiquidity.collateralHealthGate === "restricted"
+        ? {
+            routeStatus: "degraded" as const,
+            routeStatusReason:
+              "sBOLD collateral in BOLD exceeds maxCollInBold; _maxWithdraw() and _maxRedeem() return zero",
+          }
+        : sboldSpWithdrawableLiquidity.collateralHealthGate === "open" && capacityRaw > 0n
+          ? {
+              routeStatus: "open" as const,
+              routeStatusReason:
+                "sBOLD Stability Pool withdrawable BOLD positive and collateral-health gate open on-chain this run",
+            }
+          : defaultRouteOpenness
+      : defaultRouteOpenness;
   return {
     capacityUsd,
     capacityRaw: capacityRaw.toString(),
@@ -860,7 +896,15 @@ function buildRedemptionCapacityTelemetry(
     ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
-    ...resolveRouteOpenness(capacitySource, capacityRaw, pauseProbe),
+    ...sboldRouteOpenness,
+    ...(usesSboldSpWithdrawable
+      ? {
+          capacityKind:
+            sboldSpWithdrawableLiquidity.collateralHealthGate === "open"
+              ? "live-direct" as const
+              : "documented-bound" as const,
+        }
+      : {}),
     ...(usesYearnV3Capacity && yearnV3WithdrawableLiquidity
       ? {
           settlementDelaySec: yearnV3WithdrawableLiquidity.settlementDelaySec,
