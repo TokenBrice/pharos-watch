@@ -23,7 +23,7 @@ USDT's A+ overall grade is the sound of scale winning arguments: an A+ peg recor
 
 ## Collateral
 
-Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.
+Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer.
 
 ## Peg Mechanism
 
