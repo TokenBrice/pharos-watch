@@ -50,9 +50,46 @@ vi.mock("../helpers", async (importOriginal) => {
 const ORACLE_ADDRESS = "0x74f2199AEb743f68f05943e5715A33EaF2b61f53";
 const WRAPPER_ADDRESS = "0x00000000000000000000000000000000000000aa";
 const TOKEN_ADDRESS = "0x136471a34f6ef19fE571EFFC1CA711fdb8E49f2b";
+const MANAGER_ADDRESS = "0x93358db73B6cd4b98D89c8F5f230E81a95c2643a";
+const USDC_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const ROUTER_ADDRESS = "0x99B8d1D1c17a10CD1A878d1A44c11fd7E4daD7bC";
+const SOURCE_ADDRESS = "0x9F205E1aC7698F59EdbAa0a28C4A4c4ed605b722";
 
 function encodeUint256Word(value: bigint): string {
   return value.toString(16).padStart(64, "0");
+}
+
+function encodeAddressResult(address: string): `0x${string}` {
+  return `0x${address.slice(2).padStart(64, "0")}` as `0x${string}`;
+}
+
+function encodeUint256Result(value: bigint): `0x${string}` {
+  return `0x${encodeUint256Word(value)}`;
+}
+
+function ondoConfig() {
+  return {
+    adapter: "chainlink-nav" as const,
+    version: 1,
+    semantics: "single-asset" as const,
+    inputs: {
+      primary: { kind: "onchain-evm" as const, chain: "ethereum", rpcMode: "public-rpc" as const },
+    },
+    params: {
+      oracleAddress: ORACLE_ADDRESS,
+      tokenAddress: TOKEN_ADDRESS,
+      assetLabel: "Ondo T-Bills",
+      assetRisk: "very-low" as const,
+      oracleMethod: "getPriceData" as const,
+      redemptionCapacity: {
+        managerAddress: MANAGER_ADDRESS,
+        usdcAddress: USDC_ADDRESS,
+        routerAddress: ROUTER_ADDRESS,
+        sourceAddress: SOURCE_ADDRESS,
+        pauseSelector: "0xb235d468",
+      },
+    },
+  };
 }
 
 function encodeLatestRoundData(args: {
@@ -290,6 +327,98 @@ describe("fetchChainlinkNavCore", () => {
       sourceTimestamp: updatedAt,
     });
     expect(result.metadata?.navPerToken).toBe("114.853438");
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityKind: "documented-bound",
+      freshnessKind: "verified-source-timestamp",
+    });
+    expect(helpers.fetchOnchainRawCall).toHaveBeenCalledTimes(1);
+    expect(helpers.fetchOnchainUint256).toHaveBeenCalledTimes(2);
+  });
+
+  it("emits opt-in OUSG InstantManager redemption capacity from the pinned default route", async () => {
+    const helpers = await import("../helpers");
+    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
+    const updatedAt = 1_775_684_339;
+    const rawPriceData = "0x"
+      + "00000000000000000000000000000000000000000000000639e961576659e000"
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+
+    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
+      if (opts.data === DECIMALS_SELECTOR) return 18n;
+      if (opts.data === TOTAL_SUPPLY_SELECTOR) return 500_000_000_000_000_000_000n;
+      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f8eb812") {
+        return 4_999_990_000_000_000_000_000n;
+      }
+      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x6cde714a")) {
+        return 8_499_999_997_683n;
+      }
+      return null;
+    });
+    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
+      if (opts.contract === ORACLE_ADDRESS && opts.data === "0xa4a28168") return rawPriceData;
+      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f4f9613") return encodeAddressResult(ROUTER_ADDRESS);
+      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x2021065d")) {
+        return encodeAddressResult(SOURCE_ADDRESS);
+      }
+      if (opts.contract === MANAGER_ADDRESS && opts.data === "0xb235d468") return encodeUint256Result(0n);
+      if (opts.contract === MANAGER_ADDRESS && opts.data.startsWith("0x884a0501")) return encodeUint256Result(1n);
+      return null;
+    });
+
+    const result = await fetchChainlinkNavCore(
+      {} as never,
+      ondoConfig() as never,
+      new AbortController().signal,
+      { nowSec: updatedAt + 60 },
+    );
+
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 8_499_999.997683,
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      routeStatus: "open",
+      routeStatusSource: "onchain",
+      holderEligibility: "whitelisted-primary",
+      settlementDelaySec: 0,
+      minRedeemUsd: 4_999.99,
+    });
+  });
+
+  it("keeps NAV telemetry when the opt-in redemption probe fails closed", async () => {
+    const helpers = await import("../helpers");
+    const { fetchChainlinkNavCore } = await import("../chainlink-nav-core");
+    const updatedAt = 1_775_684_339;
+    const rawPriceData = "0x"
+      + "00000000000000000000000000000000000000000000000639e961576659e000"
+      + "0000000000000000000000000000000000000000000000000000000069d6caf3";
+
+    vi.mocked(helpers.fetchOnchainUint256).mockImplementation(async (opts) => {
+      if (opts.data === DECIMALS_SELECTOR) return 18n;
+      if (opts.data === TOTAL_SUPPLY_SELECTOR) return 500_000_000_000_000_000_000n;
+      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f8eb812") return 5_000n * 10n ** 18n;
+      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x6cde714a")) return 8_500_000n * 10n ** 6n;
+      return null;
+    });
+    vi.mocked(helpers.fetchOnchainRawCall).mockImplementation(async (opts) => {
+      if (opts.contract === ORACLE_ADDRESS && opts.data === "0xa4a28168") return rawPriceData;
+      if (opts.contract === MANAGER_ADDRESS && opts.data === "0x8f4f9613") return encodeAddressResult(ROUTER_ADDRESS);
+      if (opts.contract === ROUTER_ADDRESS && opts.data.startsWith("0x2021065d")) {
+        return encodeAddressResult(SOURCE_ADDRESS);
+      }
+      if (opts.contract === MANAGER_ADDRESS && opts.data.startsWith("0x884a0501")) return encodeUint256Result(1n);
+      return null;
+    });
+
+    const result = await fetchChainlinkNavCore(
+      {} as never,
+      ondoConfig() as never,
+      new AbortController().signal,
+      { nowSec: updatedAt + 60 },
+    );
+
+    expect(result.metadata?.navPerToken).toBe("114.853438");
+    expect(result.metadata?.freshnessMode).toBe("verified");
+    expect(result.metadata?.redemption).toBeUndefined();
   });
 
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {

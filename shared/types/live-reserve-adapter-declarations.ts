@@ -116,6 +116,10 @@ type LiveReserveAdapterDescriptorDeclaration = {
   configValidation: LiveReserveAdapterConfigValidationPolicy;
   redemptionTelemetry: {
     capacity: "direct" | "proxy" | "none";
+    /** Capacity emission requires per-coin params (e.g. a redemptionCapacity
+     *  block); coins without them never emit and need no unused-telemetry
+     *  policy. */
+    capacityParamsGated?: boolean;
     fee: "current-bps" | "none";
   };
   validation?: LiveReserveAdapterValidationPolicy;
@@ -243,7 +247,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1_V2,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // Redemption capacity is emitted only for coins whose params carry a
+    // redemptionCapacity block (currently OUSG); plain NAV-feed coins never
+    // emit and are not unused-telemetry candidates.
+    redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS },
   },
   "chainlink-por": {
@@ -311,7 +318,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    // The adapter reads the Inverse PSM's own supply() and the sUSDS vault's
+    // maxWithdraw() for it, which the DOLA -> USDS sell is paid out of, so
+    // capacity is a direct measurement rather than a proxy for FiRM collateral.
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -325,6 +335,18 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_SINGLE_ASSET_V1,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "escrow-balance": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "escrowBalance",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    // The read is the escrow the redemption is actually paid out of, so the
+    // measured balance is direct capacity rather than a backing proxy.
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   ethena: {
@@ -668,7 +690,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: UNVERIFIED_OR_NOT_APPLICABLE_FRESHNESS,
@@ -904,7 +926,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "none", fee: "none" },
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

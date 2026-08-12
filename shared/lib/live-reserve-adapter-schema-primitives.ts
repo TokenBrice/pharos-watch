@@ -5,6 +5,7 @@ import {
   LIVE_RESERVE_SEMANTICS_VALUES,
   type LiveReserveInput,
 } from "../types/live-reserve-core";
+import { RedemptionHolderEligibilitySchema } from "../types/redemption";
 import { ReserveRiskSchema, ReserveSliceSchema } from "../types/reserves";
 
 const LiveReserveSemanticsSchema = z.enum(LIVE_RESERVE_SEMANTICS_VALUES);
@@ -192,6 +193,16 @@ const chainlinkNavParamsSchema = z
     rpcUrl: AbsoluteUrlSchema.optional(),
     fallbackRpcUrl: AbsoluteUrlSchema.optional(),
     maxOracleAgeSec: z.number().positive().optional(),
+    redemptionCapacity: z
+      .object({
+        managerAddress: EvmAddressSchema,
+        usdcAddress: EvmAddressSchema,
+        routerAddress: EvmAddressSchema,
+        sourceAddress: EvmAddressSchema,
+        pauseSelector: z.string().regex(/^0x[0-9a-fA-F]{8}$/).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -465,6 +476,31 @@ const erc4626SingleAssetParamsSchema = z
   .strict();
 
 const evmSelectorSchema = z.string().regex(/^0x[0-9a-fA-F]{8}$/);
+const evmAbiWordSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+
+// One pinned escrow/reserve contract whose redemption capacity is readable as a
+// single token-denominated view call. `args` are pre-encoded 32-byte ABI words,
+// so the adapter never needs to know the escrow's ABI: an ERC-20 escrow is just
+// selector `0x70a08231` with the holder word, and richer accounting views (e.g.
+// Circle xReserve `balanceOfNativeCollateral(address,uint32)`) are the same
+// shape. `decimals` is the escrowed asset's decimals, not the tracked coin's.
+const escrowBalanceParamsSchema = z
+  .object({
+    contract: EvmAddressSchema,
+    selector: evmSelectorSchema,
+    args: z.array(evmAbiWordSchema).optional(),
+    decimals: z.number().int().nonnegative().max(36),
+    // Optional boolean view on the same contract; a true word withholds the
+    // route instead of publishing capacity as freely redeemable.
+    pausedSelector: evmSelectorSchema.optional(),
+    slice: reserveSliceDescriptorSchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+    holderEligibility: RedemptionHolderEligibilitySchema.optional(),
+    settlementDelaySec: z.number().int().nonnegative().optional(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
 
 // Same wrapper + M token contract addresses as the primary chain, deployed on
 // another EVM network (M0's native-multichain model reuses addresses across
@@ -893,6 +929,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   collateralPositions: collateralPositionsParamsSchema,
   curatedValidated: curatedValidatedParamsSchema,
   erc4626SingleAsset: erc4626SingleAssetParamsSchema,
+  escrowBalance: escrowBalanceParamsSchema,
   evmBranchBalances: evmBranchBalancesParamsSchema,
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
   fx: fxParamsSchema,
