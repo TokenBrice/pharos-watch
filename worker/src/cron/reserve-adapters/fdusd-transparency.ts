@@ -98,8 +98,8 @@ export function adaptFdusdReserveReport(reportText: string, reportUrl?: string):
 
   const holdings = normalized.slice(holdingsStart, totalOffset);
   const entries: Array<{ name: string; value: number }> = [];
-  // eslint-disable-next-line security/detect-unsafe-regex -- fixed label alternation plus a lazy 180-char bounded gap over the adapter's own report text; no unbounded backtracking path.
   const entryRegex =
+    // eslint-disable-next-line security/detect-unsafe-regex -- fixed label alternation plus a lazy 180-char bounded gap over the adapter's own report text; no unbounded backtracking path.
     /(US Treasury Bills|Treasury Bills|Cash|Bank Deposits|Fixed Deposits?|Reverse Repos)[\s\S]{0,180}?(?:US)?\$\s*([\d,]+(?:\.\d{2})?)/gi;
   for (const match of holdings.matchAll(entryRegex)) {
     const rawName = match[1];
