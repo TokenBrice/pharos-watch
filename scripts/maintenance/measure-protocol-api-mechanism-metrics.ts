@@ -8,6 +8,7 @@ import {
   runCliEntrypoint,
   writeCliHelpIfRequested,
 } from "../lib/cli-args.mjs";
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   buildProtocolApiMeasurement,
   isSameProtocolApiSourceSnapshot,
@@ -44,6 +45,29 @@ interface CliOptions {
   replayAll: boolean;
 }
 
+type ProtocolApiBodyClass = "empty" | "html-like" | "json-array" | "json-object" | "other";
+
+interface ProtocolApiTransportProvenance {
+  sourceId: string;
+  configuredUrl: string;
+  finalUrl: string;
+  status: number;
+  redirected: boolean;
+  mediaType: string | null;
+  bodyBytes: number;
+  bodySha256: string;
+  bodyClass: ProtocolApiBodyClass;
+  headers: Record<string, string>;
+}
+
+interface FetchObservationOptions {
+  fetchImpl?: typeof fetch;
+  log?: (message: string) => void;
+}
+
+const TRANSPORT_DIAGNOSTIC_HEADERS = ["server", "x-vercel-id", "x-vercel-cache", "x-matched-path"] as const;
+const MAX_DIAGNOSTIC_HEADER_LENGTH = 160;
+
 function parseOptions(argv: string[]): CliOptions | null {
   const { values } = parseStrictCliArgs(argv, {
     options: {
@@ -78,16 +102,86 @@ function parseOptions(argv: string[]): CliOptions | null {
   };
 }
 
-async function fetchRawObservation(source: {
-  sourceId: string;
-  url: string;
-}): Promise<RawProtocolApiObservationInput> {
-  const response = await fetch(source.url, {
+function sanitizeDiagnosticUrl(input: string): string {
+  try {
+    const url = new URL(input);
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return "<invalid-url>";
+  }
+}
+
+function classifyBody(rawBody: Uint8Array): ProtocolApiBodyClass {
+  let index = 0;
+  while (index < rawBody.length && [0x09, 0x0a, 0x0d, 0x20].includes(rawBody[index]!)) index += 1;
+  if (index === rawBody.length) return "empty";
+  if (rawBody[index] === 0x7b) return "json-object";
+  if (rawBody[index] === 0x5b) return "json-array";
+  if (rawBody[index] === 0x3c) return "html-like";
+  return "other";
+}
+
+function normalizedMediaType(response: Response): string | null {
+  const value = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+  return value || null;
+}
+
+function isJsonMediaType(mediaType: string | null): boolean {
+  return mediaType === "application/json" || (mediaType?.startsWith("application/") === true && mediaType.endsWith("+json"));
+}
+
+function diagnosticHeaders(response: Response): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const name of TRANSPORT_DIAGNOSTIC_HEADERS) {
+    const value = response.headers.get(name);
+    if (!value) continue;
+    headers[name] = value.replace(/[\u0000-\u001f\u007f]/g, "?").slice(0, MAX_DIAGNOSTIC_HEADER_LENGTH);
+  }
+  return headers;
+}
+
+function transportProvenance(
+  source: { sourceId: string; url: string },
+  response: Response,
+  rawBody: Uint8Array,
+): ProtocolApiTransportProvenance {
+  return {
+    sourceId: source.sourceId,
+    configuredUrl: sanitizeDiagnosticUrl(source.url),
+    finalUrl: sanitizeDiagnosticUrl(response.url || source.url),
+    status: response.status,
+    redirected: response.redirected,
+    mediaType: normalizedMediaType(response),
+    bodyBytes: rawBody.byteLength,
+    bodySha256: createHash("sha256").update(rawBody).digest("hex"),
+    bodyClass: classifyBody(rawBody),
+    headers: diagnosticHeaders(response),
+  };
+}
+
+async function fetchRawObservation(
+  source: { sourceId: string; url: string },
+  { fetchImpl = fetch, log = console.log }: FetchObservationOptions = {},
+): Promise<RawProtocolApiObservationInput> {
+  const response = await fetchImpl(source.url, {
     headers: { Accept: "application/json", "User-Agent": "Pharos protocol API mechanism measurement/2" },
     signal: AbortSignal.timeout(15_000),
   });
   const rawBody = new Uint8Array(await response.arrayBuffer());
-  if (!response.ok) throw new Error(`${source.url} returned HTTP ${response.status}`);
+  const provenance = transportProvenance(source, response, rawBody);
+  const serializedProvenance = JSON.stringify(provenance);
+  log(`[protocol-api-measurement] transport=${serializedProvenance}`);
+
+  let rejection: string | null = null;
+  if (!response.ok) rejection = `HTTP ${response.status}`;
+  else if (!isJsonMediaType(provenance.mediaType)) rejection = "non-JSON media type";
+  else if (provenance.bodyClass !== "json-object" && provenance.bodyClass !== "json-array") {
+    rejection = `unexpected ${provenance.bodyClass} body`;
+  }
+  if (rejection) throw new Error(`${source.sourceId} response rejected (${rejection}): ${serializedProvenance}`);
+
   return {
     sourceId: source.sourceId,
     url: source.url,
@@ -206,31 +300,33 @@ async function measureTarget(outDir: string, assetId: ProtocolApiAssetId): Promi
   );
 }
 
-void runCliEntrypoint(
-  async () => {
-    const options = parseOptions(process.argv.slice(2));
-    if (!options) return;
-    if (options.replayPaths.length > 0) {
-      const artifacts = options.replayPaths
-        .map(replayEvidence)
-        .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
-      validateProtocolApiArtifactSet(artifacts);
-      return;
-    }
-    if (options.replayAll) {
-      const paths = discoverProtocolArtifacts(DEFAULT_OUT_DIR);
-      const artifacts = paths
-        .map(readArtifact)
-        .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
-      validateProtocolApiArtifactSet(artifacts);
-      console.log(
-        `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,
-      );
-      return;
-    }
-    for (const asset of options.assets) await measureTarget(options.outDir, asset);
-  },
-  { label: "measure-protocol-api-mechanism-metrics", usage: USAGE },
-);
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runCliEntrypoint(
+    async () => {
+      const options = parseOptions(process.argv.slice(2));
+      if (!options) return;
+      if (options.replayPaths.length > 0) {
+        const artifacts = options.replayPaths
+          .map(replayEvidence)
+          .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+        validateProtocolApiArtifactSet(artifacts);
+        return;
+      }
+      if (options.replayAll) {
+        const paths = discoverProtocolArtifacts(DEFAULT_OUT_DIR);
+        const artifacts = paths
+          .map(readArtifact)
+          .filter((artifact): artifact is ProtocolApiMechanismMeasurement => artifact !== null);
+        validateProtocolApiArtifactSet(artifacts);
+        console.log(
+          `[protocol-api-measurement] replay-all passed: ${artifacts.length} V2 artifact(s), ${paths.length - artifacts.length} frozen legacy V1 artifact(s)`,
+        );
+        return;
+      }
+      for (const asset of options.assets) await measureTarget(options.outDir, asset);
+    },
+    { label: "measure-protocol-api-mechanism-metrics", usage: USAGE },
+  );
+}
 
-export { parseOptions as parseProtocolApiCliOptions };
+export { fetchRawObservation as fetchProtocolApiObservation, parseOptions as parseProtocolApiCliOptions };
