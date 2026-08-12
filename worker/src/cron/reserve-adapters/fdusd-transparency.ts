@@ -10,7 +10,6 @@ import {
   slicesFromValues,
 } from "./helpers";
 import { fetchBinaryWithRetry } from "./request";
-import { runAdapterIo } from "./concurrency";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
 
 const ADAPTER_NAME = "fdusd-transparency";
@@ -87,6 +86,7 @@ export function adaptFdusdReserveReport(reportText: string, reportUrl?: string):
   }
 
   const holdingsStart = normalized.search(/comprised of the following asset holdings/i);
+  // eslint-disable-next-line security/detect-unsafe-regex -- runs on whitespace-collapsed report text, so the adjacent \s quantifiers cannot backtrack ambiguously.
   const totalMatch = normalized.match(/Total Reserve Accounts\s+(?:US)?\$?\s*([\d,]+(?:\.\d{2})?)/i);
   if (holdingsStart < 0 || !totalMatch?.[1]) {
     throw htmlLayoutChangedError(ADAPTER_NAME, "signed reserve report did not expose its holdings table and total");
@@ -98,6 +98,7 @@ export function adaptFdusdReserveReport(reportText: string, reportUrl?: string):
 
   const holdings = normalized.slice(holdingsStart, totalOffset);
   const entries: Array<{ name: string; value: number }> = [];
+  // eslint-disable-next-line security/detect-unsafe-regex -- fixed label alternation plus a lazy 180-char bounded gap over the adapter's own report text; no unbounded backtracking path.
   const entryRegex =
     /(US Treasury Bills|Treasury Bills|Cash|Bank Deposits|Fixed Deposits?|Reverse Repos)[\s\S]{0,180}?(?:US)?\$\s*([\d,]+(?:\.\d{2})?)/gi;
   for (const match of holdings.matchAll(entryRegex)) {
