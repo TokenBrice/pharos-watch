@@ -316,6 +316,16 @@ function adjustedResponse(): MutableAdjustedResponseFixture {
 }
 
 describe("SafetyScoreV9ResponseSchema", () => {
+  it("accepts pre-9.19 snapshots without per-fact disclosure paths", () => {
+    const legacy = currentResponse();
+    const trace = legacy.cards[0]!.scoreTrace as {
+      evidenceResponsibility?: { facts?: unknown };
+    };
+    delete trace.evidenceResponsibility?.facts;
+    const parsed = SafetyScoreV9CurrentResponseSchema.parse(legacy);
+    expect(parsed.cards[0]?.scoreTrace.evidenceResponsibility.facts).toBeUndefined();
+  });
+
   it("requires the self-describing score trace on every current V9 card", () => {
     const parsed = SafetyScoreV9CurrentResponseSchema.parse(currentResponse());
     expect(parsed.schemaVersion).toBe(5);
