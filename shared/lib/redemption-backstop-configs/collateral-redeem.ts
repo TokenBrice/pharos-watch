@@ -646,7 +646,13 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     "cjpy-yamato": {
       ...collateralRedeemBase,
       outputAssets: ["asset:eth"],
-      ...documentedBoundSupplyFull("2026-04-16"),
+      ...documentedBoundSupplyFull("2026-08-12"),
+      // Live-only since v4.34: the Yamato adapter reads the priority
+      // registry's redeemable cap each run (converted JPY -> ETH -> USD
+      // through the protocol oracle and the shared ETH/USD reference); when
+      // the read is unavailable the route is left unrated instead of
+      // assuming full-supply immediacy.
+      capacityModel: { kind: "reserve-sync-metadata" },
       outputAssetType: "bluechip-collateral",
       costModel: documentedVariableFee(
         "Yamato docs describe on-chain CJPY-for-ETH redemption against the riskiest pledge; fee structure is set by protocol mechanics rather than a single fixed bps number",
