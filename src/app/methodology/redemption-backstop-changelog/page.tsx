@@ -7,7 +7,7 @@ const route = createStandardMethodologyChangelogRoute({
   path: changelog.publicPath,
   metadataTitle: "Redemption Backstop Changelog - Version History",
   metadataDescription:
-    `Full version history of the Pharos Redemption Backstop route methodology, from v1.0 through ${changelog.currentLabel}.`,
+    `Full version history of the Pharos Redemption Backstop route methodology, including its v1.0 through ${changelog.currentLabel} scoring changes.`,
   breadcrumbName: "Redemption Backstop Changelog",
   title: "Redemption Backstop Changelog",
   leadSubject: "Redemption Backstop",
