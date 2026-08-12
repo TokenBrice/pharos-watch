@@ -22,11 +22,13 @@ import {
 import {
   GRADE_RANGES,
   buildSafetyMcapMap,
+  buildSafetyPegTypeMap,
   buildV9GradeCounts,
   buildV9HeadlineStats,
   filterAndSortV9Cards,
   groupV9CardsByGrade,
   type GradeFilter,
+  type PegFilter,
   type V9SortKey,
 } from "./v9-view-model";
 
@@ -36,6 +38,12 @@ const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
   { key: "exit", label: "Exit" },
   { key: "control", label: "Econ. Control" },
   { key: "mcap", label: "MCap" },
+];
+
+const PEG_OPTIONS: ReadonlyArray<{ key: Exclude<PegFilter, "all">; label: string }> = [
+  { key: "usd", label: "USD" },
+  { key: "fiat-non-usd", label: "Fiat non USD" },
+  { key: "commodities", label: "Commodities" },
 ];
 
 const lazyCardSkeleton = (
@@ -120,19 +128,47 @@ function SortButtons({
   ));
 }
 
+function PegFilterButtons({
+  pegFilter,
+  onChange,
+}: {
+  pegFilter: PegFilter;
+  onChange: (peg: PegFilter) => void;
+}) {
+  return PEG_OPTIONS.map((option) => (
+    <Button
+      key={option.key}
+      variant="ghost"
+      size="sm"
+      aria-pressed={pegFilter === option.key}
+      onClick={() => onChange(pegFilter === option.key ? "all" : option.key)}
+      className={cn(
+        "pharos-focus-ring pharos-control-pill min-h-[44px] text-xs md:min-h-0",
+        pegFilter === option.key && "pharos-control-pill-active",
+      )}
+    >
+      {option.label}
+    </Button>
+  ));
+}
+
 function V9Controls({
   gradeFilter,
   totalCards,
   gradeCounts,
+  pegFilter,
   sortKey,
   onGradeFilterChange,
+  onPegFilterChange,
   onSortChange,
 }: {
   gradeFilter: GradeFilter;
   totalCards: number;
   gradeCounts: Record<string, number>;
+  pegFilter: PegFilter;
   sortKey: V9SortKey;
   onGradeFilterChange: (grade: GradeFilter) => void;
+  onPegFilterChange: (peg: PegFilter) => void;
   onSortChange: (key: V9SortKey) => void;
 }) {
   const gradeButtons = (
@@ -156,6 +192,12 @@ function V9Controls({
             <div className="flex flex-wrap gap-1">{gradeButtons}</div>
           </div>
           <div className="space-y-2">
+            <span className="pharos-kicker">Peg</span>
+            <div className="flex flex-wrap gap-1">
+              <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
+            </div>
+          </div>
+          <div className="space-y-2">
             <span className="pharos-kicker">Sort by</span>
             <div className="flex flex-wrap gap-1">
               <SortButtons sortKey={sortKey} onChange={onSortChange} />
@@ -168,6 +210,8 @@ function V9Controls({
         <div className="flex items-center gap-1">
           <span className="pharos-kicker mr-2">Filter:</span>
           {gradeButtons}
+          <span className="pharos-kicker ml-3 mr-2">Peg:</span>
+          <PegFilterButtons pegFilter={pegFilter} onChange={onPegFilterChange} />
         </div>
         <div className="h-5 w-px bg-border" />
         <div className="flex items-center gap-1">
@@ -205,6 +249,7 @@ export function ReportCardsV9Client() {
   const stablecoinsQuery = useStablecoins();
   const { data: logos } = useLogos();
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
+  const [pegFilter, setPegFilter] = useState<PegFilter>("all");
   const [sortKey, setSortKey] = useState<V9SortKey>("overall");
 
   const cards = useMemo(
@@ -215,12 +260,16 @@ export function ReportCardsV9Client() {
     () => buildSafetyMcapMap(stablecoinsQuery.data?.peggedAssets),
     [stablecoinsQuery.data?.peggedAssets],
   );
+  const pegTypeMap = useMemo(
+    () => buildSafetyPegTypeMap(stablecoinsQuery.data?.peggedAssets),
+    [stablecoinsQuery.data?.peggedAssets],
+  );
   const gradeCounts = useMemo(() => buildV9GradeCounts(cards), [cards]);
   const totalCards = cards.length;
   const headlineStats = useMemo(() => buildV9HeadlineStats(cards, mcapMap), [cards, mcapMap]);
   const filteredCards = useMemo(
-    () => filterAndSortV9Cards(cards, { gradeFilter, sortKey, mcapMap }),
-    [cards, gradeFilter, mcapMap, sortKey],
+    () => filterAndSortV9Cards(cards, { gradeFilter, pegFilter, pegTypeMap, sortKey, mcapMap }),
+    [cards, gradeFilter, mcapMap, pegFilter, pegTypeMap, sortKey],
   );
   const groupedCards = useMemo(() => groupV9CardsByGrade(filteredCards), [filteredCards]);
   const dataCoverage = useMemo(
@@ -282,12 +331,14 @@ export function ReportCardsV9Client() {
         gradeFilter={gradeFilter}
         totalCards={totalCards}
         gradeCounts={gradeCounts}
+        pegFilter={pegFilter}
         sortKey={sortKey}
         onGradeFilterChange={setGradeFilter}
+        onPegFilterChange={setPegFilter}
         onSortChange={setSortKey}
       />
 
-      <SafetyResultsSummary count={filteredCards.length} gradeFilter={gradeFilter} />
+      <SafetyResultsSummary count={filteredCards.length} gradeFilter={gradeFilter} pegFilter={pegFilter} />
 
       <section id="data" aria-label="Safety score cards" tabIndex={-1}>
         {!reportCardsQuery.data ? (
@@ -295,7 +346,14 @@ export function ReportCardsV9Client() {
             Safety Score V9 ratings are temporarily unavailable. V8 ratings are not used as a fallback.
           </p>
         ) : filteredCards.length === 0 ? (
-          <SafetyEmptyState gradeFilter={gradeFilter} onClearFilter={() => setGradeFilter("all")} />
+          <SafetyEmptyState
+            gradeFilter={gradeFilter}
+            pegFilter={pegFilter}
+            onClearFilter={() => {
+              setGradeFilter("all");
+              setPegFilter("all");
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {showGroupedCards

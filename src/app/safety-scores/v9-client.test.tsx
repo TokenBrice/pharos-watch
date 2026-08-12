@@ -41,7 +41,10 @@ describe("ReportCardsV9Client", () => {
         makeV9Card({ id: "asset-b", grade: "B", score: 75 }),
       ],
     })));
-    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [] }));
+    mocks.useStablecoins.mockReturnValue(query({ peggedAssets: [
+      { id: "asset-a", pegType: "peggedUSD" },
+      { id: "asset-b", pegType: "peggedEUR" },
+    ] }));
     mocks.useLogos.mockReturnValue({ data: {} });
   });
 
@@ -63,6 +66,14 @@ describe("ReportCardsV9Client", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "A (1)" })[0]);
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
     expect(screen.getByTestId("v9-card").textContent).toBe("asset-a");
+  });
+
+  it("filters the card grid by consolidated peg groups", () => {
+    render(<ReportCardsV9Client />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Fiat non USD" })[0]);
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(screen.getByTestId("v9-card").textContent).toBe("asset-b");
   });
 
   it("shows V9 unavailable without a V8 fallback", () => {

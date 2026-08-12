@@ -122,7 +122,7 @@ The writer compares *publication* identities. The capture's `v9-input` identity 
 
 ## Frontend
 
-- `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting.
+- `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting. Its grade filter composes with an inline peg filter that groups the stablecoin-list `pegType` values into USD, non-USD fiat, and commodities (gold or silver); selecting the active peg pill again clears that peg constraint.
 - `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` render the data-coverage rail in the hero footer (`FeatureHeroSplit`'s `footer` slot), not a standalone card. Collapsed it shows one sentence of headline counts and the open-data-point split by evidence responsibility; expanding it adds the responsibility explanations, the per-count breakdowns, and the most common reason codes by affected assets. A publication hold replaces the headline sentence. The rail replaces the status notice on `/safety-scores`.
 - `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
 - `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.

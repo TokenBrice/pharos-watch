@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SafetyScoreDataCoverageRail } from "./data-coverage-module";
 import type { DataCoverageModel } from "./data-coverage-view-model";
 import { SafetyGradeDistributionBar } from "./grade-distribution-bar";
-import type { GradeFilter } from "./v9-view-model";
+import type { GradeFilter, PegFilter } from "./v9-view-model";
 
 export function SafetyScoresLoadingState() {
   return (
@@ -111,9 +111,11 @@ export function SafetyScoresHero({
 export function SafetyResultsSummary({
   count,
   gradeFilter,
+  pegFilter,
 }: {
   count: number;
   gradeFilter: GradeFilter;
+  pegFilter: PegFilter;
 }) {
   if (count === 0) return null;
 
@@ -122,21 +124,24 @@ export function SafetyResultsSummary({
       Showing <span className="font-medium text-foreground">{count}</span>{" "}
       {count === 1 ? "coin" : "coins"}
       {gradeFilter !== "all" && ` with grade ${gradeFilter}`}
+      {pegFilter !== "all" && ` · ${pegFilter === "usd" ? "USD peg" : pegFilter === "fiat-non-usd" ? "fiat non-USD peg" : "commodity peg"}`}
     </p>
   );
 }
 
 export function SafetyEmptyState({
   gradeFilter,
+  pegFilter,
   onClearFilter,
 }: {
   gradeFilter: GradeFilter;
+  pegFilter: PegFilter;
   onClearFilter: () => void;
 }) {
   return (
     <div className="text-center py-12 space-y-2">
       <p className="text-sm text-muted-foreground">No coins match this filter. Loosen one and look again.</p>
-      {gradeFilter !== "all" && (
+      {(gradeFilter !== "all" || pegFilter !== "all") && (
         <Button
           variant="outline"
           size="sm"
