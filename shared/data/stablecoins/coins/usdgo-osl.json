@@ -68,7 +68,7 @@
     "semantics": "attestation-mix",
     "breakerScope": "usdgo-osl",
     "display": {
-      "url": "https://www.usdgo.com/transparency",
+      "url": "https://www.usdgo.com/en/transparency",
       "label": "USDGO Transparency"
     },
     "inputs": {

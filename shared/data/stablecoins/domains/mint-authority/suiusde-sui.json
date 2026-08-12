@@ -28,7 +28,7 @@
         },
         {
           "label": "Sui package upgrade documentation",
-          "url": "https://docs.sui.io/concepts/sui-move-concepts/packages/upgrade"
+          "url": "https://docs.sui.io/develop/publish-upgrade-packages/upgrade"
         }
       ]
     },

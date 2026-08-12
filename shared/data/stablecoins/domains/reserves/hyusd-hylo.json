@@ -54,7 +54,7 @@
     "sources": [
       {
         "label": "Pinned Hylo SDK deployment and account layouts",
-        "url": "https://github.com/hylo-so/hylo-sdk/tree/104f216773d7f7e2139ee8d5751de0d10205d984"
+        "url": "https://github.com/hylo-so/sdk/tree/2bef093193b742903e2214457bb49a4939b3896b"
       },
       {
         "label": "Hylo V2 multi-asset architecture",

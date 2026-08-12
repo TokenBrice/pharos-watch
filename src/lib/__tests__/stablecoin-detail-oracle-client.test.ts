@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { OracleRiskProfile, StablecoinMeta } from "@shared/types";
 import { formatOracleDurationSec, formatOraclePct, projectOracleRiskClientSummary } from "../stablecoin-detail-oracle-client";
 
-function coinWith(oracleRisk: unknown): StablecoinMeta {
-  return { id: "test-coin", oracleRisk } as unknown as StablecoinMeta;
+function coinWith(oracleRisk: unknown, extra: Record<string, unknown> = {}): StablecoinMeta {
+  return { id: "test-coin", symbol: "TEST", oracleRisk, ...extra } as unknown as StablecoinMeta;
 }
 
 const BOLD_LIKE_PROFILE: OracleRiskProfile = {
@@ -65,6 +65,63 @@ describe("formatOraclePct", () => {
 describe("projectOracleRiskClientSummary", () => {
   it("returns null without an oracle risk profile", () => {
     expect(projectOracleRiskClientSummary(coinWith(undefined))).toBeNull();
+  });
+
+  it("titles and frames the two price-authority roles apart", () => {
+    const collateral = projectOracleRiskClientSummary(
+      coinWith({ ...BOLD_LIKE_PROFILE, role: "collateral-pricing" }),
+    );
+    expect(collateral!.role).toBe("collateral-pricing");
+    expect(collateral!.title).toBe("Collateral pricing & liquidation");
+    expect(collateral!.roleNote).toContain("collateral behind TEST");
+
+    const feed = projectOracleRiskClientSummary(coinWith({ ...BOLD_LIKE_PROFILE, role: "coin-price-feed" }));
+    expect(feed!.role).toBe("coin-price-feed");
+    expect(feed!.title).toBe("Price feed");
+    expect(feed!.roleNote).toContain("how TEST and the assets behind it are priced");
+  });
+
+  it("falls back to the curated backfill rule when a profile omits role", () => {
+    const branched = projectOracleRiskClientSummary(
+      coinWith({
+        ...BOLD_LIKE_PROFILE,
+        branchApplicability: {
+          disposition: "branches-required",
+          reviewedAt: "2026-07-13",
+          reviewer: "test",
+          rationale: "Borrower collateral branches reviewed.",
+          sources: [{ label: "docs", url: "https://example.com/docs" }],
+        },
+      }),
+    );
+    expect(branched!.role).toBe("collateral-pricing");
+
+    // Unresolved branch applicability on a crypto-backed CDP still prices collateral.
+    const unresolvedCdp = projectOracleRiskClientSummary(
+      coinWith({ tier: "standard-external", summary: "Vaults receive collateral prices from a median feed." }, {
+        mechanismArchetype: "cdp",
+        flags: { backing: "crypto-backed" },
+      }),
+    );
+    expect(unresolvedCdp!.role).toBe("collateral-pricing");
+
+    const notApplicable = projectOracleRiskClientSummary(
+      coinWith(
+        {
+          tier: "oracleless",
+          summary: "No borrower debt market prices collateral for liquidation.",
+          branchApplicability: {
+            disposition: "not-applicable",
+            reviewedAt: "2026-07-13",
+            reviewer: "test",
+            rationale: "No borrower liquidation market exists.",
+            sources: [{ label: "docs", url: "https://example.com/docs" }],
+          },
+        },
+        { mechanismArchetype: "cdp", flags: { backing: "crypto-backed" } },
+      ),
+    );
+    expect(notApplicable!.role).toBe("coin-price-feed");
   });
 
   it("projects branches, feeds, parameters, and aggregates", () => {

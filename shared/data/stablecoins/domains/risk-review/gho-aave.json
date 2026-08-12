@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "GHO borrowing in Aave V3 Ethereum Core uses governance-selected reserve price sources through AaveOracle, with the common Pool health-factor liquidation and v3.3 deficit path.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

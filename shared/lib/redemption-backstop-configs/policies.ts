@@ -126,14 +126,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
   },
   {
     kind: "unused-live-redemption-telemetry",
-    stablecoinId: "rusd-reservoir",
-    reason:
-      "Reservoir RUSD telemetry exists, but the active direct asset is not yet configured; wrapped Reservoir routes stay covered separately while this route is reviewed.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-05-23",
-  },
-  {
-    kind: "unused-live-redemption-telemetry",
     stablecoinId: "grams-token-teknoloji",
     reason:
       "Single-asset live-reserve metadata is fee-only for redemption modeling, so no executable-capacity redemption route is configured yet.",

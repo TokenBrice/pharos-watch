@@ -47,6 +47,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "sDOLA is an ERC-4626 savings wrapper around DOLA and has no borrower-owned collateral positions or token-level liquidation engine. Its underlying DOLA exposure inherits the external FiRM oracle risk reviewed on the parent asset.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
@@ -60,7 +61,7 @@
         },
         {
           "label": "Inverse FiRM product guide",
-          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
         }
       ]
     },
@@ -74,7 +75,7 @@
       },
       {
         "label": "Inverse FiRM product guide",
-        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/product-guide/firm"
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm"
       }
     ]
   },

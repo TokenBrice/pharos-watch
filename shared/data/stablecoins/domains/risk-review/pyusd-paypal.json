@@ -448,7 +448,7 @@
         "sources": [
           {
             "label": "Codex explorer PYUSD0 token",
-            "url": "https://explorer.codex.xyz/token/0x99af3eea856556646c98c8b9b2548fe815240750"
+            "url": "https://explorer.codex.xyz/address/0x99aF3EeA856556646C98c8B9b2548Fe815240750"
           },
           {
             "label": "The Block: PayPal's PYUSD expands to Tron, Avalanche, Sei and other blockchains via LayerZero",

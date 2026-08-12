@@ -20,7 +20,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-07-15",
     "reviewer": "OpenAI Codex backing review",
     "confidence": "probable",
     "sources": [
@@ -30,7 +30,7 @@
       },
       {
         "label": "Centrifuge JTRSY pool",
-        "url": "https://centrifuge.io/pools/jtrsy"
+        "url": "https://app.centrifuge.io/pool/281474976710662"
       },
       {
         "label": "Chainlink JTRSY NAV feed",

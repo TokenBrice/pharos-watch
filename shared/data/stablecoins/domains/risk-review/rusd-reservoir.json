@@ -428,7 +428,7 @@
         "sources": [
           {
             "label": "hyperevm explorer token",
-            "url": "https://purrsec.com/token/0x866d66f64fb81461903e1e38d998e747ecf35e78"
+            "url": "https://hyperevmscan.io/address/0x866d66f64fb81461903e1e38d998e747ecf35e78"
           },
           {
             "label": "Reservoir docs",
@@ -715,7 +715,7 @@
         "sources": [
           {
             "label": "hyperliquid explorer token",
-            "url": "https://purrsec.com/token/0x866d66f64fb81461903e1e38d998e747ecf35e78"
+            "url": "https://hyperevmscan.io/address/0x866d66f64fb81461903e1e38d998e747ecf35e78"
           },
           {
             "label": "Reservoir docs",

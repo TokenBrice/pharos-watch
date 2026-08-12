@@ -18,7 +18,7 @@
         "sources": [
           {
             "label": "WEMIX$ stabilizer docs",
-            "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+            "url": "https://www.wemix.com/assets/download/WEMIX3.0_Whitepaper_v1.15.pdf"
           },
           {
             "label": "WEMIX chain RPC",
@@ -32,7 +32,7 @@
       "sources": [
         {
           "label": "WEMIX$ stabilizer docs",
-          "url": "https://docs.wemix.com/v/wemixfi-en/services/wemixusd/wemixusd-stabilizer"
+          "url": "https://www.wemix.com/assets/download/WEMIX3.0_Whitepaper_v1.15.pdf"
         },
         {
           "label": "WEMIX chain RPC (api.wemix.com)",

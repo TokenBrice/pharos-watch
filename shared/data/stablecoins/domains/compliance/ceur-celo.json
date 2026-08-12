@@ -2,7 +2,7 @@
   "id": "ceur-celo",
   "mica": {
     "status": "non-compliant",
-    "tokenType": "ART",
+    "tokenType": "EMT",
     "references": [
       {
         "label": "ESMA Interim MiCA Register — EMT Issuers (EMTWP.csv, Dec 2024)",

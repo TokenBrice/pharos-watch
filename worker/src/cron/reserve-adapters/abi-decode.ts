@@ -43,6 +43,18 @@ export function decodeBoolWord(raw: string | null | undefined): boolean | null {
   return value == null ? null : value !== 0n;
 }
 
+/**
+ * Strict single-word boolean: exactly one ABI word of value 0 or 1. Route
+ * pause/shutdown probes use this so a fallback-function echo or packed payload
+ * reads as "surface unreadable" (null) instead of as pause evidence.
+ */
+export function decodeStrictBoolWord(raw: string | null | undefined): boolean | null {
+  const value = decodeUint256Word(raw);
+  if (value === 0n) return false;
+  if (value === 1n) return true;
+  return null;
+}
+
 export function decodeUint8Word(raw: string | null | undefined): number | null {
   const value = decodeUint256Word(raw);
   if (value == null || value > 255n) return null;

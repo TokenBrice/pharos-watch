@@ -3,95 +3,138 @@
   "reserves": [
     {
       "name": "U.S. Treasury bills",
-      "pct": 61.03,
+      "pct": 61.23,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
-      "riskFactors": ["duration", "liquidity", "custody"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 364
     },
     {
       "name": "Overnight reverse repurchase agreements",
-      "pct": 10.08,
+      "pct": 9.92,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed reverse-repo counterparties",
-      "riskFactors": ["counterparty", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "one-day",
       "maturityDaysMax": 1
     },
     {
       "name": "Term reverse repurchase agreements",
-      "pct": 2.47,
+      "pct": 3.72,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Undisclosed reverse-repo counterparties",
-      "riskFactors": ["counterparty", "duration", "liquidity", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "duration",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Cash and bank deposits",
-      "pct": 0.06,
+      "pct": 0.02,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed banking counterparties",
-      "riskFactors": ["counterparty", "custody"],
+      "riskFactors": [
+        "counterparty",
+        "custody"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
       "name": "Precious metals",
-      "pct": 10.34,
+      "pct": 10.03,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Physical gold inventory",
-      "riskFactors": ["market", "custody", "liquidity"],
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity"
+      ],
       "liquidityHorizon": "seven-days"
     },
     {
       "name": "Bitcoin",
-      "pct": 3.45,
+      "pct": 3.09,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Tether-controlled on-chain wallets",
-      "riskFactors": ["market", "custody", "liquidity"],
+      "riskFactors": [
+        "market",
+        "custody",
+        "liquidity"
+      ],
       "liquidityHorizon": "seven-days"
     },
     {
       "name": "Public equities",
-      "pct": 1.78,
+      "pct": 2.0,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed public-equity issuers",
-      "riskFactors": ["market", "liquidity", "concentration", "custody"],
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "concentration",
+        "custody"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Other investments",
-      "pct": 2.53,
+      "pct": 2.79,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed",
-      "riskFactors": ["credit", "market", "liquidity", "custody"],
+      "riskFactors": [
+        "credit",
+        "market",
+        "liquidity",
+        "custody"
+      ],
       "liquidityHorizon": "unknown"
     },
     {
       "name": "Secured loans",
-      "pct": 8.25,
+      "pct": 7.17,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "Undisclosed third-party borrowers",
-      "riskFactors": ["credit", "liquidity", "counterparty", "concentration"],
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "counterparty",
+        "concentration"
+      ],
       "liquidityHorizon": "over-seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-15",
+    "reviewedAt": "2026-08-12",
     "reviewer": "OpenAI Codex Safety Score V9 curation",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Tether Q1 2026 reports and reserves, period ended March 31, 2026",
+        "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
+        "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+      },
+      {
+        "label": "Tether transparency reports",
         "url": "https://tether.to/transparency/?tab=reports"
       },
       {
@@ -99,73 +142,73 @@
         "url": "https://app.tether.to/transparency.json"
       }
     ],
-    "rationale": "Tether's Q1 2026 attestation publishes the nine reserve categories encoded by the canonical live-reserves configuration. The reviewed rows retain the report's exact percentages and names, which match the July 15 fixed-input observations within the compiler's documented weight tolerance, while the live issuer endpoint supplies current assets and liabilities coverage.",
-    "compositionBasis": "Tether Q1 2026 attested reserve-category allocation used by the canonical tether-transparency adapter",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "Tether's Q2 2026 attestation publishes the nine reserve categories encoded by the canonical live-reserves configuration. The reviewed rows retain the report's exact percentages and names, which match the July 15 fixed-input observations within the compiler's documented weight tolerance, while the live issuer endpoint supplies current assets and liabilities coverage.",
+    "compositionBasis": "Tether Q2 2026 attested reserve-category allocation used by the canonical tether-transparency adapter",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The attestation identifies secured loans, public equities, and other investments only by category; it does not disclose the borrowers, issuers, positions, or concentration needed for resolved look-through relationships.",
-    "knownUnknownExposurePct": 12.56,
+    "knownUnknownExposurePct": 11.96,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury bills",
-        "pct": 61.03,
+        "pct": 61.23,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct United States Treasury obligations are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight reverse repurchase agreements",
-        "pct": 10.08,
+        "pct": 9.92,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reverse-repo claims are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Term reverse repurchase agreements",
-        "pct": 2.47,
+        "pct": 3.72,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Reverse-repo claims are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Cash and bank deposits",
-        "pct": 0.06,
+        "pct": 0.02,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fiat bank balances are external reserve assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Precious metals",
-        "pct": 10.34,
+        "pct": 10.03,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Physical precious-metal inventory is external reserve backing rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Bitcoin",
-        "pct": 3.45,
+        "pct": 3.09,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Bitcoin inventory is external reserve backing rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Public equities",
-        "pct": 1.78,
+        "pct": 2.0,
         "disposition": "insufficient-evidence",
         "rationale": "The attestation does not identify the equity issuers, individual positions, or concentration."
       },
       {
         "reserveIndex": 7,
         "reserveName": "Other investments",
-        "pct": 2.53,
+        "pct": 2.79,
         "disposition": "insufficient-evidence",
         "rationale": "The residual category does not identify the underlying instruments, issuers, obligors, or positions."
       },
       {
         "reserveIndex": 8,
         "reserveName": "Secured loans",
-        "pct": 8.25,
+        "pct": 7.17,
         "disposition": "insufficient-evidence",
         "rationale": "The attestation does not identify the borrowers, collateral packages, maturity profile, or concentration."
       }

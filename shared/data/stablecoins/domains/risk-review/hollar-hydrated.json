@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "HOLLAR uses Hydration's enshrined per-block money-market oracles and automated partial-liquidation engine across its governance-enabled collateral set; public protocol docs do not identify a secondary oracle or a separate bad-debt backstop.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

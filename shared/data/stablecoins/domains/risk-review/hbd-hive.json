@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "Hive derives the HIVE/HBD conversion price from fresh scheduled-witness submissions, takes their median, and then takes the median over a 3.5-day history window; protocol-wide debt caps can constrain the effective conversion price and HBD issuance.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

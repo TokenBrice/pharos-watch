@@ -130,7 +130,7 @@
         },
         {
           "label": "xscscan public API",
-          "url": "https://api.xscscan.pub"
+          "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
         },
         {
           "label": "XSC public RPC (datarpc1.xsc.pub)",

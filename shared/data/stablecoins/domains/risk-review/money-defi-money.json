@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "defi.money exposes 16 borrowing-callable controller markets plus one registered, zero-ceiling RDNT branch across Arbitrum, Base, and Optimism. Each market uses one AggregateChainedOracle path over a 20-observation, 30-second Chainlink EMA; wstETH uses two serial Chainlink legs, not failover. Healthy state-changing price_w() updates refresh storedPrice, while view-only price() does not; the aggregate serves storedPrice only during sequencer downtime and the 30-minute recovery grace period. Chainlink updatedAt has no enforced staleness bound.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

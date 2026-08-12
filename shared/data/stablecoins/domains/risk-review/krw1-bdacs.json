@@ -6,5 +6,161 @@
     "evidence": "Inferred review retained: KRW1 resolves to Yes because existing metadata classifies the asset as centralized and the regulated custodian-issuer can freeze and reissue under its compliance program.",
     "reviewer": "Codex inferred-status backfill",
     "reviewedAt": "2026-05-12"
+  },
+  "bridgeRouteRisk": {
+    "tier": "opaque-or-unknown",
+    "summary": "BDACS confirms KRW1 has separate deployments on Avalanche, Polygon, BNB Chain, Plume, and Ethereum, but neither issuer material nor the reviewed explorer surfaces disclose a canonical bridge, OFT/endpoint wiring, or each proxy implementation’s mint and burn authority. Every tracked deployment therefore remains an explicitly unresolved route; the aggregate tier matches that worst-route classification.",
+    "reviewedAt": "2026-08-12",
+    "reviewer": "Codex KRW1 bridge-route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "BDACS KRW1 PoC and Avalanche issuance announcement",
+        "url": "https://newsroom.bdacs.co.kr/presscenter/pr/250917-krw1/"
+      },
+      {
+        "label": "BDACS KRW1 multichain-mainnets statement",
+        "url": "https://newsroom.bdacs.co.kr/blog/bdacs-insight-20260415/"
+      },
+      {
+        "label": "BDACS Polygon deployment announcement",
+        "url": "https://newsroom.bdacs.co.kr/presscenter/pr/251204-krw1-polygon/"
+      },
+      {
+        "label": "BDACS BNB Chain deployment announcement",
+        "url": "https://newsroom.bdacs.co.kr/presscenter/pr/251211-krw1-bnbchain/"
+      },
+      {
+        "label": "BDACS Plume deployment announcement",
+        "url": "https://newsroom.bdacs.co.kr/presscenter/pr/260203-krw1-plume/"
+      },
+      {
+        "label": "Avalanche KRW1 token explorer",
+        "url": "https://snowtrace.io/token/0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318"
+      },
+      {
+        "label": "BNB Chain KRW1 token explorer",
+        "url": "https://bscscan.com/token/0x8c2f2784cbab626846a53d20d8104ff42b3594c2"
+      }
+    ],
+    "routes": [
+      {
+        "id": "avalanche:0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+        "destinationChain": "avalanche",
+        "contractAddress": "0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "BDACS identifies Avalanche as KRW1’s initial issuance network. Snowtrace shows a 0-decimal ERC-20 with two zero-address supply creations totaling 10,000,000 KRW1, but the available explorer surface does not establish the implementation, mint/burn controller, or any peer/bridge configuration. It cannot be classified as native issuance or a bridge representation.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-12",
+        "sources": [
+          {
+            "label": "Avalanche KRW1 token explorer",
+            "url": "https://snowtrace.io/token/0x25a8ef2df91f8ee0a98f261f4803a6eab5ff0318"
+          },
+          {
+            "label": "BDACS KRW1 PoC and Avalanche issuance announcement",
+            "url": "https://newsroom.bdacs.co.kr/presscenter/pr/250917-krw1/"
+          }
+        ]
+      },
+      {
+        "id": "polygon:0xd9d335045dd7cfec24ca8bd2ba18102cad6ae1e0",
+        "destinationChain": "polygon",
+        "contractAddress": "0xd9d335045dd7cfec24ca8bd2ba18102cad6ae1e0",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "BDACS publicly announced a Polygon deployment, but its announcement describes expansion only. No issuer documentation or confirmed explorer-readable implementation identifies whether this address is issuer-minted, bridged, or controlled by OFT or other cross-chain wiring; classification remains unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-12",
+        "sources": [
+          {
+            "label": "BDACS Polygon deployment announcement",
+            "url": "https://newsroom.bdacs.co.kr/presscenter/pr/251204-krw1-polygon/"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
+        "destinationChain": "bsc",
+        "contractAddress": "0x8c2f2784cbab626846a53d20d8104ff42b3594c2",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "BDACS announced the BNB Chain deployment. BscScan identifies the address as KRW1 and exposes only a minimal EIP-1967 proxy runtime; its implementation and authority logic are not verified on the reviewed surface. The proxy alone does not prove issuer-native minting or exclude bridge/OFT wiring.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-12",
+        "sources": [
+          {
+            "label": "BNB Chain KRW1 token explorer",
+            "url": "https://bscscan.com/token/0x8c2f2784cbab626846a53d20d8104ff42b3594c2"
+          },
+          {
+            "label": "BDACS BNB Chain deployment announcement",
+            "url": "https://newsroom.bdacs.co.kr/presscenter/pr/251211-krw1-bnbchain/"
+          }
+        ]
+      },
+      {
+        "id": "ethereum:0x3e6847e5420e1e529619379b004c2f7cc61d0d0d",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x3e6847e5420e1e529619379b004c2f7cc61d0d0d",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "BDACS lists Ethereum among KRW1’s supported mainnets, but its public material does not disclose this deployment’s implementation, mint/burn authority, source chain, or bridge peer. No canonical or third-party route can be safely assigned.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-12",
+        "sources": [
+          {
+            "label": "BDACS KRW1 multichain-mainnets statement",
+            "url": "https://newsroom.bdacs.co.kr/blog/bdacs-insight-20260415/"
+          }
+        ]
+      },
+      {
+        "id": "plume:0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f",
+        "destinationChain": "plume",
+        "contractAddress": "0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f",
+        "protocol": "unresolved route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "BDACS announced that KRW1 was added to Plume, but the announcement does not identify whether the supplied address is locally issuer-minted or a bridged representation. The reviewed Plume explorer token page did not expose implementation, mint authority, or bridge/OFT peer data, so the route remains opaque.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-08-12",
+        "sources": [
+          {
+            "label": "BDACS Plume deployment announcement",
+            "url": "https://newsroom.bdacs.co.kr/presscenter/pr/260203-krw1-plume/"
+          },
+          {
+            "label": "Plume KRW1 token explorer",
+            "url": "https://explorer.plume.org/token/0x8304d1b1d04c968270ae66a0c7758f7471b8ec3f"
+          }
+        ]
+      }
+    ]
   }
 }

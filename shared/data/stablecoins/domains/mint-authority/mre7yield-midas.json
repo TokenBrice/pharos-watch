@@ -70,7 +70,7 @@
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
         "evidence": "At Ethereum block 25527148, M_RE7_MINT_OPERATOR_ROLE history and pinned state retained EOA 0x11e58b044b04eca3230c67217c482f24bdb90a72. Exact-block eth_getCode returned no bytecode."
@@ -94,11 +94,11 @@
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           },
           {
             "label": "Etherlink MidasAccessControl",
-            "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
         "evidence": "M_RE7_MINT_OPERATOR_ROLE history and pinned state retained EOA 0xb755ff07fd80b38265ae35639568cfcdc874f21d at Ethereum block 25527148 and Etherlink block 48212139. Exact-block eth_getCode returned no bytecode on both chains."
@@ -184,7 +184,7 @@
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
         "evidence": "DEFAULT_ADMIN_ROLE histories and pinned state retained EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on Ethereum and Etherlink. This authority can immediately grant or revoke M_RE7_MINT_OPERATOR_ROLE on both EVM deployments."
@@ -253,7 +253,7 @@
         },
         {
           "label": "Etherlink MidasAccessControl",
-          "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+          "url": "https://explorer.etherlink.com/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
         },
         {
           "label": "Starknet mRe7YIELD token",

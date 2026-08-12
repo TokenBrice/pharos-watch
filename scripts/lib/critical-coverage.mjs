@@ -276,6 +276,8 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
 /** @type {Record<string, string>} */
 export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/cron/depeg-resolver/constants.ts": "2026-08-30",
+  "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
+  "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
   "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
   "worker/src/cron/dews/contracts.ts": "2026-09-05",
   "worker/src/cron/dews/progress.ts": "2026-09-05",

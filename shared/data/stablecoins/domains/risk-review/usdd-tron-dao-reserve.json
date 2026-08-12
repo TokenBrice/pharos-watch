@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "USDD CDP collateral prices pass through per-collateral Median, OSM, and Spot modules before reaching Vat, with Chainlink and WinkLink documented as the primary feed sources.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

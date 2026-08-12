@@ -15,7 +15,7 @@
   "geckoId": "origin-dollar",
   "proofOfReserves": {
     "type": "real-time",
-    "url": "https://analytics.originprotocol.com/ousd/collateral/",
+    "url": "https://analytics.originprotocol.com/",
     "provider": "Origin Analytics dashboard",
     "attestorTier": "self",
     "cadence": "real-time"
@@ -49,7 +49,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "ousd-origin-protocol",
     "display": {
-      "url": "https://analytics.ousd.com",
+      "url": "https://analytics.originprotocol.com/",
       "label": "Origin Analytics"
     },
     "inputs": {

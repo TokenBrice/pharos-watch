@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Avant documents savUSD as a yield-bearing avUSD wrapper, but the reviewed materials do not identify a complete NAV oracle, fallback, stale-price, or circuit-breaker profile.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

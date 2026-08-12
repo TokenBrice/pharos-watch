@@ -25,7 +25,7 @@
     "latestReport": {
       "periodEnd": "2026-06-30",
       "publishedAt": "2026-07-03",
-      "assuranceMethod": "review",
+      "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
       "reviewer": "PoR verification sweep 2026-08 (Q2 PDF read: KPMG negative assurance stating it is neither an audit nor a review - method corrected from attestation; composition review advanced in lockstep)",

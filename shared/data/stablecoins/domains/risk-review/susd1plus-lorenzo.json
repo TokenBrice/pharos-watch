@@ -10,6 +10,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "sUSD1+ is an NAV-accruing receipt over Lorenzo's USD1+ on-chain traded fund and managed strategy portfolio, not a borrower debt market with collateral liquidation oracles.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

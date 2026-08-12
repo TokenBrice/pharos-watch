@@ -647,6 +647,20 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
       reasonCodes: uniqueSorted(facts.map((fact) => fact.code)),
     };
   });
+  const responsibilityFacts = trace.unresolvedFacts.map((fact) => {
+    if (fact.path === undefined) {
+      throw new Error(
+        `Safety Score v9 ${trace.assetId} unresolved fact ${fact.code} lacks an exact fact path`,
+      );
+    }
+    return {
+      reasonCode: fact.code,
+      exactFactPath: fact.path,
+      sourceGapId: fact.sourceGapId ?? null,
+      responsibility: fact.responsibility,
+      critical: fact.critical,
+    };
+  });
   const deploymentAdjustmentPoints =
     trace.baseAssetScore === null || trace.deploymentAdjustedScore === null
       ? null
@@ -714,6 +728,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): SafetyScoreV9Cur
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1",
       totalFactCount: trace.unresolvedFacts.length,
+      facts: responsibilityFacts,
       summaries: responsibilitySummaries,
     },
     scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({

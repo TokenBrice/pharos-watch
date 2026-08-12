@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "Sky Vault collateral prices use whitelisted feed medianizers and per-ilk Oracle Security Modules before Spot writes safety-adjusted values into the core accounting system.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

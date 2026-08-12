@@ -83,6 +83,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "sUSDS is an ERC-4626 savings wrapper over USDS and has no borrower-owned collateral positions or local liquidation engine. Its required USDS parent carries the separately reviewed Sky Vault oracle, auction, backstop, and bad-debt branch.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

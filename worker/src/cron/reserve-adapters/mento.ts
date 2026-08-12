@@ -557,6 +557,13 @@ const LIQUITY_V2_DEBT_SELECTOR = "0x45507998"; // getBoldDebt()
 const LIQUITY_V2_SHUTDOWN_SELECTOR = "0x58569081"; // shutdownTime()
 const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWithDecay()
 
+// The Mento V3 FPMM pool charges `lpFee + protocolFee`, both stored directly in
+// basis points on the pool's own BASIS_POINTS_DENOMINATOR = 10_000 scale and
+// applied symmetrically in getAmountOut() for either swap direction. Verified
+// against the FPMM implementation behind the JPYm/CHFm proxies on 2026-08-12.
+const FPMM_LP_FEE_SELECTOR = "0x704ce43e"; // lpFee()
+const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a"; // protocolFee()
+
 interface MentoPoolCallOptions {
   signal: AbortSignal;
   ctx: AdapterContext | undefined;
@@ -797,15 +804,28 @@ async function fetchMentoFpmmPoolRedemption(
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
 ): Promise<NonNullable<AdapterResult["metadata"]>> {
-  const balanceRaw = await fetchErc20Balance(
-    CELO_ONCHAIN_INPUT,
-    params.usdmTokenAddress,
-    params.poolAddress,
+  const callOptions = {
     signal,
     ctx,
-    params.rpcUrl,
-    params.fallbackRpcUrl,
-  );
+    rpcUrl: params.rpcUrl,
+    fallbackRpcUrl: params.fallbackRpcUrl,
+    rpcMode: CELO_ONCHAIN_INPUT.rpcMode,
+    chain: CELO_ONCHAIN_INPUT.chain,
+  };
+
+  const [balanceRaw, lpFeeRaw, protocolFeeRaw] = await Promise.all([
+    fetchErc20Balance(
+      CELO_ONCHAIN_INPUT,
+      params.usdmTokenAddress,
+      params.poolAddress,
+      signal,
+      ctx,
+      params.rpcUrl,
+      params.fallbackRpcUrl,
+    ),
+    fetchOnchainUint256({ ...callOptions, contract: params.poolAddress, data: FPMM_LP_FEE_SELECTOR }),
+    fetchOnchainUint256({ ...callOptions, contract: params.poolAddress, data: FPMM_PROTOCOL_FEE_SELECTOR }),
+  ]);
   if (balanceRaw == null) {
     throw new Error("mento fpmm-pool: could not read USDm pool balance");
   }
@@ -813,6 +833,10 @@ async function fetchMentoFpmmPoolRedemption(
   if (capacityUsd <= 0) {
     throw new Error("mento fpmm-pool: USDm pool balance returned zero capacity");
   }
+
+  // A missing fee leg keeps the capacity but emits no bound, so a partial read
+  // can never understate the swap cost.
+  const feeBps = lpFeeRaw != null && protocolFeeRaw != null ? Number(lpFeeRaw + protocolFeeRaw) : null;
 
   return buildRedemptionSnapshotMetadata({
     capacityUsd,
@@ -822,7 +846,7 @@ async function fetchMentoFpmmPoolRedemption(
     routeStatusSource: "onchain",
     holderEligibility: "any-holder",
     settlementDelaySec: 0,
-    // No fee emission: the FPMM fee getter is not verified for JPYm/CHFm.
+    feeBps,
     ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
   });
 }

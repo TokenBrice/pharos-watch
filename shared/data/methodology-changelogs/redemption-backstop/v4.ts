@@ -2,6 +2,25 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.32",
+    title: "Live route-openness, live fees, and exit-credit route upgrades",
+    date: "2026-08-12",
+    effectiveAt: 1786514400,
+    summary:
+      "Live reserve adapters now assert current route openness and fees where the chain proves them, several routes gain live-direct capacity or documented fee bounds, and two routes are corrected against current primary sources. Scoring weights, ladders, and the exit engine are unchanged; routes move only through better evidence.",
+    impact: [
+      "ERC-4626 wrapper adapters emit routeStatus open/paused from same-run evidence: positive redemption liquidity plus an opportunistic paused()/isShutdown() probe, so ~20 wrapper routes previously stuck at routeStatus unknown now carry current-open attribution and their producer observations become score-eligible",
+      "Mento V3 FPMM pools (JPYm, CHFm) read the pool's lpFee()+protocolFee() live (30 bps today, contract-capped at 200 bps combined), replacing the undisclosed-fee marker that ceilinged their exit credit",
+      "USDe gains live-direct redemption capacity from the EthenaMinting contract's own USDT/USDC balances, capped by per-asset and global max-redeem-per-block config read in the same pass; the prior 0.5% reviewed heuristic remains only as fallback",
+      "Reservoir routes read the USDC PSM on-chain (underlying identity, balance, pause state) instead of trusting API telemetry with unknown route status; base rUSD gains its own PSM redemption route (coverage rises to 311 configured), while srUSD/wsrUSD deliberately keep no fee bound because the deployed SavingModule exit fee is governance-settable with no ceiling under the 200 bps policy limit",
+      "USTB is remodeled from the same-day fiat issuer rail to the atomic on-chain RedemptionIdle USDC rail its live adapter already measures (whitelisted access, 0 bps documented fee)",
+      "IST's PSM route status is set to unknown following Inter Protocol's governance-approved sunset; eUSD and USD3 (Reserve) gain documented 0 bps redemption-fee ceilings from Reserve's closed fee schedule",
+      "Route-family totals are now 147 offchain-issuer, 67 stablecoin-redeem, 38 collateral-redeem, 39 queue-redeem, 11 psm-swap, and 9 basket-redeem",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.31",
     title: "Minimum-redeem ladder matches at-or-above",
     date: "2026-08-08",

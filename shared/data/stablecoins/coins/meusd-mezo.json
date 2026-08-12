@@ -56,7 +56,7 @@
     "semantics": "collateral-mix",
     "breakerScope": "meusd-mezo",
     "display": {
-      "url": "https://mezo.org/docs/users/musd/",
+      "url": "https://mezo.org/docs/users/borrow/",
       "label": "Mezo MUSD"
     },
     "inputs": {
@@ -82,7 +82,7 @@
       "borrowerOperationsAddress": "0x44b1bac67dDA612a41a58AAf779143B181dEe031",
       "redemptionRateSelector": "0x540385a3",
       "sourceUrls": [
-        "https://mezo.org/docs/users/musd/",
+        "https://mezo.org/docs/users/borrow/",
         "https://mezo.org/docs/developers/musd/musd-redemptions"
       ]
     }

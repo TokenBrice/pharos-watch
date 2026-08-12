@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Avalon USDa uses RedStone BTC-USD pricing for its FBTC-backed CeDeFi CDP, with governed LTV thresholds and an operational liquidation algorithm that sells collateral on centralized exchanges.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

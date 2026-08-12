@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Liquity V2 collateral branches use external Chainlink/RedStone-style feeds with response validation, last-good-price handling, per-branch isolation, and branch shutdown on oracle failure.",
+    "role": "collateral-pricing",
     "branchApplicability": {
       "disposition": "branches-required",
       "reviewedAt": "2026-07-13",

@@ -81,7 +81,7 @@
       },
       {
         "label": "Makina Machine share price and AUM",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/share-price"
       },
       {
         "label": "Makina Risk Manager",
@@ -133,7 +133,7 @@
       },
       {
         "label": "Makina Machine architecture",
-        "url": "https://docs.makina.finance/concepts/architecture/machine"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview"
       },
       {
         "label": "Makina Caliber positions",

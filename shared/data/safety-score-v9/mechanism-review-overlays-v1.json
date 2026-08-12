@@ -2033,7 +2033,7 @@
     {
       "assetId": "usdgo-osl",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-12",
       "sources": [
         {
           "label": "Anchorage Digital Bank Covered Stablecoin Terms (South Dakota reserve trust, client redemption, and non-client rights)",
@@ -2046,18 +2046,20 @@
         {
           "label": "Anchorage USDGO monthly reserve-attestation index",
           "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
+        },
+        {
+          "label": "Anchorage Digital Bank comment letter on the OCC GENIUS Act NPRM (USDGO, OSL Group, reserve trusts, and successor fiduciary custody)",
+          "url": "https://learn.anchorage.com/Anchorage%20Digital%E2%80%99s%20Comment%20Letter%20on%20OCC%E2%80%99s%20NPRM%20for%20GENIUS%20Act.pdf"
         }
       ],
-      "notes": "Refreshed 2026-08-08 against Anchorage Digital Bank's effective 2025-10-13 Covered Stablecoin Terms and Deloitte's examination dated 2026-07-28 for 2026-06-30. The terms place covered-stablecoin reserves in a South Dakota express trust and impose fiduciary duties on Anchorage as trustee. The examination reports $861,072,523 of reserves against 859,224,943 redeemable USDGO and states that the reserves are maintained in segregated, unencumbered fiduciary trust accounts for token holders. The same governing terms, however, expressly state that non-client holders have no contractual relationship or enforceable rights against Anchorage under the terms, that the conditional redemption right passes only if and when a recipient becomes a client, and that Anchorage redeems only for clients. The deficient non-client claim is explicit rather than inferred from silence, so claimAndSegregation remains weak despite strong segregation evidence. Custody continuity remains unavailable: the June report identifies Anchorage self-custody only for the BUIDL slice, while cash banks and money-market-fund custody chains are unnamed, and the reviewed terms/report disclose neither provider allocations and alternate-provider coverage nor reserve-wide rehypothecation, failure replacement, successor-trustee, or operational continuity mechanics. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport automatically resolves the monthly AICPA assets-and-liabilities examination to strong.",
+      "notes": "Re-reviewed 2026-08-12 against Anchorage Digital Bank's effective 2025-10-13 Covered Stablecoin Terms, Deloitte's examination dated 2026-07-28 for 2026-06-30, and Anchorage's GENIUS Act comment letter. The terms place covered-stablecoin reserves in a South Dakota express trust and impose fiduciary duties on Anchorage as trustee. The examination reports $861,072,523 of reserves against 859,224,943 redeemable USDGO and states that the reserves are maintained in segregated, unencumbered fiduciary trust accounts for token holders. The same governing terms, however, expressly state that non-client holders have no contractual relationship or enforceable rights against Anchorage under the terms, that the conditional redemption right passes only if and when a recipient becomes a client, and that Anchorage redeems only for clients. The deficient non-client claim is explicit rather than inferred from silence, so claimAndSegregation remains weak despite strong segregation evidence. The comment letter expressly names USDGO as an ADB stablecoin issued for brand partner OSL Group, says each ADB stablecoin has a separate South Dakota express Stablecoin Reserve Trust, and states that on ADB failure fiduciary reserve assets bypass receivership and transfer to a successor fiduciary and custodian able to continue managing reserves and administering redemptions with minimal interruption. This supports limited custody continuity; the letter does not establish executed provider coverage or operational testing, so the quality remains capped at limited. assuranceAndReconciliation is intentionally omitted because the coin's verified proofOfReserves.latestReport automatically resolves the monthly AICPA assets-and-liabilities examination to strong.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "quality": "weak"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "The June 2026 reserve report and governing terms do not identify the cash banks or money-market-fund custody chains, provider allocations, reserve-wide rehypothecation controls beyond the point-in-time unencumbered assertion, or failure, replacement, successor-trustee, and operational continuity mechanics. The missing evidence is issuer-undisclosed; no weak or failed custody grade is inferred from its absence.",
-          "sourceUrl": "https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report.pdf"
+          "quality": "limited"
         }
       }
     },
@@ -5762,7 +5764,7 @@
     {
       "assetId": "ntbill-nest",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-12",
       "sources": [
         {
           "label": "Nest available vaults documentation (nTBILL and redemption estimate)",
@@ -5789,6 +5791,14 @@
           "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
         },
         {
+          "label": "Anemoy JTRSY fund disclosure (daily redemption, six-month maximum, and near-real-time holdings)",
+          "url": "https://www.anemoy.io/funds/jtrsy"
+        },
+        {
+          "label": "Superstate USTB fund page (short-duration Treasury Bills, market-day liquidity, and dated holdings)",
+          "url": "https://superstate.com/assets/ustb"
+        },
+        {
           "label": "Nest binding terms and conditions",
           "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
         },
@@ -5797,7 +5807,7 @@
           "url": "https://etherscan.io/address/0xe72fe64840f4ef80e3ec73a1c749491b5c938cb9"
         }
       ],
-      "notes": "Fetched 2026-08-08. The nTBILL positions API reported $1,884,996.57 of Superstate USTB, $552,017.08 of Janus Henderson JTRSY, and roughly $1,794 of stablecoin liquidity. The price API reported NAV $2,438,547.31, price $1.053206, and supply 2,315,356.450653; the last-price-update API showed same-day cross-chain updates consistent with Nest's documented hourly NAV process. The segregated onchain vault/token and structured positions support limited fund claim and seniority, but no reviewed prospectus establishes nTBILL-holder priority in the underlying USTB/JTRSY funds. The current API and documented valuation contracts support limited NAV valuation without an independent nTBILL administrator. A T+1 redemption estimate and current liquidity sleeve are disclosed, but no vault-level WAM, duration, maturity ladder, or quantified liquidity horizon is published, so duration/liquidity remains unavailable. Binding terms assign losses to users and no junior buffer, loss waterfall, or enforceable recapitalization is published, so loss recovery is also unavailable rather than weak-from-missing.",
+      "notes": "Re-reviewed 2026-08-12 against Nest's live Available Vaults page, which reports server data loaded 2026-08-11 and lists nTBILL's T+1 redemption estimate and current constituent categories (liquid assets, Janus Henderson Fund, and Superstate USTB); live weights are intentionally not pinned because they drift. Look-through is admitted at limited quality only: Anemoy's JTRSY disclosure documents daily redemptions, a maximum six-month Treasury-bill maturity, and near-real-time holdings, while Superstate's USTB page documents short-duration Treasury Bills, market-day liquidity, and dated holdings as of 2026-07-24. Nest publishes no vault-level WAM, duration, or maturity aggregate, so no synthesized WAM/duration is recorded. The existing limited fund-claim and NAV observations remain issuer/vault-level and do not imply a direct senior claim on the underlying funds; loss recovery remains unavailable because no holder loss waterfall or recapitalization is published.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -5807,9 +5817,7 @@
           "quality": "limited"
         },
         "durationAndLiquidity": {
-          "applicability": "unavailable",
-          "rationale": "Searched the nTBILL positions, price, and last-price-update APIs plus the available-vaults and liquidity documentation. They publish a current USTB/JTRSY composition and T+1 redemption estimate but no measured aggregate WAM, duration, contractual maturity ladder, liquidity table, or quantified stress-redemption capacity for nTBILL.",
-          "sourceUrl": "https://api.nest.credit/v1/vaults/nest-treasury-vault/positions"
+          "quality": "limited"
         },
         "lossRecoveryDesign": {
           "applicability": "unavailable",
@@ -10274,7 +10282,7 @@
     {
       "assetId": "ussd-sonic-labs",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-12",
       "sources": [
         {
           "label": "Frax branded-stablecoin documentation",
@@ -10297,7 +10305,7 @@
           "url": "https://rpc.soniclabs.com"
         }
       ],
-      "notes": "Measured 2026-08-08 at finalized Sonic block 77,263,228 (2026-08-08T18:09:45Z): USSD totalSupply and the BrandedCustodian's Sonic frxUSD balance were exactly equal at 2,092,088.032064211539580162 tokens. Frax and Sonic documentation establish permissionless 1:1 mint/redeem into frxUSD. This supports limited fund claim and seniority at the wrapper layer because holders have a technical frxUSD claim but no direct senior claim on the tokenized-Treasury funds below frxUSD. The exact current wrapper assets-and-liabilities match plus Frax's current upstream balance sheet supports adequate loss recovery design without implying legal recourse. USSD itself is a par wrapper and publishes no independently administered NAV, while neither the Frax balance sheet nor Sonic/Frax docs provide an aggregate upstream WAM, maturity ladder, duration, or quantified liquidity horizon; both components remain explicit unavailable under the tbill fleet precedent.",
+      "notes": "Re-reviewed 2026-08-12. At finalized Sonic block 77,263,228 (2026-08-08T18:09:45Z), USSD totalSupply and the BrandedCustodian's Sonic frxUSD balance were exactly equal at 2,092,088.032064211539580162 tokens. Frax and Sonic documentation establish permissionless 1:1 mint/redeem into frxUSD. This supports limited fund claim and seniority at the wrapper layer because holders have a technical frxUSD claim but no direct senior claim on the tokenized-Treasury funds below frxUSD. The parity evidence supports limited wrapper-level continuity only: it is raw ERC-4626-style wrapper parity from totalAssets(), totalSupply(), and pricePerShare(), not an administrator-struck NAV, legal loss waterfall, or independent valuation report. USSD itself is a par wrapper and publishes no independently administered NAV, while neither the Frax balance sheet nor Sonic/Frax docs provide an aggregate upstream WAM, maturity ladder, duration, or quantified liquidity horizon; both components remain explicit unavailable under the tbill fleet precedent.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -10314,7 +10322,7 @@
           "sourceUrl": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
         },
         "lossRecoveryDesign": {
-          "quality": "adequate"
+          "quality": "limited"
         }
       }
     },

@@ -83,6 +83,7 @@ export const V9UnresolvedFactSchema = z
     critical: z.boolean(),
     path: z.string().min(1).optional(),
     responsibility: V9EvidenceResponsibilitySchema,
+    sourceGapId: z.string().min(1).nullable().optional(),
   })
   .strict();
 export type V9UnresolvedFact = z.infer<typeof V9UnresolvedFactSchema>;

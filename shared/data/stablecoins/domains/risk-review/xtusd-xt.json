@@ -10,6 +10,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "The live XTUSD Vat 0xf9d4810f1b140d869d2f92ca8da1755ea55e786b on XSC carries a single debt-bearing ilk, XT-A (Wrapped XT collateral), with Vat.spot set to 3.4780667 ray at block 48187434 (2026-08-08), but no Spotter, pip, or other price-update contract is a current Vat ward: only the Jug and the XT-A GemJoin are authorized among probed system contracts, and neither exposes a spot-poke path, so the collateral-price path is opaque and has no identified on-chain update mechanism. The Median/OSM/Spotter stack observed on XSC is wired only to the legacy TAI deployment (token 0x775c4bc7…), not to the XTUSD token 0x1a6131ea… or the live Vat, and the issuer announcement names no feed, heartbeat, or failover. No Cat/Dog, auction, or global-settlement module is authorized on the live Vat either, so the announced auction-based liquidation is not operable on-chain at the reviewed block.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -45,7 +46,7 @@
       },
       {
         "label": "xscscan token API (XTUSD 0x1a6131ea… supply/holders, accessed 2026-08-08)",
-        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
+        "url": "https://api.xscscan.pub/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0/api/tokens/0x1a6131eaf7edd96afa10fc75b0d79dd814d19ed0"
       },
       {
         "label": "XT.COM TAI to XTUSD announcement",

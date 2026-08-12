@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "sUSDe is an ERC-4626 savings wrapper over USDe and has no borrower-owned collateral positions or token-level liquidation engine. It inherits the parent USDe offchain oracle and hedging-system risk.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

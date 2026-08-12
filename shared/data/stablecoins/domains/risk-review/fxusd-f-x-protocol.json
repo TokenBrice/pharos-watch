@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "f(x) V2 combines Chainlink, DEX spot, and anchor feeds for ETH/WBTC pricing and falls back to anchor pricing when governed deviation thresholds are breached.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

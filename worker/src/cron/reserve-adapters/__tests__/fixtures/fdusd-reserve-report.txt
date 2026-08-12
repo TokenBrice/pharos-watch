@@ -1,0 +1,13 @@
+Reserve Accounts Report With Independent Accountant's Report
+
+FD121 (BVI) Limited (the "Company")
+
+June 30, 2026 at 9:00PM ET (July 1, 2026 at 9:00AM HKT) (hereafter "Report Date and Time")
+
+The Company's total Reserve Accounts are comprised of the following asset holdings as of the Report Date and Time:
+
+Description                                      Fair Value as of Report Date and Time
+US Treasury Bills                                US$300,239,000.00
+Cash                                             US$36,488,000.00
+Fixed Deposit                                    US$15,000,000.00
+Total Reserve Accounts                           US$351,727,000.00

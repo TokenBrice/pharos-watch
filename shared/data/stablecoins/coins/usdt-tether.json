@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Q1 2026 attestation: $191.77B total assets vs $183.54B liabilities; about $141B direct/indirect U.S. Treasury bill exposure, $20B physical gold, $7B Bitcoin, and an $8.23B excess reserve buffer.",
+  "collateral": "Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer.",
   "pegMechanism": "Direct 1:1 redemption through Tether. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "1",
@@ -22,8 +22,8 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Italy",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-05-01",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-31",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -31,12 +31,12 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Tether Q1 2026 reports and reserves",
+          "label": "Tether Q2 2026 reports and reserves",
           "url": "https://tether.to/transparency/?tab=reports"
         },
         {
-          "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-03-31 (signed Milan, 2026-04-30)",
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
+          "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
         }
       ]
     }

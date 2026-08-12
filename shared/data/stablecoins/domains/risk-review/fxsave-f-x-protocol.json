@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "fxSAVE is an ERC-4626 vault over the f(x) Stability Pool and has no borrower-owned collateral positions or token-level liquidation engine. Its required fxUSD parent carries the separately reviewed WBTC and wstETH oracle and liquidation branches.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

@@ -68,7 +68,7 @@
     "sources": [
       {
         "label": "YieldPoint core flows",
-        "url": "https://docs.yieldpoint.io/protocol/core-flows"
+        "url": "https://xsylabs.mintlify.app/protocol/architecture/flows"
       },
       {
         "label": "XSY Accountable reserve dashboard",

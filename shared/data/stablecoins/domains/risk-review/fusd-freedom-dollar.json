@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Freedom Dollar documents one shared, publicly auditable ZANO reserve and decentralized market-making bots around the one-dollar target, but it does not identify an oracle, liquidation engine, or reserve-shortfall procedure.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

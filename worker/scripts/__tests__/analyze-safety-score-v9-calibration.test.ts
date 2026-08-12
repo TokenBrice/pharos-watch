@@ -14,7 +14,12 @@ import {
   summarizeDistribution,
 } from "../../../scripts/maintenance/analyze-safety-score-v9-calibration.mjs";
 
-const BASE_CLOCK_SEC = 2_000_000_000;
+// A realistic fixed clock: the suite compiles the REAL registry, and a far-future
+// clock ages every mechanism review into bounded gaps whose attribution items
+// the 9.19 public schema rejects as unreconciled (latent invariant, see the
+// 2026-08-12 redemption-pass handoff). Keep this within the registry review
+// windows.
+const BASE_CLOCK_SEC = 1_786_579_200; // 2026-08-13T00:00:00Z, after the newest curated review dates
 
 // The adversarial tests need to mutate a JSON replay after the production
 // builder freezes it. JSON round-tripping gives the test a deliberately mutable

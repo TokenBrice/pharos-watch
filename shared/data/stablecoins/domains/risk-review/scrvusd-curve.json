@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "scrvUSD is a passive Yearn V3 vault that accepts crvUSD and runs no strategies, borrower-owned debt positions, or local liquidation engine. Its required crvUSD parent retains the separately tracked unresolved LLAMMA branch inventory.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
@@ -36,7 +37,7 @@
         },
         {
           "label": "Curve crvUSD risk documentation",
-          "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+          "url": "https://docs.curve.finance/user/security/risks/crvusd"
         }
       ]
     },
@@ -46,7 +47,7 @@
     "sources": [
       {
         "label": "Curve crvUSD risk docs",
-        "url": "https://resources.curve.finance/risks-security/risks/crvusd/"
+        "url": "https://docs.curve.finance/user/security/risks/crvusd"
       },
       {
         "label": "Savings crvUSD repository",

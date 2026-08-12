@@ -43,6 +43,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Six debt-bearing Ethereum Trove branches use immutable branch-local price feeds. ysyBOLD uses nested ERC-4626 conversion rates; scrvUSD, tBTC, and WBTC18 have active Curve-based fallback paths; sUSDS and sfrxUSD rely on single Chainlink paths. Invalid required prices irreversibly shut only the affected branch onto its last good price.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -88,7 +88,7 @@
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           },
           {
             "label": "Monad MidasAccessControl",
@@ -233,7 +233,7 @@
         "sources": [
           {
             "label": "Ethereum MidasAccessControl",
-            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4"
+            "url": "https://etherscan.io/address/0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b"
           }
         ],
         "evidence": "DEFAULT_ADMIN_ROLE event histories and pinned state retained EOA 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227 on the Ethereum, Monad, Plasma, and Katana MidasAccessControl deployments. This authority can immediately grant or revoke M_HYPER_MINT_OPERATOR_ROLE on each chain."

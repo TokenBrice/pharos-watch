@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "RIF on Chain uses a replaceable RIF/USD PriceProvider and published Medianizer for one global RIF reserve bucket; no stronger failover tier is documented.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

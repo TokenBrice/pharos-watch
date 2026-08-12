@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Inverse FiRM values isolated collateral markets through Pessimistic Price Oracles that choose the conservative value across a primary and fallback path before applying market-specific collateral and liquidation parameters.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -215,7 +216,7 @@
           },
           {
             "label": "Arbitrum canonical bridge docs",
-            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+            "url": "https://docs.arbitrum.io/arbitrum-essentials/bridging/overview"
           }
         ],
         "observedBlock": 485690756
@@ -249,7 +250,7 @@
           },
           {
             "label": "Base bridge docs",
-            "url": "https://docs.base.org/docs/bridges/bridge-tokens"
+            "url": "https://docs.base.org/base-chain/specs/protocol/bridging/bridges"
           }
         ],
         "observedBlock": 48862205
@@ -283,7 +284,7 @@
           },
           {
             "label": "Optimism Standard Bridge docs",
-            "url": "https://docs.optimism.io/builders/app-developers/bridging/standard-bridge"
+            "url": "https://docs.optimism.io/app-developers/guides/bridging/standard-bridge"
           }
         ],
         "observedBlock": 154457492
@@ -388,7 +389,7 @@
           },
           {
             "label": "Polygon FxPortal docs",
-            "url": "https://docs.polygon.technology/pos/how-to/bridging/fxportal/"
+            "url": "https://docs.polygon.technology/pos/how-to/bridging/l1-l2-communication/state-transfer"
           }
         ]
       },

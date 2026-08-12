@@ -392,7 +392,9 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     );
     expect(censusUnsupported).toMatchObject({
       reasonCode: "incomplete-dex-route-coverage",
-      responsibility: "method-unsupported",
+      // RULED 2026-08-12: no registered discovery provider is a Pharos
+      // integration gap, not a method floor.
+      responsibility: "integration-missing",
       observationState: "bounded-unknown",
     });
     expect(censusUnsupported!.message).not.toContain("do not all carry");
@@ -496,7 +498,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       expect.objectContaining({
         gapId: "alpha:gap:exit-routes",
         reasonCode: "missing-runtime-route-evidence",
-        responsibility: "method-unsupported",
+        responsibility: "integration-missing",
         observationState: "unsupported",
       }),
     );

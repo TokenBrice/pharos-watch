@@ -11,7 +11,7 @@
         "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa"
       ],
       "implementationAddresses": [
-        "0xd8a7ceccecbeded9f5350f4ca8faf55ab92f3390"
+        "0x206b88b20d9b2709153ab596add007b21124eb26"
       ],
       "adminAddresses": [
         "0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc",
@@ -19,8 +19,8 @@
       ],
       "canChangeMintLogic": true,
       "controlRef": "Metronome DAO multisig (3-of-5 Gnosis Safe)",
-      "observedAt": "2026-06-11",
-      "observedBlock": 25290617,
+      "observedAt": "2026-08-11",
+      "observedBlock": 25734737,
       "sources": [
         {
           "label": "msUSD token on Etherscan",

@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Djed uses one shared ADA reserve contract and an external pricing index for system-wide mint and redemption accounting; the reviewed primary sources do not identify the production oracle provider or failure handling.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

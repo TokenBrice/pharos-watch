@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Five debt-bearing Ethereum ilks were retained. Three divide a Chainlink stablecoin/USD numerator by an owner-set APACX PHP/USD denominator without contract-enforced freshness, while two zero-ceiling legacy ilks with outstanding debt use owner-set APACX feeds directly; liquidation is immediate through independent Dutch auctions.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

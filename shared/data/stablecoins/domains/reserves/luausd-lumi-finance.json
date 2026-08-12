@@ -73,7 +73,7 @@
       },
       {
         "label": "Lumi Finance",
-        "url": "https://lumi.finance/"
+        "url": "https://app.lumi.finance/"
       }
     ],
     "uncertainty": "Backing assets sit in Lumi's on-chain protocol contracts (bonding-curve reserve, AMO, and Curve pool liquidity) rather than with a disclosed custodian; segregation, bankruptcy remoteness, and reuse terms are not documented.",

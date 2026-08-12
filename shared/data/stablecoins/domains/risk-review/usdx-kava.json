@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Kava Mint prices each collateral type through a governance-whitelisted x/pricefeed market whose reports are medianized onchain; liquidation uses the configured per-type liquidation market, while a missing price suspends price-dependent CDP operations rather than switching to a secondary feed.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

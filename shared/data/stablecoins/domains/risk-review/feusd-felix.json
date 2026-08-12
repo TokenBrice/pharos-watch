@@ -19,6 +19,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Felix feUSD uses separate external-oracle PriceFeed contracts for four isolated Liquity V2-style branches, with freshness checks, shutdown on feed failure, Stability Pool offsets, and branch-local debt redistribution.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

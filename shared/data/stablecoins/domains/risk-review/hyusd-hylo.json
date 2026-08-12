@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "The observable V1 program uses Sanctum LST accounting and Pyth SOL/USD, while current V2 documentation specifies independent SOL/USD, BTC/USD, and USDC/USD paths. Hylo's address directory does not publish a complete deployed V2 program/pool inventory, so the production oracle graph is unresolved.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
@@ -36,7 +37,7 @@
       "sources": [
         {
           "label": "Hylo hyUSD and xSOL design",
-          "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+          "url": "https://docs.hylo.so/protocol-overview/xassets"
         },
         {
           "label": "Hylo V2 multi-asset architecture",
@@ -58,7 +59,7 @@
     "sources": [
       {
         "label": "Hylo V1 hyUSD and xSOL design",
-        "url": "https://docs.hylo.so/protocol-overview/hyUSD-%26-xSOL"
+        "url": "https://docs.hylo.so/protocol-overview/xassets"
       },
       {
         "label": "Hylo V2 multi-asset architecture",

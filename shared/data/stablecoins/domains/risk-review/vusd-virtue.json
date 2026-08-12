@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Virtue's four debt-bearing IOTA Move vaults use one configured oracle rule per collateral. IOTA and iBTC depend on single Pyth feeds with the Pyth State's 60-second stale-price threshold; stIOTA and vIOTA derive their values from their native staking pools and inherit the same single IOTA/USD Pyth path.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

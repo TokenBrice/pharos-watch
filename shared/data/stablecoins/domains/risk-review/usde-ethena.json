@@ -43,6 +43,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Ethena's offchain hedging system prices mint and redeem requests from exchange market data and validates internal pricing with Pyth and RedStone, but USDe has no permissionless CDP liquidation oracle.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
@@ -784,7 +785,7 @@
           },
           {
             "label": "USDe OFT on hyperevm explorer (verified 2026-07-20)",
-            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "url": "https://hyperevmscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ],
         "observedBlock": 40924298
@@ -1281,7 +1282,7 @@
           },
           {
             "label": "USDe OFT on HyperEVM explorer (verified 2026-07-20)",
-            "url": "https://purrsec.com/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
+            "url": "https://hyperevmscan.io/address/0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34"
           }
         ]
       },

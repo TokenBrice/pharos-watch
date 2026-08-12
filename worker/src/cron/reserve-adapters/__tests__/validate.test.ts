@@ -141,7 +141,7 @@ describe("validateAdapterOutput redemption telemetry", () => {
   });
 
   it("rejects malformed redemption source URLs", () => {
-    const adapter = getReserveAdapter("ethena");
+    const adapter = getReserveAdapter("falcon");
     const result = validateAdapterOutput(
       {
         slices,
@@ -164,7 +164,7 @@ describe("validateAdapterOutput redemption telemetry", () => {
   });
 
   it("rejects invalid route-status review dates", () => {
-    const adapter = getReserveAdapter("ethena");
+    const adapter = getReserveAdapter("falcon");
     const result = validateAdapterOutput(
       {
         slices,
@@ -330,7 +330,7 @@ describe("validateAdapterOutput redemption telemetry", () => {
   });
 
   it("rejects direct capacity kinds from proxy-only adapters", () => {
-    const adapter = getReserveAdapter("ethena");
+    const adapter = getReserveAdapter("falcon");
     const result = validateAdapterOutput(
       {
         slices,

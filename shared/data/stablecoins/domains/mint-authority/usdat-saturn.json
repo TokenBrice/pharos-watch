@@ -30,11 +30,11 @@
           },
           {
             "label": "M0 protocol docs",
-            "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "M0 minter gateway docs",
-            "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+            "url": "https://docs.m0.org/protocol/minting-burning"
           },
           {
             "label": "MinterGateway on Blockscout",
@@ -66,7 +66,7 @@
           },
           {
             "label": "M0 SwapFacility docs",
-            "url": "https://docs.m0.org/home/technical-documentations/extensions/swap-facility/"
+            "url": "https://docs.m0.org/protocol/extensionsswap-facility/"
           },
           {
             "label": "SwapFacility on Blockscout",
@@ -100,11 +100,11 @@
       "sources": [
         {
           "label": "M0 protocol docs",
-          "url": "https://docs.m0.org/home/fundamentals/whitepaper/protocol/"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "M0 minter gateway docs",
-          "url": "https://docs.m0.org/home/technical-documentations/mintergateway"
+          "url": "https://docs.m0.org/protocol/minting-burning"
         },
         {
           "label": "MinterGateway on Blockscout",

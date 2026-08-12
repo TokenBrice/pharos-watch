@@ -126,7 +126,7 @@
     "sources": [
       {
         "label": "Curve crvUSD technical documentation",
-        "url": "https://docs.curve.finance/crvUSD/overview/"
+        "url": "https://docs.curve.finance/developer/crvusd/overview"
       },
       {
         "label": "Curve crvUSD markets API",

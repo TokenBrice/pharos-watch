@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "bnUSD loan collateral is priced on ICON through Balanced Oracle v1.3.0 (cx133c...), which Loans calls via getLastPriceInUSD. At ICON block 116171048 the debt-bearing inventory is dominated by sICX (~96.3%), which uses Band ICX/USD times the staking sICX rate under a 30-minute global staleness gate; other Band-priced collaterals match Band feeds directly, while SOL/XLM/JITOSOL use long-threshold manual external prices.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

@@ -61,7 +61,7 @@
     "semantics": "single-asset",
     "breakerScope": "usdsc-startale",
     "display": {
-      "url": "https://startale.com/usdsc",
+      "url": "https://usd.startale.com/",
       "label": "Startale USDSC"
     },
     "inputs": {
@@ -84,7 +84,7 @@
         "depType": "wrapper"
       },
       "sourceUrls": [
-        "https://startale.com/usdsc",
+        "https://usd.startale.com/",
         "https://docs.m0.org/get-started/resources/addresses/"
       ],
       "rpcUrl": "https://rpc.soneium.org",

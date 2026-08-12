@@ -1,5 +1,43 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_EVIDENCE_ATTRIBUTION: MethodologyChangelogEntry = {
+  version: "9.19",
+  title: "Open facts are counted once and carry the path that produced them",
+  date: "2026-08-12",
+  effectiveAt: 1786838400,
+  summary:
+    "An asset's open-fact mass double-counted every mechanism gap: once through its pillar reason and again through a generic re-emission under a different path, which no consumer could reconcile back to a single gap. The duplicate entries also carried no usable fact path, so a reader could not tell what to disclose to clear them. Separately, a DEX surface on a chain with no registered discovery provider stops being reported as a method floor.",
+  impact: [
+    "Each gap is now published once. Deduplication is by gap identity only, so two distinct gaps that share a reason code both survive; entries that carry no gap identity keep their previous behaviour exactly",
+    "Published facts carry the `exactFactPath` the gap constructor already held, so an open fact can be traced to the component that produced it and answered. Three assets whose residual mass was previously unattributable — nopal-nest, ntbill-nest and xusd-babelfish — resolve to their real gaps: for example nopal-nest's seven facts were five real paths plus two re-emissions",
+    "No score, pillar, cap or grade moves: this removes duplicate reporting entries, not scored inputs, and a fixed-input replay confirms score equality",
+    "A DEX exit surface whose deployment census carries no registered discovery provider is attributed `integration-missing` rather than `method-unsupported`, in both the portfolio-coverage and zero-route branches so one condition cannot publish two responsibilities. The chain has deployments and markets; Pharos has not wired a provider for it. `no-exact-capable-venue` remains the genuine method limit and is unchanged",
+    "This supersedes in part the 2026-07-29 ruling that classified the no-provider census condition as a method limit",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
+export const SAFETY_SCORE_V9_TRANSFER_MATERIALITY_OBSERVATION: MethodologyChangelogEntry = {
+  version: "9.18",
+  title: "A reviewed transfer scope no longer depends on third-party chain supply",
+  date: "2026-08-11",
+  effectiveAt: 1786752000,
+  summary:
+    "The transfer scope test proves a review covers material deployments from per-chain supply, which only the DefiLlama list provides. An asset absent from that list had no supply rows, so the test could never be satisfied and an authored transfer review was withheld as unreviewed. A materiality-only on-chain observation now establishes deployment scope for a bounded cohort, and it is structurally walled off from circulating supply and market cap.",
+  impact: [
+    "Thirty-nine assets that carry an authored transfer review but no DefiLlama listing can publish that reviewed posture instead of gapping as `missing-access-review`; the remaining assets in the unlisted cohort have no review to admit and stay fail-closed",
+    "Materiality on this path is any deployment carrying non-zero supply, not a share of a summed total. Raw `totalSupply()` is never summed across deployments: for lock-mint and bridged representations the same liability is reported more than once, which would overstate the denominator and could drop a material deployment out of review while still reporting the scope complete",
+    "The observation carries only a deployment key, raw token units, decimals, block number and observation time. It has no USD or price field, so it cannot be consumed by the circulating-supply or market-cap paths, which are unchanged and remain sourced solely from the DefiLlama list",
+    "The path is fail-closed on every leg: a stale generation, a null or unreadable on-chain result, decimals that disagree with the registry, an identity mismatch, a partial deployment read, or a registry or base-input fingerprint mismatch all return the existing `bounded-unknown` result",
+    "The on-chain path engages only where there is no per-chain supply at all; where the DefiLlama list reports supply the existing share-based materiality threshold continues to decide scope unchanged",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_ORACLE_APPLICABILITY: MethodologyChangelogEntry = {
   version: "9.17",
   title: "Oracle applicability no longer implies oracle safety",

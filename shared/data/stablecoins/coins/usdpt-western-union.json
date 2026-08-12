@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Cash deposits at FDIC-insured institutions and shares of BlackRock's Select Treasury Based Liquidity Fund (TFFXX)",
+  "collateral": "Cash deposits at FDIC-insured institutions and shares of the JPMorgan OnChain Liquidity-Token Money Market Fund (JLTXX)",
   "pegMechanism": "Issuer-managed 1:1 redemption for U.S. dollars; Anchorage Digital Bank N.A. issues USDPT, with each token matched by an equal amount of U.S. dollar reserves",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {

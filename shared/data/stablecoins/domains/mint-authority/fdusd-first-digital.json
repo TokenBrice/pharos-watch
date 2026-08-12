@@ -152,7 +152,7 @@
           },
           {
             "label": "BSC Safe Transaction Service",
-            "url": "https://api.safe.global/tx-service/bsc/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
+            "url": "https://api.safe.global/tx-service/bnb/api/v1/safes/0xfa771871d3d5c85e156D3d379E2FF7699C4d6a66/"
           },
           {
             "label": "BSC SafeMint module",

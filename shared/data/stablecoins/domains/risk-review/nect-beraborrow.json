@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "At Berachain block 24033076, 13 positive-debt Beraborrow collateral branches route through a central PriceFeed. Direct branches use configured RedStone adapters with validation and no live failover; Kodiak Island LP branches compose those values; the sunsetting ylstETH branch uses an owner-set conversion rate and is separately rated single-source-or-laggy.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

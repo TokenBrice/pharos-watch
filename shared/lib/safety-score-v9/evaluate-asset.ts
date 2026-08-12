@@ -107,12 +107,14 @@ function pillarReason(
   path: string,
   message?: string,
   responsibility: V9EvidenceResponsibility = "measured-adverse",
+  sourceGapId?: string | null,
 ): V9PillarReason {
   return {
     code,
     path,
     message: message ?? resolveV9ReasonPolicy(envelope, code).reason.publicLabel,
     responsibility,
+    ...(sourceGapId == null ? {} : { sourceGapId }),
   };
 }
 
@@ -187,6 +189,7 @@ function pillarReasonsForGaps(
       `${path}:cause:${encodeURIComponent(gap.gapId)}`,
       gap.message,
       gap.responsibility,
+      gap.gapId,
     ),
   );
 }
@@ -776,6 +779,7 @@ function unresolvedEvidenceReasons(
         `gap:${gap.ownerDomain}:${gap.path.kind}:${gap.gapId}`,
         gap.message,
         gap.responsibility,
+        gap.gapId,
       ),
     ),
   );

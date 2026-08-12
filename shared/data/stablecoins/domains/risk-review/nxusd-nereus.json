@@ -47,6 +47,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "NXUSD's 17 debt-bearing Avalanche Cauldrons use collateral-specific Chainlink, LP, TWAP, or staking-rate oracle routes without a common freshness check or alternate provider; a false oracle result preserves the Cauldron's cached rate, while a reverting route blocks the update.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

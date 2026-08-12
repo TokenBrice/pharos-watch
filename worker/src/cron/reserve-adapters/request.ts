@@ -1,4 +1,4 @@
-import { fetchTextWithRetry as fetchTextBodyWithRetry } from "../../lib/fetch-retry";
+import { fetchTextWithRetry as fetchTextBodyWithRetry, fetchWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { requireHtmlInput, requireJsonInputFromConfig } from "./input-guards";
@@ -257,6 +257,32 @@ export async function fetchTextWithRetry(
     }),
     ctx,
   );
+}
+
+/** Fetches a binary body (e.g. an attestation PDF) through the shared retry
+ *  and adapter-IO plumbing, so adapters never call the network directly. */
+export async function fetchBinaryWithRetry(
+  url: string,
+  signal: AbortSignal,
+  timeoutMs = 15_000,
+  ctx?: AdapterContext,
+  options?: TextRetryOptions,
+): Promise<Uint8Array> {
+  return runAdapterIo(ctx, `binary-get:${url}`, async () => {
+    const response = await fetchWithRetry(
+      url,
+      {
+        signal,
+        headers: buildRequestHeaders({ "User-Agent": ADAPTER_USER_AGENT }, options?.headers),
+      },
+      2,
+      { timeoutMs, returnFinalResponse: true },
+    );
+    if (!response?.ok) {
+      throw new Error(response ? `HTTP ${response.status} for ${url}` : `Fetch failed for ${url}`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  });
 }
 
 export async function fetchPrimaryHtmlInput(

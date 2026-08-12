@@ -69,8 +69,9 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
   reviewedAt: REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT,
   outputAssetType: "stable-single",
   outputAssets: ["cusd-celo"],
-  costModel: undisclosedReviewedFee(
-    "Mento CDP redemption/repayment path burns the FX stablecoin against USDm collateral at oracle value; public docs reviewed do not publish one global fixed redemption fee",
+  costModel: documentedVariableFee(
+    "Mento V3 FPMM swap fee, set on-chain per pool as lpFee + protocolFee in basis points (currently 20 + 10 = 30 bps on both the JPYm and CHFm pools, contract-capped at 200 bps combined); live telemetry supplies the current bps",
+    "formula",
   ),
   docs: [
     sourceRef("Mento V3 reserve docs", "https://docs.mento.org/mento-v3/dive-deeper/the-reserve", [
@@ -85,11 +86,18 @@ const mentoFpmmPoolRedeemConfig: RedemptionBackstopConfig = {
       "access",
     ]),
     sourceRef("Mento reserve dashboard", "https://reserve.mento.org/", ["capacity", "fees", "settlement"]),
+    sourceRef(
+      "Mento V3 FPMM verified implementation",
+      "https://celo.blockscout.com/address/0x8cB0518a0510Ab62450F79f3cD9EE0cbdDB77F30?tab=contract",
+      ["fees"],
+    ),
+    MENTO_V3_FPMM_DOC,
     MENTO_V3_DOC,
   ],
   notes: [
     "Mento CDP-backed FX stables are modeled as on-chain collateral redemptions into USDm collateral rather than issuer fiat redemption.",
-    "Live reserve sync now reads the coin's Mento V3 FPMM pool USDm balance each run and reports it as direct redemption capacity, replacing the prior documented-bound/eventual-only model; no live fee telemetry is available for this pool shape.",
+    "Live reserve sync now reads the coin's Mento V3 FPMM pool USDm balance each run and reports it as direct redemption capacity, replacing the prior documented-bound/eventual-only model.",
+    "The pool's swap fee is also read live: the verified FPMM implementation behind both pool proxies stores lpFee() and protocolFee() in basis points on a 10,000 denominator and charges their sum symmetrically in getAmountOut(), with setLPFee/setProtocolFee reverting FeeTooHigh above 200 bps combined. Both pools read 20 + 10 = 30 bps on 2026-08-12.",
     "Output declared 2026-07-19: Mento V3 CDP docs name USDm as the collateral asset of the FX-stable CDP/FPMM path, so the redemption pays USDm (tracked cusd-celo), mirroring the jpym-mento precedent; declaration was previously blocked on cusd-celo being untracked.",
   ],
 };

@@ -97,7 +97,7 @@
       "sources": [
         {
           "label": "Curve crvUSD resources",
-          "url": "https://resources.curve.finance/crvusd/"
+          "url": "https://docs.curve.finance/developer/crvusd/overview"
         },
         {
           "label": "crvUSD ControllerFactory",

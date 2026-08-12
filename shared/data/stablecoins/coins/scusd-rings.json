@@ -52,7 +52,7 @@
     {
       "type": "info",
       "title": "On-chain reserve tracking pending",
-      "message": "Live reserve tracking for scUSD is pending Trevee/Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.trevee.xyz/backing for the latest published addresses."
+      "message": "Live reserve tracking for scUSD is pending Trevee/Rings publishing canonical BoringVault and treasury backing addresses. Check https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address for the latest published addresses."
     }
   ],
   "launchDate": "2024-12-09",

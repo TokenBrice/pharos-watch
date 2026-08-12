@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Bima's documented USBD collateral markets use listed external oracle contracts through a shared PriceFeed that rejects stale, invalid, or greater-than-50% round changes, retains the last valid price only within the configured heartbeat, and otherwise reverts price-dependent operations.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

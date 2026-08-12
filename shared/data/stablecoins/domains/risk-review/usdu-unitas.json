@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "USDu is issued against a protocol-managed delta-neutral reserve portfolio rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

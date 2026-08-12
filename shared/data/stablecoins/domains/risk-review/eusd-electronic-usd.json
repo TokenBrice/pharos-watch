@@ -31,6 +31,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "EUSD is a Reserve Protocol RToken whose collateral plugins (Aave V3 USDC, Compound V3 USDC/USDT) use Chainlink price feeds for default detection: a defaultThreshold/delayUntilDefault state machine moves collateral SOUND -> IFFY -> DISABLED and triggers mechanistic RSR-staker seizure. Pricing uses standard single-source Chainlink feeds per asset with oracleError bounds and basket warmup; no redundant cross-provider failover is documented.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",
@@ -100,7 +101,7 @@
           },
           {
             "label": "Reserve Protocol docs",
-            "url": "https://reserve.org/protocol/"
+            "url": "https://docs.reserve.org/"
           }
         ]
       },
@@ -132,7 +133,7 @@
           },
           {
             "label": "Base bridge docs",
-            "url": "https://docs.base.org/docs/base-chain/network-information/base-contracts"
+            "url": "https://docs.base.org/base-chain/network-information/base-contracts"
           }
         ]
       },
@@ -164,7 +165,7 @@
           },
           {
             "label": "Arbitrum token bridge docs",
-            "url": "https://docs.arbitrum.io/build-decentralized-apps/token-bridging/overview"
+            "url": "https://docs.arbitrum.io/arbitrum-essentials/bridging/overview"
           }
         ]
       }

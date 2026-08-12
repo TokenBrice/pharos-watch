@@ -2,7 +2,7 @@
   "id": "euro3-3a-dao",
   "mica": {
     "status": "non-compliant",
-    "tokenType": "ART",
+    "tokenType": "EMT",
     "references": [
       {
         "label": "ESMA Interim MiCA Register – EMT issuers (EMTWP.csv, updated 2026-06-04): no entry for 3A DAO or EURO3",

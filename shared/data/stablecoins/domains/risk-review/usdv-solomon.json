@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "USDv is issued against Solomon-managed custody assets and delta-neutral hedge positions rather than borrower debt positions with oracle-triggered collateral liquidation.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

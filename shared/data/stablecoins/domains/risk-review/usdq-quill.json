@@ -47,6 +47,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Quill's four Scroll branches use Chainlink collateral feeds with 48-hour staleness bounds; a feed failure permanently shuts down the affected branch and retains its last good price rather than switching providers.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

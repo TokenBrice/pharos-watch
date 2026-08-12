@@ -23,7 +23,7 @@
       },
       {
         "label": "CNGN contract addresses",
-        "url": "https://docs.cngn.co/integrations/contract-addresses"
+        "url": "https://docs.cngn.co/guides/contract-addresses"
       }
     ]
   },
@@ -49,7 +49,7 @@
     },
     {
       "label": "Docs",
-      "url": "https://docs.cngn.co/integrations/contract-addresses"
+      "url": "https://docs.cngn.co/guides/contract-addresses"
     },
     {
       "label": "Proof of Reserve",

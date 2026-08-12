@@ -13,7 +13,7 @@
       },
       {
         "label": "USDXL HyperEVM token proxy (Blockscout)",
-        "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645?tab=contract"
+        "url": "https://hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645?tab=contract"
       },
       {
         "label": "HyperEVM JSON-RPC",
@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "USDXL's persistent HypurrFi Market Loans facilitator uses one pooled Aave V3 health-factor engine with sixteen collateral-specific oracle branches. Every branch ultimately depends on Pyth through a direct adapter or a selected wrapper; no path enforces price recency. HyFiOracle can select a fallback for absent or nonpositive answers, but the configured fallback is the zero address. eMode categories 1 and 2 override risk parameters for correlated positions; Market Flash Loans and the USDT0 PSM are separate non-liquidation issuance paths.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
@@ -82,7 +83,7 @@
     "sources": [
       {
         "label": "HypurrFi USDXL introduction",
-        "url": "https://docs.hypurr.fi/usdxl/introduction"
+        "url": "https://docs.hypurrfi.com/products/usdxl"
       },
       {
         "label": "Verified HyFiOracle",
@@ -1249,7 +1250,7 @@
       },
       {
         "label": "USDXL token proxy on HyperEVM Blockscout",
-        "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+        "url": "https://hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
       },
       {
         "label": "HypurrFi USDXL docs",
@@ -1275,7 +1276,7 @@
         "sources": [
           {
             "label": "USDXL token proxy on HyperEVM Blockscout",
-            "url": "https://hyperliquid.blockscout.com/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
+            "url": "https://hyperevmscan.io/address/0xca79db4b49f608ef54a5cb813fbed3a6387bc645"
           }
         ]
       },

@@ -13,7 +13,7 @@
       ],
       "implementationAddresses": [
         "0x30198aa66d057a6216db471fce234b98edc1e5ad",
-        "0x23783ee86db1a05dfc6dc2f042606a92c97a374c",
+        "0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b",
         "0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc"
       ],
       "adminAddresses": [
@@ -23,7 +23,7 @@
       "canChangeMintLogic": true,
       "delaySec": 172800,
       "controlRef": "sUSDai four-chain upgrade timelocks",
-      "observedAt": "2026-07-14",
+      "observedAt": "2026-08-11",
       "sources": [
         {
           "label": "Sourcify exact-match sUSDai OToken implementation",
@@ -41,7 +41,8 @@
           "label": "Exact-match DVNTimelock source",
           "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
         }
-      ]
+      ],
+      "observedBlock": 493565609
     },
     "controls": [
       {

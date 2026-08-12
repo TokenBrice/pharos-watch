@@ -38,8 +38,8 @@
   ],
   "jurisdiction": {
     "country": "Switzerland",
-    "regulator": "FINMA",
-    "license": "VQF"
+    "regulator": "VQF (FINMA-recognized SRO)",
+    "license": "SRO Member"
   },
   "contracts": [
     {

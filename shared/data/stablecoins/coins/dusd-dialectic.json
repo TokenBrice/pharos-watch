@@ -23,7 +23,7 @@
     "sources": [
       {
         "label": "Makina Machine share price and AUM",
-        "url": "https://docs.makina.finance/concepts/architecture/machine/share-price"
+        "url": "https://docs.makina.finance/concepts/architecture/machine/overview/share-price"
       },
       {
         "label": "Makina strategy deployments",
@@ -40,7 +40,7 @@
     },
     {
       "label": "X",
-      "url": "https://x.com/makinafinance"
+      "url": "https://x.com/makinafi"
     },
     {
       "label": "Docs",

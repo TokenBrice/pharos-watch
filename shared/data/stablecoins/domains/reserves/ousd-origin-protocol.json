@@ -24,7 +24,7 @@
       },
       {
         "label": "Origin OUSD collateral analytics",
-        "url": "https://analytics.originprotocol.com/ousd/collateral/"
+        "url": "https://analytics.originprotocol.com/"
       }
     ],
     "rationale": "Origin states that OUSD became 100% USDC-backed after the November 2025 simplification and deploys the collateral across Morpho lending and Curve liquidity provision. The reviewed current disclosure does not publish a fixed strategy allocation, so the prior 90/10 Morpho/Curve estimate was replaced with one aggregate USDC protocol-position basket.",

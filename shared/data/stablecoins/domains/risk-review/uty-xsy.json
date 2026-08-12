@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "opaque-or-unknown",
     "summary": "UTY's documented Base mint path deposits USDC 1:1 and sweeps the backing to a custodian-managed strategy. XSY discloses exchange-level liquidation risk for managed short hedges, but public sources do not identify the strategy price-feed topology, freshness bounds, or fallback controls.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

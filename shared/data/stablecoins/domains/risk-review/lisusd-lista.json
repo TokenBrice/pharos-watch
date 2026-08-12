@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "redundant-with-failover",
     "summary": "Lista's Resilient Price Oracle cross-validates multiple configured providers for lisUSD collateral markets before Maker-style collateral ratios and Dutch-auction liquidation use the selected price.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

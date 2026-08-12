@@ -88,6 +88,68 @@ function calcFragmentsResult(boldAmountRaw: bigint | number): string {
   ].join("")}`;
 }
 
+// Yearn V3 vault: 5M idle plus two queued strategies (60M debt fully redeemable,
+// 35M debt with 20M redeemable) => 85M withdrawable, with isShutdown() pinned.
+function yearnV3RpcMock(isShutdownRaw: bigint | number) {
+  const strategyA = "0x1111111111111111111111111111111111111111";
+  const strategyB = "0x2222222222222222222222222222222222222222";
+  return async (_url: string, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as { params: [{ to?: string; data: string }] };
+    const call = body.params[0];
+    const to = call.to?.toLowerCase();
+    if (call.data === "0x38d52e0f") {
+      return jsonResponse({
+        result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      });
+    }
+    if (call.data === "0x01e1d114") {
+      return jsonResponse({ result: uint256Result(100_000_000n) });
+    }
+    if (call.data === "0x18160ddd") {
+      return jsonResponse({ result: uint256Result(100_000_000n) });
+    }
+    if (call.data.startsWith("0x07a2d13a") && to === "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b") {
+      return jsonResponse({ result: uint256Result(100_000_000n) });
+    }
+    if (call.data.startsWith("0x70a08231")) {
+      return jsonResponse({ result: uint256Result(5_000_000n) });
+    }
+    if (call.data === "0x313ce567") {
+      return jsonResponse({ result: uint256Result(6) });
+    }
+    if (call.data === "0x9aa7df94") {
+      return jsonResponse({ result: uint256Result(5_000_000n) });
+    }
+    if (call.data === "0xa9bbf1cc") {
+      return jsonResponse({ result: addressArrayResult([strategyA, strategyB]) });
+    }
+    if (call.data === "0xbf86d690") {
+      return jsonResponse({ result: uint256Result(isShutdownRaw) });
+    }
+    if (call.data.startsWith("0x39ebf823")) {
+      if (call.data.toLowerCase().includes(strategyA.slice(2).toLowerCase())) {
+        return jsonResponse({ result: strategyParamsResult(60_000_000n) });
+      }
+      if (call.data.toLowerCase().includes(strategyB.slice(2).toLowerCase())) {
+        return jsonResponse({ result: strategyParamsResult(35_000_000n) });
+      }
+    }
+    if (call.data.startsWith("0xd905777e") && to === strategyA) {
+      return jsonResponse({ result: uint256Result(60_000_000n) });
+    }
+    if (call.data.startsWith("0xd905777e") && to === strategyB) {
+      return jsonResponse({ result: uint256Result(20_000_000n) });
+    }
+    if (call.data.startsWith("0x07a2d13a") && to === strategyA) {
+      return jsonResponse({ result: uint256Result(60_000_000n) });
+    }
+    if (call.data.startsWith("0x07a2d13a") && to === strategyB) {
+      return jsonResponse({ result: uint256Result(20_000_000n) });
+    }
+    return null;
+  };
+}
+
 describe("fetchErc4626SingleAssetReserves", () => {
   beforeEach(() => {
     resetRpcMocks();
@@ -165,7 +227,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.25,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
+        routeStatus: "open",
+        routeStatusReason: expect.stringContaining("Idle underlying redemption liquidity"),
       },
     });
     expect(balanceOfCalls).toEqual([
@@ -368,6 +431,57 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
+  it("reports a paused redemption route when the vault paused() returns true", async () => {
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      if (body.params[0].data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (body.params[0].data === "0x01e1d114") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(100_000_000n) });
+      }
+      if (body.params[0].data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(25_000_000n) });
+      }
+      if (body.params[0].data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      if (body.params[0].data === "0x5c975abb") {
+        return jsonResponse({ result: uint256Result(1) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      coin!.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: "25000000",
+      redemption: {
+        capacityUsd: 25,
+        routeStatus: "paused",
+        routeStatusReason: "Vault paused() returned true on-chain",
+      },
+    });
+  });
+
   it("uses full convertible backing as capacity for atomic-full-backing vaults even with zero idle balance", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
@@ -416,7 +530,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 1,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
+        routeStatus: "open",
+        routeStatusReason: expect.stringContaining("Reviewer-asserted unconstrained external-savings redemption"),
         routeStatusSource: "onchain",
       },
     });
@@ -508,6 +623,58 @@ describe("fetchErc4626SingleAssetReserves", () => {
     });
   });
 
+  it("opens the Yearn V3 route when withdrawable capacity is positive and isShutdown() is false", async () => {
+    fetchWithRetryMock.mockImplementation(yearnV3RpcMock(0));
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      redemptionCapacityRaw: "85000000",
+      redemptionCapacitySource: "yearn-v3-withdrawable",
+      redemption: {
+        capacityUsd: 85,
+        routeStatus: "open",
+        routeStatusReason: "Yearn V3 withdrawable liquidity positive and isShutdown() false this run",
+        routeStatusSource: "onchain",
+      },
+    });
+  });
+
+  it("reports a paused Yearn V3 route when isShutdown() returns true", async () => {
+    fetchWithRetryMock.mockImplementation(yearnV3RpcMock(1));
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple");
+    expect(coin?.liveReservesConfig).toBeDefined();
+
+    const result = await fetchErc4626SingleAssetReserves(
+      coin!,
+      cloneConfigWithYearnV3Withdrawable(coin!.liveReservesConfig!),
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.warnings).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      redemptionCapacityRaw: "85000000",
+      redemption: {
+        capacityUsd: 85,
+        routeStatus: "paused",
+        routeStatusReason: "Yearn vault isShutdown() returned true on-chain",
+      },
+    });
+  });
+
   it("uses sBOLD Stability-Pool-withdrawable capacity from calcFragments instead of the ~0 idle balance", async () => {
     const calcFragmentsCalls: Array<{ to?: string; data: string }> = [];
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
@@ -564,7 +731,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.85,
         capacityKind: "live-direct",
         freshnessKind: "same-run-onchain",
-        routeStatus: "unknown",
+        routeStatus: "open",
+        routeStatusReason: expect.stringContaining("sBOLD Stability Pool withdrawable BOLD positive"),
         routeStatusSource: "onchain",
       },
     });
@@ -707,7 +875,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.3,
         capacityKind: "live-direct",
         freshnessKind: "same-run-api",
-        routeStatus: "unknown",
+        routeStatus: "open",
+        routeStatusReason: expect.stringContaining("Morpho listed-vault in-kind liquidity positive"),
         routeStatusSource: "protocol-api",
       },
     });
@@ -795,7 +964,8 @@ describe("fetchErc4626SingleAssetReserves", () => {
         capacityRatioOfSupply: 0.3,
         capacityKind: "live-direct",
         freshnessKind: "same-run-api",
-        routeStatus: "unknown",
+        routeStatus: "open",
+        routeStatusReason: expect.stringContaining("Morpho listed-vault in-kind liquidity positive"),
         routeStatusSource: "protocol-api",
       },
     });
@@ -1029,6 +1199,7 @@ describe("fetchErc4626SingleAssetReserves", () => {
     );
 
     expect(calledUrls).toEqual([
+      "https://rpc.plasma.to",
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",
       "https://rpc.plasma.to",

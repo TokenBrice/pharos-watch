@@ -358,30 +358,6 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
     ],
     notes: ["Retail exchange documentation describes 1-3 business day processing driven by bank-transfer timing"],
   },
-  "ustb-superstate": {
-    ...issuerBase,
-    capacityModel: { kind: "reserve-sync-metadata" },
-    costModel: fixedFee(
-      0,
-      "Superstate smart-contract docs describe redemption fees as dynamic/configurable, but the protocol redemption fee is currently set to 0 bps with only USDC supported for redemption",
-    ),
-    reviewedAt: "2026-04-15",
-    docs: [
-      sourceRef("Superstate USTB", "https://superstate.com/assets/ustb", ["route", "capacity"]),
-      sourceRef("Superstate liquidity API", "https://api.superstate.com/v1/funds/liquidity", ["capacity"]),
-      sourceRef("Superstate docs", "https://docs.superstate.com/ustb", ["route"]),
-      sourceRef("Superstate smart contracts", "https://docs.superstate.com/investors/smart-contracts", ["fees"]),
-      sourceRef(
-        "Redeeming USTB",
-        "https://docs.superstate.com/superstate-funds/ustb/redeeming-ustb",
-        ["fees"],
-      ),
-    ],
-    notes: [
-      "Fresh live reserve telemetry uses the on-chain USDC balance of Superstate's RedemptionIdle contract as the bounded current direct capacity, with the liquidity API's Circle USD availability kept as context",
-      "NAV/AUM remains reserve evidence only and is not used as immediate redemption capacity",
-    ],
-  },
   "usdh-native-markets": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,

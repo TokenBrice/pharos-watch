@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
@@ -14,6 +14,10 @@ import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 
 const signal = AbortSignal.timeout(5_000);
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("adaptAccountableDashboard", () => {
   it("maps the type breakdown into reserve slices", () => {
@@ -512,6 +516,36 @@ describe("adaptAccountableDashboard", () => {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 6, 18, 14) / 1000,
     }).valid).toBe(true);
+  });
+
+  it("sends the Apyx dashboard Origin and Referer headers", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get("Origin")).toBe("https://accountable.apyx.fi");
+      expect(headers.get("Referer")).toBe("https://accountable.apyx.fi/");
+      return new Response(JSON.stringify({
+        res: "ok",
+        data: {
+          collateralization: 1,
+          ts: "1784376607058",
+          reserves: {
+            total_reserves: 100,
+            reserves_split: [
+              { value: 100, name: "Cash & Equivalents" },
+            ],
+          },
+        },
+      }), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchAccountableReserves(
+      apxusd as never,
+      apxusd.liveReservesConfig as LiveReservesConfig,
+      AbortSignal.timeout(5_000),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("treats Unitas deployment buckets as the same high-risk strategy basket", async () => {

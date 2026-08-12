@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "single-source-or-laggy",
     "summary": "Youves uUSD has six active V3 engines and three legacy but debt-bearing engines. Eight branches accept millisecond Ubinetic report timestamps in a seconds-based nominal 900-second check, making freshness effectively unbounded; the legacy SIRS branch was fail-closed because its required BTC/USD epoch was 301 epochs stale. Liquidation is branch-local and permissionless, with no funded deficit backstop.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

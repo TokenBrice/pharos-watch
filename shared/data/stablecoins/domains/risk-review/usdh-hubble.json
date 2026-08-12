@@ -23,6 +23,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Hubble values CDP collateral through the Kamino Scope Hubble feed (Pyth Pull for core assets; KToken for the kUSDH-USDC Orca market), with tryLiquidate/borrow reading scopePrices; hybrid Stability Vault and market-based liquidations backstop undercollateralized debt, with protocol-wide redistribution on empty vault or bad debt.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

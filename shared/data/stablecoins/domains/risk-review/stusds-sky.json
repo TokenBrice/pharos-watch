@@ -35,6 +35,7 @@
   "oracleRisk": {
     "tier": "medianized-with-delay",
     "summary": "stUSDS funds one live SKY-backed Lockstake branch. SKY/USD comes from a 13-feed-quorum Chronicle Scribe through Sky's one-hour OSM and a governance-set $0.025 cap. Unsafe positions use a Dutch auction when enabled, and auction shortfall directly reduces the stUSDS exchange rate; the live Clipper was fully stopped at the reviewed block.",
+    "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",

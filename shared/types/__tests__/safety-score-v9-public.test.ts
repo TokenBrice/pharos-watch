@@ -212,6 +212,7 @@ function currentResponse() {
     evidenceResponsibility: {
       semantics: "limiting-fact-owner-v1",
       totalFactCount: 0,
+      facts: [],
       summaries: [
         { responsibility: "integration-missing", factCount: 0, criticalFactCount: 0, reasonCodes: [] },
         { responsibility: "issuer-undisclosed", factCount: 0, criticalFactCount: 0, reasonCodes: [] },

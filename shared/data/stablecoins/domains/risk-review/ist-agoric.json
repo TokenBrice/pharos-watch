@@ -10,6 +10,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "Inter Protocol vaults receive collateral prices from the Flux Aggregator data feed, whose operators submit median prices by round.",
+    "role": "collateral-pricing",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

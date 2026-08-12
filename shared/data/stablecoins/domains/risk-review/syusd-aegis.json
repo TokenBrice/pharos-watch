@@ -10,6 +10,7 @@
   "oracleRisk": {
     "tier": "oracleless",
     "summary": "sYUSD is an ERC-4626 staking receipt over YUSD whose exchange rate accrues strategy yield; it is not a borrower debt market with collateral liquidation oracles.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

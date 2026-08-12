@@ -39,6 +39,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "FPI's redemption target uses a specialized Chainlink oracle that commits the monthly CPI-U rate, but FPI is minted and redeemed through the FRAX-backed Controller Pool and stabilized through AMOs rather than borrower positions subject to collateral-price liquidation.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "not-applicable",

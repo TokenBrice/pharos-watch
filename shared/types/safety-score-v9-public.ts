@@ -481,10 +481,21 @@ export type SafetyScoreV9EvidenceResponsibilityItem = z.infer<
   typeof SafetyScoreV9EvidenceResponsibilityItemSchema
 >;
 
+export const SafetyScoreV9EvidenceResponsibilityFactSchema = z
+  .object({
+    reasonCode: V9ReasonCodeSchema,
+    exactFactPath: z.string().min(1),
+    sourceGapId: z.string().min(1).nullable(),
+    responsibility: V9EvidenceResponsibilitySchema,
+    critical: z.boolean(),
+  })
+  .strict();
+
 export const SafetyScoreV9EvidenceResponsibilityTraceSchema = z
   .object({
     semantics: z.literal("limiting-fact-owner-v1"),
     totalFactCount: z.number().int().nonnegative(),
+    facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
     summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
   })
   .strict()

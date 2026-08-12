@@ -12,7 +12,7 @@
     "summary": "AxCNH is reviewed as an issuer-native multichain token: supply is issued or redeemed by the issuer/operator on supported chains rather than through a separately identified third-party bridge token. Missing evidence for a public bridge lockbox keeps confidence below verified.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-    "confidence": "verified",
+    "confidence": "probable",
     "protocols": [
       {
         "source": "issuer",

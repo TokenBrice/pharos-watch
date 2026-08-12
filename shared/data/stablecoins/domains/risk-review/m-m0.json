@@ -5,7 +5,7 @@
     "sources": [
       {
         "label": "M0 Solana docs",
-        "url": "https://docs.m0.org/home/technical-documentations/solana/"
+        "url": "https://docs.m0.org/protocol/solana"
       },
       {
         "label": "M0 deployments",
@@ -13,7 +13,7 @@
       },
       {
         "label": "MToken technical specification",
-        "url": "https://docs.m0.org/home/technical-specifications/m-token"
+        "url": "https://docs.m0.org/protocol/m-token"
       }
     ],
     "evidence": "M0's Ethereum MToken mint and burn paths route through MinterGateway, and the Solana Token-2022 M deployment is documented as frozen-by-default with thawing limited to approved earners. That Solana holder-account control is direct FreezeWatch exposure for M.",

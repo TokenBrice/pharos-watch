@@ -80,7 +80,7 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
   "yieldConfig": {
-    "yieldSource": "tULTRA (Standard Chartered Libeara tokenized T-bills)",
+    "yieldSource": "tULTRA and FILQ (Standard Chartered Libeara and Fidelity International tokenized funds)",
     "yieldType": "nav-appreciation"
   },
   "liveReservesConfig": {

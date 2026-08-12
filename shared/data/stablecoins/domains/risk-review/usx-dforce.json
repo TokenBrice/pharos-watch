@@ -28,6 +28,7 @@
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "dForce says Chainlink Price Feeds are the primary oracle solution for its lending and stablecoin protocols, with no stronger USX-specific failover documented.",
+    "role": "collateral-pricing",
     "reviewedAt": "2026-06-12",
     "reviewer": "Codex data review",
     "confidence": "verified",

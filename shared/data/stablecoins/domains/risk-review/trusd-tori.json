@@ -27,6 +27,7 @@
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "summary": "trUSD mint and redemption amounts are constructed off-chain by Tori's pricing system, signed by the whitelisted participant, and executed by a privileged ToriMinting operator. The contract restricts collateral to USDC and USDT and enforces nominal amount bounds and per-block throughput caps, but it has no independent on-chain price feed or collateral-depeg circuit breaker. Tori's backend therefore remains the concentrated authority over the economically effective quote.",
+    "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {
       "disposition": "top-level-only",
