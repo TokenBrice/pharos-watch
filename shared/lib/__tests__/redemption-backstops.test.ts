@@ -1123,7 +1123,8 @@ describe("getRedemptionBackstopConfig", () => {
         "asset:usdc",
         "asset:ygamiusdc",
       ],
-      reviewedAt: "2026-07-19",
+      // Re-reviewed 2026-08-12 when capacity moved onto live Parallelizer telemetry.
+      reviewedAt: "2026-08-12",
     });
     expect(getRedemptionBackstopConfig("reusd-resupply")).toMatchObject({
       outputAssetType: "mixed-collateral",

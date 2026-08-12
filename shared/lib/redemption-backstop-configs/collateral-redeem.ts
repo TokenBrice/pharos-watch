@@ -459,7 +459,13 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     },
     "usdp-parallel": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull(REVIEWED_REDEMPTION_OUTPUTS_WAVE2_AT),
+      ...documentedBoundSupplyFull("2026-08-12"),
+      // Live-only since v4.35: the escrow-balance adapter sums the
+      // Parallelizer's per-collateral getIssuedByCollateral reads (verified
+      // proportional basket redemption, so the sum is the honest bound); when
+      // the read is unavailable the route is left unrated instead of assuming
+      // full-supply immediacy.
+      capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },
       outputAssetType: "mixed-collateral",
       outputAssets: [
         "asset:frxusd",
@@ -620,27 +626,55 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
     },
     "deuro-deuro": {
       ...collateralRedeemBase,
-      ...documentedBoundSupplyFull("2026-04-16"),
-      reviewedAt: REVIEWED_EXIT_CREDIT_WAVE3_AT,
-      outputAssetType: "mixed-collateral",
-      costModel: documentedVariableFee(
-        "dEURO allows burning tokens against collateralized positions below the position's redemption threshold; public docs reviewed describe a governance-managed fee schedule without a single fixed bps number",
+      capacityModel: { kind: "reserve-sync-metadata" },
+      reviewedAt: "2026-08-12",
+      outputAssetType: "stable-basket",
+      unresolvedOutputAssetKeys: [
+        "asset:eurt",
+        "eurs-stasis",
+        "asset:veur",
+        "eurc-circle",
+        "eurr-stablr",
+        "europ-schuman",
+        "euri-banking-circle",
+        "asset:eure-legacy-ethereum",
+        "asset:eura",
+      ],
+      unresolvedOutputDisposition: "reviewed-external",
+      costModel: fixedFee(
+        0,
+        "Verified StablecoinBridge source burns dEURO and transfers the decimal-converted underlying amount 1:1 with no fee deduction",
       ),
       docs: [
-        sourceRef("dEURO documentation", "https://docs.deuro.com/", ["route", "capacity"]),
-        sourceRef("dEURO app", "https://app.deuro.com/", ["route"]),
-        sourceRef("dEURO collateralized minting", "https://docs.deuro.com/positions", ["route", "capacity"]),
-        sourceRef("dEURO stablecoin bridges", "https://docs.deuro.com/swap", ["route", "capacity", "fees"]),
+        sourceRef("dEURO contract registry", "https://docs.deuro.com/smart-contracts", [
+          "route",
+          "capacity",
+          "access",
+        ]),
+        sourceRef("dEURO stablecoin bridges", "https://docs.deuro.com/swap", [
+          "route",
+          "capacity",
+          "fees",
+          "settlement",
+        ]),
         sourceRef(
           "dEURO StablecoinBridge source",
           "https://github.com/d-EURO/smartContracts/blob/develop/contracts/StablecoinBridge.sol",
-          ["fees", "settlement"],
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef(
+          "Verified EURC StablecoinBridge deployment",
+          "https://eth.blockscout.com/address/0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1?tab=contract",
+          ["route", "capacity", "fees", "settlement"],
         ),
       ],
       notes: [
-        "Frankencoin-fork CDP: dEURO is minted against position-specific collateral and burned at par against positions below their redemption threshold, without an external stablecoin target rail",
-        "Fee bound withheld 2026-08-12, and the modeled route is flagged for a remodel. Re-reading the primary docs found no holder-exercisable redemption into position collateral at all: the positions page documents only owner minting plus a permissionless challenge/auction, which is a liquidation mechanism rather than a redemption claim, so there is no documented fee to bound and the reservation recorded here previously still stands.",
-        "The only holder exit dEURO does document is a different route: StablecoinBridge burns dEURO 1:1 into a single source Euro stablecoin, charging no fee (`_burn` transfers the decimal-converted amount with no deduction) but capped at the idle inventory of the selected bridge. Read live at Ethereum block 25737044, the EURC bridge 0xB4fF7412f08C22d7381885e8BdA9EE9825092fd1 holds 456,236.35 EURC against `minted()` of 456,236.35 dEURO with `horizon()` at 2026-09-05, so the route works but is bounded by per-bridge inventory rather than by total supply. Promoting it needs a stablecoin-redeem remodel and a per-bridge capacity source, not a fee bound.",
+        "The modeled holder exit is the permissionless StablecoinBridge burn rail, not position collateral: each bridge burns dEURO and atomically transfers its configured Euro stablecoin after decimal conversion.",
+        "Live reserve sync identity-gates all nine registry bridges against their exact underlying token, underlying decimals, the tracked dEURO contract, and dEURO isMinter(bridge), then sums idle underlying inventory. Any failed read or identity mismatch withholds the entire redemption telemetry block; there is no supply-ratio or fixed-USD fallback.",
+        "Verified at Ethereum block 25737329: EURT 0; EURS 0.51; VEUR 0; EURC 456,236.347273; EURR 0; EUROP 0; EURI 0.121078948117731513; EURE 56.444074572681000575; EURA 0.013878229134009314. All eur() and dEURO() identities, token decimals, and isMinter checks passed; total idle inventory was 456,293.436304749932741402 EUR.",
+        "Capacity is stored in USD as required by reserve-sync metadata. The adapter derives EUR/USD from the same dEURO price payload as price.usd / price.eur, avoiding a false 1 EUR = 1 USD assumption; the live review reference was 1.150811321981997 USD/EUR ($525,107.65 capacity).",
+        "The basket remains unresolved under the July 2026 completeness rule. EURS, EURC, EURR, EUROP, and EURI map to exact tracked deployments; EURT, VEUR, EURA, and the legacy Ethereum EURE token at 0x3231...273f do not, so publishing only the five tracked members would falsely resolve the nine-member route.",
+        "Blockscout verified six bridge deployments as StablecoinBridge with the fee-free burn path; Sourcify exact runtime/creation matches verified the three deployments absent from Blockscout source (EURR, EUROP, EURA).",
       ],
     },
     "cjpy-yamato": {

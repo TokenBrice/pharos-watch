@@ -2,6 +2,23 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.35",
+    title: "The residual queue clears: dEURO remodel, USDp basket sum, and valued redemption outputs",
+    date: "2026-08-12",
+    effectiveAt: 1786550400,
+    summary:
+      "The final pass of the exit-credit campaign remodels dEURO onto its real StablecoinBridge rail, gives USDp a live proportional-basket bound, and values USD3 and eUSD redemption outputs at same-run on-chain NAV so their baskets no longer wait on external price rows. Scoring weights, ladders, and the exit engine are unchanged; routes move only through better evidence.",
+    impact: [
+      "dEURO replaces its false collateral-redemption model with live-only, fee-free StablecoinBridge basket telemetry across nine identity-pinned Ethereum bridges (EURT, EURS, VEUR, EURC, EURR, EUROP, EURI, EURE, EURA — each verified to burn dEURO 1:1 into its underlying with no fee). Capacity sums the idle EUR inventory (456,293 EUR at Ethereum block 25737329, almost entirely on the EURC bridge), converts it to USD through the protocol price feed rather than a false EUR=USD assumption, fails closed with no fallback, and leaves the output basket honestly unresolved because only five of the nine underlyings are tracked",
+      "USDp (Parallel) gains live capacity from the Parallelizer diamond's per-collateral getIssuedByCollateral reads, summed across the frxUSD, sfrxUSD, USDe, and sUSDe branches ($845,693 at block 25737340). The verified source redeems a proportional basket rather than holder-selected collateral, so the sum is the honest executable bound; the escrow-balance adapter gains a bounded multi-read mode for it and the documented full-supply model is dropped with no fallback",
+      "USD3 and eUSD redemption outputs are now valued at same-run on-chain NAV bound into the reserve snapshot, following the cUSD (Cap) precedent: ERC-4626 legs through convertToAssets and verified Compound wrappers through exchangeRate, with per-leg weights and a unit value published only when the live basket exactly matches the configured outputs ($1.1037 per USD3 and $1.0000 per eUSD at the review reads). An unreadable leg or a rotated basket suppresses the valuation while capacity telemetry stays intact, so the routes no longer wait on external peg rows for legs like steakUSDC",
+      "FDUSD's transparency source remains fail-closed after a first-party-only investigation: every firstdigitallabs.com path serves a Cloudflare JavaScript challenge to automated clients, the app subdomain exposes no transparency API, and the reachable copy is a Webflow mirror serving a scanned unparseable PDF — recorded so the staleness is a documented condition rather than a silent gap",
+      "Route-family totals are unchanged at 148 offchain-issuer, 67 stablecoin-redeem, 38 collateral-redeem, 39 queue-redeem, 14 psm-swap, and 9 basket-redeem",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.34",
     title: "A consensus-enforced fee bound, the USDPT issuer rail, live USSD escrow, and documented skips",
     date: "2026-08-12",

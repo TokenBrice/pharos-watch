@@ -151,14 +151,6 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     owner: POLICY_OWNER,
     reviewedAt: "2026-05-23",
   },
-  {
-    kind: "unused-live-redemption-telemetry",
-    stablecoinId: "deuro-deuro",
-    reason:
-      "The collateral-positions-api adapter only emits redemption capacity when a redemptionBridge param is configured, and dEURO's liveReservesConfig has none, so a reserve-sync-metadata route would stay permanently unrated; the documented full-system collateral-redemption model remains until a dEURO redemption bridge or capacity feed is wired.",
-    owner: POLICY_OWNER,
-    reviewedAt: "2026-06-10",
-  },
 ];
 
 const UNVERIFIED_FRESHNESS_APPROVALS = new Set<string>(
