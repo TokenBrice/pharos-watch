@@ -68,8 +68,9 @@ function resolve(rows = [observation()], capturedAtSec = CLOCK_SEC - 60) {
 }
 
 describe("Safety Score V9 transfer deployment materiality", () => {
-  it("pins the approved cohort to exactly 39 assets", () => {
-    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(39);
+  it("pins the approved cohort to exactly 40 assets", () => {
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toHaveLength(40);
+    expect(SAFETY_SCORE_V9_TRANSFER_MATERIALITY_ASSET_IDS).toContain("sfrxusd-frax");
   });
 
   it("resolves a cohort asset's reviewed transfer posture from a fresh raw-unit observation", () => {
@@ -82,6 +83,27 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     ["identity mismatch", [observation({ deploymentKey: "ethereum:0x0000000000000000000000000000000000000001" })], CLOCK_SEC - 60],
   ])("fails closed for %s", (_label, rows, capturedAtSec) => {
     expect(resolve(rows, capturedAtSec)).toEqual({ observationState: "bounded-unknown", posture: null });
+  });
+
+  it.each([
+    ["base-input generation", `report-cards-input:v1:${"c".repeat(64)}`, REGISTRY_FINGERPRINT],
+    ["registry fingerprint", BASE_INPUT_GENERATION_ID, "d".repeat(64)],
+  ])("fails closed for a mismatched %s", (_label, baseInputGenerationId, registryFingerprint) => {
+    const meta = ACTIVE_META_BY_ID.get(ASSET_ID)!;
+    const scope = transferMaterialScopeFromOnchainGeneration({
+      assetId: ASSET_ID,
+      meta,
+      baseScope: BASE_SCOPE,
+      generation: generation(),
+      registryFingerprint,
+      baseInputGenerationId,
+      clockSec: CLOCK_SEC,
+    });
+    expect(resolveSafetyScoreV9ReviewedTransferFact(
+      SAFETY_SCORE_V9_REVIEWED_TRANSFER_FACTS.get(ASSET_ID)!,
+      CLOCK_SEC,
+      scope,
+    )).toEqual({ observationState: "bounded-unknown", posture: null });
   });
 
   it("treats every non-zero deployment of a bridged multi-chain asset as material", () => {

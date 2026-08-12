@@ -226,10 +226,10 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
  * bucket, so reading the per-chain map alone discards a real, already
  * USD-denominated figure.
  *
- * Per-chain attribution genuinely does not exist for these assets, so
- * `chainDistribution`, `failureDomains` and the bridge-route shares stay empty
- * rather than being synthesized: chain-concentration gates must remain honestly
- * blocked instead of silently reading a single-chain distribution.
+ * Per-chain attribution normally does not exist for these assets, so
+ * `chainDistribution` stays empty rather than being synthesized. A narrowly
+ * admitted exact raw-unit partition may still carry reviewed bridge-route USD
+ * shares; it does not claim a provider-sourced chain distribution.
  */
 function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
   const source = context.extension.sources.chainSupply;
@@ -284,6 +284,23 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
     ),
   );
   const evidence = context.evidence.get(evidenceId)!;
+  // Aggregate-only supply may carry the legacy "unknown=1, no rows" review
+  // sentinel. It is not a route partition and must remain omitted. Only an
+  // explicit non-empty exact partition can enrich this fact shape.
+  const review = context.asset.supplyReview?.selectedBridgeRoutes.length
+    ? context.asset.supplyReview
+    : null;
+  if (review !== null) {
+    assertSupplyReviewSharesReconcile(context.asset.assetId, circulatingUsd, review);
+    const routeSupplyUsd = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyUsd, 0);
+    const toleranceUsd = Math.max(0.000001, circulatingUsd * 1e-12);
+    if (Math.abs(routeSupplyUsd - circulatingUsd) > toleranceUsd) {
+      throw new Error(
+        `Aggregate bridge supply rows do not conserve for ${context.asset.assetId}: ` +
+          `route rows sum to ${routeSupplyUsd} over ${circulatingUsd} circulating USD`,
+      );
+    }
+  }
   const status =
     evidence.freshness.state === "stale"
       ? missingLocalFact(context, {
@@ -309,12 +326,67 @@ function buildAggregateSupply(context: AssetBuildContext): V9AssetFactsV2["suppl
     referencePriceUsd: null,
     circulatingUsd,
     chainDistribution: null,
-    selectedBridgeRoutes: [],
-    selectedRouteSupplyShare: null,
-    unknownRouteSupplyShare: null,
-    unreviewedRouteSupplyShare: null,
-    failureDomains: [],
+    selectedBridgeRoutes: review?.selectedBridgeRoutes ?? [],
+    selectedRouteSupplyShare: review?.selectedRouteSupplyShare ?? null,
+    unknownRouteSupplyShare: review?.unknownRouteSupplyShare ?? null,
+    unreviewedRouteSupplyShare: review?.unreviewedRouteSupplyShare ?? null,
+    failureDomains: stableFailureDomains(review?.failureDomains ?? []),
   };
+}
+
+function assertSupplyReviewSharesReconcile(
+  assetId: string,
+  circulatingUsd: number,
+  review: NonNullable<AssetBuildContext["asset"]["supplyReview"]>,
+): void {
+  const shareSum =
+    (review.selectedRouteSupplyShare ?? 0) +
+    (review.unreviewedRouteSupplyShare ?? 0) +
+    (review.unknownRouteSupplyShare ?? 0);
+  const rowShareSum = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
+  const reviewedRowShare = review.selectedBridgeRoutes.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
+    0,
+  );
+  const unresolvedRowShare = review.selectedBridgeRoutes.reduce(
+    (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
+    0,
+  );
+  const unmatchedRowShare = review.selectedBridgeRoutes.reduce(
+    (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
+    0,
+  );
+  const carriesExplicitUnmatchedRows = review.selectedBridgeRoutes.some((route) => route.reviewState === "unmatched");
+  if (circulatingUsd > 0 && Math.abs(shareSum - 1) > 0.000001) {
+    throw new Error(
+      `Bridge supply shares do not reconcile for ${assetId}: ` +
+        `selected+unreviewed+unknown=${shareSum} must conserve to 1 over positive circulating supply`,
+    );
+  }
+  const expectedRowShare = carriesExplicitUnmatchedRows
+    ? shareSum
+    : (review.selectedRouteSupplyShare ?? 0) + (review.unreviewedRouteSupplyShare ?? 0);
+  if (circulatingUsd > 0 && Math.abs(rowShareSum - expectedRowShare) > 0.000001) {
+    throw new Error(
+      `Bridge supply rows do not reconcile for ${assetId}: ` +
+        `route rows sum to ${rowShareSum} but the represented aggregate claims ${expectedRowShare}`,
+    );
+  }
+  const categoryClaims: Array<readonly [string, number, number]> = [
+    ["reviewed", reviewedRowShare, review.selectedRouteSupplyShare ?? 0],
+    ["unresolved", unresolvedRowShare, review.unreviewedRouteSupplyShare ?? 0],
+  ];
+  if (carriesExplicitUnmatchedRows) {
+    categoryClaims.push(["unmatched", unmatchedRowShare, review.unknownRouteSupplyShare ?? 0]);
+  }
+  for (const [label, rowShare, claimedShare] of categoryClaims) {
+    if (circulatingUsd > 0 && Math.abs(rowShare - claimedShare) > 0.000001) {
+      throw new Error(
+        `Bridge supply ${label} rows do not reconcile for ${assetId}: ` +
+          `rows sum to ${rowShare} but the aggregate claims ${claimedShare}`,
+      );
+    }
+  }
 }
 
 export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"] {
@@ -415,54 +487,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     // conserve to 1, and the selected rows must reconcile to those shares.
     // Accepting under-accounted shares silently suppresses the
     // material-bridge-supply-unmatched control reason (VER-007).
-    const shareSum =
-      (review.selectedRouteSupplyShare ?? 0) +
-      (review.unreviewedRouteSupplyShare ?? 0) +
-      (review.unknownRouteSupplyShare ?? 0);
-    const rowShareSum = review.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
-    const reviewedRowShare = review.selectedBridgeRoutes.reduce(
-      (sum, route) => sum + (route.reviewState === "selected-reviewed" ? route.supplyShare : 0),
-      0,
-    );
-    const unresolvedRowShare = review.selectedBridgeRoutes.reduce(
-      (sum, route) => sum + (route.reviewState === "selected-unresolved" ? route.supplyShare : 0),
-      0,
-    );
-    const unmatchedRowShare = review.selectedBridgeRoutes.reduce(
-      (sum, route) => sum + (route.reviewState === "unmatched" ? route.supplyShare : 0),
-      0,
-    );
-    const carriesExplicitUnmatchedRows = review.selectedBridgeRoutes.some((route) => route.reviewState === "unmatched");
-    if (circulatingUsd > 0 && Math.abs(shareSum - 1) > 0.000001) {
-      throw new Error(
-        `Bridge supply shares do not reconcile for ${context.asset.assetId}: ` +
-          `selected+unreviewed+unknown=${shareSum} must conserve to 1 over positive circulating supply`,
-      );
-    }
-    const expectedRowShare = carriesExplicitUnmatchedRows
-      ? shareSum
-      : (review.selectedRouteSupplyShare ?? 0) + (review.unreviewedRouteSupplyShare ?? 0);
-    if (circulatingUsd > 0 && Math.abs(rowShareSum - expectedRowShare) > 0.000001) {
-      throw new Error(
-        `Bridge supply rows do not reconcile for ${context.asset.assetId}: ` +
-          `route rows sum to ${rowShareSum} but the represented aggregate claims ${expectedRowShare}`,
-      );
-    }
-    const categoryClaims: Array<readonly [string, number, number]> = [
-      ["reviewed", reviewedRowShare, review.selectedRouteSupplyShare ?? 0],
-      ["unresolved", unresolvedRowShare, review.unreviewedRouteSupplyShare ?? 0],
-    ];
-    if (carriesExplicitUnmatchedRows) {
-      categoryClaims.push(["unmatched", unmatchedRowShare, review.unknownRouteSupplyShare ?? 0]);
-    }
-    for (const [label, rowShare, claimedShare] of categoryClaims) {
-      if (circulatingUsd > 0 && Math.abs(rowShare - claimedShare) > 0.000001) {
-        throw new Error(
-          `Bridge supply ${label} rows do not reconcile for ${context.asset.assetId}: ` +
-            `rows sum to ${rowShare} but the aggregate claims ${claimedShare}`,
-        );
-      }
-    }
+    assertSupplyReviewSharesReconcile(context.asset.assetId, circulatingUsd, review);
     status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.supply.current"),
       observationState: "known",
