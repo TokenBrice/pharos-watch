@@ -2033,7 +2033,7 @@
     {
       "assetId": "usdgo-osl",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-12",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Anchorage Digital Bank Covered Stablecoin Terms (South Dakota reserve trust, client redemption, and non-client rights)",
@@ -5798,7 +5798,7 @@
     {
       "assetId": "ntbill-nest",
       "archetype": "tbill",
-      "reviewedAt": "2026-08-12",
+      "reviewedAt": "2026-08-11",
       "sources": [
         {
           "label": "Nest available vaults documentation (nTBILL and redemption estimate)",
