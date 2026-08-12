@@ -865,7 +865,9 @@ function adaptAccessReview(
               ? ("inherited-upstream" as const)
               : ("inherited-untracked-upstream" as const),
           }
-        : {}),
+        : status === "possible" && freezeState === "bounded-unknown"
+          ? { structuralDisposition: "reviewed-possible" as const }
+          : {}),
     },
   };
 }

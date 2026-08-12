@@ -305,22 +305,29 @@ function normalizeAccessStatus(
   // Owner ruling 2026-08-10 extends the same treatment to
   // `inherited-untracked-upstream`, where the reviewer measured inherited
   // exposure but the upstream is not a tracked asset, so none may be named.
+  // Owner ruling 2026-08-12: a current `possible` verdict is the same shape —
+  // the reviewer looked and could not prove true or false — so it is measured
+  // rather than reported as an unreviewed asset.
   const structural = structuralDisposition !== undefined && original.observationState === "bounded-unknown";
+  const structuralReasonCode =
+    structuralDisposition === "reviewed-possible" ? "reviewed-possible-access" : "inherited-access-exposure";
+  const structuralMessage =
+    structuralDisposition === "reviewed-possible"
+      ? `The ${componentKey} access posture is a reviewed structural fact: freeze reach is possible, not proven true or false.`
+      : structuralDisposition === "inherited-untracked-upstream"
+        ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from an upstream that is not a tracked asset.`
+        : `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`;
   const gapId = addGap(
     context,
     createV9FactGapV3({
       gapId: `${context.asset.assetId}:gap:access:${componentKey}`,
-      reasonCode: structural ? "inherited-access-exposure" : "missing-access-review",
+      reasonCode: structural ? structuralReasonCode : "missing-access-review",
       ownerDomain: "control",
       policyRuleId: original.applicability.policyRuleId,
       observationState: original.observationState,
       responsibility: structural ? "measured-adverse" : reviewedGapResponsibility(original.observationState),
       path: { kind: "local-component", componentKey: `access:${componentKey}` },
-      message: structural
-        ? structuralDisposition === "inherited-untracked-upstream"
-          ? `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from an upstream that is not a tracked asset.`
-          : `The ${componentKey} access posture is a reviewed structural fact: exposure is inherited from a named upstream asset.`
-        : `The ${componentKey} access/censorship review is not a current known fact.`,
+      message: structural ? structuralMessage : `The ${componentKey} access/censorship review is not a current known fact.`,
       evidenceRefIds,
     }),
   );

@@ -1291,6 +1291,22 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     const gapped = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), withoutDisposition).assets[0]!;
     expect(accessFreezeGaps(gapped).length).toBeGreaterThan(0);
     expect(accessFreezeGaps(gapped).every((gap) => gap.reasonCode === "missing-access-review")).toBe(true);
+
+    const possibleDisposition = structuredClone(withDisposition);
+    possibleDisposition.assets[0]!.accessReview!.freeze.structuralDisposition = "reviewed-possible";
+    possibleDisposition.assets[0]!.accessReview!.freeze.reviews[0] = {
+      ...possibleDisposition.assets[0]!.accessReview!.freeze.reviews[0]!,
+      source: "blacklist",
+      upstreamAssetId: null,
+      failureDomains: [],
+    };
+    const possible = compileSafetyScoreV9FactSetFromFixedInput(exactFixedInput(), possibleDisposition).assets[0]!;
+    expect(accessFreezeGaps(possible).length).toBeGreaterThan(0);
+    expect(
+      accessFreezeGaps(possible).every(
+        (gap) => gap.reasonCode === "reviewed-possible-access" && gap.responsibility === "measured-adverse",
+      ),
+    ).toBe(true);
   });
 
   it("classifies a supply-floor-withheld peg deviation as measured, not missing", () => {

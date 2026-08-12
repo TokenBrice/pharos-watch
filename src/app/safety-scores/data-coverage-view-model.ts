@@ -34,6 +34,7 @@ const REASON_CODE_LABELS = {
   "incomplete-dex-route-coverage": "DEX exit routes not fully covered",
   "incomplete-oracle-liquidation-branch": "Oracle liquidation path only partly reviewed",
   "inherited-access-exposure": "Freeze exposure inherited from a reviewed upstream asset",
+  "reviewed-possible-access": "Freeze reach reviewed as possible, not proven",
   "insufficient-evidence": "Not enough evidence to rate this input",
   "material-bridge-supply-unmatched": "Bridged supply does not reconcile",
   "material-dependency-unavailable": "A material dependency could not be scored",

@@ -1141,7 +1141,7 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
                 reviewer: "Fixture reviewer",
                 confidence: "verified" as const,
                 sources: [{ label: "Bridge docs", url: "https://example.com/bridge" }],
-                routes: [route("ethereum:0x1111111111111111111111111111111111111111", "reviewed"), ...extraRoutes],
+                routes: [route("ethereum:0x1111111111111111111111111111111111111111", "reviewed"), ...(extraRoutes as ReturnType<typeof route>[])],
               },
             },
           ],
@@ -1159,19 +1159,57 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
       avalanche: 0.0999,
     });
     expect(independent.asset.economicControlReview?.bridge.status.observationState).toBe("known");
-    expect(independent.asset.controlReview).toMatchObject({ state: "reviewed-controls" });
-    const independentControls =
-      independent.asset.controlReview?.state === "reviewed-controls"
+    const independentBridgeControls =
+      independent.asset.controlReview?.state === "reviewed-controls" ||
+      independent.asset.controlReview?.state === "partially-reviewed-controls"
         ? independent.asset.controlReview.controls.filter((control) => control.controlKind === "bridge")
         : [];
-    expect(independentControls).toHaveLength(5);
-    expect(independentControls.every((control) => control.materialSupplyShare === 0.0999)).toBe(true);
-    const independentEvaluation = evaluateV9FactSet(
-      compileSafetyScoreV9FactSetFromFixedInput(independent.fixed, independent.extension),
-      V9_CANDIDATE_POLICY_V1,
-    ).assets[0]!;
+    expect(independentBridgeControls).toHaveLength(0);
+    const independentCompiled = compileSafetyScoreV9FactSetFromFixedInput(
+      independent.fixed,
+      independent.extension,
+    );
+    const independentEvaluation = evaluateV9FactSet(independentCompiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(
       independentEvaluation.control.reasons.some((reason) => reason.code === "material-bridge-supply-unmatched"),
+    ).toBe(false);
+    expect(
+      independentCompiled.assets[0]!.gaps.some(
+        (gap) =>
+          gap.reasonCode === "unresolved-control-identity" &&
+          gap.path.kind === "deployment-control",
+      ),
+    ).toBe(false);
+
+    const reviewedLockMint = (id: string) => ({
+      ...route(id, "reviewed"),
+      issuanceModel: "bridge-representation" as const,
+      routeClass: "canonical" as const,
+      riskTier: "canonical-rollup-bridge" as const,
+      semantics: "lock-mint" as const,
+      scope: "peripheral" as const,
+      protocol: "Fixture canonical bridge",
+    });
+    const usdtShape = baselineFor(
+      { ethereum: 0.85, base: 0.1, Starknet: 0.05 },
+      [reviewedLockMint("base:0x2222222222222222222222222222222222222222") as unknown as ReturnType<typeof route>],
+    );
+    expect(usdtShape.asset.economicControlReview?.bridge.status.observationState).toBe("known");
+    const usdtShapeControls =
+      usdtShape.asset.controlReview?.state === "reviewed-controls" ||
+      usdtShape.asset.controlReview?.state === "partially-reviewed-controls"
+        ? usdtShape.asset.controlReview.controls.filter((control) => control.controlKind === "bridge")
+        : [];
+    expect(usdtShapeControls).toHaveLength(1);
+    expect(usdtShapeControls[0]?.deploymentKey).toBe("base:0x2222222222222222222222222222222222222222");
+    const usdtShapeCompiled = compileSafetyScoreV9FactSetFromFixedInput(usdtShape.fixed, usdtShape.extension);
+    expect(
+      usdtShapeCompiled.assets[0]!.gaps.some(
+        (gap) =>
+          gap.reasonCode === "unresolved-control-identity" &&
+          gap.path.kind === "deployment-control" &&
+          gap.path.deploymentKey.toLowerCase().includes("starknet"),
+      ),
     ).toBe(false);
 
     const exactThreshold = baselineFor({ ethereum: 0.9, base: 0.1 });

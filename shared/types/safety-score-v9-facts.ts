@@ -1007,14 +1007,22 @@ export const V9AccessReviewV2Schema = z
          * upstream asset. `inherited-untracked-upstream` (owner ruling
          * 2026-08-10) = the same evidenced inherited verdict where the upstream
          * is not a tracked asset, so no `upstreamAssetId` may be asserted; the
-         * exposure is still measured rather than dropped. `none-upgradeable`
-         * (reserved; no producer emits it yet) = verified absence in the
-         * current implementation behind a named upgrade authority. The freeze
-         * facts stay bounded-unknown for scoring; the disposition only stops
-         * them from being reported as missing data.
+         * exposure is still measured rather than dropped. `reviewed-possible`
+         * (owner ruling 2026-08-12) = a current review whose honest verdict is
+         * `possible`: freeze reach exists as an unproven surface, not as an
+         * unreviewed asset. `none-upgradeable` (reserved; no producer emits it
+         * yet) = verified absence in the current implementation behind a named
+         * upgrade authority. The freeze facts stay bounded-unknown for
+         * scoring; the disposition only stops them from being reported as
+         * missing data.
          */
         structuralDisposition: z
-          .enum(["inherited-upstream", "inherited-untracked-upstream", "none-upgradeable"])
+          .enum([
+            "inherited-upstream",
+            "inherited-untracked-upstream",
+            "reviewed-possible",
+            "none-upgradeable",
+          ])
           .optional(),
       })
       .strict(),

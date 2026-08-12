@@ -23,6 +23,7 @@ export const V9_REASON_CODES = [
   "incomplete-dex-route-coverage",
   "incomplete-oracle-liquidation-branch",
   "inherited-access-exposure",
+  "reviewed-possible-access",
   "insufficient-evidence",
   "material-bridge-supply-unmatched",
   "material-dependency-unavailable",

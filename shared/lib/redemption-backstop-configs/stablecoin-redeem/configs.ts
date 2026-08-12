@@ -583,6 +583,7 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
   }),
   "usda-avalon": defineStablecoinRedeemConfig({
     ...reviewedDirectRedemptionSupplyFull,
+    outputAssets: ["usdt-tether"],
     settlementModel: "days",
     executionModel: "rules-based-nav",
     costModel: documentedVariableFee(
