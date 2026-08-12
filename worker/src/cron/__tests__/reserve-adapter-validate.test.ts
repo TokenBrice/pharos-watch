@@ -247,7 +247,7 @@ describe("validateAdapterOutput", () => {
     },
     {
       label: "a direct redemption kind from a proxy adapter",
-      adapterKey: "ethena" as AdapterKey,
+      adapterKey: "falcon" as AdapterKey,
       redemptionTelemetry: true,
       metadata: {
         redemption: { capacityUsd: 10_000, capacityRatioOfSupply: 0.1, capacityKind: "live-direct" },

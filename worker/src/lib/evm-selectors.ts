@@ -1,5 +1,6 @@
 export const DECIMALS_SELECTOR = "0x313ce567";
 export const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
+export const PAUSED_SELECTOR = "0x5c975abb";
 export const TOTAL_VALUE_SELECTOR = "0xd4c3eea0";
 export const LATEST_ROUND_DATA_SELECTOR = "0xfeaf968c";
 const BALANCE_OF_SELECTOR = "0x70a08231";

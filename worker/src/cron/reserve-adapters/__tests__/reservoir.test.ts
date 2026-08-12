@@ -1,10 +1,69 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop-live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop-sources";
+
+vi.mock("../helpers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../helpers")>();
+  const fetchOnchainUint256 = vi.fn();
+  const fetchOnchainRawCall = vi.fn();
+  return {
+    ...actual,
+    fetchOnchainUint256,
+    fetchOnchainRawCall,
+    makeOnchainCallers: vi.fn(() => ({
+      uint256: (contract: string, data: string) => fetchOnchainUint256({ contract, data }),
+      raw: (contract: string, data: string) => fetchOnchainRawCall({ contract, data }),
+    })),
+  };
+});
+
+import { fetchOnchainRawCall, fetchOnchainUint256 } from "../helpers";
 import { adaptReservoirReserves, fetchReservoirReserves, type ReservoirReservesResponse } from "../reservoir";
 import { buildBrowserHeaders, NEUTRAL_ADAPTER_HEADERS } from "../request";
+
+const PSM_ADDRESS = "0x4809010926aec940b550d34a46a52739f996d75d";
+const USDC_ADDRESS = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const UNDERLYING_SELECTOR = "0x6f307dc3";
+const UNDERLYING_BALANCE_SELECTOR = "0x59356c5c";
+const PAUSED_SELECTOR = "0x5c975abb";
+const SAVING_MODULE_ADDRESS = "0x5475611dffb8ef4d697ae39df9395513b6e947d7";
+const REDEEM_FEE_SELECTOR = "0x965fa21e";
+
+function word(hexBody: string): string {
+  return `0x${hexBody.replace(/^0x/, "").padStart(64, "0")}`;
+}
+
+/**
+ * Route the mocked callers by contract and selector: the adapter fires
+ * underlying(), underlyingBalance(), paused() and redeemFee() concurrently, so
+ * ordered mock queues would be fragile here.
+ */
+function primePsmMocks(options: {
+  underlying?: string | null;
+  balance?: bigint | null;
+  paused?: boolean | null;
+  redeemFee?: bigint | null;
+}) {
+  const underlying = options.underlying === undefined ? word(USDC_ADDRESS) : options.underlying;
+  const paused = options.paused === undefined ? false : options.paused;
+  vi.mocked(fetchOnchainRawCall).mockImplementation((args: unknown) => {
+    const { contract, data } = args as { contract: string; data: string };
+    if (contract !== PSM_ADDRESS) return Promise.resolve(null);
+    if (data === UNDERLYING_SELECTOR) return Promise.resolve(underlying);
+    if (data === PAUSED_SELECTOR) return Promise.resolve(paused == null ? null : word(paused ? "1" : "0"));
+    return Promise.resolve(null);
+  });
+  vi.mocked(fetchOnchainUint256).mockImplementation((args: unknown) => {
+    const { contract, data } = args as { contract: string; data: string };
+    if (contract === SAVING_MODULE_ADDRESS && data === REDEEM_FEE_SELECTOR) {
+      return Promise.resolve(options.redeemFee === undefined ? 134n : options.redeemFee);
+    }
+    if (contract !== PSM_ADDRESS || data !== UNDERLYING_BALANCE_SELECTOR) return Promise.resolve(null);
+    return Promise.resolve(options.balance === undefined ? 4_000000n : options.balance);
+  });
+}
 
 const SAMPLE_RESPONSE: ReservoirReservesResponse = {
   assets: [
@@ -26,6 +85,11 @@ const RESERVOIR_BROWSER_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON
   buildBrowserHeaders("https://app.reservoir.xyz", "https://app.reservoir.xyz/reserves"),
 )}`;
 const RESERVOIR_NEUTRAL_CACHE_KEY = `json-get:${RESERVOIR_TEST_URL}:20000:${JSON.stringify(NEUTRAL_ADAPTER_HEADERS)}`;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  primePsmMocks({});
+});
 
 describe("adaptReservoirReserves", () => {
   it("declares the timestamp-less balance-sheet API as unverified freshness", () => {
@@ -247,24 +311,170 @@ describe("adaptReservoirReserves", () => {
       shareholderEquityUsd: 5,
       collateralizationRatio: 100 / 95,
       stableBucketLiquidityUsd: 95,
-      immediateRedeemableUsd: 5,
-      immediateRedeemableRatio: 5 / 95,
+      // The balance-sheet USDC bucket stays diagnostic; capacity comes from the PSM.
+      balanceSheetUsdcBucketUsd: 5,
+    });
+    // No timestamped disclosure exists; the adapter must not invent score-grade
+    // freshness for the composition itself.
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+  });
+
+  it("binds redemption capacity to the same-run USDC PSM balance and reports the route open", async () => {
+    primePsmMocks({ balance: 4_000000n, paused: false });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata).toMatchObject({
+      psmUnderlyingBalanceRaw: "4000000",
+      immediateRedeemableUsd: 4,
+      immediateRedeemableRatio: 4 / 95,
       redemption: {
-        capacityUsd: 5,
-        capacityRatioOfSupply: 5 / 95,
-        routeStatus: "unknown",
-        routeStatusSource: "protocol-api",
+        capacityUsd: 4,
+        capacityRatioOfSupply: 4 / 95,
+        capacityKind: "live-direct",
+        freshnessKind: "same-run-onchain",
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+        holderEligibility: "any-holder",
+        settlementDelaySec: 0,
       },
     });
-    // No timestamped disclosure exists; the adapter must not invent score-grade freshness.
-    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.redemption?.routeStatusReason).toContain("underlyingBalance()");
+    expect(result.warnings ?? []).not.toContainEqual(expect.objectContaining({ code: "reservoir-psm-unreadable" }));
+  });
+
+  it("publishes the SavingModule redeemFee() as live fee telemetry without rounding it away", async () => {
+    // 134/1e6 is a 1.34 bps multiplicative exit fee; rounding to an integer bps
+    // at the adapter would understate it by a quarter.
+    primePsmMocks({ redeemFee: 134n });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata?.redemptionFeeBps).toBeCloseTo(1.34, 10);
+    expect(result.metadata?.redemption?.feeBps).toBeCloseTo(1.34, 10);
+  });
+
+  it("does not attribute the SavingModule exit fee to rUSD, which redeems straight at the PSM", async () => {
+    primePsmMocks({ redeemFee: 134n });
+    const result = await fetchReservoirReserves(
+      { id: "rusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata?.redemptionFeeBps).toBeUndefined();
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
+    // Capacity still publishes: the PSM leg is shared by all three coins.
+    expect(result.metadata?.redemption?.capacityKind).toBe("live-direct");
+  });
+
+  it("omits fee telemetry when redeemFee() breaches the contract's own 1e6 bound", async () => {
+    primePsmMocks({ redeemFee: 1_000_000n });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
+    // The unreadable fee must not take the capacity surface down with it.
+    expect(result.metadata?.redemption?.capacityKind).toBe("live-direct");
+  });
+
+  it("reports the route paused when the PSM paused() read returns true", async () => {
+    primePsmMocks({ paused: true });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
     expect(result.metadata?.redemption).toMatchObject({
-      freshnessKind: "unverified",
+      routeStatus: "paused",
+      routeStatusSource: "onchain",
     });
   });
 
-  it("binds the emitted USDC route capacity to the adapter fixture's USDC slice", async () => {
+  it("withholds redemption telemetry when the PSM underlying() is not the pinned USDC address", async () => {
+    primePsmMocks({ underlying: word("0x1111111111111111111111111111111111111111") });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+    // The balance-sheet bucket must not silently become the capacity fallback.
+    expect(result.metadata).toMatchObject({ balanceSheetUsdcBucketUsd: 5 });
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "reservoir-psm-unreadable", effect: "info" })]),
+    );
+  });
+
+  it("withholds redemption telemetry when the PSM balance read fails", async () => {
+    primePsmMocks({ balance: null });
+    const result = await fetchReservoirReserves(
+      { id: "srusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
+  });
+
+  it("scores the PSM-bound route capacity as live-direct through the backstop entry", async () => {
     const now = 1_800_000_000;
+    primePsmMocks({ balance: 4_000000n, paused: false });
     const result = await fetchReservoirReserves(
       { id: "wsrusd-reservoir" } as never,
       {
@@ -294,8 +504,10 @@ describe("adaptReservoirReserves", () => {
     const liveMetadata = readRedemptionBackstopLiveMetadata("wsrusd-reservoir", reserveSnapshot, now);
 
     expect(liveMetadata.canUseCapacity).toBe(true);
-    expect(liveMetadata.immediateRedeemableUsd).toBe(5);
-    expect(liveMetadata.immediateRedeemableRatio).toBe(5 / 95);
+    expect(liveMetadata.capacityConfidence).toBe("live-direct");
+    expect(liveMetadata.routeStatus).toBe("open");
+    expect(liveMetadata.immediateRedeemableUsd).toBe(4);
+    expect(liveMetadata.immediateRedeemableRatio).toBe(4 / 95);
 
     const config = getRedemptionBackstopConfig("wsrusd-reservoir");
     expect(config).toBeDefined();
@@ -309,14 +521,66 @@ describe("adaptReservoirReserves", () => {
       { reserveSnapshotMetadata: reserveSnapshot },
     );
 
-    expect(entry.immediateCapacityUsd).toBe(5);
-    expect(entry.capacityProfile?.scoringUsd).toBe(5);
+    expect(entry.immediateCapacityUsd).toBe(4);
+    expect(entry.capacityProfile?.scoringUsd).toBe(4);
     const observation = entry.capacityProfile?.exitRouteObservations?.[0];
     expect(observation?.output).toEqual({
       kind: "tracked-stablecoin",
       trackedAssetIds: ["usdc-circle"],
     });
-    expect(observation?.capacityCurve?.every((point) => point.executableUsd <= 5)).toBe(true);
+    expect(observation?.capacityCurve?.every((point) => point.executableUsd <= 4)).toBe(true);
+    // The live redeemFee() read gives resolveCostBps a real number, so the
+    // observation carries a bounded cost instead of the undisclosed-fee marker
+    // that previously kept it out of V9's score-eligible set.
+    expect(observation?.scoreEligible).toBe(true);
+    expect(observation?.feeEvidence).toBeUndefined();
+  });
+
+  it("leaves the route cost-unbounded and score-ineligible when redeemFee() is unreadable", async () => {
+    // Control for the assertion above: with an unreadable fee the config has no
+    // other cost term, so resolveCostBps returns null and V9 sees the same
+    // undisclosed-fee route it saw before this adapter published a live fee.
+    const now = 1_800_000_000;
+    primePsmMocks({ balance: 4_000000n, paused: false, redeemFee: null });
+    const result = await fetchReservoirReserves(
+      { id: "wsrusd-reservoir" } as never,
+      {
+        adapter: "reservoir",
+        version: 1,
+        semantics: "protocol-reserve",
+        inputs: { primary: { kind: "http-json", url: RESERVOIR_TEST_URL } },
+      },
+      new AbortController().signal,
+      { requestCache: new Map([[RESERVOIR_BROWSER_CACHE_KEY, Promise.resolve(SAMPLE_RESPONSE)]]) } as never,
+    );
+    if (!result.metadata) throw new Error("Reservoir fixture did not emit metadata");
+
+    const reserveSnapshot = {
+      stablecoinId: "wsrusd-reservoir",
+      fetchedAt: now,
+      source: "reservoir",
+      metadata: result.metadata,
+      warningCount: 0,
+      warnings: [],
+      sourceModel: "dynamic-mix" as const,
+      evidenceClass: "independent" as const,
+      syncStatus: "ok" as const,
+    };
+    const entry = await buildRedemptionBackstopEntry(
+      {} as D1Database,
+      "wsrusd-reservoir",
+      getRedemptionBackstopConfig("wsrusd-reservoir")!,
+      95,
+      null,
+      now,
+      { reserveSnapshotMetadata: reserveSnapshot },
+    );
+
+    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    expect(observation?.scoreEligible).toBe(false);
+    expect(observation?.feeEvidence).toBe("undisclosed-reviewed");
+    // Capacity is still admitted at the bounded-unknown ceiling.
+    expect(entry.immediateCapacityUsd).toBe(4);
   });
 
   it("falls back to neutral API headers when browser-style headers fail", async () => {

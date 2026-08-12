@@ -68,6 +68,8 @@ const EXCHANGE_ID_1 = `0x${"11".repeat(32)}`;
 const EXCHANGE_ID_2 = `0x${"22".repeat(32)}`;
 const EXCHANGE_ID_3 = `0x${"33".repeat(32)}`;
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const FPMM_LP_FEE_SELECTOR = "0x704ce43e";
+const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a";
 
 function encodeExchangeIds(ids: string[]): `0x${string}` {
   return encodeAbiParameters([{ type: "bytes32[]" }], [ids as `0x${string}`[]]) as `0x${string}`;
@@ -1015,12 +1017,18 @@ describe("mento redemption telemetry", () => {
     expect(result.warnings?.some((warning) => warning.code === "mento-redemption-telemetry-failed")).toBe(true);
   });
 
-  it("computes fpmm-pool capacity from the pool's USDm balance with no fee telemetry", async () => {
+  it("computes fpmm-pool capacity and fee from the pool's USDm balance and swap fees", async () => {
     const POOL_ADDRESS = "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41";
 
     vi.mocked(fetchErc20Balance).mockImplementation(async (_input, tokenAddress, holder) => (
       tokenAddress === USDM_ADDRESS && holder === POOL_ADDRESS ? 750n * 10n ** 18n : null
     ));
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ contract, data }) => {
+      if (contract !== POOL_ADDRESS) return null;
+      if (data === FPMM_LP_FEE_SELECTOR) return 20n;
+      if (data === FPMM_PROTOCOL_FEE_SELECTOR) return 10n;
+      return null;
+    });
 
     const config = makeRedemptionConfig({
       cdpStablecoin: "JPYm",
@@ -1044,9 +1052,38 @@ describe("mento redemption telemetry", () => {
       capacityKind: "live-direct-bounded",
       freshnessKind: "same-run-onchain",
       routeStatus: "open",
+      feeBps: 30,
     });
-    expect(redemption?.feeBps).toBeUndefined();
     expect(result.slices.length).toBeGreaterThan(0);
+  });
+
+  it("keeps fpmm-pool capacity but omits the fee when a fee leg does not read", async () => {
+    const POOL_ADDRESS = "0x9861F6D2Fe392b934C86eC89D2886CEb772B2b41";
+
+    vi.mocked(fetchErc20Balance).mockResolvedValue(750n * 10n ** 18n);
+    vi.mocked(fetchOnchainUint256).mockImplementation(async ({ data }) => (
+      data === FPMM_LP_FEE_SELECTOR ? 20n : null
+    ));
+
+    const config = makeRedemptionConfig({
+      cdpStablecoin: "JPYm",
+      redemption: {
+        kind: "fpmm-pool",
+        poolAddress: POOL_ADDRESS,
+        usdmTokenAddress: USDM_ADDRESS,
+      },
+    });
+
+    const result = await fetchMentoReserves(
+      { id: "jpym-mento" } as never,
+      config,
+      new AbortController().signal,
+      { requestCache: makeRequestCache() } as never,
+    );
+
+    const redemption = result.metadata?.redemption as Record<string, unknown> | undefined;
+    expect(redemption).toMatchObject({ capacityUsd: 750 });
+    expect(redemption?.feeBps).toBeUndefined();
   });
 
   it("fails closed when the fpmm-pool balance read fails, leaving reserve slices unaffected", async () => {

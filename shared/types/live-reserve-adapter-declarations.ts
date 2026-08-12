@@ -334,7 +334,10 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    // The adapter reads the EthenaMinting contract's own USDT/USDC balances,
+    // which redemptions are paid out of, so capacity is a direct measurement
+    // rather than a proxy for the collateral basket.
+    redemptionTelemetry: { capacity: "direct", fee: "none" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
@@ -678,7 +681,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     evidenceClass: "independent",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_PROTOCOL_V1,
-    redemptionTelemetry: { capacity: "proxy", fee: "none" },
+    // Capacity comes from a same-run read of the terminal USDC PSM balance, not
+    // from the balance-sheet payload; the adapter withholds the redemption
+    // block entirely when that read fails. The fee is the SavingModule's
+    // MANAGER-settable redeemFee(), read in the same run because no static
+    // bound is defensible.
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,

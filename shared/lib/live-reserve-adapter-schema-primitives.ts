@@ -777,7 +777,7 @@ const mentoLiquityV2CrRedemptionParamsSchema = z
   .strict();
 
 // Mento V3 FPMM pool (JPYm/CHFm): capacity reads the USDm balance held by the
-// pool; no fee telemetry (FPMM fee getter is not verified).
+// pool; the swap fee reads the pool's own lpFee() + protocolFee() basis points.
 const mentoFpmmPoolRedemptionParamsSchema = z
   .object({
     kind: z.literal("fpmm-pool"),

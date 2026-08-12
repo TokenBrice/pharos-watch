@@ -7,6 +7,7 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import {
   DECIMALS_SELECTOR,
+  PAUSED_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeAddress,
   encodeBalanceOfCallData,
@@ -28,7 +29,6 @@ import type { AdapterContext, AdapterResult } from "./types";
 const ADAPTER_KEY = "m0-wrapper-underlying";
 const DEFAULT_M_TOKEN_SELECTOR = "0xc3b6f939"; // mToken()
 const DEFAULT_SWAP_FACILITY_SELECTOR = "0xae06b7e4"; // swapFacility()
-const DEFAULT_PAUSED_SELECTOR = "0x5c975abb"; // paused()
 const DEFAULT_CAN_SWAP_VIA_PATH_SELECTOR = "0xd8e21132"; // canSwapViaPath(address,address,address)
 
 type M0WrapperUnderlyingParams = LiveReserveAdapterParamsByKey[typeof ADAPTER_KEY];
@@ -256,7 +256,7 @@ export async function fetchM0WrapperUnderlyingReserves(
     }
 
     const [pausedRaw, canSwapRaw] = await Promise.all([
-      onchain.raw(swapFacilityAddress, params.pausedSelector ?? DEFAULT_PAUSED_SELECTOR),
+      onchain.raw(swapFacilityAddress, params.pausedSelector ?? PAUSED_SELECTOR),
       params.swapperAddress
         ? onchain.raw(
             swapFacilityAddress,

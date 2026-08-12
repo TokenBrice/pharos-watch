@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import {
   DECIMALS_SELECTOR,
+  PAUSED_SELECTOR,
   TOTAL_SUPPLY_SELECTOR,
   encodeAddress,
   encodeBalanceOfCallData,
@@ -15,6 +16,7 @@ import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeAbiWordAt,
   decodeStrictAddressArrayWord,
+  decodeStrictBoolWord,
   decodeUint256Word,
 } from "./abi-decode";
 import { parseEvmAddressResult, resolveCoinContractAddress } from "./evm";
@@ -224,6 +226,7 @@ const YEARN_V3_TOTAL_IDLE_SELECTOR = "0x9aa7df94";
 const YEARN_V3_GET_DEFAULT_QUEUE_SELECTOR = "0xa9bbf1cc";
 const YEARN_V3_STRATEGIES_SELECTOR = "0x39ebf823";
 const YEARN_V3_MAX_REDEEM_SELECTOR = "0xd905777e";
+const YEARN_V3_IS_SHUTDOWN_SELECTOR = "0xbf86d690";
 const MAX_YEARN_V3_QUEUE_LENGTH = 10;
 // K3 sBOLD calcFragments() -> (totalBold, boldAmount, collValue, collInBold).
 // Word index 1 (boldAmount) is the compounded BOLD across the vault's Liquity V2
@@ -718,6 +721,57 @@ function fetchMorphoVaultV1LiquidityTelemetry(args: {
   });
 }
 
+interface RoutePauseProbe {
+  paused: boolean | null;
+  shutdown: boolean | null;
+}
+
+const NO_PAUSE_PROBE: RoutePauseProbe = { paused: null, shutdown: null };
+
+const ROUTE_OPEN_REASON_BY_CAPACITY_SOURCE: Partial<
+  Record<RedemptionCapacityTelemetry["capacitySource"], string>
+> = {
+  "erc4626-atomic-full-backing":
+    "Reviewer-asserted unconstrained external-savings redemption; full convertible backing readable on-chain this run",
+  "erc4626-idle-underlying":
+    "Idle underlying redemption liquidity readable on-chain this run; no on-chain pause surface reported paused",
+  "morpho-vault-v1-liquidity":
+    "Morpho listed-vault in-kind liquidity positive via protocol API this run",
+  "morpho-vault-v2-liquidity":
+    "Morpho listed-vault in-kind liquidity positive via protocol API this run",
+  "yearn-v3-withdrawable":
+    "Yearn V3 withdrawable liquidity positive and isShutdown() false this run",
+  "sbold-sp-withdrawable":
+    "sBOLD Stability Pool withdrawable BOLD positive via calcFragments() this run",
+};
+
+function resolveRouteOpenness(
+  capacitySource: RedemptionCapacityTelemetry["capacitySource"],
+  capacityRaw: bigint,
+  pauseProbe: RoutePauseProbe,
+): Pick<RedemptionCapacityTelemetry, "routeStatus" | "routeStatusReason"> {
+  if (pauseProbe.paused === true) {
+    return {
+      routeStatus: "paused",
+      routeStatusReason: "Vault paused() returned true on-chain",
+    };
+  }
+  if (pauseProbe.shutdown === true) {
+    return {
+      routeStatus: "paused",
+      routeStatusReason: "Yearn vault isShutdown() returned true on-chain",
+    };
+  }
+  // Zero capacity is not an open route: nothing is redeemable this run, so the
+  // status stays unknown rather than asserting openness the reads do not show.
+  if (capacityRaw <= 0n) return {};
+  // Every Yearn V3 vault exposes isShutdown(); an unreadable probe leaves the
+  // shutdown claim in the reason unproven, so fail closed.
+  if (capacitySource === "yearn-v3-withdrawable" && pauseProbe.shutdown !== false) return {};
+  const routeStatusReason = ROUTE_OPEN_REASON_BY_CAPACITY_SOURCE[capacitySource];
+  return routeStatusReason ? { routeStatus: "open", routeStatusReason } : {};
+}
+
 function buildRedemptionCapacityTelemetry(
   idleUnderlyingBalanceRaw: bigint | null,
   underlyingDecimalsRaw: bigint | null,
@@ -727,6 +781,7 @@ function buildRedemptionCapacityTelemetry(
   sboldSpWithdrawableLiquidity: SboldSpWithdrawableLiquidityTelemetry | null,
   sfrxusdCrosschainWithdrawableLiquidity: SfrxusdCrosschainWithdrawableLiquidityTelemetry | null,
   atomicFullBacking: boolean,
+  pauseProbe: RoutePauseProbe,
 ): RedemptionCapacityTelemetry | null {
   const underlyingDecimals = decodeErc20Decimals(underlyingDecimalsRaw);
   if (underlyingDecimals == null) return null;
@@ -749,6 +804,7 @@ function buildRedemptionCapacityTelemetry(
       ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
       underlyingDecimals,
       ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+      ...resolveRouteOpenness("erc4626-atomic-full-backing", supplyAssetsRaw, pauseProbe),
     };
   }
 
@@ -804,6 +860,7 @@ function buildRedemptionCapacityTelemetry(
     ...(idleUnderlyingBalanceRaw != null ? { idleUnderlyingBalanceRaw: idleUnderlyingBalanceRaw.toString() } : {}),
     underlyingDecimals,
     ...(capacityRatioOfSupply != null ? { capacityRatioOfSupply } : {}),
+    ...resolveRouteOpenness(capacitySource, capacityRaw, pauseProbe),
     ...(usesYearnV3Capacity && yearnV3WithdrawableLiquidity
       ? {
           settlementDelaySec: yearnV3WithdrawableLiquidity.settlementDelaySec,
@@ -1049,6 +1106,22 @@ export async function fetchErc4626SingleAssetReserves(
           );
         }
       }
+      // Route-openness evidence. The fraxtal hop manages its own route state, so
+      // it is left untouched; every other path probes the vault's pause surfaces
+      // once, after the capacity reads, so no extra round trip is serialized.
+      let pauseProbe = NO_PAUSE_PROBE;
+      if (!usesSfrxusdCrosschainRoute) {
+        const probesYearnShutdown =
+          sliceConfig.redemptionLiquidity?.source === "yearn-v3-withdrawable";
+        const [pausedResult, shutdownResult] = await Promise.all([
+          call(PAUSED_SELECTOR),
+          probesYearnShutdown ? call(YEARN_V3_IS_SHUTDOWN_SELECTOR) : Promise.resolve(null),
+        ]);
+        pauseProbe = {
+          paused: decodeStrictBoolWord(pausedResult),
+          shutdown: probesYearnShutdown ? decodeStrictBoolWord(shutdownResult) : null,
+        };
+      }
       redemptionCapacity = buildRedemptionCapacityTelemetry(
         idleUnderlyingBalanceRaw,
         underlyingDecimalsRaw,
@@ -1058,6 +1131,7 @@ export async function fetchErc4626SingleAssetReserves(
         sboldSpWithdrawableLiquidity,
         sfrxusdCrosschainWithdrawableLiquidity,
         atomicFullBacking,
+        pauseProbe,
       );
     }
   }
