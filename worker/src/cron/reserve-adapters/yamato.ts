@@ -213,7 +213,7 @@ function decodeYamatoEthJpyPrice(raw: string): bigint {
  * Returns `null` when any leg fails, and the caller then omits the whole
  * capacity surface rather than guessing.
  */
-export async function probeYamatoRedemption(
+async function probeYamatoRedemption(
   onchain: ReturnType<typeof makeOnchainCallers>,
   yamatoAddress: string,
   signal: AbortSignal,

@@ -332,7 +332,7 @@ function readMulticallResults(
  * unless the registry still points at the tracked iUSD and USDC — a migrated
  * gateway reports nothing rather than stale gate state.
  */
-export async function probeInfiniFiRedeemRoute(
+async function probeInfiniFiRedeemRoute(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<InfiniFiRouteProbe | null> {
@@ -435,7 +435,7 @@ export async function probeInfiniFiRedeemRoute(
  * open the route still degrades once the queue is non-empty: the controller
  * enqueues a new redeemer outright instead of paying from liquidity.
  */
-export function resolveInfiniFiRouteStatus(
+function resolveInfiniFiRouteStatus(
   probe: InfiniFiRouteProbe,
 ): { routeStatus: "open" | "degraded" | "paused"; routeStatusReason: string } {
   const closedGates = [

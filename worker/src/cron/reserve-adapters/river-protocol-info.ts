@@ -294,7 +294,7 @@ async function probeRiverRedemption(
   };
 }
 
-export function buildRiverRedemptionMetadata(
+function buildRiverRedemptionMetadata(
   probe: RiverRedemptionProbe,
 ): NonNullable<AdapterResult["metadata"]> {
   const probedChains = probe.chains.map((entry) => entry.chain);
