@@ -28,8 +28,8 @@ import {
 import { PEG_METADATA } from "@shared/lib/classification";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
+import { CUSTODY_MODEL_VALUES } from "@shared/types/core";
 import {
-  CUSTODY_MODEL_VALUES,
   type CustodyModel,
   type PegCurrency,
   type ReportCardGrade,
