@@ -18,7 +18,6 @@ import { validateAdapterOutput } from "../validate";
 
 const signal = AbortSignal.timeout(5_000);
 
-const USDZ_ADDRESS = "0xA469B7Ee9ee773642b3e93E842e5D9b5BaA10067";
 const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
 const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const ORACLE_CONTRACT = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";

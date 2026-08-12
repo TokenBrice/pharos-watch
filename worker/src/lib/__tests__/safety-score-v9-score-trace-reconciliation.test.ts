@@ -1,7 +1,7 @@
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { describe, expect, it } from "vitest";
-import { createReportCardsFixedInput } from "../../../worker/src/lib/report-cards-fixed-input";
-import { buildSafetyScoreV9Candidate } from "../../../worker/src/lib/safety-score-v9-candidate";
+import { createReportCardsFixedInput } from "../report-cards-fixed-input";
+import { buildSafetyScoreV9Candidate } from "../safety-score-v9-candidate";
 
 const CURRENT_CLOCK_SEC = 1_786_579_200;
 const FAR_FUTURE_CLOCK_SEC = 2_000_000_000;

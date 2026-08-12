@@ -82,10 +82,10 @@ function addressFromWord(value: bigint | null, label: string): string {
 }
 
 function decodeWords(raw: string | null, label: string): bigint[] {
-  if (raw == null || !/^0x(?:[0-9a-fA-F]{64})+$/.test(raw)) {
+  const hex = raw?.startsWith("0x") ? raw.slice(2) : null;
+  if (hex == null || hex.length === 0 || hex.length % 64 !== 0 || !/^[0-9a-fA-F]+$/.test(hex)) {
     throw new Error(`${ADAPTER_KEY}: ${label} returned malformed data`);
   }
-  const hex = raw.slice(2);
   const words: bigint[] = [];
   for (let offset = 0; offset < hex.length; offset += 64) {
     words.push(BigInt(`0x${hex.slice(offset, offset + 64)}`));
