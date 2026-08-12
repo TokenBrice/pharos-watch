@@ -85,10 +85,16 @@ If acceptance remains uncertain, leave the row unchanged. Do not reset it merely
 
 Use `last_status_code` and `last_error_class` to classify the rejection. A
 confirmed permanent Telegram rejection means the chunk was not accepted, so
-the cursor does not advance. Reset the same edition only after an
-external/configuration cause such as channel permissions has been corrected.
-An immutable payload or HTML defect requires a new reviewed edition key; keep
-the failed row as forensic evidence.
+the cursor does not advance. There is no supported operator reset for a
+`failed_permanent` edition. After an external/configuration cause such as
+channel permissions has been corrected, use a new reviewed edition key unless
+a reviewed recovery script is first added. Such a script must require the exact
+edition key, `state = 'failed_permanent'`, the captured delivery generation and
+update timestamp, an allowed external-error class, unchanged payload and Safety
+identity, a pre-write bookmark, a durable operator-audit row, and post-write
+readback. It must return the row to `pending` without changing the chunk cursor.
+An immutable payload or HTML defect always requires a new reviewed edition key;
+keep the failed row as forensic evidence.
 
 `last_error_class` beginning with `stale_safety_identity:` means the authored
 Safety Score identity no longer matches the active publication, or the row
@@ -103,6 +109,8 @@ reviewed, identity-bound edition instead of resetting it.
 Do not modify `payload_chunks_json`, `success_actions_json`,
 `safety_context_json`, or `target_chat_id` in place. A changed edition requires
 a new reviewed edition key; mutation would break exact-payload auditability.
+Never reset `stale_safety_identity:*`, `unbound_safety_copy:*`, payload/HTML
+defects, or target mismatches that were not actually corrected.
 
 ## Verification
 
@@ -116,9 +124,10 @@ After the next five-minute poll:
 
 ## Rollback
 
-Migrations `0184_telegram_digest_outbox.sql` and
-`0221_telegram_digest_safety_identity.sql` are additive and remain in place
-during a Worker rollback. Before restoring an older Worker, reconcile all
+The additive schema introduced historically by `0184_telegram_digest_outbox.sql`
+and `0221_telegram_digest_safety_identity.sql` remains in place during a Worker
+rollback; those migration files are squashed lineage now absorbed by
+`0000_baseline.sql`, not active replay files. Before restoring an older Worker, reconcile all
 `sending` and `execution_unknown` rows; the legacy sender does not understand
 this effect fence. Keep terminal rows for forensics rather than deleting them
 during rollback.

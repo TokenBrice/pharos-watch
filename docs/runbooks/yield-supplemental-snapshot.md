@@ -58,7 +58,7 @@ ORDER BY rows DESC;
 
 - If the latest supplemental run is a single `empty-snapshot`, keep serving the previous snapshot and wait for the next 4-hour run unless optional coverage is business-critical for an incident.
 - If `sync-yield-supplemental` metadata shows one family dominating misses or budget exhaustion, inspect `sourceCoverage.sourceFamilySummaries` first. It gives compact per-family status, raw/emitted counts, audit inventory counts, budget/cap flags, miss reasons, chain breakdowns, and bounded missing-target examples. `sourceCoverage.sourceFamilyCounts` is candidate-oriented; audit-only inventory such as vaults.fyi lives in `sourceCoverage.sourceFamilyInventoryCounts`. Do not move heavy family fetches onto the hourly publisher.
-- If the job is stale due to a stuck lease, confirm no active progress row exists before clearing the stale `sync-yield-supplemental` lease through the standard admin reset-lease flow.
+- If the job is stale due to a stuck lease, first confirm `/api/status` has no fresh matching `inFlight` progress. `POST /api/reset-cron-lease` is retired; then delete only `cron_leases.job = 'sync-yield-supplemental'` with scoped remote D1 SQL and verify the next four-hour run.
 - If the cache is malformed, preserve the malformed value for debugging and let a later successful supplemental run replace it.
 
 ## Abort Conditions

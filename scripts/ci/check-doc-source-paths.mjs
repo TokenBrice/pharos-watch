@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { relative, resolve } from "node:path";
 import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mjs";
 import { reportViolations } from "../lib/report-violations.mjs";
@@ -110,12 +111,34 @@ function normalizeCandidate(token) {
   return stripped;
 }
 
+function parseHistoricalCandidate(token) {
+  const stripped = trimToken(token);
+  const match = stripped.match(/^git:([0-9a-f]{7,40}):(.+)$/i);
+  if (!match) return null;
+  const [, revision, path] = match;
+  if (!isRepoPathCandidate(path) || shouldSkipCandidate(path)) return null;
+  return { revision, path };
+}
+
 const errors = [];
 
 for (const filePath of verifiedDocFiles) {
   const content = readFileSync(filePath, "utf8");
   for (const span of iterInlineCodeSpans(content)) {
     for (const rawToken of span.value.split(/\s+/)) {
+      const historical = parseHistoricalCandidate(rawToken);
+      if (historical) {
+        const result = spawnSync("git", ["cat-file", "-e", `${historical.revision}:${historical.path}`], {
+          cwd: repoRoot,
+          stdio: "ignore",
+        });
+        if (result.status !== 0) {
+          errors.push(
+            `${relative(repoRoot, filePath)}:${span.line}: ${historical.revision}:${historical.path} does not exist`,
+          );
+        }
+        continue;
+      }
       const candidate = normalizeCandidate(rawToken);
       if (!candidate) continue;
 

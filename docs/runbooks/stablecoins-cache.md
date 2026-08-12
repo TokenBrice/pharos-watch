@@ -3,6 +3,10 @@
 Triggered by `StatusCause.code`:
 - `stablecoins_cache_unavailable`
 - `stablecoins_cache_degraded`
+- `stablecoin_publication_incomplete`
+- `stablecoin_publication_unknown`
+- `active_price_coverage_incomplete`
+- `active_price_coverage_unknown`
 
 ## Symptom
 
@@ -11,12 +15,13 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## First checks
 
 1. **`sync-stablecoins` cron:** Admin page → Crons section. Is the cron healthy? Last successful run recent (< 2× expected interval)?
-2. **Data-quality signal:** `/admin` → Triage → Blockers. `missing_prices_degraded` or `missing_prices_stale` usually accompanies a degraded cache.
-3. **Pricing provider diagnostics:** `/api/status` response → `priceProviderDiagnostics`. Any upstream (Binance, CoinGecko, DefiLlama) reporting sustained failures?
+2. **Publication completeness:** for `stablecoin_publication_*`, inspect `/api/status.dataQuality.stablecoinPublication`: missing IDs, active-ID waivers, expected/published counts, generation, and publication evidence. A schema-valid cache can still be incomplete.
+3. **Active current-price coverage:** for `active_price_coverage_*`, inspect `activePriceCoverage`: missing IDs, eligibility/streak evidence, and provider diagnostics. This is distinct from historical chart price coverage.
+4. **Pricing provider diagnostics:** inspect `/api/status.priceProviderDiagnostics`. Any upstream (Binance, CoinGecko, DefiLlama) reporting sustained failures?
 
 ## Remediation
 
-- **Recommended historical price backfill:** the status page currently recommends `backfill-cg-prices` for `stablecoins_cache_unavailable`, `stablecoins_cache_degraded`, and missing-price causes. It repairs historical `supply_history` price rows; it does not directly republish the `stablecoins` cache, so treat it as the right action when missing historical CoinGecko prices are implicated.
+- **Historical price backfill:** `backfill-cg-prices` repairs historical `supply_history` price rows only. It does not republish the exact stablecoin publication or repair current-price coverage, so use it only when historical CoinGecko gaps are independently implicated.
 - **Republish cache:** inspect `sync-stablecoins`, clear a stuck lease or provider breaker when applicable, then let the next quarter-hourly run publish the cache. Use `backfill-cg-prices` only when the incident also points at missing historical CoinGecko prices.
 - **Circuit breaker:** if a provider breaker is open, delete its `cache` row. `POST /api/reset-circuit-breaker` was retired on 2026-08-09; this single delete is exactly what it ran, and the next call re-probes closed. Scoped live-reserve breakers use the same key convention, `circuit:live-reserves:<scope>`.
 
@@ -35,4 +40,4 @@ The cached `/api/stablecoins` payload is missing, malformed, has the wrong objec
 ## Prevention
 
 - The cache TTL and fallback mode are configured in the sync-stablecoins cron. Do not tune these without understanding the `status-thresholds` coupling.
-- For stablecoins-cache incidents, remember that the current recommended action is historical price backfill rather than direct cache publication. Primary recovery for a malformed or missing cache is still to inspect `sync-stablecoins`, clear a relevant lease or breaker when applicable, and let the next quarter-hourly publish run rebuild the cache.
+- Primary recovery is to diagnose `sync-stablecoins` provider and publication state, clear a relevant lease or breaker only when its exact safety condition holds, and verify the next safe quarter-hourly publication. Do not treat historical price backfill as a generic repair for exact-publication or live-price failures.

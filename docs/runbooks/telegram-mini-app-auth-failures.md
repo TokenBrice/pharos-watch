@@ -14,10 +14,10 @@ Detection signals:
 
 ## Quick Diagnostic Checklist
 
-1. **Bot token rotation gap?** Cross-check with [`telegram-secret-rotation.md`](./telegram-secret-rotation.md). If `TELEGRAM_BOT_TOKEN` was rotated in the last 24 hours and `TELEGRAM_BOT_TOKEN_PREVIOUS` is unset or wrong, `initData` signed by the prior token will fail validation for the rest of its 24-hour read window. This is the single most common cause of a sudden `mini_app_session_invalid` spike.
+1. **Bot token rotation gap?** Cross-check with [`telegram-secret-rotation.md`](./telegram-secret-rotation.md). If `TELEGRAM_BOT_TOKEN` was rotated and `TELEGRAM_BOT_TOKEN_PREVIOUS` is unset or wrong, prior-token `initData` fails signature validation before any trusted user context exists. Expect `401` responses and Worker-log evidence, but no increase in `mini_app_session_invalid` analytics from those rejected signatures.
 2. **Stale clients?** A flat 5-minute spike across a single coin or alert that just dispatched usually means many users tapped a long-lived deep link whose `auth_date` is older than 5 minutes. Mutations require a fresh launch; reads still work. The Mini App's "relaunch from Telegram" affordance is the intended remedy.
 3. **Invalid signatures?** Use Worker logs and HTTP response codes, not `telegram_usage_daily`, for invalid-signature / invalid-auth volume. Those failures point to malformed launch data, token mismatch outside a rotation overlap, or tampered payloads; no mutation reaches D1 before HMAC validation succeeds.
-4. **Worker degradation?** Confirm the `dispatch-telegram-alerts` lane is healthy via [`telegram-no-delivery.md`](./telegram-no-delivery.md). A failing Mini App pulse loader can present as auth failures in the UI when the page never receives a fresh state.
+4. **Mini App request path degraded?** Inspect the session/mutation HTTP handlers and Pages pulse proxy separately. Telegram dispatch health does not authenticate Mini App requests and is not an auth remediation step.
 
 ## Operator Commands
 
@@ -119,7 +119,7 @@ npx wrangler tail stablecoin-api --format pretty
 1. **Bot-token rotation gap.** Set `TELEGRAM_BOT_TOKEN_PREVIOUS` to the prior token and redeploy. Sessions signed by either token will validate during the overlap.
 2. **Stale clients.** No operator action. The Mini App's stale-auth banner offers a one-tap "Relaunch and keep this panel" button (a `?startapp=` deep link back to the user's current panel) when `openTelegramLink` is available, and close-and-reopen copy otherwise; relaunching from Telegram is the intended recovery path.
 3. **Invalid signatures or malformed auth.** No mutation lands in D1 before HMAC validation succeeds. If the count persists outside a rotation window, inspect recent launch-link changes and Telegram client reports before changing backend auth rules.
-4. **Worker degradation.** Follow [`telegram-no-delivery.md`](./telegram-no-delivery.md); auth failures should clear once the dispatcher recovers and the Mini App pulse loader returns fresh state.
+4. **Request-path or pulse degradation.** Diagnose the Mini App session/mutation endpoints and the pulse loader independently. Follow [`telegram-no-delivery.md`](./telegram-no-delivery.md) only when alert delivery is also failing; dispatcher recovery does not make an invalid or stale Mini App session valid.
 
 ## Cross-References
 

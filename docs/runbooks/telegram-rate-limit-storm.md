@@ -52,5 +52,5 @@ Detection signals:
 - [`telegram-no-delivery.md`](./telegram-no-delivery.md) — when no messages are going out at all (a storm can present as no delivery).
 - [`telegram-backlog-expiration.md`](./telegram-backlog-expiration.md) — when pending rows approach their source-specific expiry (two-hour risk, 90-minute launch, or 45-minute admin).
 - [`telegram-admin-broadcast-safety.md`](./telegram-admin-broadcast-safety.md) — broadcasts must wait until rate-limit pressure clears.
-- [`telegram-bot-wide-outage.md`](./telegram-bot-wide-outage.md) — supported fresh, pending, and admin delivery pauses plus half-open recovery.
+- [`telegram-bot-wide-outage.md`](./telegram-bot-wide-outage.md) — pause-state inspection, the current audited-control gap, and half-open recovery.
 - [`telegram-operator-queries.md`](./telegram-operator-queries.md) — D1 diagnostics for pending, jobs, dead letters, webhook dedupe, and usage funnels.
