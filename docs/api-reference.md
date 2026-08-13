@@ -2449,14 +2449,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.35"
+      "methodologyVersion": "4.36"
     }
   },
   "methodology": {
-    "version": "4.35",
-    "versionLabel": "v4.35",
-    "currentVersion": "4.35",
-    "currentVersionLabel": "v4.35",
+    "version": "4.36",
+    "versionLabel": "v4.36",
+    "currentVersion": "4.36",
+    "currentVersionLabel": "v4.36",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,

@@ -847,6 +847,46 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "Modeled as a collateral redemption route into wstETH-backed vault value; protocol imbalance and validation windows can delay or restrict execution.",
       ],
     },
+    "hchf-hedera-swiss-franc": {
+      ...collateralRedeemBase,
+      outputAssets: ["asset:hbar"],
+      ...documentedBoundSupplyFull("2026-08-13"),
+      costModel: documentedVariableFee(
+        "HLiquity documents a dynamic redemption fee based on the amount redeemed relative to total HCHF supply; the fee is paid in HBAR",
+        "formula",
+      ),
+      routeStatus: "open",
+      docs: [
+        sourceRef("HLiquity overview", "https://docs.hliquity.org/overview/overview", ["route", "access"]),
+        sourceRef(
+          "HLiquity redemptions and HCHF price stability",
+          "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability",
+          ["route", "capacity", "fees", "access", "settlement"],
+        ),
+        sourceRef("HLiquity borrowing", "https://docs.hliquity.org/deep-dive/borrowing", ["capacity", "route"]),
+        sourceRef("HLiquity Stability Pool and liquidations", "https://docs.hliquity.org/deep-dive/stability-pool-and-liquidations", [
+          "capacity",
+        ]),
+        sourceRef("HLiquity contract registry", "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts", [
+          "route",
+          "access",
+        ]),
+        sourceRef("HLiquity verified source repository", "https://github.com/SwisscoastAG/HLiquity", [
+          "route",
+          "access",
+          "settlement",
+        ]),
+        sourceRef("Hedera mainnet mirror-node API", "https://mainnet-public.mirrornode.hedera.com", [
+          "capacity",
+          "route",
+        ]),
+      ],
+      notes: [
+        "Any HCHF holder can redeem against the lowest-collateral-ratio Troves; HCHF is burned and the protocol transfers face-value HBAR to the redeemer.",
+        "supply-full is the eventual system bound, not a guaranteed hot buffer: same-block capacity depends on current open Troves and their collateral.",
+        "The fee is dynamic and should be read from the deployed contract's current fee state/formula rather than treated as a fixed numeric charge.",
+      ],
+    },
   }),
 ];
 

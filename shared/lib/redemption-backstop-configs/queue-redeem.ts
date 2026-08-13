@@ -925,6 +925,35 @@ export const QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopCon
       "Secondary-market exits and optional governance floor redemption are excluded from the modeled route",
     ],
   },
+  "usdm-monetrix": {
+    ...queueRedeemBase,
+    settlementModel: "days",
+    executionModel: "deterministic-onchain",
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    reviewedAt: "2026-08-13",
+    costModel: undisclosedReviewedFee(
+      "Monetrix public docs specify 1:1 redemption and cooldown but no numeric redemption fee; network gas remains separate",
+    ),
+    routeExitCorrelation: "same-protocol-liquidity",
+    docs: [
+      sourceRef("Redeem guide", "https://doc.monetrix.xyz/guide/redeem.md", ["route", "settlement", "access"]),
+      sourceRef("Mint guide", "https://doc.monetrix.xyz/guide/mint.md", ["route", "capacity", "access"]),
+      sourceRef("Delta-neutral strategy", "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy.md", [
+        "capacity",
+        "route",
+      ]),
+      sourceRef("FAQ", "https://doc.monetrix.xyz/guide/faq.md", ["route", "settlement", "fees"]),
+      sourceRef("Audits and contracts", "https://doc.monetrix.xyz/risk-and-security/audits-and-contracts.md", [
+        "route",
+        "access",
+      ]),
+    ],
+    notes: [
+      "USDM redemption is a permissionless request/claim flow: requestRedeem burns USDM and locks a 1:1 USDC claim, then claimRedeem transfers USDC after the governance-set three-day cooldown.",
+      "The reviewed 10% strategy-buffer heuristic avoids treating Monetrix's delta-neutral positions as immediately redeemable full supply; the cooldown, pause, deposit limits, and TVL-cap controls can also block or constrain the route.",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(QUEUE_REDEEM_BACKSTOP_CONFIGS, ["iusd-infinifi"], REVIEWED_REMEDIATION_AT);

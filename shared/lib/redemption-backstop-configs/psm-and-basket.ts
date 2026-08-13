@@ -560,6 +560,38 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Pharos does not currently model XPR Network contracts, so this remains a static documented-bound route unless a supported-chain capacity adapter is added later.",
     ],
   },
+  "mai-qidao": {
+    ...psmSwapBase,
+    settlementModel: "queued",
+    outputAssetType: "stable-basket",
+    unresolvedOutputAssetKeys: [
+      "approved stablecoin collateral set (exact members are not enumerated by the current PSM documentation)",
+    ],
+    unresolvedOutputDisposition: "issuer-undisclosed",
+    capacityModel: { kind: "supply-full", confidence: "heuristic", basis: "full-system-eventual" },
+    costModel: documentedVariableFee(
+      "QiDao documents a fixed 1:1 PSM rate and a redemption fee on the collateral asset, but does not publish a numeric PSM fee on the current PSM page",
+    ),
+    routeExitCorrelation: "same-protocol-liquidity",
+    reviewedAt: "2026-08-13",
+    docs: [
+      sourceRef("QiDao Peg Stability Module", "https://docs.mai.finance/docs/peg-stability-module", [
+        "route",
+        "access",
+        "settlement",
+        "fees",
+        "capacity",
+      ]),
+      sourceRef("QiDao stablecoin economics", "https://docs.mai.finance/docs/stablecoin-economics", ["route"]),
+      sourceRef("QiDao fees", "https://docs.mai.finance/docs/fees", ["fees"]),
+      sourceRef("QiDao current protocol site", "https://www.mai.finance/", ["route"]),
+    ],
+    notes: [
+      "The permissionless PSM sends MAI into a public three-day withdrawal queue before paying 1:1 approved stablecoin collateral; the exact collateral set remains undisclosed, so outputAssets is intentionally unset.",
+      "supply-full is eventual-only: reviewed materials do not publish a current hot-buffer balance, withdrawal cap, or other immediate-capacity bound.",
+      "The PSM collateral is placed into QiDao-approved yield strategies, so the route remains correlated with QiDao's own collateral and strategy liquidity rather than ordinary CDP repayment.",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(

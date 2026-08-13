@@ -2,6 +2,24 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.36",
+    title: "Nine reviewed redemption routes across protocol and issuer rails",
+    date: "2026-08-13",
+    effectiveAt: 1786579200,
+    summary:
+      "Reviewed coverage adds nine redemption backstops across PSM, stablecoin, queue, collateral, and offchain issuer families. The routes retain unresolved outputs and eventual-capacity semantics where the dossiers do not establish a complete payout set or immediate buffer; scoring weights, ladders, and the exit engine are unchanged.",
+    impact: [
+      "MAI (QiDao) adds a permissionless PSM route with a three-day withdrawal queue, heuristic eventual capacity, same-protocol correlation, and an issuer-undisclosed stablecoin collateral set; the route is distinct from borrower-only CDP repayment.",
+      "trUSD (Tori), JUSD (JuiceDollar), JPYT (DePhaser), and suiUSDe (Sui/Ethena) add stablecoin-redeem routes: Tori is whitelisted with a fixed 10 bps fee and a conservative 10% strategy-buffer heuristic, JUSD preserves all three Citrea bridge outputs as an unresolved basket, JPYT uses rules-based NAV at the average Lock-In Exchange Rate rather than spot JPY/USD par, and suiUSDe is a role-gated atomic USDC redemption with the same conservative heuristic plus documented limits and pause controls.",
+      "USDM (Monetrix) adds a permissionless three-day request/claim queue into USDC; its conservative 10% strategy-buffer heuristic avoids treating delta-neutral positions as immediately redeemable full supply while pause, deposit limits, and TVL caps constrain execution.",
+      "HCHF (HLiquity) adds a permissionless collateral redemption into HBAR with a documented dynamic fee model and eventual full-system capacity rather than a same-block hot-buffer claim.",
+      "eMXN (Telcoin) adds a verified-customer issuer rail with 1–3 business-day processing, a 0.15% documented fee plus pass-through charges, and unresolved fiat:MXN output; HLUSD (HeLa) is modeled per review adjustment as a manual, opaque, days-settled StableHodl OTC rail into USDC or USDT with a fixed 100 bps fee and heuristic eventual capacity.",
+      "Coverage rises to 324 configured routes, with family totals of 150 offchain-issuer, 71 stablecoin-redeem, 39 collateral-redeem, 40 queue-redeem, 15 psm-swap, and 9 basket-redeem.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.35",
     title: "The residual queue clears: dEURO remodel, USDp basket sum, and valued redemption outputs",
     date: "2026-08-12",
