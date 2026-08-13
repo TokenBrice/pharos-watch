@@ -32,11 +32,13 @@ import {
 } from "./native-sync";
 
 const SOLANA_ADMISSION_SOURCE_KEY = "measured-execution:solana-admission";
-// Preserve twelve cursor-rotated admissions while reserving one additional
+// Preserve thirty cursor-rotated admissions while reserving one additional
 // serialized slot for each exact reviewed priority target. This keeps the
 // priority evidence inside its one-hour freshness window without reducing
-// general inventory coverage or adding request concurrency.
-export const SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN = 12;
+// general inventory coverage or adding request concurrency. Combined with the
+// score-facing inventory bound, four half-hour cycles cover the observed
+// production cohort inside the universal two-hour freshness horizon.
+export const SOLANA_MEASURED_ROTATING_TARGETS_PER_RUN = 30;
 const SOLANA_RUNTIME_BUDGET_MS = 7 * 60 * 1_000;
 
 export function admitSolanaMeasuredTargets(
@@ -65,9 +67,28 @@ export function admitSolanaMeasuredTargets(
     const target = priorityByPolicyId.get(entry.policyId);
     return target ? [target] : [];
   });
-  const ranked = rotatingTargets.sort(
-    (left, right) => right.retainedTvlUsd - left.retainedTvlUsd || left.targetId.localeCompare(right.targetId),
-  );
+  const grouped = new Map<string, SolanaMeasuredExecutionTarget[]>();
+  for (const target of rotatingTargets) {
+    const rows = grouped.get(target.stablecoinId) ?? [];
+    rows.push(target);
+    grouped.set(target.stablecoinId, rows);
+  }
+  const groups = [...grouped.values()]
+    .map((rows) => rows.sort(
+      (left, right) => right.retainedTvlUsd - left.retainedTvlUsd || left.targetId.localeCompare(right.targetId),
+    ))
+    .sort(
+      (left, right) =>
+        right[0]!.retainedTvlUsd - left[0]!.retainedTvlUsd ||
+        left[0]!.stablecoinId.localeCompare(right[0]!.stablecoinId),
+    );
+  const ranked: SolanaMeasuredExecutionTarget[] = [];
+  for (let depth = 0; groups.some((rows) => depth < rows.length); depth++) {
+    for (const rows of groups) {
+      const target = rows[depth];
+      if (target) ranked.push(target);
+    }
+  }
   const rotated = rotateFromCursor(ranked, cursor, (target) => target.targetId, {
     startAfterCursor: true,
   }).items;

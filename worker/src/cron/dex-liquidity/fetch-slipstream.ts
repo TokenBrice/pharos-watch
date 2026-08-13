@@ -1,7 +1,11 @@
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { throwIfAborted } from "../../lib/abort";
-import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
+import {
+  fetchEvmCallHexAtBlock,
+  fetchEvmMulticall3Aggregate3AtBlock,
+  type EvmMulticall3Result,
+} from "../../lib/evm-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { buildChainAddressKey, resolveTrackedStablecoinId } from "./token-resolution";
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
@@ -12,12 +16,25 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const PAGE_SIZE = 100;
 const MAX_CL_PAGES = 50;
 const TOKEN_BATCH_SIZE = 100;
+const STAGED_RECOVERY_MAX_POOLS = 12;
+const STAGED_RECOVERY_MAX_AGE_SEC = 4 * 60 * 60;
 const POOL_COUNT_ABI = parseAbi([
   "function allPoolsLength() view returns (uint256)",
 ]);
 const SUGAR_ABI = parseAbi([
   "function all(uint256 _limit, uint256 _offset, uint256 _filter) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 emissions_cap,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,uint256 locked,uint256 emerging,uint32 created_at,address nfpm,address alm,address root)[])",
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
+]);
+const SLIPSTREAM_POOL_ABI = parseAbi([
+  "function factory() view returns (address)",
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function tickSpacing() view returns (int24)",
+  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,bool unlocked)",
+]);
+const ERC20_RECOVERY_ABI = parseAbi([
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address account) view returns (uint256)",
 ]);
 
 type SlipstreamProtocol = "aerodrome-slipstream" | "velodrome-slipstream";
@@ -39,6 +56,204 @@ type SugarToken = {
   symbol: string;
   decimals: number;
 };
+
+interface StagedSlipstreamCandidateRow {
+  pool_id: string;
+  base_token: string | null;
+  quote_token: string | null;
+  fee_tier: number | null;
+}
+
+function decodeRecoveryResult<T>(
+  result: EvmMulticall3Result | undefined,
+  abi: typeof SLIPSTREAM_POOL_ABI | typeof ERC20_RECOVERY_ABI,
+  functionName: string,
+): T | null {
+  if (!result?.success) return null;
+  try {
+    return decodeFunctionResult({ abi, functionName: functionName as never, data: result.returnData }) as T;
+  } catch {
+    return null;
+  }
+}
+
+function recoveryResultMap(results: readonly EvmMulticall3Result[]): Map<string, EvmMulticall3Result> {
+  return new Map(results.map((result) => [result.label, result]));
+}
+
+async function recoverSlipstreamPoolsFromStaging(input: {
+  db: D1Database;
+  protocol: SlipstreamProtocol;
+  chainAddressToId: Map<string, string>;
+  trackedStablecoinPrices: Map<string, number>;
+  signal?: AbortSignal;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+}): Promise<DexApiPool[]> {
+  const config = SLIPSTREAM_CONFIG[input.protocol];
+  const nowSec = Math.floor(Date.now() / 1_000);
+  let rows: StagedSlipstreamCandidateRow[];
+  try {
+    const result = await input.db
+      .prepare(
+        `SELECT pool_id, base_token, quote_token, fee_tier
+         FROM (
+           SELECT pool_id, base_token, quote_token, fee_tier, tvl_usd,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY pool_id
+                    ORDER BY (fee_tier IS NOT NULL) DESC, tvl_usd DESC, stablecoin_id
+                  ) AS candidate_rank
+           FROM dex_pool_staging
+           WHERE chain = ? AND dex_id = ? AND refreshed_at >= ?
+             AND source IN ('cg_onchain', 'gecko_terminal', 'dexscreener')
+             AND base_token IS NOT NULL AND quote_token IS NOT NULL
+         )
+         WHERE candidate_rank = 1
+         ORDER BY tvl_usd DESC, pool_id
+         LIMIT ?`,
+      )
+      .bind(config.chain, input.protocol, nowSec - STAGED_RECOVERY_MAX_AGE_SEC, STAGED_RECOVERY_MAX_POOLS)
+      .all<StagedSlipstreamCandidateRow>();
+    rows = result.results ?? [];
+  } catch {
+    return [];
+  }
+
+  const candidates = rows.flatMap((row) => {
+    const poolAddress = row.pool_id.startsWith(`${config.chain}:`)
+      ? row.pool_id.slice(config.chain.length + 1).toLowerCase()
+      : "";
+    const baseToken = row.base_token?.toLowerCase() ?? "";
+    const quoteToken = row.quote_token?.toLowerCase() ?? "";
+    if (
+      !/^0x[0-9a-f]{40}$/.test(poolAddress) ||
+      !/^0x[0-9a-f]{40}$/.test(baseToken) ||
+      !/^0x[0-9a-f]{40}$/.test(quoteToken) ||
+      !input.chainAddressToId.has(buildChainAddressKey(config.chain, baseToken)) ||
+      !input.chainAddressToId.has(buildChainAddressKey(config.chain, quoteToken))
+    ) return [];
+    // `fee_tier` is normalized to basis points by the CoinGecko staging
+    // producer. Slipstream pool fee() uses protocol-specific raw units, so do
+    // not reinterpret that on-chain integer as basis points here.
+    const feeBps = row.fee_tier != null && Number.isFinite(row.fee_tier) && row.fee_tier > 0
+      ? row.fee_tier
+      : null;
+    return [{ poolAddress, expectedTokens: new Set([baseToken, quoteToken]), feeBps }];
+  });
+  if (candidates.length === 0) return [];
+
+  const calls = candidates.flatMap((candidate, index) => {
+    const prefix = `slipstream-recovery-${index}`;
+    const poolCall = (functionName: "factory" | "token0" | "token1" | "tickSpacing" | "slot0") => ({
+      label: `${prefix}-${functionName}`,
+      target: candidate.poolAddress,
+      callData: encodeFunctionData({ abi: SLIPSTREAM_POOL_ABI, functionName }),
+    });
+    return [
+      poolCall("factory"),
+      poolCall("token0"),
+      poolCall("token1"),
+      poolCall("tickSpacing"),
+      poolCall("slot0"),
+      ...[...candidate.expectedTokens].flatMap((tokenAddress, tokenIndex) => [
+        {
+          label: `${prefix}-token-${tokenIndex}-decimals`,
+          target: tokenAddress,
+          callData: encodeFunctionData({ abi: ERC20_RECOVERY_ABI, functionName: "decimals" }),
+        },
+        {
+          label: `${prefix}-token-${tokenIndex}-balance`,
+          target: tokenAddress,
+          callData: encodeFunctionData({
+            abi: ERC20_RECOVERY_ABI,
+            functionName: "balanceOf",
+            args: [candidate.poolAddress as `0x${string}`],
+          }),
+        },
+      ]),
+    ];
+  });
+  const rawResults = await fetchEvmMulticall3Aggregate3AtBlock(config.chain, calls, "latest", {
+    signal: input.signal,
+    timeoutMs: DIRECT_API_REQUEST_TIMEOUT_MS,
+    chainRpcs: input.chainRpcs,
+    multicallBatchSize: 60,
+  });
+  if (!rawResults) return [];
+  const results = recoveryResultMap(rawResults);
+  const pools: DexApiPool[] = [];
+  for (let index = 0; index < candidates.length; index++) {
+    const candidate = candidates[index]!;
+    const prefix = `slipstream-recovery-${index}`;
+    const factory = decodeRecoveryResult<string>(results.get(`${prefix}-factory`), SLIPSTREAM_POOL_ABI, "factory")?.toLowerCase();
+    const token0 = decodeRecoveryResult<string>(results.get(`${prefix}-token0`), SLIPSTREAM_POOL_ABI, "token0")?.toLowerCase();
+    const token1 = decodeRecoveryResult<string>(results.get(`${prefix}-token1`), SLIPSTREAM_POOL_ABI, "token1")?.toLowerCase();
+    const tickSpacing = Number(decodeRecoveryResult<number>(results.get(`${prefix}-tickSpacing`), SLIPSTREAM_POOL_ABI, "tickSpacing"));
+    const slot0 = decodeRecoveryResult<readonly [bigint, number, number, number, number, boolean]>(
+      results.get(`${prefix}-slot0`),
+      SLIPSTREAM_POOL_ABI,
+      "slot0",
+    );
+    if (
+      factory !== config.clFactoryAddress.toLowerCase() ||
+      !token0 ||
+      !token1 ||
+      !candidate.expectedTokens.has(token0) ||
+      !candidate.expectedTokens.has(token1) ||
+      token0 === token1 ||
+      !Number.isInteger(tickSpacing) ||
+      tickSpacing <= 0 ||
+      !slot0 ||
+      slot0[0] <= 0n
+    ) continue;
+
+    const stagedTokens = [...candidate.expectedTokens];
+    const tokenRows = [token0, token1].flatMap((address) => {
+      const stagedIndex = stagedTokens.indexOf(address);
+      const decimals = Number(decodeRecoveryResult<number>(
+        results.get(`${prefix}-token-${stagedIndex}-decimals`),
+        ERC20_RECOVERY_ABI,
+        "decimals",
+      ));
+      const rawBalance = decodeRecoveryResult<bigint>(
+        results.get(`${prefix}-token-${stagedIndex}-balance`),
+        ERC20_RECOVERY_ABI,
+        "balanceOf",
+      );
+      const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(config.chain, address));
+      const priceUsd = stablecoinId ? input.trackedStablecoinPrices.get(stablecoinId) : null;
+      if (
+        !stablecoinId ||
+        priceUsd == null ||
+        priceUsd <= 0 ||
+        !Number.isInteger(decimals) ||
+        decimals < 0 ||
+        decimals > 255 ||
+        rawBalance == null ||
+        rawBalance <= 0n
+      ) return [];
+      const balance = bigintToDecimal(rawBalance, decimals);
+      return [{ address, symbol: stablecoinId, decimals, priceUsd, balance }];
+    });
+    if (tokenRows.length !== 2) continue;
+    const tvlUsd = tokenRows.reduce((sum, token) => sum + token.balance * token.priceUsd, 0);
+    const price = sqrtRatioToSpotPrice(slot0[0], tokenRows[0]!.decimals, tokenRows[1]!.decimals);
+    if (!Number.isFinite(tvlUsd) || tvlUsd <= 0 || !Number.isFinite(price) || price <= 0) continue;
+    pools.push({
+      source: input.protocol,
+      chain: config.chain,
+      poolAddress: candidate.poolAddress,
+      poolType: classifyClPoolType(input.protocol, candidate.feeBps),
+      tokens: tokenRows.map(({ balance: _balance, ...token }) => token),
+      price,
+      tvlUsd,
+      volume24hUsd: 0,
+      feeRate: normalizeFeeRateFromBps(candidate.feeBps),
+      tickSpacing,
+      balances: tokenRows.map((token) => token.balance),
+    });
+  }
+  return pools;
+}
 
 export function projectSugarPoolPage(decoded: readonly SugarPool[]): SugarPool[] {
   const pools: SugarPool[] = [];
@@ -280,9 +495,11 @@ export async function fetchSlipstreamPools(
   trackedStablecoinPrices: Map<string, number>,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  db?: D1Database,
 ): Promise<DexApiFetchResult> {
   const config = SLIPSTREAM_CONFIG[protocol];
   const errors: string[] = [];
+  let pools: DexApiPool[] = [];
   try {
     const clPools = await fetchSugarPools(protocol, config, chainAddressToId, chainRpcs, signal);
     const tokenAddresses = Array.from(new Set(
@@ -290,7 +507,6 @@ export async function fetchSlipstreamPools(
     ));
     const tokenMap = await fetchSugarTokens(config.chain, config.sugarAddress, tokenAddresses, chainRpcs, signal);
 
-    const pools: DexApiPool[] = [];
     for (const pool of clPools) {
       const tickSpacing = Number(pool.type);
       if (!Number.isInteger(tickSpacing) || tickSpacing <= 0 || tickSpacing > 8_388_607) continue;
@@ -388,14 +604,32 @@ export async function fetchSlipstreamPools(
       });
     }
 
-    if (pools.length > 0) {
-      console.log(`[fetch-slipstream] ${protocol} fetched ${pools.length} pools`);
-    }
-    return makeDexApiFetchResult(pools, { ok: true, degraded: false, errors });
   } catch (error) {
     const message = toErrorMessage(error);
     errors.push(message);
     console.warn("[fetch-slipstream]", protocol, message);
-    return makeDexApiFetchResult([], { ok: false, degraded: true, errors });
   }
+  if (db) {
+    const recovered = await recoverSlipstreamPoolsFromStaging({
+      db,
+      protocol,
+      chainAddressToId,
+      trackedStablecoinPrices,
+      signal,
+      chainRpcs,
+    });
+    const known = new Set(pools.map((pool) => pool.poolAddress.toLowerCase()));
+    for (const pool of recovered) {
+      if (!known.has(pool.poolAddress.toLowerCase())) pools.push(pool);
+    }
+    if (recovered.length > 0) {
+      console.log(`[fetch-slipstream] ${protocol} recovered ${recovered.length} staged exact pools on-chain`);
+    }
+  }
+  if (pools.length > 0) console.log(`[fetch-slipstream] ${protocol} fetched ${pools.length} pools`);
+  return makeDexApiFetchResult(pools, {
+    ok: pools.length > 0 || errors.length === 0,
+    degraded: errors.length > 0,
+    errors,
+  });
 }

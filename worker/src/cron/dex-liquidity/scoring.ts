@@ -41,6 +41,7 @@ import {
   resolveDexMeasuredTargetForRetainedPool,
 } from "../measured-execution/retained-target-resolution";
 import { buildSolanaMeasuredPoolDirectionKey } from "../measured-execution/solana-inventory";
+import { isSolanaMeasuredExecutionPriorityTargetScoreEligible } from "../measured-execution/solana-registry";
 import {
   joinSolanaMeasuredExecutionEvidence,
   loadSolanaMeasuredExecutionJoinEvidence,
@@ -1028,6 +1029,9 @@ export async function computeStablecoinScores(
   const inventoryTargetCount = activeTargetInventory.length;
   const shadowInventoryTargetCount = shadowTargetInventory.length;
   const solanaInventoryTargetCount = solanaTargetInventoryById.size;
+  const scoreFacingSolanaTargetIds = [...solanaTargetInventoryById.values()]
+    .filter(isSolanaMeasuredExecutionPriorityTargetScoreEligible)
+    .map((target) => target.targetId);
   const tronInventoryTargetCount = tronTargetInventoryById.size;
   let targetPublication: ScoreDiagnostics["measuredExecution"]["targetPublication"];
   if (measuredTargetPublicationMode === "none") {
@@ -1131,7 +1135,9 @@ export async function computeStablecoinScores(
     releaseDexMeasuredExecutionProofFields(pools);
   }
   joinEvidence?.byTargetId.clear();
-  const solanaJoinEvidence = await loadSolanaMeasuredExecutionJoinEvidence(db, signal);
+  const solanaJoinEvidence = scoreFacingSolanaTargetIds.length > 0
+    ? await loadSolanaMeasuredExecutionJoinEvidence(db, signal, scoreFacingSolanaTargetIds)
+    : null;
   const solanaMeasuredExecutionJoin = joinSolanaMeasuredExecutionEvidence({
     poolsByStablecoin: preparedRetainedPools,
     evidence: solanaJoinEvidence,

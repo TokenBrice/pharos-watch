@@ -295,6 +295,7 @@ async function loadCurrentMeasuredQuoteEvidence<
   targetSchema: { parse(value: unknown): TTarget };
   profileSchema: { parse(value: unknown): TProfile };
   deferProfiles?: boolean;
+  targetIds?: readonly string[];
   signal?: AbortSignal;
 }): Promise<{
   quoteGenerationId: string;
@@ -390,6 +391,110 @@ async function loadCurrentMeasuredQuoteEvidence<
       profile: TProfile | null;
     }
   >();
+  if (input.targetIds) {
+    const allTargetResult = await runWithOverloadRetry(
+      () =>
+        input.db
+          .prepare(
+            `SELECT target_id
+             FROM dex_measured_execution_targets
+             WHERE generation_id = ?
+             ORDER BY target_id`,
+          )
+          .bind(targetGenerationId)
+          .all<{ target_id: string }>(),
+      3,
+      input.signal,
+    );
+    const allTargetIds = (allTargetResult.results ?? []).map((row) => row.target_id);
+    const allTargetIdsSha256 = await hashMeasuredTargetIds(allTargetIds);
+    if (
+      allTargetIds.length !== targetCount ||
+      (sparseTargetDigest != null && sparseTargetDigest !== allTargetIdsSha256)
+    ) {
+      throw new Error(`Published ${input.label} measured quote generation ${generation.generation_id} is incomplete`);
+    }
+
+    const available = new Set(allTargetIds);
+    const selectedTargetIds = [...new Set(input.targetIds)].filter((targetId) => available.has(targetId));
+    for (let offset = 0; offset < selectedTargetIds.length; offset += DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE) {
+      const targetIdBatch = selectedTargetIds.slice(offset, offset + DEX_MEASURED_HISTORY_TARGET_BATCH_SIZE);
+      const selectedResult: { results?: SparseCurrentQuoteWithTargetRow[] } = await runWithOverloadRetry(
+        () =>
+          input.db
+            .prepare(
+              `/* JOIN dex_measured_execution_targets: selected score-facing evidence scan */
+               SELECT t.target_id, t.target_json,
+                      q.generation_id AS quote_generation_id, q.target_generation_id,
+                      q.status, q.failure_reason, q.quote_profile_json
+               FROM dex_measured_execution_targets t
+               LEFT JOIN dex_measured_execution_quotes q
+                 ON q.generation_id = ?
+                AND q.target_generation_id = t.generation_id
+                AND q.target_id = t.target_id
+               WHERE t.generation_id = ?
+                 AND t.target_id IN (SELECT value FROM json_each(?))
+               ORDER BY t.target_id`,
+            )
+            .bind(generation.generation_id, targetGenerationId, JSON.stringify(targetIdBatch))
+            .all<SparseCurrentQuoteWithTargetRow>(),
+        3,
+        input.signal,
+      );
+      for (const row of selectedResult.results ?? []) {
+        const quotedTarget = input.targetSchema.parse(
+          parsePersistedJson(row.target_json, `${input.label} measured target JSON`),
+        );
+        if (quotedTarget.targetId !== row.target_id) {
+          throw new Error(`${input.label} measured quote ${row.target_id} has a mismatched target row`);
+        }
+        const quoteGenerationId = row.quote_generation_id ?? row.generation_id ?? null;
+        if (quoteGenerationId == null) {
+          byTargetId.set(row.target_id, {
+            quotedTarget,
+            status: "failed",
+            failureReason: "budget-deferred",
+            profile: null,
+          });
+          continue;
+        }
+        const profile = row.quote_profile_json
+          ? input.profileSchema.parse(
+              parsePersistedJson(row.quote_profile_json, `${input.label} measured profile JSON`),
+            )
+          : null;
+        if (
+          (row.status === "measured" &&
+            (row.target_generation_id !== targetGenerationId ||
+              profile == null ||
+              row.failure_reason != null ||
+              profile.targetId !== row.target_id ||
+              profile.targetGenerationId !== targetGenerationId ||
+              profile.quoteGenerationId !== generation.generation_id)) ||
+          (row.status === "failed" &&
+            (row.target_generation_id !== targetGenerationId || profile != null || !row.failure_reason?.trim())) ||
+          row.status == null
+        ) {
+          throw new Error(`${input.label} measured quote row ${row.target_id} has a torn terminal identity`);
+        }
+        byTargetId.set(row.target_id, {
+          quotedTarget,
+          status: row.status,
+          failureReason: row.failure_reason,
+          profile,
+        });
+      }
+    }
+    if (byTargetId.size !== selectedTargetIds.length) {
+      throw new Error(`Published ${input.label} measured quote generation ${generation.generation_id} is incomplete`);
+    }
+    return {
+      quoteGenerationId: generation.generation_id,
+      targetGenerationId,
+      publishedAt: generation.published_at ?? generation.started_at,
+      byTargetId,
+    };
+  }
   const targetIds: string[] = [];
   let persistedRowsSeen = 0;
   let omittedRowsSeen = 0;
@@ -1051,7 +1156,11 @@ const SOLANA_PERSISTENCE: NativePersistenceConfig<SolanaMeasuredExecutionTarget,
   profileSchema: SolanaMeasuredExecutionProfileSchema,
   profileBlockNumber: (profile) => profile.slotWindow.after,
   targetProducer: { scheduleKey: "halfHourlyChartsOffset", job: "sync-dex-liquidity", path: "halfHourlyChartsOffset" },
-  quoteProducer: { scheduleKey: "daily0810Utc", job: "sync-cl-exit-depth", path: "daily0810Utc" },
+  quoteProducer: {
+    scheduleKey: "halfHourlyMeasuredExecution",
+    job: "sync-cl-exit-depth",
+    path: "halfHourlyMeasuredExecution",
+  },
 };
 
 const TRON_PERSISTENCE: NativePersistenceConfig<TronMeasuredExecutionTarget, TronMeasuredExecutionProfile> = {
@@ -1388,6 +1497,7 @@ async function loadLatestPublishedNativeMeasuredQuoteEvidence<
 async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
   db: D1Database,
   signal?: AbortSignal,
+  targetIds?: readonly string[],
 ): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
   const currentEvidence = await loadCurrentMeasuredQuoteEvidence({
     db,
@@ -1396,6 +1506,7 @@ async function loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(
     label: "Solana",
     targetSchema: SolanaMeasuredExecutionTargetSchema,
     profileSchema: SolanaMeasuredExecutionProfileSchema,
+    targetIds,
     signal,
   });
   if (!currentEvidence) return null;
@@ -1535,8 +1646,9 @@ export async function publishSolanaMeasuredQuoteGeneration(input: {
 export async function loadLatestPublishedSolanaMeasuredQuoteEvidence(
   db: D1Database,
   signal?: AbortSignal,
+  targetIds?: readonly string[],
 ): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
-  return loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(db, signal);
+  return loadLatestPublishedSolanaMeasuredQuoteEvidenceWithLkg(db, signal, targetIds);
 }
 
 export async function publishTronMeasuredTargetInventory(input: {

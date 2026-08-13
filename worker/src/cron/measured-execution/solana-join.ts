@@ -64,9 +64,10 @@ function hasRequiredRaydiumOnStateProof(
 export async function loadSolanaMeasuredExecutionJoinEvidence(
   db: D1Database,
   signal?: AbortSignal,
+  targetIds?: readonly string[],
 ): Promise<LoadedSolanaMeasuredQuoteEvidence | null> {
   try {
-    return await loadLatestPublishedSolanaMeasuredQuoteEvidence(db, signal);
+    return await loadLatestPublishedSolanaMeasuredQuoteEvidence(db, signal, targetIds);
   } catch {
     return null;
   }

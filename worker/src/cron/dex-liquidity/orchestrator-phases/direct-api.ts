@@ -361,6 +361,7 @@ export function buildDexDirectApiFetchers(params: {
           params.stablecoinPriceById,
           signal,
           params.chainRpcs,
+          params.db,
         ),
     },
     {
@@ -376,6 +377,7 @@ export function buildDexDirectApiFetchers(params: {
           params.stablecoinPriceById,
           signal,
           params.chainRpcs,
+          params.db,
         ),
     },
   ];

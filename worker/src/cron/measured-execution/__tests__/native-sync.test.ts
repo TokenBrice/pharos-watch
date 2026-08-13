@@ -37,7 +37,7 @@ function tronTargets(count: number): TronMeasuredExecutionTarget[] {
 
 describe("native measured-execution publication sync", () => {
   it("preserves Solana rotation, cursor movement, failure aggregation, and publication output", async () => {
-    const targets = solanaTargets(13);
+    const targets = solanaTargets(31);
     const published: unknown[] = [];
     const cursorWrites: Array<{ cursor: string; pagesFetched: number }> = [];
     const profile = { chain: "solana" } as unknown as SolanaMeasuredExecutionProfile;
@@ -53,7 +53,7 @@ describe("native measured-execution publication sync", () => {
       measureTarget: async () => profile,
       publish: async (input: Parameters<typeof SOLANA_NATIVE_SYNC_ADAPTER.publish>[0]) => {
         published.push(...input.outcomes);
-        return { generationId: input.generationId, measuredCount: 12, failedCount: 1 };
+        return { generationId: input.generationId, measuredCount: 30, failedCount: 1 };
       },
       writeCursor: async (input: Parameters<typeof SOLANA_NATIVE_SYNC_ADAPTER.writeCursor>[0]) => {
         cursorWrites.push({ cursor: input.cursor, pagesFetched: input.pagesFetched });
@@ -67,24 +67,24 @@ describe("native measured-execution publication sync", () => {
     });
     const metadata = JSON.parse(result.metadata ?? "{}");
 
-    expect(cursorWrites).toEqual([{ cursor: "solana-11", pagesFetched: 12 }]);
-    expect(published).toHaveLength(13);
+    expect(cursorWrites).toEqual([{ cursor: "solana-29", pagesFetched: 30 }]);
+    expect(published).toHaveLength(31);
     expect(published[published.length - 1]).toMatchObject({
-      target: { targetId: "solana-12" },
+      target: { targetId: "solana-30" },
       status: "failed",
       failureReason: "budget-deferred",
       rawPayload: {
         adapterProfileId: "orca-whirlpool-jupiter-v1",
-        targetId: "solana-12",
+        targetId: "solana-30",
         failureReason: "budget-deferred",
       },
     });
     expect(metadata).toMatchObject({
       quoteGenerationId: "solana-quotes-1",
-      measuredCount: 12,
+      measuredCount: 30,
       failedCount: 1,
       deferredCount: 1,
-      nextAdmissionCursor: "solana-11",
+      nextAdmissionCursor: "solana-29",
       cursorWriteStatus: "written",
       failuresByReason: { "budget-deferred": 1 },
     });
