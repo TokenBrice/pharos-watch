@@ -184,6 +184,9 @@ vi.mock("../dex-liquidity/fetch-sunswap", () => ({
 vi.mock("../dex-liquidity/fetch-slipstream", () => ({
   fetchSlipstreamPools: vi.fn(async () => makeDirectApiResult()),
 }));
+vi.mock("../dex-liquidity/fetch-uniswap-v3-bsc", () => ({
+  fetchUniswapV3BscShadowPools: vi.fn(async () => makeDirectApiResult()),
+}));
 vi.mock("../../lib/stablecoins-cache", async () => {
   const actual = await vi.importActual<typeof import("../../lib/stablecoins-cache")>("../../lib/stablecoins-cache");
   return {
@@ -230,6 +233,7 @@ import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchMeteoraPools } from "../dex-liquidity/fetch-meteora";
 import { fetchPancakeSwapPools } from "../dex-liquidity/fetch-pancakeswap";
 import { fetchSlipstreamPools } from "../dex-liquidity/fetch-slipstream";
+import { fetchUniswapV3BscShadowPools } from "../dex-liquidity/fetch-uniswap-v3-bsc";
 import {
   computeDepthStability,
   computeDexPrices,
@@ -962,6 +966,45 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(metadata.fallbackMode).toContain("raydium-api-unavailable");
     expect(metadata.sourceCoverage?.sourceDegradedFamilies).toEqual([]);
     expect(persistScores).toHaveBeenCalled();
+  });
+
+  it("carries BSC Uniswap V3 direct candidates into the shadow target accumulator", async () => {
+    const pool: DexApiPool = {
+      source: "uniswap-v3-shadow",
+      chain: "bsc",
+      poolAddress: "0xf150d29d92e7460a1531cbc9d1abeab33d6998e4",
+      poolType: "uniswap-v3",
+      tokens: [
+        { address: "0x55d398326f99059ff775485246999027b3197955", symbol: "USDT", decimals: 18 },
+        { address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d", symbol: "USD1", decimals: 18 },
+      ],
+      price: 1,
+      tvlUsd: 2_000_000,
+      volume24hUsd: 50_000,
+      feeRate: 0.0001,
+      balances: [1_000_000, 1_000_000],
+    };
+    vi.mocked(fetchUniswapV3BscShadowPools).mockResolvedValueOnce({
+      pools: [pool],
+      ok: true,
+      degraded: false,
+      errors: [],
+    });
+
+    await runDexLiquidityScoringCycle(db, "graph-key");
+
+    const scoreCall = vi.mocked(computeStablecoinScores).mock.calls.at(-1);
+    const shadowTargets = scoreCall?.[9];
+    expect([...shadowTargets!.values()]).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "usdt-tether",
+        adapterProfileId: "uniswap-v3-quoter-v2",
+        chain: "bsc",
+        poolId: "bsc:0xf150d29d92e7460a1531cbc9d1abeab33d6998e4",
+        feePips: 100,
+        retainedTvlUsd: 2_000_000,
+      }),
+    );
   });
 
   it("waits for direct API fetches before loading primary and subgraph sources", async () => {
