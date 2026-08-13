@@ -170,7 +170,7 @@ function buildFixture() {
         exitRouteObservations: [dexObservation],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.8",
+          capabilityMatrixVersion: "p4a.9",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -428,7 +428,7 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
       organicMeasuredTvlUsd: fixedDexObservation.executableUsd,
       exitRouteObservationCoverage: {
         status: "populated",
-        capabilityMatrixVersion: "p4a.8",
+        capabilityMatrixVersion: "p4a.9",
         retainedPoolCount: 1,
         observationCount: 1,
         scoreEligibleObservationCount: 1,

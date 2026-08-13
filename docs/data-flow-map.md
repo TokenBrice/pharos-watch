@@ -40,7 +40,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 The DEX flow has an additive measured-execution subflow. Pinned Uniswap
 V3 on Ethereum, Polygon, and Arbitrum, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
 reads, the Fluid resolver adapter, reviewed Curve CryptoSwap `get_dy` pools,
-the Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter shadow adapter,
+the active Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter adapter,
 the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
 deployment, native Solana
 Raydium CLMM/Orca Whirlpool exact quotes, and reviewed Tron SunSwap V2
@@ -93,6 +93,10 @@ evidence is permitted only after explicit operational collection failure;
 semantic or malformed rows remain barriers. SunSwap V2's activation and
 rollback history is incident context only; current registry state is shadow and
 score-ineligible while target and quote collection continue for revalidation.
+The Ethereum hook-free V4 cohort enters P4 only after the EVM join revalidates
+the pinned runtimes, PoolManager bindings, exact PoolId state, and current quote;
+hooked pools and every other V4 chain remain unsupported. The separate shadow
+surfaces remain available for future cohorts and rollback comparison.
 A Smart Router response containing only multi-hop candidates
 may use the pinned V2 Router's exact direct-path quote; invalid direct candidates
 and missing, failed, stale, or identity-mismatched profiles remain target-level fail-closed. SunSwap census

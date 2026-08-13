@@ -9,6 +9,6 @@ describe("LiquidityMethodologySection", () => {
     const markup = renderToStaticMarkup(<LiquidityMethodologySection />);
     const markupHash = createHash("sha256").update(markup).digest("hex");
 
-    expect(markupHash).toBe("7ce8190322cb546f9717b2677b03645ee0e4462aa5a52a1fb6615aedce01cabd");
+    expect(markupHash).toBe("128bc8d7486c10de2ee259e4163fdbfc9d4ddd3d2e5fde82d75288ce4c71e598");
   });
 });

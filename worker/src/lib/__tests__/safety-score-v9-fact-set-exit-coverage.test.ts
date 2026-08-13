@@ -286,7 +286,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
             ...original.dexLiqMap.alpha!,
             exitRouteObservationCoverage: {
               status: "populated",
-              capabilityMatrixVersion: "p4a.8",
+              capabilityMatrixVersion: "p4a.9",
               retainedPoolCount: 2_380 + exactCapabilityPoolCount,
               observationCount: 1,
               scoreEligibleObservationCount: 1,

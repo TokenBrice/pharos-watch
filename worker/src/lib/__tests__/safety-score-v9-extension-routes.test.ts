@@ -127,7 +127,7 @@ function capturedNavOutputInput(navObservedAtSec: number): ReportCardsFixedInput
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.8",
+          capabilityMatrixVersion: "p4a.9",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,
@@ -748,7 +748,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.8",
+          capabilityMatrixVersion: "p4a.9",
           retainedPoolCount: 2_418,
           observationCount: 44,
           scoreEligibleObservationCount: 44,
@@ -811,7 +811,7 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
         exitRouteObservations: [route],
         exitRouteObservationCoverage: {
           status: "populated",
-          capabilityMatrixVersion: "p4a.8",
+          capabilityMatrixVersion: "p4a.9",
           retainedPoolCount: 1,
           observationCount: 1,
           scoreEligibleObservationCount: 1,

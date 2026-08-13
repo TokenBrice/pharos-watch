@@ -36,7 +36,7 @@ import {
   type TronMeasuredExecutionPublicProfile,
 } from "../types/tron-measured-execution";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 
 // The stress-request shape is owned by the one exit scoring engine
 // (`exit-route-scoring.ts`); these are named views of it, not a second copy.
@@ -76,6 +76,17 @@ const CURVE_DUSD_STABLESWAP_NG_POOL_TOKEN_ADDRESSES = [
 const CURVE_DUSD_STABLESWAP_NG_FACTORY_POOL_INDEX = 580;
 const CURVE_STABLESWAP_NG_MIN_COMPLETE_CYCLES = 3;
 const CURVE_STABLESWAP_NG_MIN_SUCCESSFUL_OBSERVATIONS = 3;
+const UNISWAP_V4_ADAPTER_PROFILE_ID = "uniswap-v4-hook-free-quoter-v1";
+const UNISWAP_V4_HOOK_FREE_ADDRESS = "0x0000000000000000000000000000000000000000";
+const UNISWAP_V4_POOL_MANAGER_ADDRESS = "0x000000000004444c5dc75cb358380d2e3de08a90";
+const UNISWAP_V4_POOL_MANAGER_CODE_HASH =
+  "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293";
+const UNISWAP_V4_STATE_VIEW_ADDRESS = "0x7ffe42c4a5deea5b0fec41c94c136cf115597227";
+const UNISWAP_V4_STATE_VIEW_CODE_HASH =
+  "0xd7947778589cf4aac9a092a4451292a2056380941635ab7006d3c691d8dfd878";
+const UNISWAP_V4_QUOTER_ADDRESS = "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203";
+const UNISWAP_V4_QUOTER_CODE_HASH =
+  "0x06de58fa119c5deaa7a667fb92d3894e25d9160e62fb82c8d86d43b47eefe441";
 export const P4_AMM_MODELED_TVL_MIN_RATIO = 0.5;
 export const P4_AMM_MODELED_TVL_MAX_RATIO = 2;
 
@@ -196,6 +207,25 @@ export const DEX_ROUTE_SOURCE_CAPABILITIES: readonly DexRouteSourceCapability[] 
     scoreEligible: true,
     limitations: [
       "Activated only for consumer-validated Uniswap V3, PancakeSwap V3, and Aerodrome Slipstream QuoterV2 profiles.",
+    ],
+  },
+  {
+    id: "uniswap-v4-hook-free-measured-exact",
+    sourceFamilies: ["dl"],
+    model: "measured-quote",
+    tokenIdentity: "exact",
+    exactBalancesOrReserves: "absent",
+    poolInvariantParameters: "exact",
+    outputIdentity: "exact",
+    fees: "exact",
+    observationTime: "source-observed",
+    outputEvidenceKind: "measured-executable-depth",
+    confidence: "high",
+    outputKinds: ["tracked-stablecoin", "collateral"],
+    commonModeKeyKinds: ["chain", "protocol", "pool", "asset", "token"],
+    scoreEligible: true,
+    limitations: [
+      "Activated only for exact hook-free Ethereum PoolKeys verified against the pinned PoolManager, StateView, and Quoter deployment.",
     ],
   },
   {
@@ -695,6 +725,10 @@ function isQuoterV2MeasuredExecutionAdapter(adapterProfileId: string): boolean {
   );
 }
 
+function isUniswapV4MeasuredExecutionAdapter(adapterProfileId: string): boolean {
+  return adapterProfileId === UNISWAP_V4_ADAPTER_PROFILE_ID;
+}
+
 function capabilityForPool(
   pool: P4DexRoutePoolInput,
   options: { ignoreMeasured?: boolean } = {},
@@ -708,6 +742,8 @@ function capabilityForPool(
         ? "native-measured-exact"
         : isQuoterV2MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
         ? "quoter-v2-measured-exact"
+        : isUniswapV4MeasuredExecutionAdapter(measuredProfile.adapterProfileId)
+          ? "uniswap-v4-hook-free-measured-exact"
         : measuredProfile.adapterProfileId === "curve-cryptoswap-get-dy-v1"
           ? "curve-cryptoswap-measured-exact"
         : measuredProfile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID
@@ -808,6 +844,7 @@ function validateMeasuredExecutionProfile(
   if (!isNative) {
     if (
       !isQuoterV2MeasuredExecutionAdapter(profile.adapterProfileId) &&
+      !isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId) &&
       profile.adapterProfileId !== "curve-cryptoswap-get-dy-v1" &&
       profile.adapterProfileId !== CURVE_STABLESWAP_ADAPTER_PROFILE_ID &&
       profile.adapterProfileId !== CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID
@@ -852,7 +889,30 @@ function validateMeasuredExecutionProfile(
     issues.push("retained-physical-pool-mismatch");
   if (profile.tokenIn.trackedAssetId !== context.stablecoinId) issues.push("tracked-input-mismatch");
   if (profile.tokenOut.trackedAssetId === context.stablecoinId) issues.push("self-output-asset");
-  if (!isNative && profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
+  if (!isNative && isUniswapV4MeasuredExecutionAdapter(profile.adapterProfileId)) {
+    const evmProfile = profile as DexMeasuredExecutionPublicProfile;
+    const provenance = evmProfile.uniswapV4PoolProvenance;
+    if (
+      canonicalExitRouteChain(evmProfile.chain) !== "ethereum" ||
+      evmProfile.protocol !== "uniswap-v4" ||
+      evmProfile.hookAddress !== UNISWAP_V4_HOOK_FREE_ADDRESS ||
+      evmProfile.tickSpacing == null ||
+      evmProfile.feePips == null ||
+      evmProfile.poolTokenAddresses?.length !== 2 ||
+      !evmProfile.poolTokenAddresses.includes(evmProfile.tokenIn.address) ||
+      !evmProfile.poolTokenAddresses.includes(evmProfile.tokenOut.address) ||
+      evmProfile.tokenIn.address === evmProfile.tokenOut.address ||
+      provenance == null ||
+      evmProfile.poolId !== canonicalExitRouteAssetKey("ethereum", provenance.poolId) ||
+      provenance.blockNumber !== evmProfile.blockNumber ||
+      provenance.poolManagerAddress !== UNISWAP_V4_POOL_MANAGER_ADDRESS ||
+      provenance.poolManagerCodeHash !== UNISWAP_V4_POOL_MANAGER_CODE_HASH ||
+      provenance.stateViewAddress !== UNISWAP_V4_STATE_VIEW_ADDRESS ||
+      provenance.stateViewCodeHash !== UNISWAP_V4_STATE_VIEW_CODE_HASH ||
+      evmProfile.executionEndpoint.address !== UNISWAP_V4_QUOTER_ADDRESS ||
+      evmProfile.executionEndpoint.codeHash !== UNISWAP_V4_QUOTER_CODE_HASH
+    ) issues.push("invalid-uniswap-v4-identity");
+  } else if (!isNative && profile.adapterProfileId === CURVE_STABLESWAP_ADAPTER_PROFILE_ID) {
     const evmProfile = profile as DexMeasuredExecutionPublicProfile;
     if (
       evmProfile.chain !== "ethereum" ||

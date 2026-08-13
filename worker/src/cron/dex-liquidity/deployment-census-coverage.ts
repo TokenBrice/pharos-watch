@@ -7,7 +7,7 @@ import { estimateDiscoverySweepPeriodSec } from "../dex-discovery/target-window"
 import { isRetryableDiscoveryInaccessibleReason } from "../dex-discovery/deployment-outcomes";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
 
-const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
+const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.9";
 const DEX_DISCOVERY_PROVIDER_IDS = new Set([
   "coingecko",
   "geckoterminal",

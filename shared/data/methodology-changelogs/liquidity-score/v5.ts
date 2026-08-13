@@ -11,6 +11,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 // counter over. Entries below are newest-first by version.
 export const LIQUIDITY_SCORE_V5: readonly MethodologyChangelogEntry[] = [
   {
+    version: "5.993",
+    title: "Activated exact hook-free Ethereum Uniswap V4 exits",
+    date: "2026-08-13",
+    effectiveAt: 1786579200,
+    summary:
+      "Reviewed hook-free Ethereum Uniswap V4 PoolKeys can now enter exact DEX exit-route scoring after three productive production shadow generations and 129 successful quotes across the latest 130-direction cohort.",
+    impact: [
+      "Activation is limited to exact hook-free PoolKeys on the pinned Ethereum PoolManager, StateView, and Quoter deployment; hooked pools and other V4 chains remain unsupported",
+      "Every score-facing profile still requires current runtime hashes, immutable PoolManager bindings, pinned pool state, exact token and PoolId identity, and a fresh ABI-bound quote",
+      "The existing 1,220-request admission ceiling, 80-request fragmentation reserve, 1,300-request hard ceiling, quote-subcall limit, memory containment, and shadow machinery are unchanged",
+      "Fluid resolver, Solana native, and SunSwap V2 profiles remain shadow-only and score-ineligible",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "5.992",
     title: "Aligned measured-quote freshness with the two-hour publication cadence",
     date: "2026-08-12",

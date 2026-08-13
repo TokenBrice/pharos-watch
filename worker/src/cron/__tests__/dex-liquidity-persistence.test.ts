@@ -520,7 +520,7 @@ describe("dex-liquidity persistence", () => {
             exitRouteObservations: [],
             exitRouteObservationCoverage: {
               status: "unknown",
-              capabilityMatrixVersion: "p4a.8",
+              capabilityMatrixVersion: "p4a.9",
               retainedPoolCount: 0,
               observationCount: 0,
               scoreEligibleObservationCount: 0,

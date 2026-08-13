@@ -632,6 +632,15 @@ describe("measured execution overflow admission", () => {
         }),
       ),
     ).toBe(true);
+    expect(
+      isDexMeasuredExecutionTargetScoreEligible(
+        target("coin-e", 100_000, "uniswap-v4", {
+          chain: "ethereum",
+          adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+          protocol: "uniswap-v4",
+        }),
+      ),
+    ).toBe(true);
   });
 
   it("keeps untracked pool-implied price mismatches diagnostic for cron status", () => {

@@ -359,7 +359,7 @@ export function makeV9FixedInput(options: V9FixedInputOptions = {}) {
       : {
           exitRouteObservationCoverage: {
             status: "populated",
-            capabilityMatrixVersion: options.dexCapabilityMatrixVersion ?? "p4a.8",
+            capabilityMatrixVersion: options.dexCapabilityMatrixVersion ?? "p4a.9",
             retainedPoolCount: 1,
             observationCount: 1,
             scoreEligibleObservationCount: 1,

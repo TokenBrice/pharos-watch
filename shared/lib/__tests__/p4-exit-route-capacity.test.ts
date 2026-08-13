@@ -92,6 +92,36 @@ describe("P4 DEX exit route observations", () => {
     };
   }
 
+  function uniswapV4MeasuredProfile(quotedAt: number): DexMeasuredExecutionPublicProfile {
+    const { poolProvenance: _poolProvenance, ...profile } = measuredProfile(quotedAt);
+    const poolId = `0x${"12".repeat(32)}`;
+    return {
+      ...profile,
+      adapterProfileId: "uniswap-v4-hook-free-quoter-v1",
+      protocol: "uniswap-v4",
+      poolId: `ethereum:${poolId}`,
+      tickSpacing: 1,
+      hookAddress: "0x0000000000000000000000000000000000000000",
+      executionEndpoint: {
+        address: "0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203",
+        codeHash: "0x06de58fa119c5deaa7a667fb92d3894e25d9160e62fb82c8d86d43b47eefe441",
+      },
+      uniswapV4PoolProvenance: {
+        blockNumber: profile.blockNumber,
+        poolId,
+        poolManagerAddress: "0x000000000004444c5dc75cb358380d2e3de08a90",
+        poolManagerCodeHash: "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",
+        stateViewAddress: "0x7ffe42c4a5deea5b0fec41c94c136cf115597227",
+        stateViewCodeHash: "0xd7947778589cf4aac9a092a4451292a2056380941635ab7006d3c691d8dfd878",
+        sqrtPriceX96: "79228162514264337593543950336",
+        tick: 0,
+        protocolFee: 0,
+        lpFee: 100,
+        liquidity: "1000000",
+      },
+    };
+  }
+
   function nativeCapacityCurve() {
     return DEX_MEASURED_CAPACITY_NOTIONALS_USD.map((requestedNotionalUsd) => {
       const executableUsd = Math.min(requestedNotionalUsd, 1_000_000);
@@ -677,7 +707,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
@@ -784,7 +814,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
       scoreEligiblePoolCount: 1,
@@ -798,6 +828,40 @@ describe("P4 DEX exit route observations", () => {
         kind: "collateral",
         assetKeys: ["ethereum:0x2260fac5e5542a773aa44fbcfedf7c193bc2c599"],
       },
+      evidenceKind: "measured-executable-depth",
+      scoreEligible: true,
+    });
+  });
+
+  it("accepts the active hook-free Ethereum Uniswap V4 adapter", () => {
+    const observedAt = 1_752_560_000;
+    const profile = uniswapV4MeasuredProfile(observedAt - 60);
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: "usdc-circle",
+      observedAt,
+      retainedPools: [{
+        poolId: "defillama-yields-uuid",
+        project: "uniswap-v4",
+        chain: "ethereum",
+        tvlUsd: 2_000_000,
+        symbol: "USDC-USDT",
+        poolType: "uniswap-v4",
+        source: "dl",
+        extra: {
+          measuredExecution: profile,
+          measuredExecutionPhysicalPoolId: profile.poolId,
+        },
+      }],
+    });
+
+    expect(result.coverage).toMatchObject({
+      capabilityMatrixVersion: "p4a.9",
+      scoreEligibleCapabilityPoolCount: 1,
+      scoreEligiblePoolCount: 1,
+      unsupportedPoolCount: 0,
+    });
+    expect(result.observations[0]).toMatchObject({
+      adapterProfileId: "uniswap-v4-hook-free-quoter-v1",
       evidenceKind: "measured-executable-depth",
       scoreEligible: true,
     });
@@ -1029,7 +1093,7 @@ describe("P4 DEX exit route observations", () => {
 
     const mature = run(3);
     expect(mature.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
@@ -1110,7 +1174,7 @@ describe("P4 DEX exit route observations", () => {
     });
 
     expect(result.coverage).toMatchObject({
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleCapabilityPoolCount: 1,
@@ -1256,7 +1320,7 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(legacyProductionCoverage)).toBe(false);
     const explicitProductionCoverage = {
       ...legacyProductionCoverage,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       scoreEligibleCapabilityPoolCount: 38,
     };
     expect(
@@ -1291,7 +1355,7 @@ describe("P4 DEX exit route observations", () => {
     // 273 omitted solely by the bounded route-selection budget.
     const overflowOnlyCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 283,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
@@ -1357,7 +1421,7 @@ describe("P4 DEX exit route observations", () => {
     // an invented key, so the carve-out could never fire on real coverage.
     const producerCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 372,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
@@ -1419,7 +1483,7 @@ describe("P4 DEX exit route observations", () => {
     // remaining gap: 3 targets deferred before any capability was exercised.
     const rotationDeferredCoverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 372,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
@@ -1457,7 +1521,7 @@ describe("P4 DEX exit route observations", () => {
   it("certifies live USDT/USDC/DAI/EURC budgeted surfaces and keeps crvUSD open", () => {
     const usdtShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1307,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
@@ -1489,7 +1553,7 @@ describe("P4 DEX exit route observations", () => {
 
     const daiShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 119,
       observationCount: 10,
       scoreEligibleObservationCount: 10,
@@ -1510,7 +1574,7 @@ describe("P4 DEX exit route observations", () => {
 
     const eurcShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 42,
       observationCount: 8,
       scoreEligibleObservationCount: 8,
@@ -1533,7 +1597,7 @@ describe("P4 DEX exit route observations", () => {
 
     const crvusdShaped = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 113,
       observationCount: 3,
       scoreEligibleObservationCount: 3,

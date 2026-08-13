@@ -93,6 +93,14 @@ describe("hook-free Uniswap V4 measured execution", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
   });
 
+  it("marks only the reviewed Ethereum deployment score eligible", () => {
+    expect(getUniswapV4Deployment("ethereum")).toMatchObject({
+      mode: "active",
+      scoreEligible: true,
+    });
+    expect(getUniswapV4Deployment("base")).toBeNull();
+  });
+
   it("builds only a reviewed exact hook-free PoolKey target", () => {
     const measuredTarget = target();
     expect(measuredTarget).toMatchObject({

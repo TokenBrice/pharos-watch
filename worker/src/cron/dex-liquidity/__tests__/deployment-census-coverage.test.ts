@@ -92,7 +92,7 @@ describe("DEX placeholder deployment-census coverage", () => {
       state: "complete-empty",
       coverage: {
         status: "populated",
-        capabilityMatrixVersion: "p4a.8",
+        capabilityMatrixVersion: "p4a.9",
         retainedPoolCount: 0,
         observationCount: 0,
         scoreEligibleObservationCount: 0,

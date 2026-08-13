@@ -225,9 +225,10 @@ export function isDexMeasuredExecutionTargetScoreEligible(target: DexMeasuredExe
     case "curve-stableswap":
     case "curve-stableswap-ng":
       return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
+    case "uniswap-v4":
+      return deployment.config.mode === "active" && deployment.config.scoreEligible === true;
     case "quoter-v2":
     case "fluid-resolver":
-    case "uniswap-v4":
     case "curve-composite":
     case undefined:
       return false;
