@@ -1,5 +1,6 @@
 import {
   buildReportCardsV9DependencyGraph,
+  REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
 import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
@@ -290,7 +291,7 @@ export function makeReportCardsV9Response(
   const updatedAt = overrides.updatedAt ?? preset.defaultUpdatedAt;
   return {
     model: "v9",
-    schemaVersion: 4,
+    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
     lifecycle: "active",
     safetyScoreIdentity,
     methodology: {

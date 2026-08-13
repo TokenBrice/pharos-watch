@@ -220,6 +220,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     expect(SafetyScoreV9ResponseSchema.parse(left.candidate)).toEqual(left.candidate);
     expect(left.candidate.resultDigest).toBe(left.evaluatedSet.scoreResultDigest);
     expect(left.candidate.factSetDigest).toBe(left.compiledFacts.v9FactSetDigest);
+    expect(left.candidate.cards[0]?.backingFromLiveReserves).toBe(true);
     expect(left.compilerFactSchemaIdentity.compiledFactSchemaCapabilities).toEqual([
       "canonical-chain-supply-distribution.v1",
       "canonical-lock-mint-supply-attribution.v1",

@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "b763cdcb1aace36cc5154d692e9bfb976a373c6ee640948f7edb1443f8be3b1a"
+      "sha256": "63f0b5c76a00afdd12d566593d8f262a803e1c07de938b4c7b752204c542530d"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -82,7 +82,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "89ffa830e54738a7c9b77b847b0e99860ccf529f9b15ff7ddfa0eb97cdc84e17"
+      "sha256": "fac69be49a12113a8e749999ce7c3ace00042316e8b1ff16baa4068649ade954"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -114,11 +114,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-      "sha256": "657e85d3597880a86dccfe23b81a1f20c536a68456fd63c5d864be2e41308f6c"
+      "sha256": "3ef030208d9aecb9e47d589239c4c4ecac3d35083a8f9c217398b5a51d29438e"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-      "sha256": "b94b64aedc14c56e176e10b123378a09cebb1803beda29ceb72b1ce9ed03f99e"
+      "sha256": "8cf6e9df68cf8bf1d1e2cab6eca177d12ab19cf6f3cd830d3c7f2bd6d62be4f0"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
@@ -134,11 +134,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-      "sha256": "14d008cead440bd8e6bebbbdceeb183f4bc43e221b1e4215cf45057294a901f1"
+      "sha256": "48db1a97f4c87fc58923726bfd40295a338a2ea16f64492b16dec77e84117e04"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "e832d1f6dd77f112634af76cbbabac5c6353da2a33a030b885aa4359acabcacf"
+      "sha256": "0e9e178c7a94af4994ca983dca77f141f11522e3d4e7b86eff59b54067b4936b"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -154,7 +154,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "c0281a0c580f6e5c80cd68e89efe2c3313d08dfaca0d5eebd849ff234589e2b0"
+      "sha256": "9a84775c8d1d69400d47cde38fbbb1f230b9faccac0a7a1827d125bb9583f129"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/shared.ts",
@@ -386,7 +386,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "7699ddc31a50628528a7a665b92e886e27d8db38c84083727777a0ac44fb149b"
+      "sha256": "362e43977f967e4c6a3757c70acf4156e939a2d5e39631b95af697584387daca"
     },
     {
       "path": "shared/types/safety-score-v9-wrapper.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "07ad623076a8ff68473a1242437ca51eecb9e21ee8b495e8a38a80c76debb875"
+  "digest": "57caf50f7f18eaf0adbffe87ddf0b5e62cd44ef7a36f81731e23090bb19d91a6"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -125,6 +125,31 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.rows[0]?.statuses.blacklist.kind).toBe("no");
   });
 
+  it("uses published V9 live-reserve provenance for the reserve headline", () => {
+    const coin = CLIENT_TRACKED_META_BY_ID.get("usdt-tether");
+    expect(coin).toBeDefined();
+
+    const model = buildCoverageMatrixModel({
+      stablecoins: resource({ peggedAssets: [] } as never),
+      pegSummary: resource({ summary: {}, coins: [] } as never),
+      dexLiquidity: resource({} as never),
+      redemptionBackstops: resource({ coins: {} } as never),
+      yieldRankings: resource({ rankings: [] } as never),
+      mintBurnFlows: resource({ gauge: {}, hourly: [], coins: [] } as never),
+      reportCards: resource(makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdt-tether", backingFromLiveReserves: true })],
+      })),
+      activeStablecoins: [coin!],
+    });
+
+    expect(model.rows[0]?.statuses.reserves.kind).toBe("live");
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "reserves")).toMatchObject({
+      availableCount: 1,
+      totalCount: 1,
+      coveragePct: 100,
+    });
+  });
+
   it("classifies dependency-map roles from live report-card graph edges", () => {
     const usdc = CLIENT_TRACKED_META_BY_ID.get("usdc-circle");
     const dai = CLIENT_TRACKED_META_BY_ID.get("dai-makerdao");

@@ -6,12 +6,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.35`
+- **Current methodology version:** `v4.36`
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.35` update: the residual exit-credit queue clears. dEURO is remodeled onto its real StablecoinBridge rail — nine identity-pinned bridges summed live (fee-free 1:1 burns; output basket honestly unresolved with only five of nine underlyings tracked); USDp gains a live proportional-basket bound from the Parallelizer's per-collateral reads; USD3 and eUSD redemption outputs are valued at same-run on-chain NAV (convertToAssets / exchangeRate) bound into the reserve snapshot per the cUSD (Cap) precedent, so basket legs like steakUSDC no longer wait on external peg rows; FDUSD's transparency staleness is recorded as a documented fail-closed condition after a first-party-only access investigation. Scoring weights, ladders, and the exit engine are unchanged.
+Latest `v4.36` update: nine reviewed routes expand coverage across protocol and issuer rails. MAI adds a queued QiDao PSM with an undisclosed stablecoin collateral set; trUSD, JUSD, JPYT, and suiUSDe add stablecoin-redemption routes while preserving JUSD's unresolved Citrea basket and JPYT's average Lock-In Exchange Rate basis, with the delta-neutral trUSD and suiUSDe routes using conservative 10% strategy-buffer heuristics; USDM adds a three-day Monetrix request/claim queue with the same heuristic; HCHF adds HBAR collateral redemption; and eMXN plus reviewer-adjusted HLUSD add delayed issuer rails, with HLUSD modeled as a manual StableHodl OTC route into USDC or USDT. Eventual-capacity, pause/limit, unresolved-output, and OTC-processing caveats remain explicit. Scoring weights, ladders, and the exit engine are unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 

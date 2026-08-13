@@ -26,7 +26,7 @@ describe("handleReportCardsV9", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       model: "v9",
-      schemaVersion: 4,
+      schemaVersion: 5,
       lifecycle: "active",
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
     });

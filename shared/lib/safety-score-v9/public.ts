@@ -31,6 +31,8 @@ type V9PublicAccessProjectionInput = V9AccessPostureResult & {
 
 export interface V9PublicCardProjectionInput {
   trace: V9ProductionScoreTrace;
+  /** Exact fact-set provenance; absent only in compatibility/test callers. */
+  backingFromLiveReserves?: boolean;
   scoreInput: Pick<V9ProductionScoreInput, "pillars" | "peg" | "dependencyReasons" | "methodologyReasons">;
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
@@ -775,6 +777,9 @@ export function projectSafetyScoreV9Card(input: V9PublicCardProjectionInput): Sa
   const bindingCap = caps.find((cap) => cap.binding) ?? null;
   return SafetyScoreV9CurrentCardSchema.parse({
     id: input.trace.assetId,
+    ...(input.backingFromLiveReserves === undefined
+      ? {}
+      : { backingFromLiveReserves: input.backingFromLiveReserves }),
     score: input.trace.finalScore,
     grade: input.trace.finalGrade,
     qualityScore: input.trace.weightedQuality,

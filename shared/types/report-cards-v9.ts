@@ -11,7 +11,7 @@ import { compareText } from "./safety-score-v9-fact-primitives";
 
 const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 4;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 5;
 
 export const V9_PUBLICATION_HOLD_REASON_CODES = [
   "dex-stale",
@@ -290,7 +290,7 @@ function refineReportCardsV9Response(
   }
 }
 
-/** Current public report contract. Report-v4 adds compact component breakdowns. */
+/** Current public report contract. Report-v5 adds per-card live-reserve provenance. */
 export const ReportCardsV9CurrentResponseSchema = z
   .object({
     ...ReportCardsV9ResponseShape,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { getReserveDisplayBadgeKindForAdapter } from "@shared/lib/live-reserve-display";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
 
@@ -22,7 +23,10 @@ describe("coverage reserve resolution from the client registry", () => {
   it("resolves non-curated reserve states for live-enabled client coins", () => {
     const kinds = new Map<string, number>();
     for (const coin of CLIENT_ACTIVE_STABLECOINS) {
-      const status = reserveCoverageFeature.resolve(coin, true, true);
+      const scoreGradeLive = coin.liveReserveAdapter
+        ? getReserveDisplayBadgeKindForAdapter(coin.liveReserveAdapter) === "live"
+        : false;
+      const status = reserveCoverageFeature.resolve(coin, scoreGradeLive, true);
       kinds.set(status.kind, (kinds.get(status.kind) ?? 0) + 1);
     }
 

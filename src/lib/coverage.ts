@@ -165,7 +165,7 @@ export function buildCoverageRow({
   hasDependencyCoverage,
   blacklistStatus = null,
   publishedMint = null,
-  liveReserveFresh = true,
+  liveReserveFresh = null,
   dataAvailability,
 }: BuildCoverageRowInput): CoverageRow {
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;

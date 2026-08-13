@@ -518,6 +518,11 @@ function buildSafetyScoreV9CandidatePipeline(
   const displayByAssetId = new Map(
     compiledFacts.assets.map((asset) => [asset.assetId, publicDisplayMetadata(asset)]),
   );
+  const scoreGradeLiveReserveIds = new Set(
+    compiledFacts.assets
+      .filter((asset) => asset.reserveExposures.some((exposure) => exposure.provenance === "live"))
+      .map((asset) => asset.assetId),
+  );
 
   // The published response does not expose replay intermediates. Release each
   // large graph as soon as its compact projection has been captured; replay and
@@ -553,6 +558,7 @@ function buildSafetyScoreV9CandidatePipeline(
     publishedAtSec: input.publishedAtSec,
     results: evaluatedSet.assets.map((asset) => ({
       trace: asset.trace,
+      backingFromLiveReserves: scoreGradeLiveReserveIds.has(asset.assetId),
       scoreInput: asset.scoreInput,
       access: asset.access,
       dependencyInputs: asset.dependencyInputs,

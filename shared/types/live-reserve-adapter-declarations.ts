@@ -258,6 +258,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
     validation: { allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS },
   },
+  "chronicle-nav": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "chronicleNav",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "independent-assurance",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: { allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS },
+  },
   "chainlink-por": {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "chainlinkPor",
@@ -627,13 +638,6 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
-    provenance: {
-      status: "parked",
-      rationale:
-        "OpenEden USDO adapter is retained, but its live config was suspended 2026-06-25 because OpenEden's gateway drops Cloudflare Worker egress; rebind once the issuer allowlists our egress.",
-      parkedSince: "2026-06-25",
-      nextReview: "2026-12-25",
-    },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,

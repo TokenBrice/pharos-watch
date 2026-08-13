@@ -2352,7 +2352,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 ```text
 {
   "model": "v9",
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "lifecycle": "active",
   "safetyScoreIdentity": {
     "model": "v9",
@@ -2382,7 +2382,7 @@ Canonical Safety Score V9 ratings with Backing, Exit, and Economic Control pilla
 
 The endpoint reads only the accepted `report-cards:v9` publication and its `report-cards:v9:publication-health` row. Missing, malformed, or incomplete accepted state returns `503`; an identity mismatch between otherwise valid rows serves the authenticated publication as explicitly held. The handler never recomputes a score and never falls back to V8. The retired unversioned `/api/report-cards` route and preview aliases return `404`.
 
-Rateable cards contain mandatory report-v4/trace-v3 `backing`, `exit`, and `control` breakdowns. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
+Rateable cards contain mandatory `backing`, `exit`, and `control` breakdowns. Each card may also carry `backingFromLiveReserves`; current report-v5 publications set it to `true` exactly when the compiled V9 fact set used accepted live reserve exposures for Backing, independently of the reserve detail-page badge. The field is optional only for rollout compatibility with a retained pre-report-v5 publication. Each breakdown reconciles evaluator and published pillar values through ordered adjustments. Economic Control uses the minimum binding component; Backing and Exit expose bounded aggregation inputs and weights. `breakdowns` is `null` exactly when the card is `NR`.
 
 `breakdowns.exit.primaryRoute.capacity` describes the selected route rather than market-wide liquidity. It exposes `executableUsd`, `requestedNotionalUsd`, `completionRatio`, request and observed cost bounds, settlement delay and scoring horizon, chain, protocol, pool, evidence kind, and evidence timestamp. Exit alternatives expose their own horizon, delay, confidence factor, and compact capacity summary so the evidence-confidence tradeoff against a higher-capacity alternative remains visible. Issuer redemption remains a separate daily, queued, or eventual route; exchange volume, aggregate DEX TVL, and issuer reserves are not interchangeable with executable capacity on one selected route.
 
@@ -2449,14 +2449,14 @@ Rows written by the current worker are grouped by a completed snapshot run manif
       "feeBps": null,
       "queueEnabled": false,
       "updatedAt": 1773350400,
-      "methodologyVersion": "4.35"
+      "methodologyVersion": "4.36"
     }
   },
   "methodology": {
-    "version": "4.35",
-    "versionLabel": "v4.35",
-    "currentVersion": "4.35",
-    "currentVersionLabel": "v4.35",
+    "version": "4.36",
+    "versionLabel": "v4.36",
+    "currentVersion": "4.36",
+    "currentVersionLabel": "v4.36",
     "changelogPath": "/methodology/#safety-scores-methodology",
     "asOf": 1773350400,
     "isCurrent": true,

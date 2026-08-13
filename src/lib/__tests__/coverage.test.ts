@@ -131,6 +131,7 @@ describe("coverage helpers", () => {
             },
           },
         }),
+        true,
       ).kind,
     ).toBe("live");
 
@@ -146,6 +147,7 @@ describe("coverage helpers", () => {
             },
           },
         }),
+        false,
       ).kind,
     ).toBe("curated-validated");
 
@@ -165,6 +167,7 @@ describe("coverage helpers", () => {
             },
           },
         }),
+        false,
       ).kind,
     ).toBe("proof");
 
@@ -208,6 +211,23 @@ describe("coverage helpers", () => {
     expect(reserveCoverageFeature.resolve(liveConfiguredCoin, false).kind).toBe("live-configured");
     expect(reserveCoverageFeature.resolve(liveConfiguredCoin, false).available).toBe(false);
     expect(reserveCoverageFeature.resolve(liveConfiguredCoin, null).kind).toBe("checking");
+  });
+
+  it("counts score-grade V9 reserve evidence independently of the detail-page badge", () => {
+    const proofBadgeCoin = makeCoin({
+      liveReservesConfig: {
+        adapter: "tether-transparency",
+        version: 1,
+        semantics: "collateral-mix",
+        inputs: {
+          primary: { kind: "http-json", url: "https://example.com/reserves" },
+        },
+        params: { currencyIso: "USD" },
+      },
+    });
+
+    expect(reserveCoverageFeature.resolve(proofBadgeCoin, false).kind).toBe("proof");
+    expect(reserveCoverageFeature.resolve(proofBadgeCoin, true).kind).toBe("live");
   });
 
   it("maps redemption route families into user-facing labels", () => {
@@ -695,6 +715,7 @@ describe("coverage helpers", () => {
           },
         }),
         marketCapUsd: 700,
+        liveReserveFresh: true,
       }),
       makeCoverageRow(["validated", "VAL"], {
         coin: makeCoin({
@@ -707,6 +728,7 @@ describe("coverage helpers", () => {
             },
           },
         }),
+        liveReserveFresh: false,
       }),
       makeCoverageRow(["proof", "PROOF"], {
         coin: makeCoin({
@@ -723,6 +745,7 @@ describe("coverage helpers", () => {
             },
           },
         }),
+        liveReserveFresh: false,
       }),
       makeCoverageRow(["curated", "CUR"], {
         coin: makeCoin({

@@ -206,6 +206,18 @@ const chainlinkNavParamsSchema = z
   })
   .strict();
 
+const chronicleNavParamsSchema = z
+  .object({
+    consumerAddress: EvmAddressSchema,
+    tokenAddress: EvmAddressSchema,
+    assetLabel: z.string(),
+    assetRisk: LiveReserveRiskSchema,
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    maxOracleAgeSec: z.number().positive().optional(),
+  })
+  .strict();
+
 const superstateLiquidityParamsSchema = chainlinkNavParamsSchema
   .extend({
     liquidityUrl: AbsoluteUrlSchema,
@@ -1140,6 +1152,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   btcfi: btcfiParamsSchema,
   capVault: capVaultParamsSchema,
   chainlinkNav: chainlinkNavParamsSchema,
+  chronicleNav: chronicleNavParamsSchema,
   chainlinkPor: chainlinkPorParamsSchema,
   circleTransparency: circleTransparencyParamsSchema,
   collateralPositions: collateralPositionsParamsSchema,

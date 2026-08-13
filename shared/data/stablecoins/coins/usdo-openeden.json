@@ -84,6 +84,22 @@
   ],
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "liveReservesConfig": {
+    "adapter": "openeden-usdo",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "openeden",
+    "display": {
+      "url": "https://openeden.com/usdo/transparency",
+      "label": "OpenEden Transparency"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
+      }
+    }
+  },
   "yieldConfig": {
     "yieldSource": "OpenEden USDO daily rebase",
     "yieldType": "rebase"

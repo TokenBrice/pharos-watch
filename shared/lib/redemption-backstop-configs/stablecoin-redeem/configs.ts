@@ -1593,6 +1593,156 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh specialized telemetry pins the vault, validator, protocol-config proxies and implementations, reads pause/queue state and the current admin-configurable fee, and keeps idle USDC diagnostic-only. Identity or state-read drift fails closed with no static capacity fallback.",
     ],
   }),
+  "trusd-tori": defineStablecoinRedeemConfig({
+    accessModel: "whitelisted-onchain",
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdc-circle", "usdt-tether"],
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    executionModel: "rules-based-nav",
+    costModel: fixedFee(10, "Tori documents a 0.1% fee on direct trUSD minting and redemption"),
+    routeExitCorrelation: "same-protocol-liquidity",
+    reviewedAt: "2026-08-13",
+    docs: [
+      sourceRef("Institutional access and direct mint/redeem", "https://docs.tori.finance/resources/institutional", [
+        "route",
+        "access",
+        "fees",
+      ]),
+      sourceRef("trUSD product", "https://docs.tori.finance/products/trusd", ["route", "access", "fees"]),
+      sourceRef("trUSD FAQ", "https://docs.tori.finance/faq/trusd", ["route", "access", "fees", "settlement"]),
+      sourceRef("Official contracts", "https://docs.tori.finance/resources/contracts", ["route", "access"]),
+      sourceRef("Risk disclosures", "https://docs.tori.finance/resources/risks", ["capacity", "route"]),
+    ],
+    notes: [
+      "The modeled primary rail is direct trUSD redemption by KYC/AML and risk-verified participants using whitelisted wallets, paying USDC or USDT at NAV/market rate.",
+      "The reviewed 10% strategy-buffer heuristic avoids treating trUSD's delta-neutral reserve stack as immediately redeemable full supply; Tori does not publish a current USDC/USDT buffer or executable capacity.",
+      "Unverified users' market swaps are secondary liquidity and are excluded from the redemption backstop.",
+    ],
+  }),
+  "jusd-juicedollar": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    unresolvedOutputAssetKeys: ["USDC.e (Citrea)", "USDT.e (Citrea)", "ctUSD (Citrea; tracked as ctusd-citrea)"],
+    unresolvedOutputDisposition: "reviewed-external",
+    ...documentedBoundSupplyFull("2026-08-13"),
+    costModel: fixedFee(0, "JuiceDollar's bridge documentation describes fee-free 1:1 burns into the source stablecoin"),
+    routeExitCorrelation: "same-stablecoin-pool-backing",
+    docs: [
+      sourceRef("JuiceDollar stablecoin bridges", "https://docs.juicedollar.com/swap", [
+        "route",
+        "capacity",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("JuiceDollar smart-contract registry", "https://docs.juicedollar.com/smart-contracts", [
+        "route",
+        "access",
+        "capacity",
+      ]),
+      sourceRef("JuiceDollar function reference", "https://docs.juicedollar.com/smart-contracts/functions", [
+        "route",
+        "fees",
+        "settlement",
+      ]),
+      sourceRef("JuiceDollar smart-contract source repository", "https://github.com/JuiceDollar/smartContracts", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("CitreaScan mainnet explorer", "https://citreascan.com", ["route", "capacity", "access"]),
+      sourceRef("Citrea mainnet RPC", "https://rpc.mainnet.citrea.xyz", ["capacity", "route"]),
+    ],
+    notes: [
+      "The permissionless bridge rail burns JUSD and atomically returns the bridge's source stablecoin; the complete three-member output set remains unresolved because two Citrea assets are untracked.",
+      "Per-bridge mint limits, expiry horizons, and governance stop controls constrain execution; burning remains available after mint expiry, but supply-full is an eventual-system bound rather than a same-block liquidity claim.",
+    ],
+  }),
+  "jpyt-dephaser": defineStablecoinRedeemConfig({
+    outputAssetType: "stable-basket",
+    outputAssets: ["usdt-tether", "usdc-circle"],
+    settlementModel: "days",
+    executionModel: "rules-based-nav",
+    ...documentedBoundSupplyFull("2026-08-13"),
+    costModel: undisclosedReviewedFee(
+      "DePhaser's public terms disclose user-paid gas, while the contract source exposes protocol fee controls and reviewed materials do not establish an immutable numeric redemption fee",
+    ),
+    routeStatus: "open",
+    routeExitCorrelation: "same-protocol-liquidity",
+    docs: [
+      sourceRef("DePhaser overview", "https://docs.dephaser.com/", ["route", "access"]),
+      sourceRef("DePhaser money flow", "https://docs.dephaser.com/how-it-works/money-flow/", [
+        "route",
+        "capacity",
+        "settlement",
+      ]),
+      sourceRef("DePhaser reliable yen stablecoin", "https://docs.dephaser.com/how-it-works/reliable-yen-stablecoin", [
+        "route",
+      ]),
+      sourceRef("DePhaser Terms of Service", "https://docs.dephaser.com/policy/terms-of-service", [
+        "route",
+        "fees",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("DePhaser DEX and redemption timing", "https://docs.dephaser.com/how-it-works/dex", ["settlement"]),
+      sourceRef("DePhaser contracts repository", "https://github.com/0xDephaser/contracts", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
+      sourceRef("Optimism public RPC", "https://optimism-rpc.publicnode.com", ["capacity", "route"]),
+      sourceRef("Base public RPC", "https://base-rpc.publicnode.com", ["capacity", "route"]),
+    ],
+    notes: [
+      "Redemption burns JPYT and unlocks USDT on Optimism or USDC on Base after the security cooldown; the reviewed route has no published reserve-capacity ceiling beyond deposit-manager/Aave liquidity.",
+      "Execution is rules-based NAV: redemption pays the average Lock-In Exchange Rate, not spot JPY/USD par, so redemption value can deviate from current peg value because of the locked FX basis.",
+      "The documented completion window is no more than 24 hours, but the conservative days bucket preserves the non-atomic two-step request/execute flow.",
+    ],
+  }),
+  "suiusde-sui": defineStablecoinRedeemConfig({
+    accessModel: "whitelisted-onchain",
+    outputAssets: ["usdc-circle"],
+    capacityModel: { kind: "supply-ratio", ratio: 0.1, confidence: "heuristic", basis: "strategy-buffer" },
+    costModel: undisclosedReviewedFee(
+      "The public SDK exposes a collateral defaultFee field, but reviewed primary sources do not publish the active numeric redemption fee",
+    ),
+    holderEligibility: "whitelisted-primary",
+    routeExitCorrelation: "wrapper-to-parent-dependency",
+    reviewedAt: "2026-08-13",
+    docs: [
+      sourceRef("Sui/Ethena suiUSDe announcement", "https://www.sui.io/blog/suig-ethena-suiusde-stablecoin", [
+        "route",
+        "access",
+      ]),
+      sourceRef("SuiUSDe SDK README", "https://github.com/ethena-labs/suiusde-sdk", ["route", "access", "settlement"]),
+      sourceRef("SDK redemption transaction builder", "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/redeem.ts", [
+        "route",
+        "settlement",
+      ]),
+      sourceRef("SDK role-gated action surface", "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/suiusde.ts", [
+        "route",
+        "access",
+        "settlement",
+      ]),
+      sourceRef("SDK config and pause state", "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/generated/suiusde/config.ts", [
+        "capacity",
+        "access",
+      ]),
+      sourceRef("SDK redemption limiter", "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/generated/suiusde/limiter.ts", [
+        "capacity",
+        "access",
+      ]),
+      sourceRef("SDK collateral query", "https://raw.githubusercontent.com/ethena-labs/suiusde-sdk/main/src/suiusde.ts", [
+        "capacity",
+        "fees",
+      ]),
+    ],
+    notes: [
+      "The modeled route is suiUSDe's own role-gated Sui redemption into USDC, not a generic bridge to parent USDe; the SDK builds the redemption and USDC transfer in one transaction.",
+      "The reviewed 10% strategy-buffer heuristic avoids treating suiUSDe's delta-neutral reserve stack as immediately redeemable full supply; enablement, pause state, global/collateral/benefactor limits, and current redeem balance remain operational controls outside this static bound.",
+    ],
+  }),
 };
 
 applyTrackedReviewedDocs(RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS, [
