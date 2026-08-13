@@ -212,6 +212,20 @@ describe("DEX placeholder deployment-census coverage", () => {
       reason: "deploymentCensusProviderOutage",
     },
     {
+      name: "retryable inaccessible crawl miss is a deferral",
+      deployments: [deployment()],
+      rows: [
+        outcome({
+          outcome: "provider_inaccessible",
+          observed_pool_count: 0,
+          provider_set_json: JSON.stringify(["geckoterminal", "dexscreener"]),
+          reason: "No provider completed a query for this deployment in the bounded crawl",
+        }),
+      ],
+      state: "discovery-deferral",
+      reason: "deploymentCensusMissingOutcome",
+    },
+    {
       name: "unsupported provider method",
       deployments: [deployment()],
       rows: [

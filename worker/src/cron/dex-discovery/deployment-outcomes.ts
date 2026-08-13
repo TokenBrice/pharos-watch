@@ -86,7 +86,7 @@ export function classifyDexDeploymentOutcomes(params: {
   );
   const failedChecks = new Set(
     params.providerChecks
-      .filter((check) => check.status === "failure")
+      .filter((check) => check.status === "failure" && check.retryable !== true)
       .map((check) => deploymentKey(check.chain, check.address)),
   );
   const degradedChecks = new Set(
@@ -149,8 +149,8 @@ export function classifyDexDeploymentOutcomes(params: {
         providers.length === 0
           ? "No registered token-pool provider supports this chain"
           : failedChecks.has(key)
-            ? "All attempted token-pool provider queries failed"
-            : "No provider completed a query for this deployment in the bounded crawl",
+            ? DEX_DISCOVERY_PROVIDER_OUTAGE_REASON
+            : DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
       observedPoolCount: 0,
       observedAt: params.nowSec,
     };
@@ -174,6 +174,17 @@ export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDe
   );
 }
 
+export const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
+  "No provider completed a query for this deployment in the bounded crawl";
+export const DEX_DISCOVERY_FAILED_CRAWL_REASON =
+  "Bounded discovery crawl failed before a complete deployment census";
+export const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
+  "All attempted token-pool provider queries failed";
+
+export function isRetryableDiscoveryInaccessibleReason(reason: string): boolean {
+  return reason === DEX_DISCOVERY_BOUNDED_CRAWL_REASON || reason === DEX_DISCOVERY_FAILED_CRAWL_REASON;
+}
+
 export function buildFailedCrawlDeploymentOutcomes(params: {
   stablecoinId: string;
   deployments: readonly ContractDeployment[];
@@ -185,7 +196,7 @@ export function buildFailedCrawlDeploymentOutcomes(params: {
     address: deployment.address,
     outcome: "provider_inaccessible",
     providers: getDexDiscoveryProviders(deployment.chain, deployment.address),
-    reason: "Bounded discovery crawl failed before a complete deployment census",
+    reason: DEX_DISCOVERY_FAILED_CRAWL_REASON,
     observedPoolCount: 0,
     observedAt: params.nowSec,
   }));
