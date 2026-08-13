@@ -128,6 +128,30 @@
     "yieldSource": "Anemoy Apollo Diversified Credit Fund NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "chronicle-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "acrdx-anemoy-apollo",
+    "display": {
+      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/anemoy-tokenized-apollo-acrdx",
+      "label": "Chronicle Proof of Asset — Apollo ACRDX"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "consumerAddress": "0x9a3bF392f86acd1b1EC07d026B326302eAED7488",
+      "tokenAddress": "0x9477724bb54ad5417de8baff29e59df3fb4da74f",
+      "assetLabel": "Apollo Diversified Credit Fund NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 345600
+    }
+  },
   "notices": [
     {
       "type": "info",

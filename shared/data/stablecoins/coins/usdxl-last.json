@@ -60,6 +60,216 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
+  "liveReservesConfig": {
+    "adapter": "evm-branch-balances",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "usdxl-last",
+    "display": {
+      "url": "https://docs.hypurrfi.com/products/usdxl",
+      "label": "HypurrFi USDXL pool collateral"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "hyperevm",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "rpcUrl": "https://rpc.hyperliquid.xyz/evm",
+      "sourceUrls": [
+        "https://docs.hypurrfi.com/products/usdxl",
+        "https://hyperevmscan.io/address/0xceCcE0EB9DD2Ef7996e01e25dd70e461F918A14b"
+      ],
+      "branches": [
+        {
+          "name": "WHYPE",
+          "holder": "0x7C97cd7B57b736c6AD74fAE97C0e21e856251dcf",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x5555555555555555555555555555555555555555",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "wstHYPE",
+          "holder": "0xC8b6E0acf159E058E22c564C0C513ec21f8a1Bf5",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x94e8396e0869c9F2200760aF0621aFd240E1CF38",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "UBTC",
+          "holder": "0x02379E4a55111d999Ac18C367F5920119398b94B",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463",
+            "decimals": 8
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "UETH",
+          "holder": "0x68717797aAAe1b009C258b6fF5403AeCCB7010c0",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xBe6727B535545C67d5cAa73dEa54865B92CF7907",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "USDe",
+          "holder": "0xe8F7D82A73f13A64d689e7ddAD06139BFb51f9C6",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
+            "decimals": 18
+          },
+          "risk": "high",
+          "coinId": "usde-ethena",
+          "depType": "collateral"
+        },
+        {
+          "name": "feUSD",
+          "holder": "0xAEA02692F502b47e116bdfA9a4CeB3138Bd8B516",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x02c6a2fA58cC01A18B8D9E00eA48d65E4dF26c70",
+            "decimals": 18
+          },
+          "risk": "high",
+          "coinId": "feusd-felix",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDT0",
+          "holder": "0x1Ca7e21B2dAa5Ab2eB9de7cf8f34dCf9c8683007",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdt-tether",
+          "depType": "collateral"
+        },
+        {
+          "name": "USDHL",
+          "holder": "0xFd32712A1cb152c03a62D54557fcb1dE372ABfe9",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xb50A96253aBDF803D85efcDce07Ad8becBc52BD5",
+            "decimals": 6
+          },
+          "risk": "high"
+        },
+        {
+          "name": "USOL",
+          "holder": "0x64A0f4Ed4151d6381c509C0E64f0257e179120EC",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x068f321Fa8Fb9f0D135f290Ef6a3e2813e1c8A29",
+            "decimals": 9
+          },
+          "risk": "high"
+        },
+        {
+          "name": "kHYPE",
+          "holder": "0xCAe9e2A86c146b084169E170E63d340bF34d6b83",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xfD739d4e423301CE9385c1fb8850539D657C296D",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "XAUt0",
+          "holder": "0x22ee197111BC4c009Da9174113526290Fa500DC1",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xf4D9235269a96aaDaFc9aDAe454a0618eBE37949",
+            "decimals": 6
+          },
+          "risk": "medium"
+        },
+        {
+          "name": "thBILL",
+          "holder": "0xf9C625FAf1160f00E3AC16e8e3e24F09B107ae53",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xfDD22Ce6D1F66bc0Ec89b20BF16CcB6670F55A5a",
+            "decimals": 6
+          },
+          "risk": "low"
+        },
+        {
+          "name": "sUSDe",
+          "holder": "0x85c88bfBbb3Cf5178bDc4f90289c9aFDbBCc1ED9",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2",
+            "decimals": 18
+          },
+          "priceToken": {
+            "chain": "hyperevm",
+            "address": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34"
+          },
+          "risk": "high",
+          "coinId": "susde-ethena",
+          "depType": "wrapper"
+        },
+        {
+          "name": "PT-kHYPE-13NOV2025",
+          "holder": "0x68A0d8F2dfe817F3A6Aa85EE430D42BA256fC8f4",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0x311dB0FDe558689550c68355783c95eFDfe25329",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "beHYPE",
+          "holder": "0x3b967db41B6bE6A42B3F42077Ee707aF2F45713e",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xd8FC8F0b03eBA61F64D08B0bef69d80916E5DdA9",
+            "decimals": 18
+          },
+          "risk": "high"
+        },
+        {
+          "name": "USDC",
+          "holder": "0x280535137Dd84080d97d0826c577B4019d8e1BEb",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xb88339CB7199b77E23DB6E890353E22632Ba630f",
+            "decimals": 6
+          },
+          "risk": "low",
+          "coinId": "usdc-circle",
+          "depType": "collateral"
+        },
+        {
+          "name": "PT-kHYPE-19MAR2026",
+          "holder": "0xB55780B08b18A57590e7B2729CaeA5a6818Ba035",
+          "token": {
+            "chain": "hyperevm",
+            "address": "0xea84ca9849D9e76a78B91F221F84e9Ca065FC9f5",
+            "decimals": 18
+          },
+          "risk": "high"
+        }
+      ]
+    }
+  },
   "notices": [
     {
       "type": "danger",

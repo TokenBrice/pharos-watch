@@ -12,6 +12,7 @@ import { fetchCapVaultReserves } from "./cap-vault";
 import { fetchCircleReserves } from "./circle-transparency";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
 import { fetchChainlinkPorReserves } from "./chainlink-por";
+import { fetchChronicleNavReserves } from "./chronicle-nav";
 import { fetchCollateralPositionsApiReserves } from "./collateral-positions-api";
 import { fetchCrvUsdReserves } from "./crvusd";
 import { fetchCuratedValidatedReserves } from "./curated-validated";
@@ -81,6 +82,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "chainlink-nav": fetchChainlinkNavCore,
   "circle-transparency": fetchCircleReserves,
   "chainlink-por": fetchChainlinkPorReserves,
+  "chronicle-nav": fetchChronicleNavReserves,
   "collateral-positions-api": fetchCollateralPositionsApiReserves,
   crvusd: fetchCrvUsdReserves,
   "curated-validated": fetchCuratedValidatedReserves,

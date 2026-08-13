@@ -70,6 +70,33 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
+  "liveReservesConfig": {
+    "adapter": "chainlink-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "mglobal-midas-fasanara",
+    "display": {
+      "url": "https://midas.app/mGLOBAL",
+      "label": "Midas mGLOBAL NAV"
+    },
+    "scoring": {
+      "maxSourceAgeSec": 4000000
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "alchemy"
+      }
+    },
+    "params": {
+      "oracleAddress": "0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38",
+      "tokenAddress": "0x7433806912eae67919e66aea853d46fa0aef98a8",
+      "assetLabel": "Fasanara Global diversified alternative debt strategy NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 4000000
+    }
+  },
   "yieldConfig": {
     "yieldSource": "Midas Fasanara Global NAV",
     "yieldType": "nav-appreciation"

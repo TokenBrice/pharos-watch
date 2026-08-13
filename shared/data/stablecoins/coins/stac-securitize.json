@@ -76,6 +76,30 @@
     "yieldSource": "Securitize Tokenized AAA CLO Fund NAV",
     "yieldType": "nav-appreciation"
   },
+  "liveReservesConfig": {
+    "adapter": "chronicle-nav",
+    "version": 1,
+    "semantics": "single-asset",
+    "breakerScope": "stac-securitize",
+    "display": {
+      "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac",
+      "label": "Chronicle Proof of Asset — Securitize STAC"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "consumerAddress": "0x9D77E4cA90E25114AFb24dF908f5918f572D958B",
+      "tokenAddress": "0x51c2d74017390cbbd30550179a16a1c28f7210fc",
+      "assetLabel": "Securitize Tokenized AAA CLO Fund NAV",
+      "assetRisk": "high",
+      "maxOracleAgeSec": 345600
+    }
+  },
   "notices": [
     {
       "type": "warning",
