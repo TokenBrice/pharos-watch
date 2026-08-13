@@ -6,7 +6,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "files": [
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "69f4d1f551d50d87b2743f255704c129860f8af865da58b0a7b46f82ad0dfe43"
+      "sha256": "3c87504b29098ab4205d19f8856320feec2af4db2f1ac6c8db83ff54808b8131"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "c0932b7647e722035c7a7846b4676a4af6f1f23bc53ef0f02709f3391b808184"
+      "sha256": "b763cdcb1aace36cc5154d692e9bfb976a373c6ee640948f7edb1443f8be3b1a"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -74,7 +74,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-capacity.ts",
-      "sha256": "ed48ed24fec56ef21960671ae25bfb2d8bb27c7492edde3ca7cd95f3a56dc71a"
+      "sha256": "9513f435ffd323567653cd77135e4c3dc3b35b15476b0d5b9db63db80ce70413"
     },
     {
       "path": "shared/lib/redemption-backstop-capacity.ts",
@@ -402,7 +402,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
-      "sha256": "fd0f4807ec5fb4f803881ff5d4a4c08879c56266c449e36fda69550f0a219058"
+      "sha256": "aa64c3aa2b3df56532e902cd2f2dfcdcad75f87cb72aa12f90ccd45d8b619b7e"
     },
     {
       "path": "worker/src/lib/evm-selectors.ts",
@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-supply.ts",
-      "sha256": "d4404132c4019bd357cfe751ae212cce8dc9087b3cd5dca153cc2c0054bf70e1"
+      "sha256": "72213065a58746cfe12732ed36848ad0c968a88b2f82a39b07990014d602f125"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-transfer.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "bba308859533d4f25bfb61926cbb1255e6463d7fb53e4ce53a8ec6ec38bc5a7f"
+  "digest": "07ad623076a8ff68473a1242437ca51eecb9e21ee8b495e8a38a80c76debb875"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

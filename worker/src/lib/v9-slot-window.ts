@@ -166,7 +166,12 @@ export async function runV9AfterCoreWithinWindow(
     options.scheduledTimeMs ?? options.slotStartedAt * 1_000;
   const scheduledTimeSec = Math.floor(scheduledTimeMs / 1_000);
   const coreSlotStartedAt = Math.floor(scheduledTimeSec / 900) * 900;
-  const deadlineMs = scheduledTimeMs + options.deadlineOffsetMs;
+  const nextCoreSlotStartedAt = coreSlotStartedAt + 15 * 60;
+  const deadlineMs = Math.min(
+    scheduledTimeMs + options.deadlineOffsetMs,
+    nextCoreSlotStartedAt * 1_000,
+  );
+  const effectiveWindowMs = Math.max(0, deadlineMs - scheduledTimeMs);
   const initialRemainingMs = deadlineMs - Date.now();
 
   if (initialRemainingMs < options.minimumRemainingMs) {
@@ -296,7 +301,7 @@ export async function runV9AfterCoreWithinWindow(
       {
         abortSignal: timeout.signal,
         ttlSec:
-          Math.ceil(options.deadlineOffsetMs / 1_000) +
+          Math.ceil(effectiveWindowMs / 1_000) +
           V9_MEMORY_LANE_TTL_MARGIN_SEC,
         heartbeatSec: 15,
       },

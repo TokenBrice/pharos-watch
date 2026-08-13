@@ -40,7 +40,7 @@ This map links each major Pharos data domain from upstream source to frontend co
 The DEX flow has an additive measured-execution subflow. Pinned Uniswap
 V3 on Ethereum, Polygon, and Arbitrum, PancakeSwap V3, and Base Aerodrome Slipstream QuoterV2/factory RPC
 reads, the Fluid resolver adapter, reviewed Curve CryptoSwap `get_dy` pools,
-the Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter shadow adapter,
+the active Ethereum hook-free Uniswap V4 PoolManager/StateView/Quoter adapter,
 the exact Ethereum legacy Curve 3pool StableSwap `get_dy(int128,int128,uint256)`
 deployment, native Solana
 Raydium CLMM/Orca Whirlpool exact quotes, and reviewed Tron SunSwap V2
@@ -62,8 +62,9 @@ metadata therefore cannot choose physical quote indices alone. The prior
 retained-pool target generation is
 stored in `dex_measured_execution_targets`; raw proof and validated quote
 profiles are generation-fenced in `dex_measured_execution_quotes`. Score-bearing
-active EVM targets and quotes remain on the half-hour lane; shadow EVM and native
-diagnostics use separate daily target/quote generations. Quote generations write
+active EVM targets and quotes remain on the half-hour lane; bounded Solana
+collection runs serially after EVM on that trigger while retaining a separate
+shadow generation, and shadow EVM plus Tron remain daily. Quote generations write
 only measured outcomes and real failures; a target-count and target-ID digest
 proves omitted `budget-deferred` outcomes so readers can reconstruct them. The
 hourly `:10` source stage carries the active target graph into its exact bounded
@@ -90,9 +91,15 @@ post-activation scoring consumers exceeded the Worker memory limit. Generic
 Raydium, Orca, Meteora, and unreviewed measured cohorts remain
 score-ineligible while their activation evidence is pending. Fresh Solana LKG
 evidence is permitted only after explicit operational collection failure;
-semantic or malformed rows remain barriers. SunSwap V2's activation and
+semantic or malformed rows remain barriers. Scoring selects native quote JSON
+only for exact score-eligible Solana target IDs, so the broad shadow inventory
+does not reintroduce the prior proof-graph memory peak. SunSwap V2's activation and
 rollback history is incident context only; current registry state is shadow and
 score-ineligible while target and quote collection continue for revalidation.
+The Ethereum hook-free V4 cohort enters P4 only after the EVM join revalidates
+the pinned runtimes, PoolManager bindings, exact PoolId state, and current quote;
+hooked pools and every other V4 chain remain unsupported. The separate shadow
+surfaces remain available for future cohorts and rollback comparison.
 A Smart Router response containing only multi-hop candidates
 may use the pinned V2 Router's exact direct-path quote; invalid direct candidates
 and missing, failed, stale, or identity-mismatched profiles remain target-level fail-closed. SunSwap census

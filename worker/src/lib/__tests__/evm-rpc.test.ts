@@ -499,6 +499,30 @@ describe("evm-rpc helpers", () => {
     expect(block).toBe(90);
   });
 
+  it("brackets a near-tip scoring clock without probing pruned deep history", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3e3" } }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: { timestamp: "0x3de" } }), { status: 200 }));
+
+    const block = await resolveClosestBlockAtOrBeforeTimestamp(
+      "sei",
+      990,
+      {
+        latestBlockNumber: 100,
+        blockTimestampByNumber: new Map([[100, 1000]]),
+      },
+      { extraRpcUrls: ["https://rpc.example"] },
+    );
+
+    expect(block).toBe(98);
+    const requestedBlockTags = fetchWithRetryMock.mock.calls.map((call) => {
+      const body = JSON.parse(String(call[1]?.body)) as { params: unknown[] };
+      return body.params[0];
+    });
+    expect(requestedBlockTags).toEqual(["0x63", "0x62"]);
+    expect(requestedBlockTags).not.toContain("0x32");
+  });
+
   it("fetches proxy hex results from Etherscan", async () => {
     fetchWithRetryMock.mockResolvedValue(
       new Response(JSON.stringify({ result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }), {

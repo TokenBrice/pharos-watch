@@ -18572,6 +18572,70 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "silk-shade-protocol",
+      "archetype": "cdp",
+      "reviewedAt": "2026-08-08",
+      "sources": [
+        {
+          "label": "Shade Single Vault Registry current code-hash provenance at Secret block 26592283",
+          "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1qxk2scacpgj2mmm0af60674afl9e6qneg7yuny"
+        },
+        {
+          "label": "Shade Single Vault Registry legacy code-hash provenance at Secret block 26592283",
+          "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret18y86hldtdp9ndj0jekcch49kwr0gwy7upe3ffw"
+        },
+        {
+          "label": "SILK overcollateralized minting and Stability Pool liquidation mechanics",
+          "url": "https://docs.shadeprotocol.io/shade-protocol/advanced-topics-apps/silk/minting-and-redemption/overcollateralized-minting"
+        },
+        {
+          "label": "ShadeLend vault registry and liquidation interface reference",
+          "url": "https://github.com/securesecrets/Secret-Network-Hackathon"
+        },
+        {
+          "label": "Shade Stability Pool code-hash provenance at Secret block 26592283",
+          "url": "https://rest.lavenderfive.com/secretnetwork/compute/v1beta1/code_hash/by_contract_address/secret1wdxqz26acf2e6rsac8007pd53ak7n8tgeqr46w"
+        },
+        {
+          "label": "Shade Oracle Router source and provider/freshness behavior",
+          "url": "https://github.com/securesecrets/shade-oracle/blob/release/contracts/oracle_router/src/contract.rs"
+        }
+      ],
+      "notes": "Measured from encrypted compute queries at Secret Network block 26592283 (2026-08-08). Across the current and legacy ShadeLend registries, vault-level collateral was valued with the recorded router quotes and reconciled against 207,123.4 SILK of aggregate elastic debt, giving collateralizationRatio=2.08. The two stale-price branches are retained as adverse evidence in the review: Persistence ATOM collateral cannot be newly priced because its derivative rate is stale, while the WBTC branch is explicitly distressed. The Shade Stability Pool reported 88,291.3 SILK deposited against the same aggregate debt, giving liquidationCapacityRatio=0.426. Liquidations are permissionless and the pool offsets debt before distributing discounted collateral, but the measured pool covers only a bounded share of aggregate debt. ShadeLend vaults are isolated by collateral branch, while no global shutdown, deficit socialization, or unconditional recapitalization path is documented. The frozen WBTC vault carries 37,867.7 SILK of elastic debt (18.3% of aggregate debt) against approximately 0.00002097 WBTC, has its collateral staleness check disabled, and its LiquidatablePositions query reverted with divide-by-zero; this is an observed stranded shortfall, not a hypothetical weakness. SILK has documented collateral redemption/conversion paths, but the reviewed evidence does not establish an unconditional, bounded holder redemption route, so structural redemption remains limited.",
+      "metrics": {
+        "collateralizationRatio": 2.08,
+        "liquidationCapacityRatio": 0.426
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "measured"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "adequate"
+        },
+        "backstop": {
+          "quality": "limited"
+        },
+        "branchIsolation": {
+          "quality": "adequate"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "weak"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

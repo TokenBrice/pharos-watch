@@ -71,8 +71,8 @@ function sweep(
 }
 
 describe("estimateDeploymentCrawlCostMs", () => {
-  it("prices a GeckoTerminal-only chain above a CoinGecko chain", () => {
-    expect(estimateDeploymentCrawlCostMs("ethereum")).toBeLessThan(
+  it("prices every registered stage instead of only the first provider", () => {
+    expect(estimateDeploymentCrawlCostMs("ethereum")).toBeGreaterThan(
       estimateDeploymentCrawlCostMs("linea"),
     );
   });
@@ -100,7 +100,7 @@ describe("estimateDeploymentCrawlCostMs", () => {
 
 describe("selectDiscoveryTargetWindow", () => {
   it("leaves a footprint that fits the per-coin budget untouched", () => {
-    const targets = CG_CHAINS.slice(0, 4).map(deployment);
+    const targets = CG_CHAINS.slice(0, 3).map(deployment);
     const selected = selectDiscoveryTargetWindow({
       targets,
       cursor: null,
@@ -186,7 +186,7 @@ describe("estimateDiscoverySweepWindowCount", () => {
   });
 
   it("sweeps a footprint that fits the per-coin budget in one window", () => {
-    expect(estimateDiscoverySweepWindowCount(CG_CHAINS.slice(0, 4).map(deployment))).toBe(1);
+    expect(estimateDiscoverySweepWindowCount(CG_CHAINS.slice(0, 3).map(deployment))).toBe(1);
   });
 
   it("matches the runs one real rotation needs for an oversized footprint", () => {

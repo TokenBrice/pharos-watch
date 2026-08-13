@@ -130,7 +130,7 @@ describe("P4 route observation persistence envelope", () => {
     });
     const coverage = {
       status: "populated" as const,
-      capabilityMatrixVersion: "p4a.8",
+      capabilityMatrixVersion: "p4a.9",
       retainedPoolCount: 1,
       observationCount: 1,
       scoreEligibleObservationCount: 1,

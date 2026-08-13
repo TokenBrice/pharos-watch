@@ -48,16 +48,18 @@ export const DEX_LIQUIDITY_POOL_MIN_TVL_USD = 10_000;
 // closed at `quote-missing` until a reviewed QuoterV2 deployment for the chain
 // is pinned in ../measured-execution/registry.ts and ratified, so a chain added
 // alone moves reason codes without adding exit-route coverage. Every added
-// chain also joins this family's parallel per-chain fan-out, the cost that
-// retired the Optimism lane (docs/dex-liquidity.md). Celo and BSC candidate
-// subgraph, factory, and QuoterV2 evidence is recorded in the
-// exact-dex-route-coverage activation packet.
+// chain also joins this family's bounded per-chain fan-out, the cost that
+// retired the Optimism lane (docs/dex-liquidity.md). BSC is intentionally the
+// sixth and final source in this family; at most five requests run in parallel,
+// and BSC publishes shadow-only targets until a later evidence-gated activation
+// review.
 export const UNIV3_SUBGRAPHS: Record<string, string> = {
   ethereum: "5zvR82QoaXYFyDEKLZ9t6v9adgnptxYpKpSbxtgVENFV",
   base: "FUbEPQw1oMghy39fwWBFY5fE6MXPXZQtjncQy2cXdrNS",
   arbitrum: "FbCGRftH4a3yZugY7TnbYgPJVEv2LvMT6oF1fxPe9aJM",
   polygon: "3hCPRGf4z88VC5rsBKU5AA9FBBq5nF3jbKJG7VZCbhjm",
   celo: "ESdrTJ3twMwWVoQ1hUE2u7PugEHX3QkenudD6aXCkDQ4",
+  bsc: "F85MNzUGYqgSHSHRGgeVMNsdnW1KtZSVgFULumXRZTw2",
 };
 
 // The Graph caps `first` at 1000 per page; paginate via `skip` to reach pools

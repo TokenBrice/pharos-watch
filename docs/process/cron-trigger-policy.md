@@ -19,11 +19,11 @@ The growth gate is **25 physical trigger expressions**, **32 fetch-capable sched
 
 ### Current growth gate
 
-The reviewed topology is fixed at **25 physical trigger expressions**, **32 fetch-capable scheduled entries**, and at most two headroom-full (`5/6`) slots. The current topology has one such slot, `halfHourlyOffset`; active measured execution was reduced to `3/6` by moving shadow/native diagnostics to a daily serial lane. `npm run check:cron-sync` rejects a 26th physical trigger, and `npm run check:cron-connections` rejects another fetch-capable entry or a third `5/6` slot until this gate is deliberately re-reviewed. These limits are owned by `CRON_GROWTH_HEADROOM_POLICY` in `shared/lib/cron-jobs.ts`; changing one is a policy change, not a routine schedule edit.
+The reviewed topology is fixed at **25 physical trigger expressions**, **32 fetch-capable scheduled entries**, and at most two headroom-full (`5/6`) slots. The current topology has one such slot, `halfHourlyOffset`; active measured execution remains `3/6`, and the bounded Solana shadow collector runs only after the EVM lane has released its connections, preserving that peak. Other shadow/native diagnostics remain daily. `npm run check:cron-sync` rejects a 26th physical trigger, and `npm run check:cron-connections` rejects another fetch-capable entry or a third `5/6` slot until this gate is deliberately re-reviewed. These limits are owned by `CRON_GROWTH_HEADROOM_POLICY` in `shared/lib/cron-jobs.ts`; changing one is a policy change, not a routine schedule edit.
 
 Before adding fetch-heavy scheduled work, the Worker operations owner is the required reviewer and must review the measured workload before one of these consolidation/rebalance paths is executed:
 
-1. Preserve the active/shadow measured-execution split; do not move daily diagnostic work back into the active `0,30` slot.
+1. Preserve the active/shadow measured-execution surfaces. A bounded native collector may share the active `0,30` trigger only as a serialized phase with a proven unchanged connection peak and a producer runtime below the slot fence; broad diagnostic fan-out remains daily.
 2. Reduce `sync-dex-liquidity-stage` from `5/6` to `4/6` by serializing the nested provider fan-out or moving a bounded source partition to a slot with proven headroom; preserve the hourly `:10` source cadence and re-run the topology checks.
 3. If that path does not preserve required freshness, move the bounded unit of work to Cloudflare Queues or Workflows rather than adding another fetch-heavy cron surface.
 

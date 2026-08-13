@@ -77,10 +77,13 @@ describe("runV9AfterCoreWithinWindow", () => {
       _db: D1Database,
       _job: string,
       run: (input: { signal: AbortSignal }) => Promise<unknown>,
+      leaseOptions?: { abortSignal?: AbortSignal },
     ) => ({
       status: "ok",
       result: await run({
-        signal: new AbortController().signal,
+        signal:
+          leaseOptions?.abortSignal ??
+          new AbortController().signal,
       }),
     }));
   });
@@ -117,6 +120,92 @@ describe("runV9AfterCoreWithinWindow", () => {
       expect.any(Function),
       expect.objectContaining({
         ttlSec: 60,
+        heartbeatSec: 15,
+      }),
+    );
+  });
+
+  it("allows a compiler run longer than the former 60-second window", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:22:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({
+      state: "finished",
+      result_status: "ok",
+      worker_version: "worker-v2",
+    });
+    const run = vi.fn(async (signal: AbortSignal) => {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 70_000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(signal.reason);
+        }, { once: true });
+      });
+      return {
+        status: "ok" as const,
+        itemCount: 337,
+      };
+    });
+
+    const pending = runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs, {
+        deadlineOffsetMs: 3 * 60_000,
+      }),
+      run,
+    );
+    await vi.advanceTimersByTimeAsync(70_000);
+
+    await expect(pending).resolves.toMatchObject({
+      status: "ok",
+      itemCount: 337,
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("clamps a longer requested window to the next quarter boundary", async () => {
+    const scheduledTimeMs = Date.parse("2026-07-26T12:14:00Z");
+    vi.useFakeTimers();
+    vi.setSystemTime(scheduledTimeMs + 1_000);
+    const fixture = dbWithCoreSlot({
+      state: "finished",
+      result_status: "ok",
+      worker_version: "worker-v2",
+    });
+    const run = vi.fn(async (signal: AbortSignal) => {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, 70_000);
+        signal.addEventListener("abort", () => {
+          clearTimeout(timer);
+          reject(signal.reason);
+        }, { once: true });
+      });
+      return {
+        status: "ok" as const,
+        itemCount: 1,
+      };
+    });
+
+    const pending = runV9AfterCoreWithinWindow(
+      options(fixture.db, scheduledTimeMs, {
+        deadlineOffsetMs: 3 * 60_000,
+      }),
+      run,
+    );
+    const rejected = expect(pending).rejects.toMatchObject({
+      name: "TimeoutError",
+      message:
+        "compute-safety-score-v9 exceeded its pre-quarter execution window",
+    });
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    await rejected;
+    expect(leaseMocks.runCronWithLease).toHaveBeenCalledWith(
+      fixture.db,
+      V9_MEMORY_LANE_LEASE_KEY,
+      expect.any(Function),
+      expect.objectContaining({
+        ttlSec: 90,
         heartbeatSec: 15,
       }),
     );

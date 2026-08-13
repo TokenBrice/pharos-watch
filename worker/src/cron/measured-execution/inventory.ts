@@ -628,6 +628,82 @@ export function buildUniV3MeasuredExecutionTarget(
   });
 }
 
+export function buildUniV3DirectMeasuredExecutionTargets(input: {
+  pools: readonly DexApiPool[];
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  validationReferences?: PriceValidationReferences;
+  stablecoinPriceById?: Map<string, number>;
+  capturedAt: number;
+}): Map<string, DexMeasuredExecutionTarget> {
+  const targets = new Map<string, DexMeasuredExecutionTarget>();
+  for (const pool of input.pools) {
+    if (
+      pool.source !== "uniswap-v3-shadow" ||
+      pool.tokens.length !== 2 ||
+      pool.feeRate == null ||
+      !Number.isFinite(pool.feeRate) ||
+      pool.feeRate <= 0 ||
+      !Number.isFinite(pool.tvlUsd) ||
+      pool.tvlUsd <= 0 ||
+      pool.price == null ||
+      !Number.isFinite(pool.price) ||
+      pool.price <= 0
+    ) continue;
+    const [token0, token1] = pool.tokens;
+    const poolAddress = canonicalEvmAddress(pool.poolAddress);
+    const token0Address = canonicalEvmAddress(token0.address);
+    const token1Address = canonicalEvmAddress(token1.address);
+    const feePips = Math.round(pool.feeRate * 1_000_000);
+    if (
+      !poolAddress ||
+      !token0Address ||
+      !token1Address ||
+      token0Address === token1Address ||
+      !Number.isInteger(feePips) ||
+      feePips <= 0 ||
+      feePips > 1_000_000 ||
+      !Number.isInteger(token0.decimals) ||
+      token0.decimals < 0 ||
+      token0.decimals > 255 ||
+      !Number.isInteger(token1.decimals) ||
+      token1.decimals < 0 ||
+      token1.decimals > 255
+    ) continue;
+    const candidate: UniV3ExecutionCandidate = {
+      chain: pool.chain,
+      poolAddress,
+      feePips,
+      tvlUsd: pool.tvlUsd,
+      token0Price: 1 / pool.price,
+      token1Price: pool.price,
+      tokens: [
+        { address: token0Address, symbol: token0.symbol, decimals: token0.decimals },
+        { address: token1Address, symbol: token1.symbol, decimals: token1.decimals },
+      ],
+    };
+    const stablecoinIds = new Set(
+      candidate.tokens
+        .map((token) => input.chainAddressToId.get(buildChainAddressKey(pool.chain, token.address)))
+        .filter((stablecoinId): stablecoinId is string => Boolean(stablecoinId)),
+    );
+    for (const stablecoinId of stablecoinIds) {
+      const target = buildUniV3MeasuredExecutionTarget({
+        stablecoinId,
+        candidate,
+        stablecoinPriceById: input.stablecoinPriceById,
+        chainAddressToId: input.chainAddressToId,
+        symbolToChainScopedIds: input.symbolToChainScopedIds,
+        validationReferences: input.validationReferences,
+        retainedTvlUsd: pool.tvlUsd,
+        capturedAt: input.capturedAt,
+      });
+      if (target) targets.set(buildMeasuredPoolDirectionKey(stablecoinId, target.poolId), target);
+    }
+  }
+  return targets;
+}
+
 export function buildSlipstreamMeasuredExecutionTarget(
   input: Omit<ClMeasuredExecutionTargetInput, "candidate"> & { candidate: SlipstreamExecutionCandidate },
 ): DexMeasuredExecutionTarget | null {

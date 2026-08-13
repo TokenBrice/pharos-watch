@@ -6,6 +6,7 @@ import {
 } from "@shared/lib/safety-score-v9/facts";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { SafetyScoreV9FactSetExtensionV2 } from "./safety-score-v9-fact-set";
 import type { V9ExtensionRegistryMeta } from "./safety-score-v9-extension-shared";
 import { safetyScoreV9TransferDeploymentKey } from "./safety-score-v9-extension-transfer";
@@ -320,9 +321,9 @@ function buildIndependentLiabilitySupplyReview(
     routeByDeploymentKey.size !== packet.authoritativeDeploymentKeys.length
   ) return null;
 
-  const aggregateSupplyUsd = Object.values(
-    fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
-  ).reduce((sum, value) => sum + value, 0);
+  const aggregateSupplyUsd = getCirculatingRaw(
+    fixedInput.aggregateCirculatingById[assetId] ?? {},
+  );
   if (!Number.isFinite(aggregateSupplyUsd) || aggregateSupplyUsd <= 0) return null;
 
   const maxDecimals = Math.max(...packet.observations.map((row) => row.decimals));

@@ -71,6 +71,13 @@ export function LiquidityPoolMatchingDetails() {
           Solidly forks or deployments on Avalanche, Linea, or Sonic.
         </p>
         <p>
+          Hook-free Ethereum Uniswap V4 pools can publish measured exact-execution profiles through the separately
+          reviewed PoolManager, StateView, and Quoter path. Each score-facing profile binds the exact PoolId, ordered
+          currencies, fee, tick spacing, zero hook, pinned runtimes, immutable PoolManager relationships, current pool
+          state, and ABI-decoded quote. Hooked pools and other V4 chains remain unsupported, and stale or drifted evidence
+          fails closed.
+        </p>
+        <p>
           Base Aerodrome Slipstream pools can also publish measured exact-execution profiles. Each profile pins the
           reviewed factory and QuoterV2 runtimes, proves the retained pool through the factory&apos;s exact token and
           tick-spacing binding, and revalidates identity, prices, freshness, capacity monotonicity, and the retained TVL

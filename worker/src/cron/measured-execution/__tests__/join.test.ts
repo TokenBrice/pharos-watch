@@ -20,6 +20,10 @@ vi.mock("../curve-composite", async () => {
   );
   return { ...actual, validateCurveCompositeProfileProof: vi.fn(() => []) };
 });
+vi.mock("../uniswap-v4", async () => {
+  const actual = await vi.importActual<typeof import("../uniswap-v4")>("../uniswap-v4");
+  return { ...actual, validateUniswapV4ProfileProof: vi.fn(() => []) };
+});
 
 import { buildDexMeasuredExecutionTargetId, type DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import type { PoolEntry } from "../../dex-liquidity/types";
@@ -53,6 +57,11 @@ import {
   encodeCurveCompositeQuote,
   type CurveMetapoolPolicy,
 } from "../curve-composite";
+import {
+  UNISWAP_V4_ADAPTER_PROFILE_ID,
+  UNISWAP_V4_HOOK_FREE_ADDRESS,
+  getUniswapV4Deployment,
+} from "../uniswap-v4";
 
 function curveStableSwapPacket() {
   const policy = CURVE_3POOL_STABLESWAP_POLICY;
@@ -323,6 +332,86 @@ function target(chain: string = "ethereum"): DexMeasuredExecutionTarget {
   };
 }
 
+function uniswapV4Route() {
+  const deployment = getUniswapV4Deployment("ethereum");
+  if (!deployment) throw new Error("missing V4 deployment");
+  const poolId = `ethereum:0x${"12".repeat(32)}`;
+  const poolTokenAddresses = [
+    "0x1111111111111111111111111111111111111111",
+    "0x2222222222222222222222222222222222222222",
+  ] as [`0x${string}`, `0x${string}`];
+  const input = {
+    schemaVersion: "dex-measured-target-v1" as const,
+    stablecoinId: "usdc-circle",
+    adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+    protocol: "uniswap-v4",
+    chain: "ethereum",
+    poolId,
+    poolTokenAddresses,
+    tokenIn: {
+      address: poolTokenAddresses[0],
+      symbol: "USDC",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdc-circle",
+    },
+    tokenOut: {
+      address: poolTokenAddresses[1],
+      symbol: "USDT",
+      decimals: 6,
+      referencePriceUsd: 1,
+      trackedAssetId: "usdt-tether",
+    },
+    feePips: 100,
+    tickSpacing: 1,
+    hookAddress: UNISWAP_V4_HOOK_FREE_ADDRESS,
+    retainedTvlUsd: 2_000_000,
+    retainedPoolPriceUsd: 1,
+    capturedAt: 1_000,
+  };
+  const measuredTarget: DexMeasuredExecutionTarget = {
+    ...input,
+    targetId: buildDexMeasuredExecutionTargetId({
+      adapterProfileId: input.adapterProfileId,
+      stablecoinId: input.stablecoinId,
+      chain: input.chain,
+      protocol: input.protocol,
+      poolId: input.poolId,
+      tokenInAddress: input.tokenIn.address,
+      tokenOutAddress: input.tokenOut.address,
+      poolTokenAddresses,
+      feePips: input.feePips,
+      tickSpacing: input.tickSpacing,
+      hookAddress: input.hookAddress,
+    }),
+  };
+  const points = [1_000, 100_000, 1_000_000].map((inputUsd) => {
+    const amountInRaw = BigInt(inputUsd) * 1_000_000n;
+    const amountOutRaw = BigInt(Math.round(inputUsd * 0.999 * 1_000_000));
+    return {
+      amountInRaw: amountInRaw.toString(),
+      amountOutRaw: amountOutRaw.toString(),
+      callData: "0x12" as const,
+      returnData: "0x12" as const,
+      inputUsd,
+      outputUsd: inputUsd * 0.999,
+      costBps: 10,
+      passesCostBound: true,
+    };
+  });
+  const profile = buildDexMeasuredExecutionProfile({
+    target: measuredTarget,
+    targetGenerationId: "v4-target-generation",
+    quoteGenerationId: "v4-quote-generation",
+    quotedAt: 1_060,
+    blockNumber: 25_601_359,
+    endpointAddress: deployment.endpointAddress,
+    endpointCodeHash: deployment.expectedCodeHash,
+    points,
+  });
+  return { measuredTarget, profile };
+}
+
 function slipstreamTarget(): DexMeasuredExecutionTarget {
   const input = {
     schemaVersion: "dex-measured-target-v1" as const,
@@ -371,6 +460,47 @@ function slipstreamTarget(): DexMeasuredExecutionTarget {
 }
 
 describe("measured execution join activation", () => {
+  it("joins reviewed hook-free Ethereum V4 evidence without an activation gate", () => {
+    const { measuredTarget, profile } = uniswapV4Route();
+    const pool: PoolEntry = {
+      poolId: measuredTarget.poolId,
+      project: "uniswap-v4",
+      chain: "ethereum",
+      tvlUsd: measuredTarget.retainedTvlUsd,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 10_000,
+      poolType: "uniswap-v4",
+      source: "dl",
+      extra: { measuredExecutionTarget: measuredTarget },
+    };
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+      evidence: {
+        quoteGenerationId: "v4-quote-generation",
+        targetGenerationId: "v4-target-generation",
+        publishedAt: 1_060,
+        byTargetId: new Map([[measuredTarget.targetId, {
+          quotedTarget: measuredTarget,
+          status: "measured",
+          failureReason: null,
+          profile,
+          quoteGenerationId: "v4-quote-generation",
+          targetGenerationId: "v4-target-generation",
+          resolution: "latest",
+          latestFailureReason: null,
+        }]]),
+      },
+      nowSec: 1_060,
+    });
+
+    expect(pool.extra?.measuredExecutionDiagnostic?.detail).toBeUndefined();
+    expect(pool.extra?.measuredExecution).toMatchObject({
+      adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+    });
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
+  });
+
   it("makes all nine reviewed metapool quotes score eligible without an activation gate", () => {
     for (const policy of CURVE_R3_METAPOOL_POLICIES) {
       const { measuredTarget, profile } = curveCompositeRoute(policy);

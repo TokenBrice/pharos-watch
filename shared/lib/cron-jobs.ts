@@ -419,7 +419,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "half-hourly",
     scheduleKey: "halfHourlyMeasuredExecution",
     triggerMode: "isolated",
-    maxConnections: 3, // Three EVM lanes; daily shadow EVM/Solana/Tron streams execute serially at the same peak.
+    maxConnections: 3, // Three EVM lanes; Solana follows serially here, while daily shadow EVM/Tron keep the same peak.
   },
   {
     job: "sync-dex-liquidity-stage",

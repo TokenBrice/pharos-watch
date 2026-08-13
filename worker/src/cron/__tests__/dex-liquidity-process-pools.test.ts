@@ -1077,7 +1077,7 @@ describe("processPoolMetrics", () => {
         observedAt: 1_000,
       });
       expect(routeResult.coverage, testCase.name).toMatchObject({
-        capabilityMatrixVersion: "p4a.8",
+        capabilityMatrixVersion: "p4a.9",
         retainedPoolCount: 1,
         scoreEligiblePoolCount: 0,
         scoreEligibleCapabilityPoolCount: 1,
@@ -1089,7 +1089,7 @@ describe("processPoolMetrics", () => {
     }
   });
 
-  it("attaches V4 shadow targets only for one exact hook-free candidate", () => {
+  it("attaches V4 targets only for one exact hook-free candidate", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
     const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const USDT = "0xdac17f958d2ee523a2206206994597c13d831ec7";

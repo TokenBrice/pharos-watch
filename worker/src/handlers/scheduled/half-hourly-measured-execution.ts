@@ -2,10 +2,13 @@
  * Half-hourly trigger (0,30 * * * *):
  *   sync-cl-exit-depth (3)
  *
- * Isolated score-bearing measured-execution lane. Shadow EVM, Solana, and
- * Tron evidence runs once daily in the 08:10 UTC slot.
+ * Isolated score-bearing measured-execution lane. Solana runs serially after
+ * EVM so its rotating cohort stays inside the two-hour freshness horizon
+ * without increasing the per-trigger connection peak. Tron remains daily.
  */
 import { syncDexMeasuredExecution } from "../../cron/measured-execution/sync";
+import { syncSolanaDexMeasuredExecution } from "../../cron/measured-execution/solana-sync";
+import { throwIfAborted } from "../../lib/abort";
 import type { CronResult } from "../../lib/cron-logger";
 import { toErrorMessage } from "../../lib/error-utils";
 import { tryParseJson } from "../../lib/json-parse";
@@ -99,7 +102,23 @@ export function mergeMeasuredExecutionResults(evm: CronResult, solana: CronResul
 export async function runHalfHourlyMeasuredExecutionSlot(runtime: ScheduledRuntimeContext) {
   return runSingleScheduledJob(runtime, "half-hour measured execution slot", {
     job: "sync-cl-exit-depth",
-    run: (signal, reportProgress) =>
-      syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
+    run: async (signal, reportProgress) => {
+      const evm = await settleMeasuredExecutionLane(
+        "evm",
+        syncDexMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
+      );
+      throwIfAborted(signal);
+      const solana = await settleMeasuredExecutionLane(
+        "solana-shadow",
+        syncSolanaDexMeasuredExecution(runtime.db, runtime.env.JUPITER_API_KEY, signal, reportProgress),
+      );
+      const tron: CronResult = {
+        status: "skipped_neutral",
+        itemCount: 0,
+        metadata: JSON.stringify({ reason: "daily-native-lane" }),
+        productivity: { productive: false, reason: "daily-native-lane" },
+      };
+      return mergeMeasuredExecutionResults(evm, solana, tron);
+    },
   });
 }

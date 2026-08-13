@@ -8,7 +8,6 @@
  */
 import { generateWeeklyRecap } from "../../cron/weekly-recap";
 import { syncDexShadowMeasuredExecution } from "../../cron/measured-execution/sync";
-import { syncSolanaDexMeasuredExecution } from "../../cron/measured-execution/solana-sync";
 import { syncTronDexMeasuredExecution } from "../../cron/measured-execution/tron-sync";
 import { throwIfAborted } from "../../lib/abort";
 import { buildTelegramCreds } from "../../lib/runtime-credentials";
@@ -41,11 +40,12 @@ export async function runDaily0810Slot(runtime: ScheduledRuntimeContext) {
               syncDexShadowMeasuredExecution(runtime.db, runtime.chainRpcs, signal, reportProgress),
             );
             throwIfAborted(signal);
-            const solana = await settleMeasuredExecutionLane(
-              "solana-shadow",
-              syncSolanaDexMeasuredExecution(runtime.db, runtime.env.JUPITER_API_KEY, signal, reportProgress),
-            );
-            throwIfAborted(signal);
+            const solana = {
+              status: "skipped_neutral" as const,
+              itemCount: 0,
+              metadata: JSON.stringify({ reason: "half-hour-native-lane" }),
+              productivity: { productive: false, reason: "half-hour-native-lane" },
+            };
             const tron = await settleMeasuredExecutionLane(
               "tron-shadow",
               syncTronDexMeasuredExecution(runtime.db, runtime.env.TRONGRID_API_KEY, signal, reportProgress),

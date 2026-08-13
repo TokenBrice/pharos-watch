@@ -212,6 +212,7 @@ export const CIRCUIT_SOURCE = {
   SUNSWAP_API: "sunswap-api",
   AERODROME_SLIPSTREAM_API: "aerodrome-slipstream-api",
   VELODROME_SLIPSTREAM_API: "velodrome-slipstream-api",
+  UNISWAP_V3_BSC_SHADOW: "uniswap-v3-bsc-shadow",
   TRONGRID: "trongrid",
   ANTHROPIC: "anthropic-api",
   BLUECHIP: "bluechip-api",

@@ -61,7 +61,7 @@ describe("V9 publication scheduling", () => {
     });
   });
 
-  it("admits a bounded 60-second compiler window with ten seconds required", async () => {
+  it("admits the compiler timeout plus finalization headroom", async () => {
     const scheduledRuntime = runtime();
 
     await runV9PublicationSlot(scheduledRuntime);
@@ -72,7 +72,7 @@ describe("V9 publication scheduling", () => {
         scheduledTimeMs: scheduledRuntime.scheduledTimeMs,
         slotStartedAt: scheduledRuntime.slotStartedAt,
         workerVersion: "worker-v1",
-        deadlineOffsetMs: 60_000,
+        deadlineOffsetMs: 3 * 60_000,
         minimumRemainingMs: 10_000,
         lane: "compute-safety-score-v9",
         currentSlotKey: "v9PublicationOffset",

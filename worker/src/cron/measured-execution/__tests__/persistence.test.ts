@@ -181,6 +181,7 @@ function solanaEvidenceDb(input: {
   latestFailureReason: string;
   historical?: { profile?: ReturnType<typeof solanaFixtureProfile>; failureReason?: string };
 }) {
+  const preparedSql: string[] = [];
   const makeStmt = (sql: string, _binds: unknown[] = []): Record<string, unknown> => ({
     bind: (...nextBinds: unknown[]) => makeStmt(sql, nextBinds),
     first: async () => {
@@ -216,6 +217,9 @@ function solanaEvidenceDb(input: {
       return null;
     },
     all: async () => {
+      if (sql.includes("SELECT target_id") && sql.includes("FROM dex_measured_execution_targets")) {
+        return { results: [{ target_id: input.target.targetId }] };
+      }
       if (sql.includes("SELECT history_generation.generation_id")) {
         return { results: input.historical ? [{ generation_id: "solana-quotes-lkg" }] : [] };
       }
@@ -252,7 +256,15 @@ function solanaEvidenceDb(input: {
       return { results: [] };
     },
   });
-  return { db: { prepare: (sql: string) => makeStmt(sql) } as unknown as D1Database };
+  return {
+    preparedSql,
+    db: {
+      prepare: (sql: string) => {
+        preparedSql.push(sql);
+        return makeStmt(sql);
+      },
+    } as unknown as D1Database,
+  };
 }
 
 function evidenceDb(input: {
@@ -1174,6 +1186,24 @@ describe("measured execution last-known-good selection", () => {
 });
 
 describe("Solana measured execution last-known-good selection", () => {
+  it("materializes only selected score-facing target JSON", async () => {
+    const target = solanaFixtureTarget();
+    const { db, preparedSql } = solanaEvidenceDb({
+      target,
+      latestFailureReason: "budget-deferred",
+    });
+
+    const evidence = await loadLatestPublishedSolanaMeasuredQuoteEvidence(
+      db,
+      undefined,
+      [target.targetId],
+    );
+
+    expect(evidence?.byTargetId).toHaveLength(1);
+    expect(preparedSql.some((sql) => sql.includes("selected score-facing evidence scan"))).toBe(true);
+    expect(preparedSql.some((sql) => sql.includes("sparse target-first evidence scan"))).toBe(false);
+  });
+
   it("retains a fresh exact profile after a budget-deferred rotation row", async () => {
     const target = solanaFixtureTarget();
     const profile = solanaFixtureProfile(target, {

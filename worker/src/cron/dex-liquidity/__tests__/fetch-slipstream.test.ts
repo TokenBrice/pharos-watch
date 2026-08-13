@@ -3,9 +3,13 @@ import { encodeFunctionResult, parseAbi } from "viem/utils";
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
-import { fetchEvmCallHexAtBlock } from "../../../lib/evm-rpc";
+import {
+  fetchEvmCallHexAtBlock,
+  fetchEvmMulticall3Aggregate3AtBlock,
+} from "../../../lib/evm-rpc";
 import {
   fetchSlipstreamPools,
   getSlipstreamPoolFeeBps,
@@ -19,6 +23,15 @@ const ABI = parseAbi([
   "function allPoolsLength() view returns (uint256)",
   "function all(uint256 _limit, uint256 _offset, uint256 _filter) view returns ((address lp,string symbol,uint8 decimals,uint256 liquidity,int24 type,int24 tick,uint160 sqrt_ratio,address token0,uint256 reserve0,uint256 staked0,address token1,uint256 reserve1,uint256 staked1,address gauge,uint256 gauge_liquidity,bool gauge_alive,address fee,address bribe,address factory,uint256 emissions,address emissions_token,uint256 emissions_cap,uint256 pool_fee,uint256 unstaked_fee,uint256 token0_fees,uint256 token1_fees,uint256 locked,uint256 emerging,uint32 created_at,address nfpm,address alm,address root)[])",
   "function tokens(uint256 _limit, uint256 _offset, address _account, address[] _addresses) view returns ((address token_address,string symbol,uint8 decimals,uint256 account_balance,bool listed,bool emerging)[])",
+]);
+const RECOVERY_ABI = parseAbi([
+  "function factory() view returns (address)",
+  "function token0() view returns (address)",
+  "function token1() view returns (address)",
+  "function tickSpacing() view returns (int24)",
+  "function slot0() view returns (uint160 sqrtPriceX96,int24 tick,uint16 observationIndex,uint16 observationCardinality,uint16 observationCardinalityNext,bool unlocked)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address account) view returns (uint256)",
 ]);
 
 describe("sqrtRatioToSpotPrice", () => {
@@ -266,6 +279,68 @@ describe("fetchSlipstreamPools", () => {
           priceUsd: 1,
         },
       ],
+    });
+  });
+
+  it("recovers a staged BtcUSD Base pool through the existing Slipstream family", async () => {
+    const btcusd = "0xe4b20925d9e9a62f1e492e15a81dc0de62804dd4";
+    const usdc = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
+    const pool = "0x516025f6ed7895b33754e131a09da83355a9ba1b";
+    vi.mocked(fetchEvmCallHexAtBlock).mockResolvedValueOnce(null);
+    const encoded = (functionName: string, result: unknown) => encodeFunctionResult({
+      abi: RECOVERY_ABI,
+      functionName: functionName as never,
+      result: result as never,
+    });
+    vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockResolvedValueOnce([
+      { label: "slipstream-recovery-0-factory", success: true, returnData: encoded("factory", "0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A") },
+      { label: "slipstream-recovery-0-token0", success: true, returnData: encoded("token0", usdc) },
+      { label: "slipstream-recovery-0-token1", success: true, returnData: encoded("token1", btcusd) },
+      { label: "slipstream-recovery-0-tickSpacing", success: true, returnData: encoded("tickSpacing", 1) },
+      { label: "slipstream-recovery-0-slot0", success: true, returnData: encoded("slot0", [(1n << 96n) * 1_000_000n, 0, 0, 0, 0, true]) },
+      { label: "slipstream-recovery-0-token-0-decimals", success: true, returnData: encoded("decimals", 18) },
+      { label: "slipstream-recovery-0-token-0-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 18n) },
+      { label: "slipstream-recovery-0-token-1-decimals", success: true, returnData: encoded("decimals", 6) },
+      { label: "slipstream-recovery-0-token-1-balance", success: true, returnData: encoded("balanceOf", 1_000_000n * 10n ** 6n) },
+    ]);
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          all: async () => ({ results: [{
+            pool_id: `base:${pool}`,
+            base_token: btcusd,
+            quote_token: usdc,
+            fee_tier: 1,
+          }] }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const result = await fetchSlipstreamPools(
+      "aerodrome-slipstream",
+      new Map([
+        [`base:${btcusd}`, "btcusd-btcfi"],
+        [`base:${usdc}`, "usdc-circle"],
+      ]),
+      new Map(),
+      new Map([
+        ["btcusd-btcfi", 1],
+        ["usdc-circle", 1],
+      ]),
+      undefined,
+      undefined,
+      db,
+    );
+
+    expect(result).toMatchObject({ ok: true, degraded: true });
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]).toMatchObject({
+      source: "aerodrome-slipstream",
+      poolAddress: pool,
+      poolType: "aerodrome-slipstream-1bp",
+      tickSpacing: 1,
+      tvlUsd: 2_000_000,
+      price: 1,
     });
   });
 });

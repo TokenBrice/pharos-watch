@@ -1,43 +1,53 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../../lib/db", () => ({
-  batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
-    const state = (db as unknown as { scoringTestState?: { stagedDepthValues: number; stagedPriceRows: number } })
-      .scoringTestState;
-    if (state) {
-      for (const statement of stmts) {
-        const sql = (statement as unknown as { sql?: string }).sql ?? "";
-        if (sql.includes("SET depth_stability = ?")) state.stagedDepthValues++;
-        if (sql.includes("INSERT INTO dex_price_run_rows")) state.stagedPriceRows++;
+vi.mock("../../lib/db", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/db")>();
+  return {
+    ...actual,
+    batchExecute: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
+      const state = (db as unknown as {
+        scoringTestState?: {
+          measuredTargetRows: number;
+          stagedDepthValues: number;
+          stagedPriceRows: number;
+        };
+      }).scoringTestState;
+      if (state) {
+        for (const statement of stmts) {
+          const sql = (statement as unknown as { sql?: string }).sql ?? "";
+          if (sql.includes("SET depth_stability = ?")) state.stagedDepthValues++;
+          if (sql.includes("INSERT INTO dex_price_run_rows")) state.stagedPriceRows++;
+          if (sql.includes("INSERT INTO dex_measured_execution_targets")) state.measuredTargetRows++;
+        }
       }
-    }
-    return stmts.length;
-  }),
-  executeAtomicBatch: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
-    const state = (db as unknown as {
-      scoringTestState?: {
-        expectedDepthRows: number;
-        existingPriceRows: number;
-        stagedPriceRows: number;
-        publishedPriceRows: number;
-      };
-    }).scoringTestState;
-    const sql = stmts.map((statement) => (statement as unknown as { sql?: string }).sql ?? "").join("\n");
-    if (!state) return stmts.length;
-    if (sql.includes("UPDATE dex_liquidity") && sql.includes("depth_stability")) {
-      return state.expectedDepthRows;
-    }
-    if (sql.includes("DELETE FROM dex_prices")) {
-      const stagedPriceRows = state.stagedPriceRows;
-      const changes = 1 + state.existingPriceRows + stagedPriceRows;
-      state.publishedPriceRows = stagedPriceRows;
-      return changes;
-    }
-    return stmts.length;
-  }),
-  isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
-  isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
-}));
+      return stmts.length;
+    }),
+    executeAtomicBatch: vi.fn(async (db: D1Database, stmts: D1PreparedStatement[]) => {
+      const state = (db as unknown as {
+        scoringTestState?: {
+          expectedDepthRows: number;
+          existingPriceRows: number;
+          stagedPriceRows: number;
+          publishedPriceRows: number;
+        };
+      }).scoringTestState;
+      const sql = stmts.map((statement) => (statement as unknown as { sql?: string }).sql ?? "").join("\n");
+      if (!state) return stmts.length;
+      if (sql.includes("UPDATE dex_liquidity") && sql.includes("depth_stability")) {
+        return state.expectedDepthRows;
+      }
+      if (sql.includes("DELETE FROM dex_prices")) {
+        const stagedPriceRows = state.stagedPriceRows;
+        const changes = 1 + state.existingPriceRows + stagedPriceRows;
+        state.publishedPriceRows = stagedPriceRows;
+        return changes;
+      }
+      return stmts.length;
+    }),
+    isMissingTableError: (error: unknown) => String(error).toLowerCase().includes("no such table"),
+    isMissingColumnError: (error: unknown) => String(error).toLowerCase().includes("no such column"),
+  };
+});
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(),
@@ -79,6 +89,7 @@ interface ScoringTestState {
   existingPriceRows: number;
   stagedPriceRows: number;
   publishedPriceRows: number;
+  measuredTargetRows: number;
 }
 
 function toError(value: unknown): Error {
@@ -93,6 +104,7 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
     existingPriceRows: 0,
     stagedPriceRows: 0,
     publishedPriceRows: 0,
+    measuredTargetRows: 0,
   };
 
   function createStatement(sql: string, boundValues: unknown[] = []): PreparedStatementWithMeta {
@@ -143,6 +155,9 @@ function makeQueryDb(configs: QueryConfig[]): D1Database & { history: Array<{ sq
             generation_row_count: scoringTestState.publishedPriceRows,
             staged_row_count: scoringTestState.stagedPriceRows,
           } as T;
+        }
+        if (sql.includes("COUNT(*) AS count FROM dex_measured_execution_targets")) {
+          return { count: scoringTestState.measuredTargetRows } as T;
         }
         return (config?.first ?? null) as T | null;
       },
@@ -1370,6 +1385,63 @@ describe("dex-liquidity scoring", () => {
 
     expect(result.diagnostics.measuredExecution.inventoryTargetCount).toBe(1);
     expect(slipstreamTargets).toHaveLength(0);
+  });
+
+  it("publishes target-only BSC Uniswap V3 rows without admitting them to active scoring", async () => {
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const target: DexMeasuredExecutionTarget = {
+      schemaVersion: "dex-measured-target-v1",
+      targetId: "bsc-uniswap-v3-shadow-target",
+      stablecoinId: "usdt-tether",
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "bsc",
+      poolId: "bsc:0xf150d29d92e7460a1531cbc9d1abeab33d6998e4",
+      poolTokenAddresses: [
+        "0x55d398326f99059ff775485246999027b3197955",
+        "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+      ],
+      tokenIn: {
+        address: "0x55d398326f99059ff775485246999027b3197955",
+        symbol: "USDT",
+        decimals: 18,
+        referencePriceUsd: 1,
+        trackedAssetId: "usdt-tether",
+      },
+      tokenOut: {
+        address: "0x8d0d000ee44948fc98c9b98a4fa4921476f08b0d",
+        symbol: "USD1",
+        decimals: 18,
+        referencePriceUsd: 1,
+        trackedAssetId: "usd1-world-liberty-financial",
+      },
+      feePips: 100,
+      retainedTvlUsd: 2_000_000,
+      retainedPoolPriceUsd: 1,
+      capturedAt: 1_700_000_000,
+    };
+    const shadowTargets = new Map([[`usdt-tether|${target.poolId}`, target]]);
+
+    const result = await computeStablecoinScores(
+      db,
+      new Map(),
+      new Map(),
+      undefined,
+      1_700_000_100,
+      new Map(),
+      new Map(),
+      undefined,
+      new Map(),
+      shadowTargets,
+    );
+
+    expect(result.diagnostics.measuredExecution).toMatchObject({
+      inventoryTargetCount: 0,
+      shadowInventoryTargetCount: 1,
+      targetPublication: { status: "skipped", reason: "no-score-eligible-targets" },
+      shadowTargetPublication: { status: "published", rowCount: 1 },
+    });
+    expect(shadowTargets).toHaveLength(0);
   });
 
   it("joins a DeFiLlama Slipstream fingerprint to the unique exact target inside the TVL window", async () => {

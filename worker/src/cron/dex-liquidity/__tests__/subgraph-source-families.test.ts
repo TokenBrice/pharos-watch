@@ -51,7 +51,7 @@ describe("subgraph source families", () => {
     expect(buildUniV3PoolQuery(2000)).toContain("skip: 2000");
   });
 
-  it("queries all five Uni V3 chains and creates a Celo execution candidate", async () => {
+  it("queries the bounded six-chain Uni V3 family and creates BSC shadow candidates", async () => {
     const configuredChains = Object.entries(UNIV3_SUBGRAPHS);
     expect(configuredChains.map(([chain]) => chain)).toEqual([
       "ethereum",
@@ -59,25 +59,31 @@ describe("subgraph source families", () => {
       "arbitrum",
       "polygon",
       "celo",
+      "bsc",
     ]);
 
     const token0 = "0x1111111111111111111111111111111111111111";
     const token1 = "0x2222222222222222222222222222222222222222";
     const poolAddress = "0x3333333333333333333333333333333333333333";
+    let inFlight = 0;
+    let maxInFlight = 0;
     const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      inFlight++;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
       const url = String(input);
       const matchedChain = configuredChains.find(([, subgraphId]) => url.endsWith(subgraphId))?.[0];
       if (!matchedChain) {
         throw new Error("Unexpected Uni V3 subgraph URL");
       }
-      return new Response(
+      const response = new Response(
         JSON.stringify({
           data: {
             pools: [
               {
                 id: poolAddress,
                 token0: { id: token0, symbol: "USDC", decimals: "6" },
-                token1: { id: token1, symbol: "USDm", decimals: "18" },
+                token1: { id: token1, symbol: "USDT", decimals: "18" },
                 feeTier: "3000",
                 totalValueLockedUSD: "1000000",
                 volumeUSD: "500000",
@@ -91,24 +97,39 @@ describe("subgraph source families", () => {
         }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
+      inFlight--;
+      return response;
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchUniV3Data("graph-key", new Map(), new Map());
+    const chainAddressToId = new Map(
+      configuredChains.map(([chain]) => [`${chain}:${token0}`, "usdc-circle"]),
+    );
+    const result = await fetchUniV3Data("graph-key", new Map(), chainAddressToId);
 
     expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
+    expect(maxInFlight).toBe(5);
     expect(fetchMock.mock.calls.some(([input]) =>
-      String(input).endsWith(UNIV3_SUBGRAPHS.celo),
+      String(input).endsWith(UNIV3_SUBGRAPHS.bsc),
     )).toBe(true);
     expect(result.uniV3ExecutionCandidates.size).toBe(configuredChains.length);
-    const celoKey = buildUniV3ExecutionCandidateKey("celo", [token0, token1], 3000);
-    expect(celoKey).not.toBeNull();
-    expect(result.uniV3ExecutionCandidates.get(celoKey!)).toEqual([
+    const bscKey = buildUniV3ExecutionCandidateKey("bsc", [token0, token1], 3000);
+    expect(bscKey).not.toBeNull();
+    expect(result.uniV3ExecutionCandidates.get(bscKey!)).toEqual([
       expect.objectContaining({
-        chain: "celo",
+        chain: "bsc",
         poolAddress,
         feePips: 3000,
       }),
+    ]);
+    expect(result.uniV3PoolFees.has(`bsc:${poolAddress}`)).toBe(false);
+    expect(result.uniV3SymbolFees.has("bsc:USDC:USDT")).toBe(false);
+    expect(result.uniV3PriceObs.get("usdc-circle")?.map((observation) => observation.chain)).toEqual([
+      "ethereum",
+      "base",
+      "arbitrum",
+      "polygon",
+      "celo",
     ]);
   });
 

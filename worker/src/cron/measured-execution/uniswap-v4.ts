@@ -54,6 +54,8 @@ export interface UniswapV4Deployment {
   adapterProfileId: typeof UNISWAP_V4_ADAPTER_PROFILE_ID;
   protocol: "uniswap-v4";
   chain: "ethereum";
+  mode: "active" | "shadow";
+  scoreEligible: boolean;
   poolManagerAddress: `0x${string}`;
   expectedPoolManagerCodeHash: `0x${string}`;
   stateViewAddress: `0x${string}`;
@@ -67,13 +69,17 @@ export interface UniswapV4Deployment {
  * https://developers.uniswap.org/docs/protocols/v4/deployments
  *
  * Runtime hashes were pinned from Ethereum block 25,618,353 on 2026-07-26.
- * This is intentionally shadow-only; registry presence is not an activation.
+ * The reviewed hook-free Ethereum cohort was activated after three productive
+ * production shadow generations and a 129/130 successful latest generation on
+ * 2026-08-13. Hooked pools and other deployments remain outside this registry.
  */
 const UNISWAP_V4_DEPLOYMENTS: readonly UniswapV4Deployment[] = [
   {
     adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
     protocol: "uniswap-v4",
     chain: "ethereum",
+    mode: "active",
+    scoreEligible: true,
     poolManagerAddress: "0x000000000004444c5dc75cb358380d2e3de08a90",
     expectedPoolManagerCodeHash:
       "0x785f1014552b7ce7d5fb7d0c970ca60edee94fd00425d7ca21609acac7ce1293",

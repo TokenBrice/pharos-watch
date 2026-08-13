@@ -15,9 +15,11 @@ export const DEX_DISCOVERY_PER_COIN_BUDGET_MS = 25_000;
 
 /**
  * Wall-clock cost of one bounded provider query for a deployment: the provider's
- * pacing floor plus a measured request allowance. GeckoTerminal's 2s floor makes
- * a GT-only chain roughly twice as expensive as a CoinGecko chain, so a window
- * has to price its targets per provider instead of counting them.
+ * pacing floor plus a measured request allowance. A deployment may be visited by
+ * several serial stages, so window pricing must include every registered
+ * provider rather than only the first one. The old first-provider estimate
+ * admitted windows that fit CoinGecko but expired before GT/DexScreener/Curve,
+ * repeatedly publishing bounded-crawl gaps for the tail.
  */
 const DEPLOYMENT_CRAWL_COST_MS = {
   coingecko: RATE_LIMITS.COINGECKO_ONCHAIN_MS + 1_200,
@@ -27,7 +29,7 @@ const DEPLOYMENT_CRAWL_COST_MS = {
   horizon: RATE_LIMITS.HORIZON_MS + 600,
 } as const;
 
-/** Provider stage order inside a coin crawl; the first supporter sets the cost. */
+/** Provider stage order inside a coin crawl. */
 const COST_PROVIDER_ORDER = ["coingecko", "geckoterminal", "dexscreener", "curve", "horizon"] as const;
 
 export interface DiscoveryTargetWindow {
@@ -55,10 +57,10 @@ export function discoveryTargetCursorKey(deployment: ContractDeployment): string
 export function estimateDeploymentCrawlCostMs(chain: string, address?: string): number {
   const providers = getDexDiscoveryProviders(chain, address);
   if (providers.length === 0) return 0;
-  for (const provider of COST_PROVIDER_ORDER) {
-    if (providers.includes(provider)) return DEPLOYMENT_CRAWL_COST_MS[provider];
-  }
-  return 0;
+  return COST_PROVIDER_ORDER.reduce(
+    (sum, provider) => sum + (providers.includes(provider) ? DEPLOYMENT_CRAWL_COST_MS[provider] : 0),
+    0,
+  );
 }
 
 /**
@@ -91,7 +93,24 @@ export function selectDiscoveryTargetWindow({
     };
   }
 
-  const rotated = rotateFromCursor(targets, cursor, discoveryTargetCursorKey, {
+  const grouped = new Map<string, ContractDeployment[]>();
+  for (const target of targets) {
+    const signature = getDexDiscoveryProviders(target.chain, target.address).join("+") || "unsupported";
+    const rows = grouped.get(signature) ?? [];
+    rows.push(target);
+    grouped.set(signature, rows);
+  }
+  const providerGroups = [...grouped.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, rows]) => rows);
+  const providerFairTargets: ContractDeployment[] = [];
+  for (let depth = 0; providerGroups.some((rows) => depth < rows.length); depth++) {
+    for (const rows of providerGroups) {
+      const target = rows[depth];
+      if (target) providerFairTargets.push(target);
+    }
+  }
+  const rotated = rotateFromCursor(providerFairTargets, cursor, discoveryTargetCursorKey, {
     startAfterCursor: true,
   }).items;
   const window: ContractDeployment[] = [];
