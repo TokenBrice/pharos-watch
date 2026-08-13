@@ -966,7 +966,8 @@ describe("tracked stablecoin metadata", () => {
       },
     ]);
     expect(usdai?.liveReservesConfig).toMatchObject({
-      adapter: "curated-validated",
+      adapter: "usdai-hub",
+      version: 1,
       semantics: "single-asset",
       breakerScope: "usdai-usd-ai",
       display: {
@@ -978,6 +979,14 @@ describe("tracked stablecoin metadata", () => {
           kind: "onchain-evm",
           chain: "arbitrum",
           rpcMode: "public-rpc",
+        },
+      },
+      params: {
+        hubAddress: "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
+        baseTokenAddress: "0x46850aD61C2B7d64d08c9C754F45254596696984",
+        implementationAddress: "0x0ab74df531c0d8f1c46643e404b3d14723bbc212",
+        redemptionCapacity: {
+          holderEligibility: "whitelisted-primary",
         },
       },
     });

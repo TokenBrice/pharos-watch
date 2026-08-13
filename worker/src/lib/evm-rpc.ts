@@ -592,6 +592,16 @@ export async function fetchEvmBlockHeader(
   return { number: parsedNumber, timestamp, hash: hash as `0x${string}` };
 }
 
+/** Header lookup for the JSON-RPC safe tag. Kept separate so existing
+ * finalized-only observer dependency contracts remain source-compatible. */
+export async function fetchEvmBlockHeaderAtTag(
+  chainId: string,
+  blockNumberOrTag: "safe" | "finalized",
+  options?: EvmRpcOptions,
+): Promise<EvmBlockHeader | null> {
+  return fetchEvmBlockHeader(chainId, blockNumberOrTag as "finalized", options);
+}
+
 export async function resolveClosestBlockAtOrBeforeTimestamp(
   chainId: string,
   targetTimestamp: number,

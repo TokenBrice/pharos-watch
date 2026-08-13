@@ -332,6 +332,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // redemption block and is not an unused-telemetry candidate.
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "none" },
   },
+  "usdai-hub": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "usdaiHub",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_SINGLE_ASSET_V1,
+    redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
   "dola-inverse": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
@@ -396,6 +407,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "xdai-bridge": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "xdaiBridge",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   falcon: {
@@ -493,6 +515,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_PROTOCOL_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "hive-hbd-protocol": {
+    primaryInputKinds: ["http-json"],
+    paramsSchema: "hiveHbdProtocol",
+    sourceModel: "single-bucket",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_PROTOCOL_V1,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
   },
   infinifi: {
