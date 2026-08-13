@@ -1378,9 +1378,10 @@ describe("P4 DEX exit route observations", () => {
       },
     };
     expect(ExitRouteObservationCoverageSchema.safeParse(producerCoverage).success).toBe(true);
-    // 22 capability pools are still gated, so the carve-out alone cannot
-    // certify this surface even once the key matches.
-    expect(isDexExitRouteCoverageWithinRouteBudget(producerCoverage)).toBe(false);
+    // 9.2: ten score-eligible observations already fill the public payload
+    // bound, so leftover construction/model gates and non-admitted quote
+    // failures are not missing budgeted observations.
+    expect(isDexExitRouteCoverageWithinRouteBudget(producerCoverage)).toBe(true);
 
     // Same surface with the gated pools cleared: the only unobserved
     // capability pools are payload-budget omissions, so budget accounting
@@ -1437,8 +1438,9 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(rotationDeferredCoverage)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(rotationDeferredCoverage)).toBe(true);
 
-    // An attempted measurement that produced no valid profile is a genuine
-    // capability gap and stays in the denominator.
+    // quote-failed on a payload-saturated surface is a leftover attempt, not a
+    // missing budgeted observation. It still fails closed when the public
+    // bound is not full (see gatedCoverage above, 4 of 10 observed).
     expect(
       isDexExitRouteCoverageWithinRouteBudget({
         ...rotationDeferredCoverage,
@@ -1449,7 +1451,107 @@ describe("P4 DEX exit route observations", () => {
           routeObservationPayloadOverflow: 264,
         },
       }),
-    ).toBe(false);
+    ).toBe(true);
+  });
+
+  it("certifies live USDT/USDC/DAI/EURC budgeted surfaces and keeps crvUSD open", () => {
+    const usdtShaped = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 1307,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 802,
+      unsupportedPoolCount: 1297,
+      evidenceCounts: { "measured-executable-depth": 10 },
+      unsupportedReasons: {
+        "executionCapabilityGate:constant-product-v2:incomplete-exact-capture": 13,
+        "executionCapabilityGate:measured-execution:target-unresolved": 461,
+        "executionCapabilityGate:measured-execution:quote-missing": 40,
+        "executionCapabilityGate:curve-stableswap:exact-pool-join-unresolved": 6,
+        "executionCapabilityGate:measured-execution:budget-deferred": 82,
+        "executionCapabilityGate:curve-cryptoswap:unsupported-invariant": 5,
+        "executionCapabilityGate:measured-execution:invalid-observation": 3,
+        "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 5,
+        "executionCapabilityGate:balancer-amm:paused-or-swap-disabled": 2,
+        "executionCapabilityGate:balancer-amm:rate-bearing-inputs": 1,
+        "executionCapabilityGate:measured-execution:activation-pending": 1,
+        "nonExecutableEvidence:discovery-pool-shaped": 280,
+        "nonExecutableEvidence:direct-api-amm-shaped": 1,
+        "nonExecutableEvidence:defillama-pool-shaped": 224,
+        invalidRetainedPool: 2,
+        routeObservationPayloadOverflow: 171,
+      },
+    };
+    expect(isDexExitRouteCoverageComplete(usdtShaped)).toBe(false);
+    expect(isDexExitRouteCoverageWithinRouteBudget(usdtShaped)).toBe(true);
+
+    const daiShaped = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 119,
+      observationCount: 10,
+      scoreEligibleObservationCount: 10,
+      scoreEligiblePoolCount: 10,
+      scoreEligibleCapabilityPoolCount: 61,
+      unsupportedPoolCount: 109,
+      evidenceCounts: { "measured-executable-depth": 10 },
+      unsupportedReasons: {
+        "executionCapabilityGate:measured-execution:quote-missing": 4,
+        "executionCapabilityGate:measured-execution:target-unresolved": 19,
+        "executionCapabilityGate:balancer-amm:unsupported-invariant": 2,
+        "nonExecutableEvidence:defillama-pool-shaped": 50,
+        "nonExecutableEvidence:discovery-pool-shaped": 8,
+        routeObservationPayloadOverflow: 26,
+      },
+    };
+    expect(isDexExitRouteCoverageWithinRouteBudget(daiShaped)).toBe(true);
+
+    const eurcShaped = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 42,
+      observationCount: 8,
+      scoreEligibleObservationCount: 8,
+      scoreEligiblePoolCount: 8,
+      scoreEligibleCapabilityPoolCount: 34,
+      unsupportedPoolCount: 34,
+      evidenceCounts: { "measured-executable-depth": 8 },
+      unsupportedReasons: {
+        "executionCapabilityGate:measured-execution:target-unresolved": 11,
+        "executionCapabilityGate:measured-execution:quote-missing": 5,
+        "executionCapabilityGate:measured-execution:budget-deferred": 5,
+        "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1,
+        "executionCapabilityGate:balancer-amm:rate-bearing-inputs": 1,
+        "executionCapabilityGate:curve-cryptoswap:unsupported-invariant": 1,
+        "nonExecutableEvidence:defillama-pool-shaped": 8,
+        routeObservationPayloadOverflow: 2,
+      },
+    };
+    expect(isDexExitRouteCoverageWithinRouteBudget(eurcShaped)).toBe(true);
+
+    const crvusdShaped = {
+      status: "populated" as const,
+      capabilityMatrixVersion: "p4a.8",
+      retainedPoolCount: 113,
+      observationCount: 3,
+      scoreEligibleObservationCount: 3,
+      scoreEligiblePoolCount: 3,
+      scoreEligibleCapabilityPoolCount: 50,
+      unsupportedPoolCount: 110,
+      evidenceCounts: { "measured-executable-depth": 3 },
+      unsupportedReasons: {
+        "invalidMeasuredExecution:physical-pool-provenance-mismatch": 8,
+        "executionCapabilityGate:curve-cryptoswap:unsupported-invariant": 13,
+        "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1,
+        "executionCapabilityGate:measured-execution:deployment-code-mismatch": 3,
+        "nonExecutableEvidence:discovery-pool-shaped": 62,
+        "nonExecutableEvidence:defillama-pool-shaped": 1,
+        routeObservationPayloadOverflow: 22,
+      },
+    };
+    expect(isDexExitRouteCoverageWithinRouteBudget(crvusdShaped)).toBe(false);
   });
 
   it("rejects internally inconsistent producer coverage counts", () => {

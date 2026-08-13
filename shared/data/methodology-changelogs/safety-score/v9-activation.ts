@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_ROUTE_BUDGET_COMPLETENESS: MethodologyChangelogEntry = {
+  version: "9.2",
+  title: "Budgeted DEX observations stop publishing as a data-feed failure",
+  date: "2026-08-13",
+  effectiveAt: 1786622400,
+  summary:
+    "Exit gap accounting treats the public route-selection bound as the admitted observation set. A populated p4a.8 surface that already carries its budgeted score-eligible routes is complete even when hundreds of other recognised venues failed target construction or sit behind a reviewed model limit. Leftover `quote-failed` attempts no longer keep a payload-saturated surface open; they still fail closed when the bound is not full. A recognised venue whose only remaining gates are reviewed model limits is method-unsupported rather than producer-failed.",
+  impact: [
+    "USDT, USDC, DAI, EURC, and other payload-saturated or fully-carved populated surfaces leave `incomplete-dex-route-coverage` instead of publishing as a data-feed failure",
+    "Exact-route scoring completeness is unchanged: only gap accounting uses the budgeted denominator, so a partial observation set still cannot replace the aggregate DEX path",
+    "Rate-bearing, unsupported-invariant, metapool, and paused/swap-disabled gates on a zero-observation surface are method limits, not feed outages",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_RESERVE_FRESHNESS_PROVENANCE: MethodologyChangelogEntry = {
   version: "9.193",
   title: "Reserve freshness follows the accounting state, not its API envelope",
