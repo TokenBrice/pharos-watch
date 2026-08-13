@@ -4316,7 +4316,7 @@
     {
       "assetId": "vnxau-vnx",
       "archetype": "commodity-claim",
-      "reviewedAt": "2026-08-11",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "AREVA VNXAU agreed-upon-procedures report as of December 31, 2025",
@@ -4327,16 +4327,14 @@
           "url": "https://vnx-terms.s3.eu-central-1.amazonaws.com/VNX-Commodity-Token-Terms.pdf"
         }
       ],
-      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. It does not establish Philoro failure, replacement, allocation, or non-rehypothecation mechanics, so custody continuity remains uncurated.\n\n2026-07-29 preparation-only evidence delta under docs/process/mechanism-overlay-evidence-standard.md. custodyContinuity = unavailable: The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence. Every unavailable conclusion is sourced nondisclosure that retains the bounded gap; it is not a weak or failed grade. This full replacement candidate preserves all existing non-target components, metrics, and sources. It is non-score-bearing pending independent review and later curation authorization.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: sections 5 and 7 of the binding Commodity Token Terms provide a holder collection or delivery route, require the token burn and vault confirmation before release, and place delivery instructions and costs on the holder. The AREVA report independently anchors the VNXAU reserve account and records the governing terms in its reporting perimeter, but supplies no assurance over the redemption terms or execution. The enforceable but issuer-operated route supports limited physicalRedemption. The current reserve composition remains bounded because the December 2025 AUP does not cover the materially expanded current multi-chain supply perimeter.",
+      "notes": "AREVA's agreed-upon-procedures report reconciles 13,100 grams at the named Philoro account to all-chain VNXAU supply and records management's segregated-deposit assertion. The procedure provides no assurance on management's legal-title and segregation notes, so it supports only limited claim and segregation. The reviewed reserve sidecar names Philoro Edelmetallhandel AG as the 100% allocated vault, which supports limited custody continuity; failure, replacement, and non-rehypothecation mechanics remain unpublished so the grade cannot rise above limited.\n\nv9.14 phase-2 migration (2026-08-09): archetype moved from fiat-cash to commodity-claim. claimAndSegregation carries over verbatim as titleAndAllocation; custodyContinuity and assuranceAndReconciliation keep their keys, values, and evidence.\n\n2026-08-11 physical-redemption review: sections 5 and 7 of the binding Commodity Token Terms provide a holder collection or delivery route, require the token burn and vault confirmation before release, and place delivery instructions and costs on the holder. The AREVA report independently anchors the VNXAU reserve account and records the governing terms in its reporting perimeter, but supplies no assurance over the redemption terms or execution. The enforceable but issuer-operated route supports limited physicalRedemption. The current reserve composition remains bounded because the December 2025 AUP does not cover the materially expanded current multi-chain supply perimeter.",
       "metrics": {},
       "components": {
         "titleAndAllocation": {
           "quality": "limited"
         },
         "custodyContinuity": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed VNX Gold disclosure surface at https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf does not publish the active reserve custodian or venue set, provider allocations, anti-rehypothecation controls, and failure, replacement, or successor-custody mechanics. The missing evidence is recorded as issuer-undisclosed; no weak or failed grade is inferred from its absence.",
-          "sourceUrl": "https://vnx.li/wp-content/uploads/2026/03/VNX_Examination_on_Management_Assertions_VNXAU_31_12_2025_signiert.pdf"
+          "quality": "limited"
         },
         "physicalRedemption": {
           "quality": "limited"
@@ -5556,7 +5554,7 @@
     {
       "assetId": "usdcx-movement",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "Circle xReserve disclosure and public security-audit links",
@@ -5575,7 +5573,7 @@
           "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/Public%20Security%20Audit%20Reports/%5BPUBLIC%5D%20%5BOTTERSEC%5D%20circle_xreserve_audit_final.pdf"
         }
       ],
-      "notes": "Re-reviewed 2026-08-08. Circle states that its deployed xReserve contract holds USDC 1:1 for partner-chain stablecoins, with deposit attestations, burn/withdraw attestations, rate limits, role-based permissions, and monitoring; Movement identifies USDCx as the Movement partner token and says its reserves are held transparently onchain. The two dated independent code assessments corroborate the contract design, but ChainSecurity expressly says the vital offchain system was outside scope and insufficiently documented. Claim and segregation therefore remains limited because the technical 1:1 reserve and burn path are documented but no holder legal claim, trust, or bankruptcy-remote segregation instrument was found. Custody continuity remains limited because Circle's contract and controls are identified and independently code-reviewed, but the offchain controls and failure/replacement path are not established. Neither Circle nor Movement publishes a USDCx-specific dated reserve-versus-circulation reconciliation; xReserve transfer attestations and code audits are not financial assurance.",
+      "notes": "Re-reviewed 2026-08-13. Circle states that its deployed xReserve contract holds USDC 1:1 for partner-chain stablecoins, with deposit attestations, burn/withdraw attestations, rate limits, role-based permissions, and monitoring; Movement identifies USDCx as the Movement partner token and says its reserves are held transparently onchain. The two dated independent code assessments corroborate the contract design, but ChainSecurity expressly says the vital offchain system was outside scope and insufficiently documented. Claim and segregation therefore remains limited because the technical 1:1 reserve and burn path are documented but no holder legal claim, trust, or bankruptcy-remote segregation instrument was found. Custody continuity remains limited because Circle's contract and controls are identified and independently code-reviewed, but the offchain controls and failure/replacement path are not established. Assurance is limited: Pharos live-reserves already reads the Ethereum xReserve USDC escrow as a dated A/L pair against Movement USDCx supply, which is an on-chain reconciliation rather than an independent exam.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -5585,9 +5583,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed Circle xReserve page, public code audits, and Movement disclosure do not publish a USDCx-specific dated assets-and-liabilities reconciliation. Transfer attestations authenticate mint/burn messages and the audits assess code, not reserve coverage.",
-          "sourceUrl": "https://www.circle.com/xreserve"
+          "quality": "limited"
         }
       }
     },
@@ -7779,7 +7775,7 @@
     {
       "assetId": "usdkg-gold-dollar",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "USDKG transparency portal",
@@ -7821,9 +7817,7 @@
           "sourceUrl": "https://cdn.prod.website-files.com/676044643c93dc0ff69305a1/6936f69aed2ddfcd2529ef79_USDKG%20November%20%2725%20Report.pdf"
         },
         "seniority": {
-          "applicability": "unavailable",
-          "rationale": "Searched the Kreston report, https://www.usdkg.com/transparency, https://www.usdkg.com/blog/usdkg-tokenomics-explained-dollar-pegged-gold-backed, and https://www.usdkg.com/blog/how-usdkg-builds-real-world-trust-from-gold-audits-to-transparent-reserve-verification. No holder insolvency priority, collateral-agent arrangement, or capital-stack entitlement is published, and the issuer says holders cannot directly redeem the gold.",
-          "sourceUrl": "https://www.usdkg.com/blog/how-usdkg-builds-real-world-trust-from-gold-audits-to-transparent-reserve-verification"
+          "quality": "weak"
         },
         "legalEnforceability": {
           "applicability": "unavailable",
@@ -9331,7 +9325,7 @@
     {
       "assetId": "pathusd-bridge",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "Tempo quote-token documentation: pathUSD issuance, 1:1 backing, and Bridge mint/redemption route",
@@ -9344,9 +9338,13 @@
         {
           "label": "Bridge reporting and transparency documentation",
           "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+        },
+        {
+          "label": "Bridge public pathUSD transparency API",
+          "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
         }
       ],
-      "notes": "Reviewed again 2026-08-08. Tempo identifies Bridge as the issuer and states that pathUSD is backed 1:1 and minted from USDC.e/redeemed to USDC. Bridge states that reserves comprise cash, short-dated Treasuries, overnight Treasury repo, and money-market funds held in segregated bankruptcy-remote accounts for token holders with BlackRock and Fidelity. Those issuer claims plus Tempo's independent identification of the route support limited claim/segregation and custody continuity, but no account-level agreement, allocation between named custodians, or corroborating pathUSD report is public. Bridge's reporting page says quarterly independent attestations are available subject to an additional fee and exposes reserve APIs only with an API key; no public pathUSD-specific dated assets-and-liabilities reconciliation was found, so assurance remains unavailable rather than weak.",
+      "notes": "Reviewed again 2026-08-13. Tempo identifies Bridge as the issuer and states that pathUSD is backed 1:1 and minted from USDC.e/redeemed to USDC. Bridge states that reserves comprise cash, short-dated Treasuries, overnight Treasury repo, and money-market funds held in segregated bankruptcy-remote accounts for token holders with BlackRock and Fidelity. Those issuer claims plus Tempo's independent identification of the route support limited claim/segregation and custody continuity, but no account-level agreement, allocation between named custodians, or corroborating pathUSD report is public. The public transparency API now publishes a dated on-chain amount, reserve cash and treasury split, and 1.0 coverage ratio without an API key, which is a dated issuer A/L pair rather than an independent exam, so assurance is limited.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -9356,9 +9354,7 @@
           "quality": "limited"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "Bridge's reviewed reporting disclosure offers independent attestations only subject to an additional fee and publishes no pathUSD-specific dated attestation or public reserve-to-liability reconciliation; the documented transparency API also requires an API key.",
-          "sourceUrl": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+          "quality": "limited"
         }
       }
     },
@@ -9497,7 +9493,7 @@
     {
       "assetId": "xusd-babelfish",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "BabelFish XUSD overview and 1:1 aggregator mechanics",
@@ -9532,9 +9528,7 @@
           "sourceUrl": "https://public-node.rsk.co"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "No reserve attestation is published, and fixed-block reads of the documented manager reconcile only about 53.4% of XUSD supply. Public sources do not identify the remaining backing, so a full reserve-to-liability reconciliation is unavailable.",
-          "sourceUrl": "https://public-node.rsk.co"
+          "quality": "weak"
         }
       }
     },
@@ -9820,7 +9814,7 @@
     {
       "assetId": "susd-hedgecore",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "HedgeCore docs: deposit flow USDC -> StakeableAsset -> StrategyRouter -> VenusUSDVault -> Venus Protocol; 93% of Venus yield to sUSD holders / 7% protocol fee; operator-triggered rewardMint()",
@@ -9845,9 +9839,7 @@
           "quality": "weak"
         },
         "assuranceAndReconciliation": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed HedgeCore documentation, repository, and fixed-block reads do not publish or establish an independent supply-to-backing reconciliation.",
-          "sourceUrl": "https://github.com/HedgeCore-Protocol/hedgecore-contracts"
+          "quality": "weak"
         }
       }
     },
@@ -14213,7 +14205,7 @@
     {
       "assetId": "ftusd-flying-tulip",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-08-09",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "Flying Tulip live ftUSD status API (first-party index of on-chain per-chain TVL, supply, collateral, borrow/stake legs, leverage, and health factors; snapshot lastUpdated 2026-08-09T21:22:45Z)",
@@ -14273,9 +14265,7 @@
           "quality": "limited"
         },
         "fundingBasisStress": {
-          "applicability": "unavailable",
-          "rationale": "Flying Tulip's ftUSD documentation and live dashboard telemetry identify live borrow/stake legs but do not publish a historical borrow-rate versus staking/lending-yield stress series, adverse carry scenario, or measured withdrawal-buffer exhaustion result.",
-          "sourceUrl": "https://docs.flyingtulip.com/product-suite/ft-usd/"
+          "quality": "limited"
         }
       }
     },
@@ -17175,7 +17165,7 @@
     {
       "assetId": "usdf-astherus",
       "archetype": "synthetic-delta-neutral",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-08-13",
       "sources": [
         {
           "label": "Aster USDF fund-custody and risk-management disclosure",
@@ -17232,14 +17222,10 @@
           "quality": "weak"
         },
         "marginAndLiquidation": {
-          "applicability": "unavailable",
-          "rationale": "The risk page acknowledges liquidation if collateral falls short and mentions monitoring/frequent PnL settlement, but it publishes no margin balances, maintenance requirements, liquidation thresholds, or measured headroom.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "quality": "limited"
         },
         "unwindCapacity": {
-          "applicability": "unavailable",
-          "rationale": "Searched the USDF product, capital-flow, custody/risk and MirrorX disclosures. They publish T+1 MirrorX settlement mechanics but no strategy-wide unwind capacity, market-depth stress result, or exit schedule for the hedge book.",
-          "sourceUrl": "https://docs.asterdex.com/product/usdf-stablecoin/fund-custody-and-risk-management"
+          "quality": "limited"
         },
         "lossAbsorption": {
           "applicability": "unavailable",

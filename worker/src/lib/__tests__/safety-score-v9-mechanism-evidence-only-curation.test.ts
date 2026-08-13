@@ -20,7 +20,6 @@ const EVIDENCE_ONLY_TARGETS = {
   "chfau-allunity": ["assuranceAndReconciliation", "custodyContinuity"],
   "jupusd-jupiter": ["claimAndSegregation"],
   "brz-transfero": ["assuranceAndReconciliation", "claimAndSegregation", "custodyContinuity"],
-  "pathusd-bridge": ["assuranceAndReconciliation"],
   "eusd-electronic-usd": [],
   "aid-gaib": ["claimAndSegregation", "custodyContinuity"],
   "usdm-moneta": ["custodyContinuity"],
@@ -32,7 +31,6 @@ const EVIDENCE_ONLY_TARGETS = {
   "usdq-quantoz": ["assuranceAndReconciliation", "custodyContinuity"],
   "ctusd-citrea": ["assuranceAndReconciliation", "custodyContinuity"],
   "tryb-bilira": ["custodyContinuity"],
-  "vnxau-vnx": ["custodyContinuity"],
   "axcnh-anchorx": ["custodyContinuity"],
   "kgst-kyrgyz-som": ["assuranceAndReconciliation", "custodyContinuity"],
   "jtrsy-anemoy": ["lossRecoveryDesign"],
@@ -49,14 +47,13 @@ const EVIDENCE_ONLY_TARGETS = {
 const REVIEW_DATE_OVERRIDES: Partial<Record<keyof typeof EVIDENCE_ONLY_TARGETS, string>> = {
   "pgold-pleasing": "2026-08-11",
   "usdgo-osl": "2026-08-11",
-  "vnxau-vnx": "2026-08-11",
   "xaum-matrixdock": "2026-08-11",
 };
 
 describe("Safety Score V9 evidence-only mechanism curation", () => {
   it("keeps every reviewed nondisclosure target bounded and non-scoring", () => {
-    expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(36);
-    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(64);
+    expect(Object.keys(EVIDENCE_ONLY_TARGETS)).toHaveLength(34);
+    expect(Object.values(EVIDENCE_ONLY_TARGETS).flat()).toHaveLength(62);
 
     const overlayById = new Map(
       mechanismReviewOverlaysAsset.overlays.map((overlay) => [overlay.assetId, overlay]),
