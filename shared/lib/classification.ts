@@ -49,6 +49,6 @@ export const HERO_CHIP_BACKING_LABELS = {
 
 export const HERO_CHIP_GOVERNANCE_LABELS = {
   centralized: "Centralized",
-  "centralized-dependent": "Dependent",
+  "centralized-dependent": "Centralized-Dependent",
   decentralized: "Decentralized",
 } as const satisfies Record<GovernanceType, string>;

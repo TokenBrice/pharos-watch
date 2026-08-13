@@ -463,6 +463,7 @@ describe("HeroCard", () => {
       />,
     );
 
+    expect(html).toContain("Centralized-Dependent");
     expect(html).toContain("Upstream freeze — freezing is inherited from an upstream issuer or collateral asset");
     expect(html).toContain(">Upstream<");
     expect(html).not.toContain("No issuer controls");
