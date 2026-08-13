@@ -523,6 +523,46 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
       "supply-full is eventual issuer-term capacity only: no current eMXN reserve or executable-capacity telemetry was published.",
     ],
   },
+  "jpysc-sbi-startale": {
+    ...issuerBase,
+    ...documentedBoundSupplyFull("2026-08-13"),
+    outputAssetType: "stable-single",
+    unresolvedOutputAssetKeys: ["fiat:JPY"],
+    unresolvedOutputDisposition: "reviewed-external",
+    costModel: documentedVariableFee(
+      "Direct issuer redemption costs 3,000 JPY plus consumption tax per redemption; bank transfer fees are borne by the holder",
+    ),
+    holderEligibility: "verified-customer",
+    routeExitCorrelation: "independent-issuer-rail",
+    docs: [
+      sourceRef("SBI Shinsei Trust JPYSC product page", "https://www.shinseitrust.com/stablecoin/jpysc.html", [
+        "route",
+        "access",
+        "settlement",
+        "fees",
+      ]),
+      sourceRef(
+        "SBI Shinsei Trust JPYSC terms PDF",
+        "https://www.shinseitrust.com/stablecoin/pdf/jpysc_terms_20260624.pdf",
+        ["route", "access", "settlement", "fees", "capacity"],
+      ),
+      sourceRef("SBI VC Trade token manual", "https://www.sbivc.co.jp/assets/docs/manual_tt.pdf", ["route", "settlement"]),
+      sourceRef("SBI VC Trade JPYSC page", "https://www.sbivc.co.jp/jpysc", ["route", "access"]),
+      sourceRef("Startale JPYSC launch announcement", "https://startale.com/ja/blog/jpysc-launch", ["access", "settlement"]),
+      sourceRef("Ethereum JPYSC explorer", "https://etherscan.io/address/0x6781d5631bfe47432b089e64e3eab3b6edd26177#code", [
+        "route",
+        "access",
+        "capacity",
+      ]),
+      sourceRef("Ethereum RPC", "https://ethereum.publicnode.com", ["capacity", "access"]),
+    ],
+    notes: [
+      "The primary modeled route is direct 1:1 JPY redemption from SBI Shinsei Trust after the holder transfers JPYSC to the issuer-designated wallet; the separate SBI VC Trade account route is not required.",
+      "The current terms allow a principal beneficiary to request partial redemption subject to identity and transaction checks, with prompt JPY payment after receipt; JPY remains an unresolved fiat output rather than a tracked stablecoin.",
+      "supply-full is the documented legal redemption bound, not a claim that same-day bank liquidity equals current token supply; requests can lapse or be delayed under the terms' wallet-designation and transfer windows.",
+      "The 3,000 JPY plus consumption-tax issuer fee and holder-borne bank transfer fee are documented flat-currency charges, so the cost is retained as a documented variable/unclear model rather than converted into fabricated bps.",
+    ],
+  },
   "hlusd-hela": {
     ...issuerBase,
     accessModel: "manual",

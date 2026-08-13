@@ -6,12 +6,12 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** `v4.36`
+- **Current methodology version:** `v4.37`
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/redemption-backstop.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`
 
-Latest `v4.36` update: nine reviewed routes expand coverage across protocol and issuer rails. MAI adds a queued QiDao PSM with an undisclosed stablecoin collateral set; trUSD, JUSD, JPYT, and suiUSDe add stablecoin-redemption routes while preserving JUSD's unresolved Citrea basket and JPYT's average Lock-In Exchange Rate basis, with the delta-neutral trUSD and suiUSDe routes using conservative 10% strategy-buffer heuristics; USDM adds a three-day Monetrix request/claim queue with the same heuristic; HCHF adds HBAR collateral redemption; and eMXN plus reviewer-adjusted HLUSD add delayed issuer rails, with HLUSD modeled as a manual StableHodl OTC route into USDC or USDT. Eventual-capacity, pause/limit, unresolved-output, and OTC-processing caveats remain explicit. Scoring weights, ladders, and the exit engine are unchanged.
+Latest `v4.37` update: three reviewed routes expand coverage across collateral, PSM, and direct issuer rails. EURO3 adds Polygon/Linea 3A DAO vault collateral redemption with a 0.40290081 eligible-debt heuristic and a current 0 bps fee observation that remains governance-adjustable; iUSD adds a funded Indigo PSM exit into USDM, USDA, and USDCx at 1%, preserving the complete basket as unresolved because Cardano USDCx is untracked; and JPYSC adds direct verified-customer 1:1 JPY redemption from SBI Shinsei Trust with unresolved fiat output and a documented 3,000 JPY plus consumption-tax issuer fee. Eventual-capacity, unresolved-output, and flat-currency fee caveats remain explicit. Scoring weights, ladders, and the exit engine are unchanged.
 
 Earlier release history lives in `shared/data/methodology-changelogs/redemption-backstop/`; keep this document focused on the current contract.
 
@@ -139,7 +139,7 @@ The 2026-07-19 second output pass made the following rulings over the routes tha
 | Route | Ruling | Primary evidence |
 | ----- | ------ | ---------------- |
 | AUDm, BRLm, CADm, COPm, GHSm, KESm, ZARm (broker pools), CHFm (FPMM) | Stable single: USDm (`cusd-celo`). Mento V3 CDP docs name USDm as the collateral asset of the FX-stable path, and every FX Broker/BiPoolManager exchange settles in USDm (the rebranded cUSD). The 2026-07-15 pass left these blocked on cusd-celo being untracked; it is now tracked and priced. | [Mento V3 CDP](https://docs.mento.org/mento-v3/dive-deeper/cdp), [Mento BiPoolManager](https://docs.mento.org/mento/build-on-mento/smart-contracts/bipoolmanager) |
-| USDai | Stable single: PYUSD, from the existing reviewed note that base USDai redeems through the burn-and-withdraw path into PYUSD. | [USD.AI buy / stake](https://docs.usd.ai/app-guide/buy-stake) |
+| USDai | Stable single: PYUSD via the burn-and-withdraw path; capacity now reads the same-run PYUSD `balanceOf(hub)` telemetry from the `usdai-hub` adapter, which fails closed on pause, identity, or liability-reconciliation drift. | [USD.AI buy / stake](https://docs.usd.ai/app-guide/buy-stake) |
 | U | Stable basket: USDC + USDT + USD1, the documented whitelisted stablecoin set of the 1:1 smart-contract mint/burn path. The terms reserve issuer discretion over which reserve asset satisfies a redemption (including cash), so the basket is the documented onchain set, not a guaranteed payout composition. | [United Stables terms](https://www.u.tech/terms/) |
 | inALPHA | Type corrected nav → stable basket (USDC + pUSD), matching the four sibling Nest vault entries retyped on 2026-07-15; the payout assets were already declared and delayed-NAV settlement is unchanged. | [Nest liquidity and redemptions](https://docs.nest.credit/about/liquidity-and-redemptions) |
 | sAID | Type corrected nav → stable single: AID. The withdrawal pays AID (a tracked $1-target stablecoin); the unstaking-NAV conversion-rate and haircut caveats stay in the queued rules-based-nav execution model. | [GAIB sAID docs](https://docs.gaib.ai/products/gaib-products/staked-ai-dollar-said) |

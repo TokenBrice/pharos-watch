@@ -2,6 +2,22 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const REDEMPTION_BACKSTOP_V4: readonly MethodologyChangelogEntry[] = [
   {
+    version: "4.37",
+    title: "Three reviewed redemption routes across collateral, PSM, and direct issuer rails",
+    date: "2026-08-14",
+    effectiveAt: 1786665600,
+    summary:
+      "Reviewed coverage adds EURO3 collateral redemption, Indigo iUSD PSM swaps, and direct SBI Shinsei Trust JPYSC redemption. The routes preserve heuristic or eventual-capacity caveats, explicit output identity gaps, and documented fee semantics; scoring weights, ladders, and the exit engine are unchanged.",
+    impact: [
+      "EURO3 (3A DAO) adds a permissionless Polygon/Linea collateral-redemption route into the documented vault collateral set, using a 0.40290081 eligible-debt heuristic and a current 0 bps observation that remains governance-adjustable.",
+      "iUSD (Indigo) adds a permissionless funded PSM route into USDM, USDA, and USDCx at 1%; USDM and USDA are verified tracked identities while the complete basket remains unresolved because Cardano USDCx is untracked, with a 0.15577082 PSM-share heuristic.",
+      "JPYSC (SBI Shinsei Trust / Startale) adds a verified-customer same-day direct issuer route at 1:1 JPY, retaining unresolved fiat:JPY output and the documented 3,000 JPY plus consumption-tax issuer fee with holder-borne bank-transfer charges.",
+      "Coverage rises to 327 configured routes, with family totals of 151 offchain-issuer, 71 stablecoin-redeem, 40 collateral-redeem, 40 queue-redeem, 16 psm-swap, and 9 basket-redeem.",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "4.36",
     title: "Nine reviewed redemption routes across protocol and issuer rails",
     date: "2026-08-13",
