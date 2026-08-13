@@ -25,17 +25,40 @@ function rejected(deploymentKey: string): SafetyScoreV9TransferMaterialityObserv
   return { deploymentKey, rawTokenUnits: null, decimals: null, blockNumber: null, observedAtSec: null, status: "rejected" };
 }
 
+/**
+ * Observer-local public RPCs for reviewed transfer-materiality deployments
+ * that are absent from the global `PUBLIC_RPC_URLS` map. Do not fold these
+ * into reserve-adapter RPC resolution: they exist only so an already-wired
+ * independent-liability packet can observe its long-tail legs.
+ */
+const TRANSFER_MATERIALITY_EXTRA_RPCS: Record<string, { rpcUrl: string; fallbackRpcUrl?: string }> = {
+  fraxtal: { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
+  sei: { rpcUrl: "https://evm-rpc.sei-apis.com", fallbackRpcUrl: "https://sei-evm-rpc.publicnode.com" },
+  mode: { rpcUrl: "https://mainnet.mode.network", fallbackRpcUrl: "https://mode.drpc.org" },
+  xlayer: { rpcUrl: "https://rpc.xlayer.tech" },
+  katana: { rpcUrl: "https://rpc.katana.network", fallbackRpcUrl: "https://rpc.katanarpc.com" },
+  sonic: { rpcUrl: "https://rpc.soniclabs.com", fallbackRpcUrl: "https://sonic-rpc.publicnode.com" },
+};
+
+export function transferMaterialityObserverResolvesRpc(
+  chainId: string,
+  configured: Map<string, ChainRpcConfig> = new Map(),
+): boolean {
+  return rpcConfig(chainId, configured) !== null;
+}
+
 function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Map<string, ChainRpcConfig> | null {
   if (configured.has(chainId)) return configured;
   const meta = CHAIN_META[chainId];
-  const rpcUrl = getPublicRpcUrl(chainId);
+  const extra = TRANSFER_MATERIALITY_EXTRA_RPCS[chainId];
+  const rpcUrl = extra?.rpcUrl ?? getPublicRpcUrl(chainId);
   if (!meta || meta.type !== "evm" || !rpcUrl) return null;
   return new Map(configured).set(chainId, {
     chainId,
     chainName: meta.name,
     type: "evm",
     rpcUrl,
-    fallbackRpcUrl: getSecondaryFallbackRpcUrl(chainId),
+    fallbackRpcUrl: extra?.fallbackRpcUrl ?? getSecondaryFallbackRpcUrl(chainId),
     explorerUrl: meta.explorerUrl,
   });
 }
