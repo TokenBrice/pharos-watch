@@ -18,11 +18,10 @@
   "geckoId": "flying-tulip-usd",
   "llamaId": "421",
   "proofOfReserves": {
-    "type": "self-reported",
+    "type": "real-time",
     "url": "https://flyingtulip.com/ftusd/dashboard/",
-    "attestorTier": "self",
     "cadence": "real-time",
-    "provider": "Flying Tulip real-time dashboard/API (issuer-operated cross-chain collateral, supply, and strategy telemetry; no independent third-party attestation)"
+    "provider": "Flying Tulip real-time dashboard/API (first-party indexing of publicly verifiable on-chain collateral, supply, and strategy state)"
   },
   "links": [
     {
@@ -76,7 +75,7 @@
     "breakerScope": "ftusd-flying-tulip",
     "display": {
       "url": "https://flyingtulip.com/ftusd/dashboard/",
-      "label": "Flying Tulip ftUSD dashboard (issuer-operated)"
+      "label": "Flying Tulip ftUSD on-chain reserve dashboard"
     },
     "inputs": {
       "primary": {
