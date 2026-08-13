@@ -387,9 +387,30 @@ function buildExecutionModel(input: {
     };
   }
   const trackedTokenIndex = trackedIndexes[0]!;
-  const trackedReferencePrice = input.stablecoinPriceById.get(reference.stablecoinId);
-  if (!Number.isFinite(trackedReferencePrice) || !(trackedReferencePrice! > 0)) {
-    return { model: null, reason: "incomplete-exact-capture" };
+  const trustedPriceByIndex = assetIds.map((assetId) => {
+    if (!assetId) return null;
+    const price = input.stablecoinPriceById.get(assetId);
+    return Number.isFinite(price) && price! > 0 ? price! : null;
+  });
+  let trackedReferencePrice = trustedPriceByIndex[trackedTokenIndex];
+  let trackedReferenceSource: "tracked-market" | "pool-implied" = "tracked-market";
+  // Weak/single-source quotes never enter stablecoinPriceById. A unique
+  // authoritative counter-asset still sizes the tracked input from same-block
+  // reserves, the inverse of the existing untracked-output imply.
+  if (trackedReferencePrice == null) {
+    const pricedOthers = trustedPriceByIndex.flatMap((price, index) =>
+      index !== trackedTokenIndex && price != null ? [{ index, price }] : [],
+    );
+    if (pricedOthers.length !== 1) {
+      return { model: null, reason: "incomplete-exact-capture" };
+    }
+    const other = pricedOthers[0]!;
+    const implied = (state.balances[other.index]! * other.price) / state.balances[trackedTokenIndex]!;
+    if (!Number.isFinite(implied) || implied <= 0) {
+      return { model: null, reason: "incomplete-exact-capture" };
+    }
+    trackedReferencePrice = implied;
+    trackedReferenceSource = "pool-implied";
   }
 
   const symbolByAddress = new Map(
@@ -398,19 +419,23 @@ function buildExecutionModel(input: {
   const referencePrices: number[] = [];
   const referencePriceSources: Array<"tracked-market" | "pool-implied"> = [];
   for (let index = 0; index < state.tokenAddresses.length; index++) {
-    const assetId = assetIds[index];
-    if (assetId) {
-      const price = input.stablecoinPriceById.get(assetId);
-      if (!Number.isFinite(price) || !(price! > 0)) {
-        return { model: null, reason: "incomplete-exact-capture" };
-      }
-      referencePrices[index] = price!;
+    if (index === trackedTokenIndex) {
+      referencePrices[index] = trackedReferencePrice;
+      referencePriceSources[index] = trackedReferenceSource;
+      continue;
+    }
+    const trustedPrice = trustedPriceByIndex[index];
+    if (trustedPrice != null) {
+      referencePrices[index] = trustedPrice;
       referencePriceSources[index] = "tracked-market";
       continue;
     }
+    if (assetIds[index]) {
+      return { model: null, reason: "incomplete-exact-capture" };
+    }
     const trackedBalance = state.balances[trackedTokenIndex]!;
     const balance = state.balances[index]!;
-    const poolImpliedPrice = (trackedBalance * trackedReferencePrice!) / balance;
+    const poolImpliedPrice = (trackedBalance * trackedReferencePrice) / balance;
     if (!Number.isFinite(poolImpliedPrice) || poolImpliedPrice <= 0) {
       return { model: null, reason: "incomplete-exact-capture" };
     }
