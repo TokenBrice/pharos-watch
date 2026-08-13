@@ -11,6 +11,7 @@ import { buildChainAddressKey, resolveTrackedStablecoinId } from "./token-resolu
 import { classifyClPoolType, normalizeFeeRateFromBps } from "./direct-source-helpers";
 import { DIRECT_API_REQUEST_TIMEOUT_MS } from "./direct-api-policy";
 import { toErrorMessage } from "../../lib/error-utils";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 const PAGE_SIZE = 100;
@@ -623,7 +624,14 @@ export async function fetchSlipstreamPools(
       if (!known.has(pool.poolAddress.toLowerCase())) pools.push(pool);
     }
     if (recovered.length > 0) {
-      console.log(`[fetch-slipstream] ${protocol} recovered ${recovered.length} staged exact pools on-chain`);
+      logWorkerEvent({
+        scope: "lib",
+        level: "info",
+        event: "slipstream-staged-pools-recovered",
+        job: "sync-dex-liquidity",
+        message: "Recovered staged Slipstream pools through exact on-chain verification",
+        metadata: { protocol, recoveredPoolCount: recovered.length },
+      });
     }
   }
   if (pools.length > 0) console.log(`[fetch-slipstream] ${protocol} fetched ${pools.length} pools`);
