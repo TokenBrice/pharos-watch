@@ -574,7 +574,7 @@ const MEASURED_QUOTE_FAILED_REASON = "executionCapabilityGate:measured-execution
  * not missing budgeted observations. `quote-failed` stays in the denominator
  * unless the public observation bound is already saturated below.
  */
-export function carvedRouteBudgetCapabilityCount(coverage: ExitRouteObservationCoverage): number {
+function carvedRouteBudgetCapabilityCount(coverage: ExitRouteObservationCoverage): number {
   const overflow = coverage.unsupportedReasons["routeObservationPayloadOverflow"] ?? 0;
   let gated = 0;
   for (const [reason, count] of Object.entries(coverage.unsupportedReasons)) {

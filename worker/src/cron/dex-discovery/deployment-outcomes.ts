@@ -174,11 +174,11 @@ export function buildStaticInaccessibleDeploymentOutcomes(nowSec: number): DexDe
   );
 }
 
-export const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
+const DEX_DISCOVERY_BOUNDED_CRAWL_REASON =
   "No provider completed a query for this deployment in the bounded crawl";
-export const DEX_DISCOVERY_FAILED_CRAWL_REASON =
+const DEX_DISCOVERY_FAILED_CRAWL_REASON =
   "Bounded discovery crawl failed before a complete deployment census";
-export const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
+const DEX_DISCOVERY_PROVIDER_OUTAGE_REASON =
   "All attempted token-pool provider queries failed";
 
 export function isRetryableDiscoveryInaccessibleReason(reason: string): boolean {
