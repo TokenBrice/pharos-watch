@@ -453,13 +453,26 @@ function buildRoute(
  *   stale outcomes) are genuine producer failures and stay `producer-failed`.
  * - `no-exact-capable-venue`: retained pools exist, but no adapter family in the
  *   capability matrix recognises any of them and no capability gate is holding
- *   one back. "Pharos has no execution model for any venue this asset trades
- *   on" is exactly `method-unsupported`, and it is anti-fragile: the day an
- *   adapter lands, the surface silently returns to the scored path.
+ *   one back — or the only remaining gates are reviewed model limits (rate-
+ *   bearing inputs, unsupported invariants, metapools, paused/swap-disabled
+ *   pools). That is `method-unsupported`. Construction/delivery gates
+ *   (`target-unresolved`, `quote-missing`, `quote-failed`) stay producer-failed.
  *
  * Everything else keeps the producer attribution.
  */
 type V9DexSurfaceUnsupportedKind = "census-unsupported" | "no-exact-capable-venue";
+
+const MODEL_UNSUPPORTED_GATE_FRAGMENTS = [
+  "unsupported-invariant",
+  "rate-bearing-inputs",
+  "metapool-unsupported",
+  "paused-or-swap-disabled",
+] as const;
+
+function isModelUnsupportedCapabilityGate(reason: string): boolean {
+  if (!reason.startsWith("executionCapabilityGate:")) return false;
+  return MODEL_UNSUPPORTED_GATE_FRAGMENTS.some((fragment) => reason.includes(fragment));
+}
 
 function classifyUnsupportedDexSurface(
   coverage: ExitRouteObservationCoverage | undefined,
@@ -472,12 +485,23 @@ function classifyUnsupportedDexSurface(
   }
   // `scoreEligibleCapabilityPoolCount` is optional: an absent count proves
   // nothing about the venue set, so it must fail closed to producer attribution.
-  const heldByCapabilityGate = Object.keys(coverage.unsupportedReasons).some((reason) =>
+  const capabilityGates = Object.keys(coverage.unsupportedReasons).filter((reason) =>
     reason.startsWith("executionCapabilityGate:"),
   );
-  return coverage.scoreEligibleCapabilityPoolCount === 0 && !heldByCapabilityGate
-    ? "no-exact-capable-venue"
-    : null;
+  const heldByCapabilityGate = capabilityGates.length > 0;
+  if (coverage.scoreEligibleCapabilityPoolCount === 0 && !heldByCapabilityGate) {
+    return "no-exact-capable-venue";
+  }
+  // 9.2: a recognised venue whose only remaining gates are reviewed model
+  // limits is a method floor, not a feed failure.
+  if (
+    heldByCapabilityGate &&
+    capabilityGates.every(isModelUnsupportedCapabilityGate) &&
+    (coverage.scoreEligiblePoolCount ?? 0) === 0
+  ) {
+    return "no-exact-capable-venue";
+  }
+  return null;
 }
 
 export function buildRoutes(context: AssetBuildContext): {

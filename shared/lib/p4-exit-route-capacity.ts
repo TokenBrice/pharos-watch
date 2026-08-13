@@ -11,6 +11,7 @@ import type {
   ExitRouteOutput,
   LiquidityPoolSourceFamily,
 } from "../types/market";
+import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "../types/exit-route";
 import {
   canonicalExitRouteAssetKey,
   canonicalExitRouteChain,
@@ -561,21 +562,47 @@ export function isDexExitRouteCoverageComplete(coverage: ExitRouteObservationCov
   );
 }
 
+const MEASURED_QUOTE_FAILED_REASON = "executionCapabilityGate:measured-execution:quote-failed";
+
 /**
- * Completeness for GAP ACCOUNTING only (owner ruling 2026-07-27): capability
- * pools omitted solely by the bounded route-selection budget are excluded from
- * the completeness denominator — a surface whose every budget-admitted
- * capability pool carries a score-eligible observation is fully covered by
- * design, and the overflow count remains visible as diagnostics in
- * `unsupportedReasons.routeObservationPayloadOverflow` — the key the
- * sync-dex-liquidity payload-budget trim actually emits. Exact-route SCORING
- * eligibility keeps the strict predicate above: route-budget completeness must
- * never widen which portfolios may replace the aggregate DEX path.
+ * Capability-pool counts that do not belong in the gap-accounting denominator
+ * after the 2026-08-13 budget ruling: payload-budget omissions plus every
+ * execution-capability gate except a measured `quote-failed`. Construction
+ * failures (`target-unresolved`, `quote-missing`, incomplete exact captures),
+ * quote-budget deferrals, shadow `activation-pending` rows, and reviewed
+ * model limits (rate-bearing, unsupported invariant, metapool, paused) are
+ * not missing budgeted observations. `quote-failed` stays in the denominator
+ * unless the public observation bound is already saturated below.
+ */
+function carvedRouteBudgetCapabilityCount(coverage: ExitRouteObservationCoverage): number {
+  const overflow = coverage.unsupportedReasons["routeObservationPayloadOverflow"] ?? 0;
+  let gated = 0;
+  for (const [reason, count] of Object.entries(coverage.unsupportedReasons)) {
+    if (!reason.startsWith("executionCapabilityGate:")) continue;
+    if (reason === MEASURED_QUOTE_FAILED_REASON) continue;
+    gated += count;
+  }
+  return overflow + gated;
+}
+
+/**
+ * Completeness for GAP ACCOUNTING only (owner rulings 2026-07-27 and
+ * 2026-08-13): capability pools omitted solely by the bounded route-selection
+ * budget are excluded from the completeness denominator — a surface whose
+ * every budget-admitted capability pool carries a score-eligible observation
+ * is fully covered by design, and the overflow count remains visible as
+ * diagnostics in `unsupportedReasons.routeObservationPayloadOverflow` — the
+ * key the sync-dex-liquidity payload-budget trim actually emits. Exact-route
+ * SCORING eligibility keeps the strict predicate above: route-budget
+ * completeness must never widen which portfolios may replace the aggregate
+ * DEX path.
  *
- * The rotating measured-execution quote budget is carved out on the same
- * ground: a `budget-deferred` target was never attempted, so it proves nothing
- * about the surface. Only that explicit gate is excluded — `quote-failed` and
- * every other operational reason stay in the denominator and fail closed.
+ * Construction failures and reviewed model limits are carved on the same
+ * ground as `budget-deferred`: they never entered the admitted observation
+ * set. A surface that already published `MAX_DEX_EXIT_ROUTE_OBSERVATIONS`
+ * score-eligible routes with leftover overflow is complete even when a few
+ * non-admitted `quote-failed` attempts remain; `quote-failed` still fails
+ * closed when the public bound is not full.
  */
 export function isDexExitRouteCoverageWithinRouteBudget(
   coverage: ExitRouteObservationCoverage | null | undefined,
@@ -589,14 +616,20 @@ export function isDexExitRouteCoverageWithinRouteBudget(
     return false;
 
   const selectionOverflowCount = coverage.unsupportedReasons["routeObservationPayloadOverflow"] ?? 0;
-  const quoteBudgetDeferredCount =
-    coverage.unsupportedReasons["executionCapabilityGate:measured-execution:budget-deferred"] ?? 0;
   const budgetCapabilityPoolCount =
-    coverage.scoreEligibleCapabilityPoolCount - selectionOverflowCount - quoteBudgetDeferredCount;
+    coverage.scoreEligibleCapabilityPoolCount - carvedRouteBudgetCapabilityCount(coverage);
+  if (
+    coverage.scoreEligiblePoolCount <= 0 ||
+    budgetCapabilityPoolCount <= 0 ||
+    budgetCapabilityPoolCount > coverage.retainedPoolCount
+  ) {
+    return false;
+  }
+  if (coverage.scoreEligiblePoolCount === budgetCapabilityPoolCount) return true;
   return (
-    budgetCapabilityPoolCount > 0 &&
-    budgetCapabilityPoolCount <= coverage.retainedPoolCount &&
-    coverage.scoreEligiblePoolCount === budgetCapabilityPoolCount
+    coverage.scoreEligiblePoolCount >= MAX_DEX_EXIT_ROUTE_OBSERVATIONS &&
+    selectionOverflowCount > 0 &&
+    coverage.scoreEligiblePoolCount <= budgetCapabilityPoolCount
   );
 }
 

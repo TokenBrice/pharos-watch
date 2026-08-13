@@ -43,7 +43,10 @@ export function SafetyScoresOverview() {
         supported adapter can observe is unsupported methodology rather than producer failure: deployment census
         coverage is reported per chain instead of all or nothing, an exit surface whose census remainder is
         unsupported reports unsupported route evidence, and an unreviewed dependency set on an asset with no
-        live-reserve adapter is unsupported rather than failed. An asset with no usable price whose tracked peg
+        live-reserve adapter is unsupported rather than failed. Since methodology 9.2, a populated DEX exit
+        surface is complete for gap accounting once its budgeted score-eligible routes are observed; leftover
+        target-construction and reviewed model-limit gates on other recognised venues are not a data-feed
+        failure. Exact-route scoring completeness stays strict. An asset with no usable price whose tracked peg
         record is already adverse is measured adverse, while a clean record with no usable price stays a quiet
         observation and its deviation is never coerced to zero. These are provenance and
         evidence-retention changes: pillar weights, score math, and grade thresholds are unchanged.

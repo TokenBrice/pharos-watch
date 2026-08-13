@@ -12,7 +12,10 @@ import {
   transferMaterialScopeFromOnchainGeneration,
   type SafetyScoreV9TransferMaterialityObservation,
 } from "../safety-score-v9-transfer-materiality";
-import { observeSafetyScoreV9TransferMaterialityGeneration } from "../safety-score-v9-transfer-materiality-observer";
+import {
+  observeSafetyScoreV9TransferMaterialityGeneration,
+  transferMaterialityObserverResolvesRpc,
+} from "../safety-score-v9-transfer-materiality-observer";
 
 const ASSET_ID = "aa-falconx-mev-capital";
 const DEPLOYMENT_KEY = "ethereum:0xc26a6fa2c37b38e549a4a1807543801db684f99c";
@@ -208,5 +211,14 @@ describe("Safety Score V9 transfer deployment materiality", () => {
     });
     expect(after).toBe(BASE_SCOPE);
     expect(JSON.stringify(after)).toBe(before);
+  });
+
+  it("resolves observer-local RPCs for the sfrxUSD long-tail legs", () => {
+    const emptyConfigured = new Map();
+    for (const chainId of ["fraxtal", "sei", "mode", "xlayer", "katana", "sonic"]) {
+      expect(transferMaterialityObserverResolvesRpc(chainId, emptyConfigured)).toBe(true);
+    }
+    expect(transferMaterialityObserverResolvesRpc("ethereum", emptyConfigured)).toBe(true);
+    expect(transferMaterialityObserverResolvesRpc("secret", emptyConfigured)).toBe(false);
   });
 });

@@ -114,6 +114,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
         address: deployment.address,
         provider: "geckoterminal",
         status: "failure",
+        retryable: true,
       },
     ]);
     expect(

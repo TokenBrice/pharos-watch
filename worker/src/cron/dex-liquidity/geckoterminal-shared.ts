@@ -20,26 +20,33 @@ export function fetchGtTokenPools(
     maxPages: GT_TOKEN_POOLS_MAX_PAGES,
     pageSize: GT_TOKEN_POOLS_PAGE_SIZE,
     fetchPage: async (page) => {
-      const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
-      const result = await fetchJsonWithRetry<{ data?: unknown }>(
-        url,
-        {
-          headers: {
-            "User-Agent": USER_AGENT,
-            Accept: "application/json",
+      try {
+        const url = `${GT_API_BASE}/networks/${gtChain}/tokens/${tokenAddress}/pools?page=${page}`;
+        const result = await fetchJsonWithRetry<{ data?: unknown }>(
+          url,
+          {
+            headers: {
+              "User-Agent": USER_AGENT,
+              Accept: "application/json",
+            },
+            signal,
           },
-          signal,
-        },
-        maxRetries,
-        { timeoutMs, passthrough404: true },
-      );
-      if (!result) throw new Error(`GeckoTerminal ${gtChain} token-pools request failed`);
-      if (result.response.status === 404) return [];
-      if (!result.response.ok) {
-        throw new Error(`GeckoTerminal ${gtChain} token-pools returned ${result.response.status}`);
+          maxRetries,
+          { timeoutMs, passthrough404: true },
+        );
+        if (!result) throw new Error(`GeckoTerminal ${gtChain} token-pools request failed`);
+        if (result.response.status === 404) return [];
+        if (!result.response.ok) {
+          throw new Error(`GeckoTerminal ${gtChain} token-pools returned ${result.response.status}`);
+        }
+        const json = result.body;
+        return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
+      } catch (error) {
+        // A later-page 429/timeout must not discard a completed page-1 200.
+        // Returning [] stops paging and keeps pools already accumulated.
+        if (page > 1) return [];
+        throw error;
       }
-      const json = result.body;
-      return Array.isArray(json.data) ? (json.data as GtPool[]) : [];
     },
   });
 }

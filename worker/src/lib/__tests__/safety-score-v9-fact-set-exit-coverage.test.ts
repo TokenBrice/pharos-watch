@@ -254,7 +254,10 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
   });
 
   it("keeps shaped diagnostic pools out of the DEX completeness denominator without hiding exact gates", () => {
-    const fixedWithCoverage = (exactCapabilityPoolCount: number) => {
+    const fixedWithCoverage = (
+      exactCapabilityPoolCount: number,
+      extraGate?: Record<string, number>,
+    ) => {
       const original = exactFixedInput();
       const {
         schemaVersion: omittedSchemaVersion,
@@ -297,7 +300,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
                 "nonExecutableEvidence:direct-api-amm-shaped": 653,
                 "nonExecutableEvidence:discovery-pool-shaped": 267,
                 ...(exactCapabilityPoolCount > 1
-                  ? { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 }
+                  ? (extraGate ?? { "executionCapabilityGate:measured-execution:quote-failed": 1 })
                   : {}),
               },
             },
@@ -313,6 +316,13 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     const gated = compileSafetyScoreV9FactSetFromFixedInput(fixedWithCoverage(2), extension()).assets[0]!;
     expect(gated.exitStatus.observationState).toBe("bounded-unknown");
     expect(gated.gaps.map((gap) => gap.reasonCode)).toContain("incomplete-dex-route-coverage");
+
+    const modelLimitOnly = compileSafetyScoreV9FactSetFromFixedInput(
+      fixedWithCoverage(2, { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 }),
+      extension(),
+    ).assets[0]!;
+    expect(modelLimitOnly.exitStatus.observationState).toBe("known");
+    expect(modelLimitOnly.gaps.map((gap) => gap.reasonCode)).not.toContain("incomplete-dex-route-coverage");
   });
 
   // Owner rulings R1-A / R1-B / R4 (2026-07-29). Only a producer that could
@@ -437,8 +447,8 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
       responsibility: "method-unsupported",
     });
 
-    // A capability gate means an adapter DOES recognise the venue and the
-    // producer has not delivered it yet, so the surface stays producer-failed.
+    // 9.2: a recognised venue whose only remaining gate is a reviewed model
+    // limit (rate-bearing StableSwap) is a method floor, not a feed failure.
     expect(
       portfolioGap(
         withCoverage({
@@ -448,6 +458,20 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
           scoreEligibleCapabilityPoolCount: 0,
           unsupportedPoolCount: 4,
           unsupportedReasons: { "executionCapabilityGate:curve-stableswap:rate-bearing-inputs": 1 },
+        }, { withRedemptionRoute: true }),
+      ),
+    ).toMatchObject({ reasonCode: "incomplete-dex-route-coverage", responsibility: "method-unsupported" });
+
+    // A construction/delivery gate is still a producer failure.
+    expect(
+      portfolioGap(
+        withCoverage({
+          status: "unsupported",
+          retainedPoolCount: 4,
+          scoreEligiblePoolCount: 0,
+          scoreEligibleCapabilityPoolCount: 0,
+          unsupportedPoolCount: 4,
+          unsupportedReasons: { "executionCapabilityGate:measured-execution:target-unresolved": 1 },
         }, { withRedemptionRoute: true }),
       ),
     ).toMatchObject({ reasonCode: "incomplete-dex-route-coverage", responsibility: "producer-failed" });

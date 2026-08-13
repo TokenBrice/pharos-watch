@@ -42,6 +42,8 @@ export interface DexDeploymentProviderCheck {
   provider: "coingecko" | "geckoterminal" | "dexscreener" | "curve" | "horizon";
   status: DexDeploymentProviderCheckStatus;
   observedPoolCount?: number;
+  /** Timeout, 429, or other transport miss — do not persist as a hard provider outage. */
+  retryable?: boolean;
 }
 
 /**

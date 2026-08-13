@@ -105,6 +105,35 @@ describe("DEX deployment outcomes", () => {
     expect(inaccessible[0]).toMatchObject({ outcome: "provider_inaccessible", providers: ["horizon"] });
   });
 
+  it("does not persist retryable provider misses as a hard outage", () => {
+    const retryable = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [
+        { ...DEPLOYMENT, provider: "geckoterminal", status: "failure", retryable: true },
+        { ...DEPLOYMENT, provider: "dexscreener", status: "failure", retryable: true },
+      ],
+      nowSec: 100,
+    });
+    expect(retryable[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      reason: "No provider completed a query for this deployment in the bounded crawl",
+    });
+
+    const hardFailure = classifyDexDeploymentOutcomes({
+      stablecoinId: "test",
+      deployments: [DEPLOYMENT],
+      pools: [],
+      providerChecks: [{ ...DEPLOYMENT, provider: "geckoterminal", status: "failure" }],
+      nowSec: 100,
+    });
+    expect(hardFailure[0]).toMatchObject({
+      outcome: "provider_inaccessible",
+      reason: "All attempted token-pool provider queries failed",
+    });
+  });
+
   it("materializes every audited unsupported deployment", () => {
     const outcomes = buildStaticInaccessibleDeploymentOutcomes(100);
     expect(outcomes).toHaveLength(51);

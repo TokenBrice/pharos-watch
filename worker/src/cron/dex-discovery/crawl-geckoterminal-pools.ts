@@ -107,6 +107,7 @@ export async function crawlGeckoTerminalPoolsStage({
           deploymentAddressByQueryKey.get(buildChainAddressKey(token.ourChain, token.address)) ?? token.address,
         provider: "geckoterminal",
         status,
+        ...(status === "failure" ? { retryable: true as const } : {}),
       });
     },
     parsePool: parseGtPool,

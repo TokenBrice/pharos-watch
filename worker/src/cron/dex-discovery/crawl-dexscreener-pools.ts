@@ -148,7 +148,13 @@ export async function crawlDexScreenerPoolsStage({
         0,
       );
       if (!result.ok) {
-        providerChecks.push({ chain, address, provider: "dexscreener", status: "failure" });
+        providerChecks.push({
+          chain,
+          address,
+          provider: "dexscreener",
+          status: "failure",
+          retryable: true,
+        });
         if (result.hardRefusal) {
           runState.hardRefusal = {
             status: result.status ?? null,
@@ -272,7 +278,13 @@ export async function crawlDexScreenerPoolsStage({
     } catch (err) {
       if (context.signal?.aborted) throw err;
       console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
-      providerChecks.push({ chain, address, provider: "dexscreener", status: "failure" });
+      providerChecks.push({
+        chain,
+        address,
+        provider: "dexscreener",
+        status: "failure",
+        retryable: true,
+      });
     }
   }
 

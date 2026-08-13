@@ -4,6 +4,7 @@ import type { ExitRouteObservationCoverage } from "@shared/types/market";
 import type { ContractDeployment } from "@shared/types/core";
 import { tryParseJson } from "../../lib/json-parse";
 import { estimateDiscoverySweepPeriodSec } from "../dex-discovery/target-window";
+import { isRetryableDiscoveryInaccessibleReason } from "../dex-discovery/deployment-outcomes";
 import { DISCOVERY_TIERS } from "../dex-discovery/types";
 
 const DEX_ROUTE_CAPABILITY_MATRIX_VERSION = "p4a.8";
@@ -285,6 +286,11 @@ export function classifyDexPlaceholderCoverage(params: {
           providerInaccessibleCount++;
           unsupportedMethodOutcomeCount++;
           increment(reasonCounts, "deploymentCensusUnsupportedMethod");
+        } else if (isRetryableDiscoveryInaccessibleReason(row.reason)) {
+          // Transport/budget misses stay a discovery deferral. Treating them as
+          // a provider outage published "a data feed failed" for healthy
+          // GeckoTerminal/DexScreener chains the crawl simply did not finish.
+          missingOutcomeCount++;
         } else {
           providerInaccessibleCount++;
           increment(reasonCounts, "deploymentCensusProviderOutage");
