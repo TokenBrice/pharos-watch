@@ -507,7 +507,7 @@ function readObservation(
   };
 }
 
-export function adaptXdaiBridgeResponse(
+function adaptXdaiBridgeResponse(
   observation: XdaiBridgeObservation,
   params: XdaiBridgeParams,
 ): AdapterResult {

@@ -99,7 +99,7 @@ function requireSafeInteger(value: unknown, label: string): number {
   return value;
 }
 
-export function parseHiveAsset(value: unknown, expectedSymbol: HiveAsset["symbol"], label: string): HiveAsset {
+function parseHiveAsset(value: unknown, expectedSymbol: HiveAsset["symbol"], label: string): HiveAsset {
   const raw = requireString(value, label).trim();
   const match = /^(\d+)\.(\d{3})\s+([A-Z]+)$/.exec(raw);
   if (!match || match[3] !== expectedSymbol) {
@@ -272,7 +272,7 @@ function validateHeadRecency(dgp: DynamicGlobalProperties, nowSec: number): void
 }
 
 /** Reproduces database::calculate_HBD_percent() after HF24/HF21. */
-export function deriveHiveDebtRatio(input: {
+function deriveHiveDebtRatio(input: {
   currentHbdSupply: bigint;
   treasuryHbd: bigint;
   currentHiveSupply: bigint;
@@ -425,7 +425,7 @@ function thresholdWarnings(ratioBps: bigint): LiveReserveWarning[] {
   return warnings;
 }
 
-export function adaptHiveHbdProtocolSnapshots(
+function adaptHiveHbdProtocolSnapshots(
   snapshots: readonly [HiveNodeSnapshot, HiveNodeSnapshot],
 ): AdapterResult {
   const [primary, fallback] = snapshots;
