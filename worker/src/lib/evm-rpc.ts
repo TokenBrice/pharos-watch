@@ -634,6 +634,29 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
     }
   }
 
+  // A scoring clock captured immediately before this lookup is commonly only
+  // seconds behind the chain tip. Starting an unbounded binary search at block
+  // zero makes the first probe deep history, which non-archive public RPCs may
+  // have pruned even though every block needed for the near-tip lookup is still
+  // available. Find a retained lower bound by walking back exponentially from
+  // the closest known upper bound, then binary-search only that bracket.
+  if (low === 0 && high > 0) {
+    const upperAnchor = high;
+    let offset = 1;
+    while (true) {
+      const candidate = Math.max(0, upperAnchor - offset);
+      const timestamp = await getTimestamp(candidate);
+      if (timestamp == null) return null;
+      if (timestamp <= targetTimestamp) {
+        low = candidate;
+        break;
+      }
+      high = candidate;
+      if (candidate === 0) return null;
+      offset = Math.min(upperAnchor, offset * 2);
+    }
+  }
+
   while (low + 1 < high) {
     const mid = Math.floor((low + high) / 2);
     const timestamp = await getTimestamp(mid);
