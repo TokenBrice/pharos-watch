@@ -2,7 +2,10 @@ import { runV9AfterCoreWithinWindow } from "../../lib/v9-slot-window";
 import type { ScheduledRuntimeContext } from "./context";
 import { runSingleScheduledJob } from "./slot-groups";
 
-const V9_PUBLICATION_WINDOW_MS = 60_000;
+// The publication runner has its own two-minute end-to-end timeout. Give that
+// controlled timeout room to settle while v9-slot-window still clamps the
+// outer memory lane to the next quarter-hour boundary.
+const V9_PUBLICATION_WINDOW_MS = 3 * 60_000;
 const V9_PUBLICATION_MINIMUM_REMAINING_MS = 10_000;
 
 export async function runV9PublicationSlot(
