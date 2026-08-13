@@ -8,13 +8,14 @@ const now = 1_780_000_000;
 function snapshot(
   stablecoinId: string,
   metadata: Record<string, unknown>,
+  evidenceClass: ReserveSnapshotMetadataRecord["evidenceClass"] = "independent",
 ): ReserveSnapshotMetadataRecord {
   return {
     stablecoinId,
     fetchedAt: now - 60,
     source: "unit-test",
     sourceModel: "single-bucket",
-    evidenceClass: "independent",
+    evidenceClass,
     syncStatus: "ok",
     warningCount: 0,
     warnings: [],
@@ -742,5 +743,49 @@ describe("readRedemptionBackstopLiveMetadata", () => {
       redemptionFeeBps: rejected.redemptionFeeBps,
       routeStatus: rejected.routeStatus,
     });
+  });
+
+  it("uses scoreable nested redemption telemetry even when the snapshot evidence class is weak", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "usdz-anzen",
+      snapshot(
+        "usdz-anzen",
+        {
+          freshnessMode: "not-applicable",
+          redemption: {
+            capacityUsd: 0.006695,
+            capacityKind: "live-direct",
+            freshnessKind: "same-run-onchain",
+          },
+        },
+        "weak-live-probe",
+      ),
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.immediateRedeemableUsd).toBe(0.006695);
+    expect(metadata.capacityKind).toBe("live-direct");
+    expect(metadata.freshnessKind).toBe("same-run-onchain");
+  });
+
+  it("still rejects weak-probe snapshots that only carry legacy capacity fields", () => {
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "satusd-river",
+      snapshot(
+        "satusd-river",
+        {
+          freshnessMode: "not-applicable",
+          immediateRedeemableUsd: 9_100_000,
+        },
+        "weak-live-probe",
+      ),
+      now,
+    );
+
+    expect(metadata.canUseCapacity).toBe(false);
+    expect(metadata.capacityReason).toBe(
+      "Live reserve metadata uses weak or non-scoring evidence for redemption capacity",
+    );
   });
 });

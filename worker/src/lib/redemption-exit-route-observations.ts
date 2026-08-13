@@ -327,10 +327,14 @@ export function deriveSupplyModelExitRouteObservation(
   const profile = entry.capacityProfile;
   const eventualUsd = profile?.eventualUsd;
   const modeledExitSizeUsd = profile?.modeledExitSizeUsd;
+  // scoringUsd == 0 is still "no immediate capacity" — only a positive
+  // scoring figure means the producer already quantified an immediate bound.
+  const hasQuantifiedImmediateCapacity =
+    profile?.scoringUsd != null && Number.isFinite(profile.scoringUsd) && profile.scoringUsd > 0;
   if (
     entry.provider !== REDEMPTION_BACKSTOP_PROVIDER_IDS.SUPPLY_FULL_MODEL ||
     !profile ||
-    profile.scoringUsd != null ||
+    hasQuantifiedImmediateCapacity ||
     (profile.exitRouteObservations?.length ?? 0) > 0 ||
     entry.resolutionState !== "resolved" ||
     entry.routeStatus !== "open" ||

@@ -204,7 +204,24 @@ const SCOREABLE_REDEMPTION_CAPACITY_KINDS = new Set<RedemptionLiveCapacityKind>(
   "live-proxy-validated",
   "documented-bound",
 ]);
+const SCOREABLE_NESTED_REDEMPTION_FRESHNESS_KINDS = new Set<RedemptionLiveFreshnessKind>([
+  "verified-source-timestamp",
+  "same-run-onchain",
+  "same-run-api",
+]);
 const MAX_FUTURE_REDEMPTION_SOURCE_TIMESTAMP_SKEW_SEC = 10 * 60;
+
+function hasScoreableNestedRedemptionEvidence(
+  capacityKind: RedemptionLiveCapacityKind | null,
+  freshnessKind: RedemptionLiveFreshnessKind | null,
+): boolean {
+  return (
+    capacityKind != null &&
+    SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(capacityKind) &&
+    freshnessKind != null &&
+    SCOREABLE_NESTED_REDEMPTION_FRESHNESS_KINDS.has(freshnessKind)
+  );
+}
 
 function isRedemptionFreshnessAllowed(
   stablecoinId: string,
@@ -276,7 +293,14 @@ function resolveCapacityReason(args: {
     return "Live reserve metadata degraded; latest snapshot not in ok state";
   }
   if (args.hasBlockingWarnings) return "Live reserve metadata degraded by reserve warnings";
-  if (!SCORING_LIVE_RESERVE_EVIDENCE_CLASSES.includes(args.snapshotMetadata.evidenceClass)) {
+  // Snapshot evidenceClass describes reserve-composition quality (e.g.
+  // river-protocol-info TVL is weak-live-probe). Nested redemption
+  // telemetry with a scoreable capacity kind and freshness is an independent
+  // same-run probe and may still bound the route.
+  if (
+    !hasScoreableNestedRedemptionEvidence(args.capacityKind, args.freshnessKind) &&
+    !SCORING_LIVE_RESERVE_EVIDENCE_CLASSES.includes(args.snapshotMetadata.evidenceClass)
+  ) {
     return "Live reserve metadata uses weak or non-scoring evidence for redemption capacity";
   }
   if (args.capacityKind && !SCOREABLE_REDEMPTION_CAPACITY_KINDS.has(args.capacityKind)) {

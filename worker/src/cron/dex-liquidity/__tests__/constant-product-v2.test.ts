@@ -20,6 +20,12 @@ const AERODROME_PAIR = "0xcdac0d6c6c59727a65f871236188350531885c43" as const;
 const A7A5 = "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9" as const;
 const USDT_ETHEREUM = "0xdac17f958d2ee523a2206206994597c13d831ec7" as const;
 const A7A5_USDT_PAIR = "0x14d7aab5b4bca6a02e52ac22520b033bf35f4091" as const;
+const SPUSD = "0x40ff3dea2eec93a7b71879874dc4407918da77a6" as const;
+const USDC_BSC = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" as const;
+const SPUSD_USDC_PAIR = "0x1111111111111111111111111111111111111111" as const;
+const KAG = "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e" as const;
+const XAUT = "0x68749665ff8d2d112fa859aa293f07a622782f38" as const;
+const KAG_XAUT_PAIR = "0x2222222222222222222222222222222222222222" as const;
 
 function word(value: bigint): `0x${string}` {
   return `0x${value.toString(16).padStart(64, "0")}`;
@@ -285,7 +291,7 @@ describe("constant-product V2 execution", () => {
     expect(fetchMulticall).toHaveBeenCalledOnce();
   });
 
-  it("gates a fully captured V2 pair whose tracked input has no trusted quote leg", async () => {
+  it("implies the tracked V2 input from a unique authoritative counter-asset", async () => {
     const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
     const chainAddressToId = new Map([
       [canonicalExitRouteAssetKey("ethereum", A7A5), "a7a5-old-vector"],
@@ -355,14 +361,34 @@ describe("constant-product V2 execution", () => {
       return metric.topPools[0]!;
     };
 
-    // Only the counter asset carries an authoritative quote leg: the tracked
-    // input's own reference is the sole missing capture input.
-    const untrusted = await enrich(new Map([["usdt-tether", 1]]));
-    expect(untrusted.extra?.ammExecutionModel).toBeUndefined();
-    expect(untrusted.extra?.evmV2ExecutionCandidate).toBeUndefined();
-    expect(untrusted.extra?.executionCapabilityGate).toEqual({
+    const unpriced = await enrich(new Map());
+    expect(unpriced.extra?.ammExecutionModel).toBeUndefined();
+    expect(unpriced.extra?.executionCapabilityGate).toEqual({
       family: "constant-product-v2",
       reason: "incomplete-exact-capture",
+    });
+
+    const implied = await enrich(new Map([["usdt-tether", 1]]));
+    expect(implied.extra?.executionCapabilityGate).toBeUndefined();
+    expect(implied.extra?.ammExecutionModel).toMatchObject({
+      source: "uniswap-v2",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.003,
+      tokens: [
+        {
+          address: A7A5,
+          trackedAssetId: "a7a5-old-vector",
+          referencePriceUsd: 71_000 / 5_700_000,
+          referencePriceSource: "pool-implied",
+        },
+        {
+          address: USDT_ETHEREUM,
+          trackedAssetId: "usdt-tether",
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+        },
+      ],
     });
 
     const trusted = await enrich(
@@ -377,6 +403,246 @@ describe("constant-product V2 execution", () => {
       invariant: "constant-product",
       trackedTokenIndex: 0,
       feeRate: 0.003,
+      tokens: [
+        { address: A7A5, referencePriceUsd: 0.0125, referencePriceSource: "tracked-market" },
+        { address: USDT_ETHEREUM, referencePriceUsd: 1, referencePriceSource: "tracked-market" },
+      ],
+    });
+  });
+
+  it("implies a Pancake V2 tracked input from USDC when the wrapper quote is untrusted", async () => {
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "pancakeswap-v2")!;
+    const candidate = buildEvmV2ExecutionCandidate({
+      chain: "bsc",
+      protocol: "pancakeswap",
+      poolType: "ds-amm",
+      poolAddress: SPUSD_USDC_PAIR,
+      tokenAddresses: [SPUSD, USDC_BSC],
+      tokenSymbols: ["SPUSD", "USDC"],
+    })!;
+    const metric = initMetrics("spusd-soulpeg", "SPUSD");
+    metric.topPools.push({
+      poolId: canonicalExitRouteAssetKey("bsc", SPUSD_USDC_PAIR),
+      project: "pancakeswap",
+      chain: "BSC",
+      tvlUsd: 8_854,
+      symbol: "SPUSD / USDC",
+      volumeUsd1d: 1_200,
+      poolType: "cg-amm",
+      source: "cg_onchain",
+      extra: { evmV2ExecutionCandidate: candidate },
+    });
+    await enrichEvmV2ExecutionModels({
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([
+        [canonicalExitRouteAssetKey("bsc", SPUSD), "spusd-soulpeg"],
+        [canonicalExitRouteAssetKey("bsc", USDC_BSC), "usdc-circle"],
+      ]),
+      contractMetaByChainAddress: new Map(),
+      stablecoinPriceById: new Map([["usdc-circle", 1]]),
+      chainRpcs: new Map([
+        [
+          "bsc",
+          {
+            chainId: "bsc",
+            chainName: "BSC",
+            type: "evm",
+            rpcUrl: "https://rpc.example",
+            explorerUrl: "https://example.com",
+          },
+        ],
+      ]),
+      dependencies: {
+        fetchBlockNumber: vi.fn(async () => 50_000_000),
+        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+        fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
+          calls.map((call) => ({
+            label: call.label,
+            success: true,
+            returnData: call.label.endsWith("-pair")
+              ? addressWord(SPUSD_USDC_PAIR)
+              : call.label.endsWith("-token0")
+                ? addressWord(SPUSD)
+                : call.label.endsWith("-token1")
+                  ? addressWord(USDC_BSC)
+                  : call.label.endsWith("-reserves")
+                    ? reservesWord(4_430n * 10n ** 18n, 4_420n * 10n ** 18n)
+                    : call.label.endsWith("-decimals0")
+                      ? word(18n)
+                      : word(18n),
+          })),
+        ) as never,
+        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+      },
+    });
+
+    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toBeUndefined();
+    expect(metric.topPools[0]!.extra?.ammExecutionModel).toMatchObject({
+      source: "pancakeswap-v2",
+      invariant: "constant-product",
+      trackedTokenIndex: 0,
+      feeRate: 0.0025,
+      tokens: [
+        {
+          address: SPUSD,
+          trackedAssetId: "spusd-soulpeg",
+          referencePriceUsd: 4_420 / 4_430,
+          referencePriceSource: "pool-implied",
+        },
+        {
+          address: USDC_BSC,
+          trackedAssetId: "usdc-circle",
+          referencePriceUsd: 1,
+          referencePriceSource: "tracked-market",
+        },
+      ],
+    });
+  });
+
+  it("implies KAG from XAUt on a factory-verified Ethereum Uni V2 pair", async () => {
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
+    const candidate = buildEvmV2ExecutionCandidate({
+      chain: "ethereum",
+      protocol: "uniswap-v2",
+      poolType: "generic",
+      poolAddress: KAG_XAUT_PAIR,
+      tokenAddresses: [KAG, XAUT],
+      tokenSymbols: ["KAG", "XAUt"],
+    })!;
+    const metric = initMetrics("kag-kinesis", "KAG");
+    metric.topPools.push({
+      poolId: canonicalExitRouteAssetKey("ethereum", KAG_XAUT_PAIR),
+      project: "uniswap-v2",
+      chain: "Ethereum",
+      tvlUsd: 1_519,
+      symbol: "KAG / XAUt",
+      volumeUsd1d: 200,
+      poolType: "cg-amm",
+      source: "cg_onchain",
+      extra: { evmV2ExecutionCandidate: candidate },
+    });
+    await enrichEvmV2ExecutionModels({
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([
+        [canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"],
+        [canonicalExitRouteAssetKey("ethereum", XAUT), "xaut-tether"],
+      ]),
+      contractMetaByChainAddress: new Map(),
+      stablecoinPriceById: new Map([["xaut-tether", 4_300]]),
+      chainRpcs: new Map([
+        [
+          "ethereum",
+          {
+            chainId: "ethereum",
+            chainName: "Ethereum",
+            type: "evm",
+            rpcUrl: "https://rpc.example",
+            explorerUrl: "https://example.com",
+          },
+        ],
+      ]),
+      dependencies: {
+        fetchBlockNumber: vi.fn(async () => 21_000_000),
+        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+        fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
+          calls.map((call) => ({
+            label: call.label,
+            success: true,
+            returnData: call.label.endsWith("-pair")
+              ? addressWord(KAG_XAUT_PAIR)
+              : call.label.endsWith("-token0")
+                ? addressWord(KAG)
+                : call.label.endsWith("-token1")
+                  ? addressWord(XAUT)
+                  : call.label.endsWith("-reserves")
+                    ? reservesWord(14n * 10n ** 18n, 1n * 10n ** 6n)
+                    : call.label.endsWith("-decimals0")
+                      ? word(18n)
+                      : word(6n),
+          })),
+        ) as never,
+        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+      },
+    });
+
+    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toBeUndefined();
+    expect(metric.topPools[0]!.extra?.ammExecutionModel).toMatchObject({
+      source: "uniswap-v2",
+      trackedTokenIndex: 0,
+      tokens: [
+        { address: KAG, referencePriceSource: "pool-implied", referencePriceUsd: (1 * 4_300) / 14 },
+        { address: XAUT, referencePriceSource: "tracked-market", referencePriceUsd: 4_300 },
+      ],
+    });
+  });
+
+  it("still gates a captured V2 pair when no token has a trusted quote leg", async () => {
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
+    const candidate = buildEvmV2ExecutionCandidate({
+      chain: "ethereum",
+      protocol: "uniswap-v2",
+      poolType: "generic",
+      poolAddress: KAG_XAUT_PAIR,
+      tokenAddresses: [KAG, XAUT],
+      tokenSymbols: ["KAG", "XAUt"],
+    })!;
+    const metric = initMetrics("kag-kinesis", "KAG");
+    metric.topPools.push({
+      poolId: canonicalExitRouteAssetKey("ethereum", KAG_XAUT_PAIR),
+      project: "uniswap-v2",
+      chain: "Ethereum",
+      tvlUsd: 1_519,
+      symbol: "KAG / XAUt",
+      volumeUsd1d: 200,
+      poolType: "cg-amm",
+      source: "cg_onchain",
+      extra: { evmV2ExecutionCandidate: candidate },
+    });
+    await enrichEvmV2ExecutionModels({
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([[canonicalExitRouteAssetKey("ethereum", KAG), "kag-kinesis"]]),
+      contractMetaByChainAddress: new Map(),
+      stablecoinPriceById: new Map(),
+      chainRpcs: new Map([
+        [
+          "ethereum",
+          {
+            chainId: "ethereum",
+            chainName: "Ethereum",
+            type: "evm",
+            rpcUrl: "https://rpc.example",
+            explorerUrl: "https://example.com",
+          },
+        ],
+      ]),
+      dependencies: {
+        fetchBlockNumber: vi.fn(async () => 21_000_000),
+        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+        fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
+          calls.map((call) => ({
+            label: call.label,
+            success: true,
+            returnData: call.label.endsWith("-pair")
+              ? addressWord(KAG_XAUT_PAIR)
+              : call.label.endsWith("-token0")
+                ? addressWord(KAG)
+                : call.label.endsWith("-token1")
+                  ? addressWord(XAUT)
+                  : call.label.endsWith("-reserves")
+                    ? reservesWord(14n * 10n ** 18n, 1n * 10n ** 6n)
+                    : call.label.endsWith("-decimals0")
+                      ? word(18n)
+                      : word(6n),
+          })),
+        ) as never,
+        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+      },
+    });
+
+    expect(metric.topPools[0]!.extra?.ammExecutionModel).toBeUndefined();
+    expect(metric.topPools[0]!.extra?.executionCapabilityGate).toEqual({
+      family: "constant-product-v2",
+      reason: "incomplete-exact-capture",
     });
   });
 
