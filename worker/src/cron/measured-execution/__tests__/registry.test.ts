@@ -50,6 +50,19 @@ describe("measured execution deployment registry", () => {
     });
   });
 
+  it("pins BSC Uniswap V3 while keeping the deployment shadow-only", () => {
+    expect(getDexMeasuredExecutionDeployment("uniswap-v3-quoter-v2", "BSC")).toEqual({
+      adapterProfileId: "uniswap-v3-quoter-v2",
+      protocol: "uniswap-v3",
+      chain: "bsc",
+      endpointAddress: "0x78d78e420da98ad378d7799be8f4af69033eb077",
+      expectedCodeHash: "0xb6652d71ca265e7b2b5f066661fec38c8c22eb9a9c17b8a5c0fae62ec401bc55",
+      factoryAddress: "0xdb1d10011ad0ff90774d0c6bb92e5c5c8b4461f7",
+      expectedFactoryCodeHash: "0x34b1009d0f004e58da791225992645e2df7697ac71ac89dc5e80469c4ef7e322",
+    });
+    expect(isDexMeasuredExecutionDeploymentScoreEligible("uniswap-v3-quoter-v2", "bsc")).toBe(false);
+  });
+
   it("pins the active Base Aerodrome Slipstream factory and QuoterV2", () => {
     expect(getDexMeasuredExecutionDeployment("aerodrome-slipstream-quoter-v2", "Base")).toEqual({
       adapterProfileId: "aerodrome-slipstream-quoter-v2",

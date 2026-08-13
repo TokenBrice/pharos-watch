@@ -30,6 +30,7 @@ import { fetchMeteoraPools } from "../fetch-meteora";
 import { fetchPancakeSwapPools } from "../fetch-pancakeswap";
 import { fetchSunSwapPools } from "../fetch-sunswap";
 import { fetchSlipstreamPools } from "../fetch-slipstream";
+import { fetchUniswapV3BscShadowPools } from "../fetch-uniswap-v3-bsc";
 import { mergeGtPools } from "../fetch-crawlers";
 import { normalizeProtocol } from "../pool-helpers";
 import { buildDirectApiPoolIdentity } from "../direct-source-helpers";
@@ -205,6 +206,7 @@ function compactDirectApiProviderEntry(
 
   const rawPools = entry.result.pools;
   const authoritativeExactPoolKeys =
+    entry.normalizedProtocol !== "uniswap-v3-shadow" &&
     entry.result.ok && !entry.result.degraded && (entry.result.warnings?.length ?? 0) === 0
       ? new Set<string>()
       : undefined;
@@ -224,14 +226,15 @@ function compactDirectApiProviderEntry(
         rawPool.source === "raydium" ||
         rawPool.source === "orca" ||
         rawPool.source === "sunswap" ||
+        rawPool.source === "uniswap-v3-shadow" ||
         rawPool.source === "aerodrome-slipstream") &&
       hasTrackedDirectApiToken(rawPool, lookups)
     ) {
       measuredExecutionPools.push(rawPool);
     }
-    // SunSwap is an exact-execution shadow census only. Do not let the new
-    // source alter liquidity scores or price consensus before activation.
-    if (rawPool.source === "sunswap") continue;
+    // Exact-execution shadow censuses do not alter liquidity scores or price
+    // consensus before their separate activation reviews.
+    if (rawPool.source === "sunswap" || rawPool.source === "uniswap-v3-shadow") continue;
 
     // Normalize one pool at a time so the full raw provider graph never
     // coexists with a second full normalized graph.
@@ -274,7 +277,7 @@ export interface DirectApiIntegrationResult {
 }
 
 export function buildDexDirectApiFetchers(params: {
-  db?: D1Database;
+  db: D1Database;
   graphApiKey: string | null;
   chainAddressToId: SymbolLookups["chainAddressToId"];
   symbolToChainScopedIds: SymbolLookups["symbolToChainScopedIds"];
@@ -363,6 +366,19 @@ export function buildDexDirectApiFetchers(params: {
           params.chainRpcs,
           params.db,
         ),
+    },
+    {
+      name: "Uniswap V3 BSC shadow",
+      circuitKey: CIRCUIT_SOURCE.UNISWAP_V3_BSC_SHADOW,
+      normalizedProtocol: "uniswap-v3-shadow",
+      supportedChains: ["bsc"],
+      fn: (signal) => fetchUniswapV3BscShadowPools({
+        db: params.db,
+        chainAddressToId: params.chainAddressToId,
+        trackedStablecoinPrices: params.stablecoinPriceById,
+        signal,
+        chainRpcs: params.chainRpcs,
+      }),
     },
     {
       name: "Velodrome Slipstream",

@@ -982,13 +982,14 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(fetchAerodromeData).toHaveBeenCalledOnce();
   });
 
-  it("stages the exact five-chain Uni V3 source family", async () => {
+  it("stages the exact bounded six-chain Uni V3 source family", async () => {
     expect(Object.keys(UNIV3_SUBGRAPHS)).toEqual([
       "ethereum",
       "base",
       "arbitrum",
       "polygon",
       "celo",
+      "bsc",
     ]);
 
     await runDexLiquidityScoringCycle(db, "graph-key");

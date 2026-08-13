@@ -72,6 +72,15 @@ const DEX_MEASURED_EXECUTION_DEPLOYMENTS: readonly DexMeasuredExecutionDeploymen
     expectedFactoryCodeHash: "0x5960f2f785dd273f0eeb9624f32a9f93bd1560dc1335171d22411d48296d79b3",
   },
   {
+    adapterProfileId: "uniswap-v3-quoter-v2",
+    protocol: "uniswap-v3",
+    chain: "bsc",
+    endpointAddress: "0x78d78e420da98ad378d7799be8f4af69033eb077",
+    expectedCodeHash: "0xb6652d71ca265e7b2b5f066661fec38c8c22eb9a9c17b8a5c0fae62ec401bc55",
+    factoryAddress: "0xdb1d10011ad0ff90774d0c6bb92e5c5c8b4461f7",
+    expectedFactoryCodeHash: "0x34b1009d0f004e58da791225992645e2df7697ac71ac89dc5e80469c4ef7e322",
+  },
+  {
     adapterProfileId: "aerodrome-slipstream-quoter-v2",
     protocol: "aerodrome-slipstream",
     chain: "base",

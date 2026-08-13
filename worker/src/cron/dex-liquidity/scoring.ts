@@ -995,7 +995,19 @@ export async function computeStablecoinScores(
     preparedRetainedPools.set(id, retainedPools);
   }
 
-  const targetInventoryById = new Map<string, DexMeasuredExecutionTarget>();
+  // Target-only shadow families deliberately do not enter the retained pool
+  // graph. Preserve those independently verified targets for the shadow
+  // publication while active families still require a retained-pool join.
+  const targetInventoryById = new Map(
+    [...slipstreamMeasuredTargets.values()]
+      .filter(
+        (target) =>
+          target.adapterProfileId === "uniswap-v3-quoter-v2" &&
+          target.chain === "bsc" &&
+          !isDexMeasuredExecutionTargetScoreEligible(target),
+      )
+      .map((target) => [target.targetId, target] as const),
+  );
   const solanaTargetInventoryById = new Map<string, SolanaMeasuredExecutionTarget>();
   const tronTargetInventoryById = new Map(
     [...tronMeasuredTargets.values()].map((target) => [target.targetId, target] as const),

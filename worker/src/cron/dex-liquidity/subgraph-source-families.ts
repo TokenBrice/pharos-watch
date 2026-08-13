@@ -72,6 +72,8 @@ type UniswapV4SubgraphPool = {
   token1Price: string;
 };
 
+const UNIV3_EXECUTION_ONLY_CHAINS = new Set(["bsc"]);
+
 function parseSubgraphInteger(value: string): number {
   const normalized = value.trim();
   if (!/^-?[0-9]+$/.test(normalized)) return Number.NaN;
@@ -130,6 +132,10 @@ export async function fetchUniV3Data(
     subgraphs: UNIV3_SUBGRAPHS,
     missingApiKeyMessage: "[dex-liquidity] No GRAPH_API_KEY, skipping Uni V3 subgraph enrichment",
     familyLabel: "Uni V3 subgraph",
+    // Six reviewed sources fit the existing five-connection source-stage
+    // budget by scheduling the final chain only after one prior response has
+    // released its header-wait slot.
+    maxConcurrency: 5,
     createLookups: () => ({
       uniV3PoolFees: new Map<string, number>(),
       uniV3SymbolFees: new Map<string, number>(),
@@ -149,14 +155,17 @@ export async function fetchUniV3Data(
         const feeTier = parseInt(pool.feeTier, 10);
         if (isNaN(feeTier)) return [];
         const tvl = parseFloat(pool.totalValueLockedUSD);
+        const executionOnly = UNIV3_EXECUTION_ONLY_CHAINS.has(chain);
 
-        lookups.uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
+        if (!executionOnly) {
+          lookups.uniV3PoolFees.set(`${chain}:${pool.id.toLowerCase()}`, feeTier);
 
-        const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
-        const symKey = `${chain}:${syms}`;
-        const existing = lookups.uniV3SymbolFees.get(symKey);
-        if (existing == null || feeTier < existing) {
-          lookups.uniV3SymbolFees.set(symKey, feeTier);
+          const syms = [normalizeDexSymbol(pool.token0.symbol), normalizeDexSymbol(pool.token1.symbol)].sort().join(":");
+          const symKey = `${chain}:${syms}`;
+          const existing = lookups.uniV3SymbolFees.get(symKey);
+          if (existing == null || feeTier < existing) {
+            lookups.uniV3SymbolFees.set(symKey, feeTier);
+          }
         }
 
         const token0Decimals = Number.parseInt(pool.token0.decimals, 10);
@@ -194,6 +203,11 @@ export async function fetchUniV3Data(
           });
           lookups.uniV3ExecutionCandidates.set(executionKey, candidates);
         }
+
+        // BSC is a shadow measured-execution source. Until a later activation
+        // review, its subgraph rows cannot alter fee-quality enrichment or DEX
+        // price consensus.
+        if (executionOnly) return [];
 
         if (isNaN(tvl) || tvl < DEX_PRICE_OBSERVATION_MIN_TVL_USD) return [];
 

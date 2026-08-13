@@ -62,6 +62,7 @@ import {
   buildFluidMeasuredExecutionTargets,
   buildPancakeMeasuredExecutionTargets,
   buildSlipstreamMeasuredExecutionTargets,
+  buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
 import { buildSolanaMeasuredExecutionTargets } from "../measured-execution/solana-inventory";
 import { buildTronMeasuredExecutionTargets } from "../measured-execution/tron-inventory";
@@ -573,6 +574,22 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     stablecoinPriceById,
     capturedAt: ctx.syncStartSec,
   });
+  const uniswapV3BscShadowTargets = buildUniV3DirectMeasuredExecutionTargets({
+    pools: compactedDirectApi.measuredExecutionPools,
+    chainAddressToId: lookups.chainAddressToId,
+    symbolToChainScopedIds: lookups.symbolToChainScopedIds,
+    validationReferences,
+    stablecoinPriceById,
+    capturedAt: ctx.syncStartSec,
+  });
+  // The scoring-stage contract predates direct Uniswap targets and names this
+  // generic EVM target accumulator after its first direct CL source. Target
+  // adapter identity remains explicit, and the registry routes BSC Uniswap V3
+  // into the separate shadow generation.
+  for (const [key, target] of uniswapV3BscShadowTargets) {
+    slipstreamMeasuredExecutionTargets.set(key, target);
+  }
+  uniswapV3BscShadowTargets.clear();
   const solanaMeasuredExecutionTargets = buildSolanaMeasuredExecutionTargets({
     pools: compactedDirectApi.measuredExecutionPools,
     chainAddressToId: lookups.chainAddressToId,

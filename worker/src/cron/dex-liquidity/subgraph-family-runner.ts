@@ -1,3 +1,4 @@
+import { mapWithConcurrency } from "../../lib/concurrency";
 import { SUBGRAPH_PER_CHAIN_TIMEOUT_MS } from "./constants";
 import {
   fetchSubgraphEntities,
@@ -11,6 +12,7 @@ interface RunSubgraphFamilyParams<TEntity, TLookups> {
   subgraphs: Record<string, string>;
   missingApiKeyMessage?: string | null;
   familyLabel: string;
+  maxConcurrency?: number;
   createLookups: () => TLookups;
   buildConfig: (
     chain: string,
@@ -39,8 +41,11 @@ export async function runSubgraphFamily<TEntity, TLookups>(
     return lookups;
   }
 
-  await Promise.all(
-    Object.entries(params.subgraphs).map(async ([chain, subgraphId]) => {
+  const subgraphs = Object.entries(params.subgraphs);
+  await mapWithConcurrency(
+    subgraphs,
+    params.maxConcurrency ?? Math.max(1, subgraphs.length),
+    async ([chain, subgraphId]) => {
       try {
         const perChainTimeout = AbortSignal.timeout(SUBGRAPH_PER_CHAIN_TIMEOUT_MS);
         const combinedSignal = params.signal
@@ -58,7 +63,8 @@ export async function runSubgraphFamily<TEntity, TLookups>(
         if (params.signal?.aborted) throw error;
         console.warn(`[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
       }
-    }),
+    },
+    { signal: params.signal },
   );
 
   console.log(params.buildFinalSummary(lookups));

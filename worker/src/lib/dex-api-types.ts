@@ -31,7 +31,8 @@ export interface DexApiPool {
     | "pancakeswap"
     | "sunswap"
     | "aerodrome-slipstream"
-    | "velodrome-slipstream";
+    | "velodrome-slipstream"
+    | "uniswap-v3-shadow";
   chain: string;
   poolAddress: string;
   poolType: string;
