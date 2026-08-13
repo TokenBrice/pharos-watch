@@ -19,7 +19,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://frax.com/transparency",
-    "provider": "Chaos Labs",
+    "provider": "Frax/Chaos Labs reserve index; Erebor cash issuer-disclosed",
     "attestorTier": "niche",
     "cadence": "real-time"
   },
@@ -186,7 +186,7 @@
     "breakerScope": "frxusd-frax",
     "display": {
       "url": "https://frax.com/transparency",
-      "label": "Frax Transparency"
+      "label": "Frax Reserve Index"
     },
     "inputs": {
       "primary": {

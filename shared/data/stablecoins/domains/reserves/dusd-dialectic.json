@@ -102,10 +102,18 @@
       {
         "label": "Makina DUSD allocation API",
         "url": "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations"
+      },
+      {
+        "label": "DUSD Machine contract",
+        "url": "https://eth.blockscout.com/address/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721?tab=contract"
+      },
+      {
+        "label": "DUSD hub Caliber contract",
+        "url": "https://eth.blockscout.com/address/0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC?tab=contract"
       }
     ],
-    "rationale": "Makina publishes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API and preserves gross AUM, net AUM, and debt telemetry when present. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in Makina's allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Rootfile feeds are not used for this DUSD reserve review while their anomalies remain quarantined.",
-    "compositionBasis": "Makina Machine accounting plus the Makina strategy and allocation APIs",
+    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The numerical accounting is publicly verifiable from the Machine and Caliber contracts: position IDs, values, debt flags, accounting times, base-token balances, and oracle-denominated values can be independently read, while Makina's API supplies the human protocol and strategy labels used to group those positions. The static fallback uses the material buckets from the 2026-07-29 allocation snapshot while live reserve sync refreshes weights from Makina's strategy accounting API and preserves gross AUM, net AUM, and debt telemetry when present. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible both in the allocation feed and Caliber state, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms. Rootfile feeds are not used for this DUSD reserve review while their anomalies remain quarantined.",
+    "compositionBasis": "Publicly verifiable Makina Machine and Caliber accounting, indexed and human-labelled by the Makina strategy and allocation APIs",
     "compositionAsOf": "2026-07-29",
     "scope": "full-composition",
     "knownUnknownExposure": "The 2026-07-29 pinned allocation snapshot identifies the material protocol buckets; dust and unlabelled exposure were below static display materiality and are retained by the live adapter when present.",

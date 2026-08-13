@@ -85,6 +85,11 @@ const CONFIG_ACCOUNTABLE = {
   allowedVersions: [1],
 } as const satisfies LiveReserveAdapterConfigValidationPolicy;
 
+// DUSD's reviewed Machine configuration treats position accounting older than
+// three hours as stale. Match that contract guard instead of the generic
+// dashboard window now that Makina snapshots expose the oldest position time.
+const MAKINA_POSITION_SOURCE_MAX_AGE_SEC = 3 * 60 * 60;
+
 const CONFIG_CURATED_VALIDATED = {
   allowedSemantics: ["attestation-mix", "collateral-mix", "single-asset"],
   allowedVersions: [1, 2],
@@ -430,6 +435,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_ATTESTATION_V1_V2,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
@@ -445,6 +451,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
@@ -573,11 +580,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "proxy", fee: "none" },
     validation: {
-      maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
+      maxSourceAgeSec: MAKINA_POSITION_SOURCE_MAX_AGE_SEC,
       maxUnknownExposurePct: MATERIAL_UNKNOWN_EXPOSURE_PCT,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
@@ -845,6 +853,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
     sharedSourceMode: "source-invariant",
     configValidation: CONFIG_ATTESTATION_V1,
     redemptionTelemetry: { capacity: "none", fee: "none" },
@@ -906,6 +915,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
+    displayBadgeKind: "proof",
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },

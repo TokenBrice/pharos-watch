@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_RESERVE_FRESHNESS_PROVENANCE: MethodologyChangelogEntry = {
+  version: "9.193",
+  title: "Reserve freshness follows the accounting state, not its API envelope",
+  date: "2026-08-13",
+  effectiveAt: 1786615191,
+  summary:
+    "DUSD's Makina reserve snapshot now uses the oldest underlying Caliber position-accounting timestamp and the reviewed Machine's three-hour staleness threshold. A newly generated index response can no longer make stale contract accounting score-eligible.",
+  impact: [
+    "Makina-indexed balances, AUM, supply, debt flags, oracle values, and redemption state were independently reconciled to Machine and Caliber contracts; the API remains the source of human protocol and strategy labels",
+    "DUSD reserve snapshots become stale when any included position accounting exceeds the Machine's three-hour threshold, even if both API envelopes were generated recently",
+    "Frax, Tether, and USD.AI mixed native feeds retain conservative issuer-attested ingestion provenance and now use proof-style public presentation instead of claiming that the complete feed is independently measured",
+    "Pillar weights, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_REVIEWED_BOUNDED_RESIDUALS: MethodologyChangelogEntry = {
   version: "9.192",
   title: "Reviewed bounded residuals stop publishing as missing data",

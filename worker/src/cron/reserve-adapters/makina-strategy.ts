@@ -595,7 +595,7 @@ export function adaptMakinaStrategyReserves(
   const allocationsTimestamp = readTimestamp(allocations.meta?.generated_at, "allocations generated_at");
   // The result combines accounting state with allocation-driven reserve slices, so
   // its freshness cannot be newer than either source.
-  const sourceTimestamp = Math.min(strategyTimestamp, allocationsTimestamp);
+  let sourceTimestamp = Math.min(strategyTimestamp, allocationsTimestamp);
   const currentAumUsd = readNonNegativeAccountingValue(strategyData.aum, accountingDecimals, "current AUM");
   const lastReportedAumUsd = strategyData.lastReportedAum == null
     ? null
@@ -613,6 +613,7 @@ export function adaptMakinaStrategyReserves(
   let grossAssetsUsd = 0;
   let positionCount = 0;
   let debtPositionCount = 0;
+  let oldestPositionUpdatedAt: number | null = null;
   let oldestMaterialPositionUpdatedAt: number | null = null;
   const positionDetails: Array<Record<string, unknown>> = [];
   const chainTotals = new Map<string, number>();
@@ -671,6 +672,9 @@ export function adaptMakinaStrategyReserves(
     chainTotals.set(chainId, (chainTotals.get(chainId) ?? 0) + signedValue);
 
     const updatedAt = typeof entry.updated_at === "number" ? entry.updated_at : null;
+    if (updatedAt != null && (oldestPositionUpdatedAt == null || updatedAt < oldestPositionUpdatedAt)) {
+      oldestPositionUpdatedAt = updatedAt;
+    }
     const protocol = protocolKey(entry.protocol);
     const name = protocol ? displayProtocol(protocol) : "Unknown Makina exposure";
     const key = protocol ? `protocol:${protocol}` : "unknown";
@@ -741,6 +745,14 @@ export function adaptMakinaStrategyReserves(
     }
   }
 
+  // The API envelopes can be regenerated without the underlying Caliber
+  // positions being re-accounted. Bound reserve freshness by the oldest
+  // position update so a freshly indexed response cannot make stale on-chain
+  // accounting appear current.
+  if (oldestPositionUpdatedAt != null) {
+    sourceTimestamp = Math.min(sourceTimestamp, oldestPositionUpdatedAt);
+  }
+
   return {
     slices: normalizeSlices(
       displayedBuckets.map((bucket) => reserveSliceFromBucket({
@@ -774,6 +786,7 @@ export function adaptMakinaStrategyReserves(
         ...(lastReportedAumUsd != null && lastReportedAumUsd > 0
           ? { lastReportedAumDiffPct: Math.abs(netReserveUsd - lastReportedAumUsd) / lastReportedAumUsd * 100 }
           : {}),
+        oldestPositionUpdatedAt,
         oldestMaterialPositionUpdatedAt,
         positionCount,
         debtPositionCount,

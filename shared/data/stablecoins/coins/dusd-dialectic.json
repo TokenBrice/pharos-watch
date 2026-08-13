@@ -80,7 +80,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://makina.finance/strategy/dusd",
-    "provider": "Makina on-chain Machine accounting",
+    "provider": "Makina-indexed, publicly verifiable on-chain Machine accounting",
     "attestorTier": "self",
     "cadence": "real-time"
   },

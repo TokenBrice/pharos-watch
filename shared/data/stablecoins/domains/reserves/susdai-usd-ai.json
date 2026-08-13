@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "PYUSD (PayPal USD)",
-      "pct": 60.89741894,
+      "pct": 59.29384384,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Paxos (PYUSD issuer) held in USD.AI reserve contracts",
@@ -16,10 +16,10 @@
     },
     {
       "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
-      "pct": 39.10258106,
+      "pct": 40.70615616,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "USD.AI borrower SPVs financing NVIDIA GPU compute (27 loan positions per issuer proof-of-reserves API)",
+      "issuerOrObligor": "USD.AI borrower SPVs financing NVIDIA GPU compute (18 active share-bearing loan positions in the reviewed reserve index)",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -31,8 +31,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-30",
-    "reviewer": "GPT SOL-CORP-A wave6; Kimi T48 safety-v9 unknown-reduction w2 (dependency adjudication)",
+    "reviewedAt": "2026-08-13",
+    "reviewer": "GPT-5 Codex native-telemetry reconstruction audit; prior dependency adjudication retained",
     "confidence": "verified",
     "sources": [
       {
@@ -42,26 +42,34 @@
       {
         "label": "USD.AI reserves dashboard",
         "url": "https://app.usd.ai/reserves"
+      },
+      {
+        "label": "Arbitrum USDai contract and PYUSD reserve balance",
+        "url": "https://arbitrum.blockscout.com/address/0x0A1a1A107E45b7Ced86833863F482Bc5f4eD82EF"
+      },
+      {
+        "label": "Arbitrum USD.AI LoanRouterV2 proxy",
+        "url": "https://arbitrum.blockscout.com/address/0x1C2ED170de32846316784c4fd58A5e3C7563E12f"
       }
     ],
-    "rationale": "The issuer's live proof-of-reserves API enumerates every reserve position: a PYUSD T-bill sleeve plus 27 GPU-backed infrastructure loan deals whose shares sum to 60.89741894% PYUSD and 39.10258106% loans as of 2026-07-22. Slice names are aligned to the exact live usdai-proof-of-reserves adapter identities so the reviewed classification overlays the captured rows. Dependency adjudication 2026-07-30: sUSDai is a serial wrapper of USDai (asset() re-verified live at Arbitrum block 491177809 returning USDai 0x0A1a1a107E45b7CeD86833863F482Bc5f4eD82EF), so the PYUSD look-through slice is not an additional parallel dependency path — the PYUSD exposure is inherited through the reviewed serial edge to usdai-usd-ai, whose own verified reserve envelope is 100% PYUSD; the slice's direct coin link was removed accordingly and recorded as a reviewed non-link.",
-    "compositionBasis": "USD.AI proof-of-reserves API position-level shares aggregated by bucket, fetched 2026-07-22",
-    "compositionAsOf": "2026-07-22",
+    "rationale": "The live USD.AI reserve index publishes a PYUSD sleeve plus GPU-backed infrastructure loans. On 2026-08-13, the share-bearing rows summed to 59.29384384% PYUSD and 40.70615616% across 18 active loans. The accounting is independently reconstructible from Arbitrum: PYUSD balanceOf(USDai) exactly matched the API's normalized PYUSD amount, LoanRouterV2 emits loan hashes and lifecycle events, and loanState(bytes32) exactly matched the API's outstanding principal for the sampled active loan. That verifies token balances and loan accounting, but not the off-chain GPU identity, appraisal, insurance, SPV structure, or legal enforceability; those remain issuer disclosures. Slice names remain aligned to the live adapter identities. Dependency adjudication retained: sUSDai is a serial wrapper of USDai, so the PYUSD look-through is inherited through the parent rather than modeled as a parallel dependency.",
+    "compositionBasis": "USD.AI index shares aggregated by bucket and reconciled to Arbitrum PYUSD balance and LoanRouterV2 state, fetched 2026-08-13",
+    "compositionAsOf": "2026-08-13",
     "scope": "full-composition",
-    "knownUnknownExposure": "Every reserve bucket reported by the issuer API is identified; individual loan-level obligor detail inside the GPU loan bucket is published by the API (borrower addresses, hardware, APR) but is aggregated here into one reviewed exposure.",
+    "knownUnknownExposure": "Every accounting bucket is identified and its token or loan principal is reconstructible on-chain. Borrower addresses and loan state are public, but the physical GPU mapping, valuation, insurance, SPV structure, and enforceability behind the private-credit bucket remain issuer-described and are aggregated here into one reviewed exposure.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "PYUSD (PayPal USD)",
-        "pct": 60.89741894,
+        "pct": 59.29384384,
         "disposition": "not-applicable",
         "rationale": "sUSDai is a serial wrapper of USDai; this PYUSD slice is the look-through of the parent's backing. The PYUSD exposure is inherited through the reviewed serial wrapper edge to usdai-usd-ai (whose verified reserve envelope is 100% PYUSD) and is tracked on the parent asset, so the slice is not a separate parallel dependency link."
       },
       {
         "reserveIndex": 1,
         "reserveName": "GPU-backed infrastructure loans (NVIDIA hardware)",
-        "pct": 39.10258106,
+        "pct": 40.70615616,
         "disposition": "untracked-exogenous-asset",
         "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies."
       }
@@ -95,6 +103,6 @@
       }
     ],
     "uncertainty": "The PYUSD sleeve sits in USD.AI's on-chain reserve contracts, while GPU loans are extended to borrower SPVs with hardware collateral held at colocation sites; the reviewed sources do not establish legal segregation, SPV insolvency treatment, or reuse terms for the loan book.",
-    "knownUnknownExposurePct": 39.10258106
+    "knownUnknownExposurePct": 40.70615616
   }
 }
