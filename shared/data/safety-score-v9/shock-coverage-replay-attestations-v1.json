@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-08-11",
+  "attestedAt": "2026-08-13",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-07-16-block-25546976-shock-coverage.json",
@@ -116,6 +116,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-08-11-block-25729422-shock-coverage.json",
       "journalSha256": "e4048b2f01104bc74cc8a96d0a52242795edd5a2f4f8b3009d8ecdc2d431c059",
       "attestedAt": "2026-08-11",
+      "exactReplayPassed": true,
+      "callsConsumed": 746,
+      "codePinsConsumed": 54
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-08-13-block-25743883-shock-coverage.json",
+      "journalSha256": "10130e1aa9ca1989a372ac51db9402469f4da4d44192b2015b11db97d176b643",
+      "attestedAt": "2026-08-13",
       "exactReplayPassed": true,
       "callsConsumed": 746,
       "codePinsConsumed": 54
@@ -252,6 +260,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-11-block-25729422-shock-coverage.json",
       "journalSha256": "bf1f786377b92491e82bbfa163a050cce0992f7631193210981725ca34063699",
       "attestedAt": "2026-08-11",
+      "exactReplayPassed": true,
+      "callsConsumed": 262,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-08-13-block-25743883-shock-coverage.json",
+      "journalSha256": "02f6c74552e1d7fb6b7fad6bc3c83e2114812601b84794f4d9e3dc6e96bbfc1c",
+      "attestedAt": "2026-08-13",
       "exactReplayPassed": true,
       "callsConsumed": 262,
       "codePinsConsumed": 14
