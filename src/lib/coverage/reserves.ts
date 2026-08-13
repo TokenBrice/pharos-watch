@@ -104,7 +104,7 @@ type ReserveCoverageCoinMeta = Pick<StablecoinMeta, "reserves" | "flags" | "coll
 
 function resolveReserve(
   coin: ReserveCoverageCoinMeta,
-  liveReserveFresh: boolean | null = true,
+  liveReserveFresh: boolean | null = null,
   dataAvailable = true,
 ): CoverageStatus {
   if (!dataAvailable) {
@@ -112,17 +112,19 @@ function resolveReserve(
   }
   const liveReserveAdapter = coin.liveReserveAdapter ?? coin.liveReservesConfig?.adapter;
   if (liveReserveAdapter) {
+    // Scoring provenance and the detail-page display badge are orthogonal.
+    // Some independently scored feeds intentionally use a proof-style badge.
+    if (liveReserveFresh === true) {
+      return createPresetStatus(RESERVES_STATUS_PRESETS.live);
+    }
+
     const badgeKind = getReserveDisplayBadgeKindForAdapter(liveReserveAdapter);
     if (badgeKind === "live") {
       if (liveReserveFresh === null) {
         return createPresetStatus(RESERVES_STATUS_PRESETS.checking);
       }
 
-      if (!liveReserveFresh) {
-        return createPresetStatus(RESERVES_STATUS_PRESETS["live-configured"]);
-      }
-
-      return createPresetStatus(RESERVES_STATUS_PRESETS.live);
+      return createPresetStatus(RESERVES_STATUS_PRESETS["live-configured"]);
     }
 
     if (badgeKind === "curated-validated") {

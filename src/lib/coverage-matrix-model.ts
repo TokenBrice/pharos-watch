@@ -157,7 +157,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
       blacklistStatus: getResolvedBlacklistStatus(coin.id),
       publishedMint: reportCard ? readV9CardMintComponent(reportCard) : null,
-      liveReserveFresh: null,
+      liveReserveFresh: reportCard?.backingFromLiveReserves ?? null,
       dataAvailability: queryAvailability,
     });
   });

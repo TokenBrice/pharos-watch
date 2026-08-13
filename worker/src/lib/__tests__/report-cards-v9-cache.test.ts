@@ -47,7 +47,7 @@ describe("canonical V9 report-card cache", () => {
     mockLoadPublicationHealth.mockReset();
   });
 
-  it("projects the evaluator publication into the active report-v4 contract", () => {
+  it("projects the evaluator publication into the active report-v5 contract", () => {
     const publication = evaluatorPublication();
     const health = makeReportCardsV9Response().publicationHealth;
 
@@ -55,7 +55,7 @@ describe("canonical V9 report-card cache", () => {
       projectSafetyScoreV9PublicationToPublicSnapshot(publication, health),
     ).toMatchObject({
       model: "v9",
-      schemaVersion: 4,
+      schemaVersion: 5,
       lifecycle: "active",
       safetyScoreIdentity: {
         publicationGenerationId: publication.publicationGenerationId,

@@ -124,13 +124,13 @@ describe("frontend API query descriptors", () => {
     }
   }, 30_000);
 
-  it("accepts only report-v4 at the live V9 reader boundary", async () => {
+  it("accepts only report-v5 at the live V9 reader boundary", async () => {
     const schema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9.schema);
     if (schema === undefined) throw new Error("Expected a V9 report-card response schema");
-    const reportV4 = makeReportCardsV9Response();
+    const reportV5 = makeReportCardsV9Response();
 
-    expect(schema.safeParse(reportV4).success).toBe(true);
-    expect(schema.safeParse({ ...reportV4, schemaVersion: 3 }).success).toBe(false);
+    expect(schema.safeParse(reportV5).success).toBe(true);
+    expect(schema.safeParse({ ...reportV5, schemaVersion: 4 }).success).toBe(false);
   });
 
   it("validates only global PSI display fields and preserves the full payload", () => {

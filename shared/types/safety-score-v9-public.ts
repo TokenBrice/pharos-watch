@@ -1311,6 +1311,12 @@ export type SafetyScoreV9Breakdowns = z.infer<typeof SafetyScoreV9BreakdownsSche
 
 const SafetyScoreV9CardShape = {
   id: z.string().min(1),
+  /**
+   * True when the exact V9 fact set compiled this asset's Backing reserve
+   * exposures from an accepted live-reserve snapshot. Optional only so a new
+   * Worker can continue reading the last pre-field publication during rollout.
+   */
+  backingFromLiveReserves: z.boolean().optional(),
   score: ScoreSchema.nullable(),
   grade: V9GradeSchema,
   qualityScore: ScoreSchema.nullable(),
