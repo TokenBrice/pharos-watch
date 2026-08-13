@@ -993,7 +993,8 @@ describe("dex liquidity scoring stage cycle", () => {
 
     await runDexLiquidityScoringCycle(db, "graph-key");
 
-    const scoreCall = vi.mocked(computeStablecoinScores).mock.calls.at(-1);
+    const scoreCalls = vi.mocked(computeStablecoinScores).mock.calls;
+    const scoreCall = scoreCalls[scoreCalls.length - 1];
     const shadowTargets = scoreCall?.[9];
     expect([...shadowTargets!.values()]).toContainEqual(
       expect.objectContaining({
