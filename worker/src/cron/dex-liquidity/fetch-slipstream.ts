@@ -499,7 +499,7 @@ export async function fetchSlipstreamPools(
 ): Promise<DexApiFetchResult> {
   const config = SLIPSTREAM_CONFIG[protocol];
   const errors: string[] = [];
-  let pools: DexApiPool[] = [];
+  const pools: DexApiPool[] = [];
   try {
     const clPools = await fetchSugarPools(protocol, config, chainAddressToId, chainRpcs, signal);
     const tokenAddresses = Array.from(new Set(
