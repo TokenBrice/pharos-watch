@@ -488,6 +488,9 @@ describe("derived supply-model route observations", () => {
     expect(
       deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, provider: "reserve-sync-metadata" }, now),
     ).toBeNull();
+    expect(
+      deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, capacityProfile: undefined }, now),
+    ).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, resolutionState: "impaired" }, now)).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, routeStatus: "degraded" }, now)).toBeNull();
     expect(deriveSupplyModelExitRouteObservation({ ...supplyFullEntry, docs: null }, now)).toBeNull();
@@ -512,5 +515,97 @@ describe("derived supply-model route observations", () => {
         now,
       ),
     ).toBeNull();
+  });
+
+  it("still derives when the published row scored immediate capacity as zero", () => {
+    const observation = deriveSupplyModelExitRouteObservation(
+      {
+        ...supplyFullEntry,
+        capacityProfile: { ...supplyFullEntry.capacityProfile!, scoringUsd: 0 },
+      },
+      now,
+    );
+    expect(observation).toMatchObject({
+      routeFamily: "issuer-redemption",
+      executableUsd: 5_000_000,
+      scoreEligible: true,
+    });
+  });
+
+  it("derives diagnostic eventual-redemption from the live Avalon USDa config", () => {
+    const avalonConfig = getRedemptionBackstopConfig("usda-avalon");
+    expect(avalonConfig).toBeDefined();
+    expect(avalonConfig?.outputAssets).toEqual(["usdt-tether"]);
+    expect(avalonConfig?.settlementModel).toBe("days");
+    expect(avalonConfig?.capacityModel.kind).toBe("supply-full");
+
+    const observation = deriveSupplyModelExitRouteObservation(
+      {
+        ...supplyFullEntry,
+        stablecoinId: "usda-avalon",
+        routeFamily: avalonConfig!.routeFamily,
+        accessModel: avalonConfig!.accessModel,
+        settlementModel: avalonConfig!.settlementModel,
+        executionModel: avalonConfig!.executionModel,
+        outputAssetType: avalonConfig!.outputAssetType,
+        feeModelKind: "documented-variable",
+        feeBps: null,
+        docs: {
+          label: avalonConfig!.docs![0]!.label,
+          url: avalonConfig!.docs![0]!.url,
+          reviewedAt: avalonConfig!.reviewedAt,
+        },
+      },
+      now,
+    );
+
+    expect(observation).toMatchObject({
+      routeId: "redemption:usda-avalon:stablecoin-redeem",
+      routeFamily: "eventual-redemption",
+      settlementHorizonSec: 14 * 86_400,
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      evidenceKind: "documented-terms",
+      feeEvidence: "undisclosed-reviewed",
+      scoreEligible: false,
+      executableUsd: 5_000_000,
+      completionRatio: 1,
+    });
+  });
+});
+
+describe("reserve-sync observations with tiny live capacity", () => {
+  it("publishes a fail-closed observation when scoring capacity is a near-zero USDC payout", () => {
+    const anzenConfig = getRedemptionBackstopConfig("usdz-anzen");
+    expect(anzenConfig).toBeDefined();
+    expect(anzenConfig?.outputAssets).toEqual(["usdc-circle"]);
+
+    const observation = build({
+      stablecoinId: "usdz-anzen",
+      config: anzenConfig!,
+      capacityProfile: {
+        scoringUsd: 0.006695,
+        scoringHorizon: "immediate",
+        capacityProfileConfidence: "live-direct",
+        modeledExitSizeUsd: 5_000_000,
+      },
+      scoringCapacityUsd: 0.006695,
+      supplyUsd: 806_422.8,
+      sourceMode: "dynamic",
+      capacityConfidence: "live-direct",
+      capacityKind: "live-direct",
+      freshnessKind: "same-run-onchain",
+      sourceTimestamp: Date.UTC(2026, 6, 13, 10) / 1_000,
+      resolvedFeeBps: 0,
+    });
+
+    expect(observation).toMatchObject({
+      routeId: "redemption:usdz-anzen:stablecoin-redeem",
+      routeFamily: "protocol-redemption",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+      evidenceKind: "onchain-contract-state",
+      executableUsd: 0.006695,
+      completionRatio: 0.006695 / 5_000_000,
+      scoreEligible: true,
+    });
   });
 });

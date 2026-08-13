@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   evaluateOutputDependencyImpairment,
   loadSevereActiveDepegAvailabilityMap,
   type ActiveDepegAvailabilityRow,
 } from "../redemption-backstop-availability";
+import { buildRedemptionBackstopEntry } from "../redemption-backstop-sources";
+import type { ReserveSnapshotMetadataRecord } from "../live-reserves-store";
 
 const REVIEW_DATE = "2026-04-22";
 
@@ -288,5 +291,167 @@ describe("evaluateOutputDependencyImpairment", () => {
     const partial = evaluateOutputDependencyImpairment(weights, new Map([["dep-a", row("dep-a", -3000, 1_000_000)]]));
     expect(partial?.outputImpairedShare).toBeCloseTo(0.5, 6);
     expect(partial?.impairedDependencyId).toBe("dep-a");
+  });
+});
+
+describe("wave2 redemption exit-route embeds", () => {
+  const now = 1_780_000_000;
+
+  function weakProbeSnapshot(
+    stablecoinId: string,
+    source: string,
+    redemption?: Record<string, unknown>,
+  ): ReserveSnapshotMetadataRecord {
+    return {
+      stablecoinId,
+      fetchedAt: now - 60,
+      source,
+      metadata: {
+        freshnessMode: "not-applicable",
+        ...(redemption ? { redemption } : {}),
+      },
+      warningCount: 0,
+      warnings: [],
+      sourceModel: "single-bucket",
+      evidenceClass: "weak-live-probe",
+      syncStatus: "ok",
+    };
+  }
+
+  it("attaches diagnostic eventual-redemption for the live Avalon USDa supply-full row", async () => {
+    const config = getRedemptionBackstopConfig("usda-avalon");
+    expect(config).toBeDefined();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usda-avalon",
+      config!,
+      50_000_000,
+      0,
+      now,
+    );
+
+    expect(entry.provider).toBe("supply-full-model");
+    expect(entry.capacityProfile?.scoringUsd).toBeNull();
+    expect(entry.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({
+      routeId: "redemption:usda-avalon:stablecoin-redeem",
+      routeFamily: "eventual-redemption",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
+      settlementHorizonSec: 14 * 86_400,
+      scoreEligible: false,
+    });
+  });
+
+  it("publishes an observation for successful Anzen reserve-sync with near-zero scoring capacity", async () => {
+    const config = getRedemptionBackstopConfig("usdz-anzen");
+    expect(config).toBeDefined();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "usdz-anzen",
+      config!,
+      806_422.8,
+      0,
+      now,
+      {
+        reserveSnapshotMetadata: weakProbeSnapshot("usdz-anzen", "anzen-usdz", {
+          capacityUsd: 0.006695,
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+          holderEligibility: "any-holder",
+          settlementDelaySec: 0,
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          feeBps: 0,
+          sourceUrls: ["https://docs.anzen.finance/usdz-101/overview"],
+        }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.immediateCapacityUsd).toBe(0.006695);
+    expect(entry.capacityProfile?.scoringUsd).toBe(0.006695);
+    expect(entry.capacityProfile?.exitRouteObservations?.[0]).toMatchObject({
+      routeId: "redemption:usdz-anzen:stablecoin-redeem",
+      routeFamily: "protocol-redemption",
+      output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdc-circle"] },
+      evidenceKind: "onchain-contract-state",
+      feeEvidence: "undisclosed-reviewed",
+      executableUsd: 0.006695,
+      scoreEligible: false,
+    });
+  });
+
+  it("publishes an observation for successful River reserve-sync trove-debt telemetry", async () => {
+    const config = getRedemptionBackstopConfig("satusd-river");
+    expect(config).toBeDefined();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "satusd-river",
+      config!,
+      159_000_000,
+      0,
+      now,
+      {
+        reserveSnapshotMetadata: weakProbeSnapshot("satusd-river", "river-protocol-info", {
+          capacityUsd: 9_100_000,
+          capacityKind: "live-direct-bounded",
+          freshnessKind: "same-run-onchain",
+          holderEligibility: "any-holder",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          feeBps: 50,
+          sourceUrls: ["https://docs.river.inc/products/editor/redemption"],
+        }),
+      },
+    );
+
+    expect(entry.resolutionState).toBe("resolved");
+    expect(entry.immediateCapacityUsd).toBe(9_100_000);
+    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    expect(observation).toMatchObject({
+      routeId: "redemption:satusd-river:collateral-redeem",
+      routeFamily: "protocol-redemption",
+      output: { kind: "collateral", assetKeys: ["asset:btc", "asset:eth", "asset:bnb"] },
+      evidenceKind: "onchain-contract-state",
+      scoreEligible: true,
+    });
+    expect(observation?.executableUsd).toBe(entry.capacityProfile?.modeledExitSizeUsd);
+    expect(observation?.executableUsd).toBeGreaterThan(0);
+  });
+
+  it("keeps River unrated when the Satoshi probe withholds redemption telemetry", async () => {
+    const config = getRedemptionBackstopConfig("satusd-river");
+    expect(config).toBeDefined();
+
+    const entry = await buildRedemptionBackstopEntry(
+      mockD1(),
+      "satusd-river",
+      config!,
+      159_000_000,
+      0,
+      now,
+      {
+        reserveSnapshotMetadata: {
+          ...weakProbeSnapshot("satusd-river", "river-protocol-info"),
+          warningCount: 1,
+          warnings: [
+            {
+              code: "river-redemption-unreadable",
+              message:
+                "No Satoshi Protocol chain returned a matching debtToken()/getGlobalSystemBalances()/branch set for satusd-river this run; redemption telemetry withheld",
+              severity: "info",
+              effect: "info",
+            },
+          ],
+        },
+      },
+    );
+
+    expect(entry.resolutionState).toBe("missing-capacity");
+    expect(entry.immediateCapacityUsd).toBeNull();
+    expect(entry.capacityProfile).toBeUndefined();
+    expect(entry.score).toBeNull();
   });
 });
