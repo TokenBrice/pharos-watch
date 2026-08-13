@@ -418,7 +418,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/redemption-exit-route-observations.ts",
-      "sha256": "d254cd880f45a2020d33c1ce8a74d75e11d2fc180925c59d5678e29ac864a439"
+      "sha256": "3d1b511be5ea8a02e40bac05dc1b378966debeff45e6210c9762b67b8a3c26c6"
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "f43a8e8e96fd5f2c140761cbe74209ee9ea0dd26dd4e59fd7026cd98ae0aab3f"
+  "digest": "bba308859533d4f25bfb61926cbb1255e6463d7fb53e4ce53a8ec6ec38bc5a7f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
