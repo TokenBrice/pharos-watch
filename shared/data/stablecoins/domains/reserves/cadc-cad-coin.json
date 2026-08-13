@@ -17,24 +17,28 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-21",
-    "reviewer": "Codex Safety Score V9 reserve batch 7",
+    "reviewedAt": "2026-08-13",
+    "reviewer": "Codex Wave 5 R-A1 reserve research",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Loon CADC transparency and monthly attestations",
-        "url": "https://loon.finance/transparency/"
+        "label": "CADC July 2026 ATB Financial bank confirmation",
+        "url": "https://loon.finance/api/attestations"
       },
       {
-        "label": "Loon CADC product page",
-        "url": "https://loon.finance/"
+        "label": "CADC July 2026 report object",
+        "url": "https://storage.googleapis.com/loon-attestations/CADC_Bank_Attestation_Jul_2026.pdf"
+      },
+      {
+        "label": "Loon CADC transparency",
+        "url": "https://loon.finance/transparency/"
       }
     ],
-    "rationale": "Loon's current transparency page states that every CADC is backed 1:1 by Canadian dollars at ATB Financial, with 100% cash deposits in segregated accounts and no exposure to commercial paper or investment instruments. The page lists a June 2026 monthly bank attestation, so the single disclosed cash-deposit slice remains the complete reserve composition.",
-    "compositionBasis": "Loon transparency page and listed June 2026 monthly bank attestation",
-    "compositionAsOf": "2026-06-30",
+    "rationale": "The issuer API listed a July 2026 bank confirmation uploaded 2026-08-11. The ATB Financial form confirms CAD 1,817,260.14 in a Business Growth Plus deposit as of 2026-07-31. The single disclosed reserve asset is Canadian-dollar cash at the named bank. The form is not an accountant's opinion or audit and does not state CADC circulation or reconcile liabilities; account number, account legal safeguards, and withdrawal terms remain undisclosed.",
+    "compositionBasis": "ATB Financial bank confirmation for PayTrie AB Inc as listed in Loon's July 2026 attestation API",
+    "compositionAsOf": "2026-07-31",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve asset class and ATB Financial custody are disclosed; the transparency page does not disclose account-level balances or provider shares beyond the single named bank.",
+    "knownUnknownExposure": "No reserve asset class is unclassified. The confirmation does not establish CADC liability coverage, account legal safeguards, or withdrawal terms.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -42,7 +46,7 @@
         "reserveName": "Canadian-dollar cash deposits at ATB Financial",
         "pct": 100,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "Canadian-dollar bank deposits are off-chain cash reserves rather than a tracked stablecoin dependency."
+        "rationale": "Canadian-dollar bank deposits are external reserve assets rather than tracked stablecoin dependencies."
       }
     ]
   },
