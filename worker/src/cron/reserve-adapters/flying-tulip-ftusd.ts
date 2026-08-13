@@ -175,7 +175,7 @@ export function adaptFlyingTulipFtUsd(payload: FlyingTulipPayload): AdapterResul
       unknownExposurePct: 0,
       details: {
         sourceOperator: "Flying Tulip",
-        assurance: "issuer-operated telemetry; no independent attestation",
+        assurance: "first-party index of publicly verifiable on-chain reserve state",
         strategies: diagnostics,
       },
     },

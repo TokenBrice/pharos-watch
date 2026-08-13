@@ -57,7 +57,7 @@ describe("adaptFlyingTulipFtUsd", () => {
       sourceTimestamp: 1786310565,
       unknownExposurePct: 0,
       details: {
-        assurance: "issuer-operated telemetry; no independent attestation",
+        assurance: "first-party index of publicly verifiable on-chain reserve state",
         strategies: [
           expect.objectContaining({ chainName: "Ethereum", borrow: "WETH", stake: "wstETH", leverage: 1.042 }),
           expect.objectContaining({ chainName: "Sonic", borrow: "wS", stake: "stS", leverage: 1.568 }),

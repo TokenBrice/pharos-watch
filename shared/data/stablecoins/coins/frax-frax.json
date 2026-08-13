@@ -131,7 +131,7 @@
     "breakerScope": "frax-frax",
     "display": {
       "url": "https://frax.com/transparency",
-      "label": "Frax Transparency"
+      "label": "Frax Reserve Index"
     },
     "inputs": {
       "primary": {

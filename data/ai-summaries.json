@@ -1955,13 +1955,11 @@
   },
   "ftusd-flying-tulip": {
     "title": "On-Chain Carry, Concentrated Control",
-    "text": "ftUSD is Flying Tulip's non-yielding base dollar, while sftUSD is the optional wrapper that receives strategy yield. The live reserve stack lends stablecoin collateral and runs borrow-and-stake carry on both Ethereum and Sonic: WETH into wstETH exposure on Ethereum and wS into stS on Sonic, not a short-perpetual hedge. Flying Tulip's token-sale capital is not conventional operating runway: primary FT allocations carry a perpetual put against reserved contributed assets, and the issuer says operations are funded from generated yield and revenue. Yield attributable to unstaked ftUSD accrues to the protocol, an opportunity-cost transfer distinct from a mandatory yield-bearing token. The risk sits in the layers added above the stablecoin collateral: issuer-run reserve reporting, lending and staking/liquidation exposure, upstream USDC/USDT/USSD dependencies, and the same no-timelock 3-of-5 Safe controlling token ownership, master-minter authority, and the upgradeable minter on both chains.",
-    "updatedAt": "2026-08-09",
+    "text": "ftUSD is Flying Tulip's non-yielding base dollar, while sftUSD is the optional wrapper that receives strategy yield. The live reserve stack lends stablecoin collateral and runs borrow-and-stake carry on both Ethereum and Sonic: WETH into wstETH exposure on Ethereum and wS into stS on Sonic, not a short-perpetual hedge. Flying Tulip's token-sale capital is not conventional operating runway: primary FT allocations carry a perpetual put against reserved contributed assets, and the issuer says operations are funded from generated yield and revenue. Yield attributable to unstaked ftUSD accrues to the protocol, an opportunity-cost transfer distinct from a mandatory yield-bearing token. Flying Tulip indexes the reserve feed, while the underlying balances are publicly verifiable on-chain. The remaining risks include lending and staking/liquidation exposure, upstream USDC/USDT/USSD dependencies, and the same no-timelock 3-of-5 Safe controlling token ownership, master-minter authority, and the upgradeable minter on both chains.",
+    "updatedAt": "2026-08-13",
     "authoredBy": "ai",
     "model": "gpt-5-codex",
-    "reviewedBy": "@TokenBrice",
-    "reviewedAt": "2026-08-09",
-    "factsAsOf": "2026-08-09",
+    "factsAsOf": "2026-08-13",
     "sources": [
       {
         "label": "ftUSD product documentation",

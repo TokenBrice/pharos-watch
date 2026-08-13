@@ -110,7 +110,7 @@
     "breakerScope": "susdai-usd-ai",
     "display": {
       "url": "https://app.usd.ai/reserves",
-      "label": "USD.AI Reserves"
+      "label": "USD.AI On-chain Reserve Index"
     },
     "inputs": {
       "primary": {
@@ -122,7 +122,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161",
-    "provider": "USD.AI proof-of-reserves API",
+    "provider": "USD.AI on-chain reserve index; GPU collateral self-disclosed",
     "attestorTier": "self",
     "cadence": "real-time"
   },

@@ -26,17 +26,17 @@
     "attestorJurisdiction": "Italy",
     "attestorLicense": "BDO member firm assurance",
     "latestReport": {
-      "periodEnd": "2026-03-31",
-      "publishedAt": "2026-04-30",
+      "periodEnd": "2026-06-30",
+      "publishedAt": "2026-07-31",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "OpenAI Codex reserve telemetry audit",
       "confidence": "verified",
       "sources": [
         {
-          "label": "BDO Tether Gold Reserves Report - March 31, 2026",
-          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+          "label": "BDO Tether Gold Reserves Report - June 30, 2026",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
         },
         {
           "label": "Tether Gold reserves reports",

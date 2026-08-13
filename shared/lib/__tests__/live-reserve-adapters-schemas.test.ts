@@ -283,6 +283,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     const issuerAdapters = [
       "frax-balance-sheet",
       "frax-fpi-collateral",
+      "makina-strategy",
       "tether-transparency",
       "usdai-proof-of-reserves",
     ] as const;
@@ -290,6 +291,7 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     for (const adapterKey of issuerAdapters) {
       expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES[adapterKey]).toBe("issuer-attested");
       expect(LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].evidenceClass).toBe("independent");
+      expect(getReserveDisplayBadgeKindForAdapter(adapterKey)).toBe("proof");
     }
     expect(LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES["3jane-usd3"]).toBe("unknown");
   });

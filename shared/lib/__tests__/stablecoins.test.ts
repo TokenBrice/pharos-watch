@@ -987,7 +987,7 @@ describe("tracked stablecoin metadata", () => {
       breakerScope: "susdai-usd-ai",
       display: {
         url: "https://app.usd.ai/reserves",
-        label: "USD.AI Reserves",
+        label: "USD.AI On-chain Reserve Index",
       },
       inputs: {
         primary: {

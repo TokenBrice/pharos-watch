@@ -56,7 +56,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "ftusd-flying-tulip",
-      note: "Borrow-and-stake example. Stablecoin collateral is lent on Ethereum and Sonic, native assets are borrowed and staked into matched exposure, ftUSD remains non-yielding, and sftUSD is the opt-in yield wrapper. The reserve feed is issuer-operated rather than independently attested.",
+      note: "Borrow-and-stake example. Stablecoin collateral is lent on Ethereum and Sonic, native assets are borrowed and staked into matched exposure, ftUSD remains non-yielding, and sftUSD is the opt-in yield wrapper. Flying Tulip indexes the feed, while the underlying reserve balances are publicly verifiable on-chain.",
     },
     {
       coinId: "usr-resolv",

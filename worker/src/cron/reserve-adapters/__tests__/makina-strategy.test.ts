@@ -73,6 +73,7 @@ describe("makina-strategy adapter", () => {
       "1": 10700,
       "8453": 300,
     });
+    expect(result.metadata?.details?.oldestPositionUpdatedAt).toBe(1785265103);
     expect(result.metadata?.details?.oldestMaterialPositionUpdatedAt).toBe(1785265103);
     expect(result.warnings?.map((warning) => warning.code)).toEqual(["makina-unknown-exposure"]);
   });
@@ -123,6 +124,22 @@ describe("makina-strategy adapter", () => {
       Math.floor(Date.parse("2026-07-19T09:28:20.429Z") / 1000),
     );
     expect(validation.valid).toBe(true);
+    expect(validation.warnings.map((warning) => warning.code)).toContain("stale-source-data");
+  });
+
+  it("does not hide stale on-chain position accounting behind fresh API envelopes", () => {
+    const strategy = structuredClone(STRATEGY_FIXTURE);
+    const allocations = structuredClone(ALLOCATIONS_FIXTURE);
+    strategy.meta.generated_at = "2026-07-28T22:58:23.000Z";
+    allocations.meta.generated_at = "2026-07-28T22:58:23.000Z";
+
+    const result = adaptMakinaStrategyReserves(strategy, allocations, PARAMS);
+    const validation = validateAdapterOutput(result, {
+      adapter: getReserveAdapter("makina-strategy") ?? undefined,
+      now: Math.floor(Date.parse("2026-07-28T22:58:23.000Z") / 1000),
+    });
+
+    expect(result.metadata?.sourceTimestamp).toBe(1785265103);
     expect(validation.warnings.map((warning) => warning.code)).toContain("stale-source-data");
   });
 

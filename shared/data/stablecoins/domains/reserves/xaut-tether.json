@@ -19,13 +19,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-13",
+    "reviewer": "OpenAI Codex reserve telemetry audit",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BDO Tether Gold Reserves Report - March 31, 2026",
-        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        "label": "BDO Tether Gold Reserves Report - June 30, 2026",
+        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
       },
       {
         "label": "Tether Gold reserves reports",
@@ -36,9 +36,9 @@
         "url": "https://app.tether.to/transparency.json"
       }
     ],
-    "rationale": "The March 31, 2026 Tether Gold Reserves Report identifies the complete direct reserve as London Good Delivery physical gold vaulted in Switzerland. It reports 707,747.139 fine troy ounces against 707,747.090000 XAUT in circulation and states that each token is backed by at least one fine troy ounce; BDO reconciled the reported liabilities to the relevant blockchain ledgers.",
-    "compositionBasis": "Tether Gold March 31, 2026 reserves report and official transparency feed",
-    "compositionAsOf": "2026-03-31",
+    "rationale": "The June 30, 2026 Tether Gold Reserves Report identifies the complete direct reserve as London Good Delivery physical gold vaulted in Switzerland. It reports 707,747.139 fine troy ounces against 707,747.090000 XAUT minted and states that each token is backed by at least one fine troy ounce; BDO reconciled the reported liabilities to the relevant blockchain ledgers.",
+    "compositionBasis": "Tether Gold June 30, 2026 reserves report and official transparency feed",
+    "compositionAsOf": "2026-06-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete direct reserve asset is identified as physical gold; custodian identity and provider allocation remain unknown and are recorded in the custody profile.",
     "knownUnknownExposurePct": 0,
@@ -55,20 +55,20 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Custodian(s) not publicly named in the March 2026 report",
+        "name": "Custodian(s) not publicly named in the June 2026 report",
         "role": "custodian"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "contractual-only",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
-    "reviewer": "OpenAI Codex backing review",
+    "reviewedAt": "2026-08-13",
+    "reviewer": "OpenAI Codex reserve telemetry audit",
     "confidence": "probable",
     "sources": [
       {
-        "label": "BDO Tether Gold Reserves Report - March 31, 2026",
-        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_31.03.2026_RC187322026DV0089.pdf"
+        "label": "BDO Tether Gold Reserves Report - June 30, 2026",
+        "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.06.2026_RC187322026DV0170.pdf"
       },
       {
         "label": "Tether Gold reserves reports",
