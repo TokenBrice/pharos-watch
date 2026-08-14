@@ -15,6 +15,8 @@ const CAPTURED_AT_RE = /<!--\s*captured-at:\s*(\d{4}-\d{2}-\d{2}T[\d:]+Z)\s*-->/
 // explaining why. They are frozen on purpose: the refresh script must not list
 // them, and they are exempt from the 90-day staleness bound.
 const ARCHIVED_RE = /<!--\s*archived:\s*(\S[^>]*?)\s*-->/;
+const SOURCE_TRIMMED_RE = /<!--\s*source-trimmed:\s*(\S[^>]*?)\s*-->/;
+const SOURCE_RE = /<!--\s*source:\s*(https:\/\/\S+?)\s*-->/;
 const MAX_FIXTURE_AGE_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -38,11 +40,8 @@ function inspectFixtureFreshness(file: string, content: string, now = new Date()
 const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
   "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
-  "europ-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
-  "straitsx-independent-assurance": "Compact gated-asset index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
-  "usdgo-transparency": "Reviewed PDF manifest, pinned on-chain reads, and issuer API cross-checks are covered with compact inline discovery and payload fixtures.",
 };
 
 function fixturePrefixCandidates(key: string): string[] {
@@ -99,12 +98,24 @@ describe("http-html adapter fixture coverage", () => {
 
   const archivedFixtureNames = htmlFixtureNames.filter((name) =>
     ARCHIVED_RE.test(readFileSync(resolve(FIXTURES_DIR, name), "utf8")));
-  const refreshableFixtureNames = htmlFixtureNames.filter((name) => !archivedFixtureNames.includes(name));
+  const manuallyTrimmedFixtureNames = htmlFixtureNames.filter((name) =>
+    SOURCE_TRIMMED_RE.test(readFileSync(resolve(FIXTURES_DIR, name), "utf8")));
+  const currentFixtureNames = htmlFixtureNames.filter((name) => !archivedFixtureNames.includes(name));
+  const refreshableFixtureNames = currentFixtureNames.filter((name) => !manuallyTrimmedFixtureNames.includes(name));
 
-  it.each(refreshableFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
+  it.each(currentFixtureNames)("%s carries a valid captured-at header no older than 90 whole days", (fixtureName) => {
     const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
     const result = inspectFixtureFreshness(fixtureName, content);
     expect(result.error, result.error).toBeUndefined();
+  });
+
+  it.each(manuallyTrimmedFixtureNames)("%s identifies its live source and why it is manually trimmed", (fixtureName) => {
+    const content = readFileSync(resolve(FIXTURES_DIR, fixtureName), "utf8");
+    expect(content.match(SOURCE_RE)?.[1], `${fixtureName}: missing HTTPS source header`).toMatch(/^https:\/\//);
+    expect(
+      content.match(SOURCE_TRIMMED_RE)?.[1]?.trim().length,
+      `${fixtureName}: source-trimmed reason must be specific`,
+    ).toBeGreaterThan(20);
   });
 
   it.each(archivedFixtureNames)("%s documents why it is archived instead of refreshed", (fixtureName) => {

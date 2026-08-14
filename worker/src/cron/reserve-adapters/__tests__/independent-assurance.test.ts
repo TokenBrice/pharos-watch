@@ -1,17 +1,26 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, afterEach, vi } from "vitest";
 import {
+  getIndependentAssuranceManifest,
   IndependentAssuranceManifestSchema,
   reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
+  type IndependentAssuranceProduct,
 } from "@shared/lib/independent-assurance";
 import { getReserveAdapter } from "../index";
+import { EUROP_INDEPENDENT_ASSURANCE_PROFILE } from "../europ-independent-assurance";
 import {
   verifyIndependentAssuranceReport,
   type IndependentAssuranceProfile,
 } from "../independent-assurance";
+import { straitsxIndependentAssuranceProfile } from "../straitsx-independent-assurance";
+import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { validateAdapterOutput } from "../validate";
 
+const TEST_DIR = dirname(fileURLToPath(import.meta.url));
 const PDF_BYTES = new TextEncoder().encode("%PDF-1.7\nfixture\n");
 const PDF_SHA256 = createHash("sha256").update(PDF_BYTES).digest("hex");
 
@@ -104,6 +113,49 @@ async function verify(manifestOverride: Partial<IndependentAssuranceManifest> = 
   });
 }
 
+function readIndexFixture(name: string): string {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- test-only fixture reads with literal names from this file.
+  return readFileSync(resolve(TEST_DIR, "fixtures", name), "utf8");
+}
+
+async function verifyRealIndexFixture(
+  product: IndependentAssuranceProduct,
+  profile: IndependentAssuranceProfile,
+  fixtureName: string,
+  htmlOverride?: string,
+): Promise<void> {
+  const reviewed = getIndependentAssuranceManifest(product);
+  const indexHost = new URL(reviewed.officialIndexUrl).hostname;
+  const reportHost = new URL(reviewed.reportUrl).hostname;
+  const html = htmlOverride ?? readIndexFixture(fixtureName);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === reviewed.officialIndexUrl) {
+        return new Response(html, { headers: { "content-type": "text/html" } });
+      }
+      if (url === reviewed.reportUrl) {
+        return new Response(PDF_BYTES, {
+          headers: {
+            "content-type": "application/pdf",
+            "content-length": String(PDF_BYTES.length),
+          },
+        });
+      }
+      throw new Error(`unexpected fixture request ${url}`);
+    }),
+  );
+  await verifyIndependentAssuranceReport({
+    manifest: reviewed,
+    indexUrl: reviewed.officialIndexUrl,
+    indexHost,
+    reportHosts: [reportHost],
+    profile,
+    signal: new AbortController().signal,
+  });
+}
+
 describe("independent-assurance manifest framework", () => {
   afterEach(() => vi.unstubAllGlobals());
 
@@ -160,6 +212,37 @@ describe("independent-assurance manifest framework", () => {
     );
 
     await expect(verify()).rejects.toThrow("reviewed report URL is missing or duplicated");
+  });
+
+  it.each([
+    ["EUROP", EUROP_INDEPENDENT_ASSURANCE_PROFILE, "europ-independent-assurance.html"],
+    ["XSGD", straitsxIndependentAssuranceProfile("XSGD"), "straitsx-independent-assurance-xsgd.html"],
+    ["XUSD", straitsxIndependentAssuranceProfile("XUSD"), "straitsx-independent-assurance-xusd.html"],
+    ["USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, "usdgo-transparency.html"],
+  ] as const)("accepts the trimmed real %s index shape before verifying PDF bytes", async (product, profile, fixture) => {
+    await expect(verifyRealIndexFixture(product, profile, fixture)).rejects.toThrow("PDF byte length");
+  });
+
+  it("ignores a newer unrelated StraitsX whitepaper but fails closed on a newer XSGD report", async () => {
+    const fixture = "straitsx-independent-assurance-xsgd.html";
+    await expect(
+      verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture),
+    ).rejects.toThrow("PDF byte length");
+
+    const withNewReport = readIndexFixture(fixture) +
+      '<button data-gated-asset="XSGD Attestation Report July 2026" data-gated-url="https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/XSGD_SCS_Reserve_Account_Report_(31_July_2026).pdf"></button>';
+    await expect(
+      verifyRealIndexFixture("XSGD", straitsxIndependentAssuranceProfile("XSGD"), fixture, withNewReport),
+    ).rejects.toThrow("newer unreviewed report");
+  });
+
+  it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
+    const fixture = "usdgo-transparency.html";
+    const ambiguous = readIndexFixture(fixture) +
+      '<a href="https://learn.anchorage.com/06.30.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Jun revised</a>';
+    await expect(
+      verifyRealIndexFixture("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
+    ).rejects.toThrow("reviewed report URL is missing or duplicated");
   });
 
   it("keeps stale verified reports out of score-grade state", () => {

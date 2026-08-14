@@ -24,7 +24,7 @@ const CROSS_CHECK_TOLERANCE_PCT = 1;
 const BUIDL_BALANCE_OF_SELECTOR = "0x70a08231";
 const BUIDL_DECIMALS_SELECTOR = "0x313ce567";
 
-const PROFILE: IndependentAssuranceProfile = {
+export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: ADAPTER_KEY,
   product: "USDGO",
   profile: "usdgo-v1",
@@ -64,7 +64,9 @@ const PROFILE: IndependentAssuranceProfile = {
       liquidityHorizon: "one-day",
     },
   },
-  isReportCandidate: (href, text) => /usdgo|attestation|reserve.?report/i.test(`${href} ${text}`),
+  isReportCandidate: (href) =>
+    /USDGO[-_ ]Stablecoin[-_ ]Attestation[-_ ]Report/i.test(decodeURIComponent(href)),
+  reportDateFromCandidate: usdgoReportDate,
 };
 
 interface UsdgoIssuerCrossCheckPayload {
@@ -80,6 +82,19 @@ interface BuidlObservation {
   balanceRaw: bigint;
   decimals: number;
   codeHash: string;
+}
+
+function usdgoReportDate(href: string): string | null {
+  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const match = fileName.match(/^(\d{2})[.](\d{2})[.](\d{2})_USDGO[-_]Stablecoin[-_]Attestation[-_]Report/i);
+  if (!match) return null;
+  const month = Number(match[1]);
+  const day = Number(match[2]);
+  const year = 2000 + Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > new Date(Date.UTC(year, month, 0)).getUTCDate()) {
+    return null;
+  }
+  return `${year}-${match[1]}-${match[2]}`;
 }
 
 function encodeAddressCall(selector: string, address: string): string {
@@ -298,7 +313,14 @@ export async function fetchUsdgoTransparencyReserves(
   const reportTimestamp = Date.parse(manifest.reportAsOf);
   if (!Number.isFinite(reportTimestamp)) throw new Error(`${ADAPTER_KEY}: reviewed report timestamp is invalid`);
 
-  const assurancePromise = fetchIndependentAssuranceReserves(coin, config, signal, PROFILE, params, ctx);
+  const assurancePromise = fetchIndependentAssuranceReserves(
+    coin,
+    config,
+    signal,
+    USDGO_INDEPENDENT_ASSURANCE_PROFILE,
+    params,
+    ctx,
+  );
   const buidlPromise = readBuidlObservation(params, signal, ctx);
   const crossCheckPromise = readIssuerCrossCheck(params.issuerCrossCheckUrl, signal, ctx).catch((error: unknown) => ({
     error: error instanceof Error ? error.message : String(error),
