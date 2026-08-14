@@ -1,0 +1,116 @@
+{
+  "id": "brlm-mento",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register landing page (last update 12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Mento local payments — BRLm listed among local-currency stablecoins",
+        "url": "https://www.mento.org/use-cases/local-payments"
+      },
+      {
+        "label": "Mento stablecoins — decentralized stablecoin and reserve overview",
+        "url": "https://www.mento.org/stablecoins"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Mento markets BRLm as a decentralized local-currency stablecoin for payments and lists BRLm in its payment-product materials, giving it an apparent payment use even though its legal issuer posture is unresolved.",
+      "references": [
+        {
+          "label": "Mento local payments and BRLm product listing",
+          "url": "https://www.mento.org/use-cases/local-payments",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://reserve.mento.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "As of 2026-08-14, no token-specific GENIUS permitted payment stablecoin approval, state-qualified approval, official application, or foreign-issuer exception registration was found in the reviewed Federal Register, OCC, Treasury, and Mento materials. Mento describes BRLm as decentralized and reserve-backed, but the reviewed sources do not identify a legal U.S. issuer or GENIUS pathway. The regime remains in proposed-rules phase, so a future pathway should not be inferred.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury GENIUS Act proposed AML and sanctions rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Mento local payments",
+        "url": "https://www.mento.org/use-cases/local-payments",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Mento Reserve",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register OCC GENIUS Act issuance proposed rule (91 FR 10202)",
+        "OCC GENIUS Act proposed rule and public releases",
+        "U.S. Treasury/FinCEN/OFAC GENIUS Act proposed AML and sanctions rule",
+        "Public web search for BRLm/Mento plus GENIUS, PPSI, and foreign-issuer registration",
+        "Mento local-payments, stablecoin, and reserve disclosures"
+      ],
+      "summary": "The reviewed regulator materials describe the GENIUS permitting and rulemaking framework but do not name Mento, BRLm, or a Mento issuer as a permitted issuer or pending applicant. Mento public product pages identify BRLm as a decentralized local-currency stablecoin and show reserve data, but no U.S. authorization, application, or foreign-exception registration was found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

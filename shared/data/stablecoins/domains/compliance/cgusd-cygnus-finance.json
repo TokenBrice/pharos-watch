@@ -1,5 +1,22 @@
 {
   "id": "cgusd-cygnus-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register portal — no Cygnus Information Limited/cgUSD issuer record located in the reviewed issuer registers",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Cygnus official website — Cygnus Information Limited copyright and global liquidity/infrastructure presentation; no Union offer/admission or MiCA authorization disclosed",
+        "url": "https://www.cygnus.finance/"
+      },
+      {
+        "label": "Cygnus documentation — cgUSD is presented within the Cygnus DeFi/liquidity system",
+        "url": "https://wiki.cygnus.finance/whitepaper/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
@@ -9,13 +26,13 @@
           "label": "ARKS Labs website — FinCEN MSB registration and HK/US addresses",
           "url": "https://www.arkslabs.io/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-08-14"
         },
         {
           "label": "Cygnus Finance website footer — Cygnus Information Limited copyright",
           "url": "https://www.cygnus.finance/",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-06-07"
+          "accessedAt": "2026-08-14"
         }
       ]
     },
@@ -30,43 +47,50 @@
     "reserveDisclosureUrl": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "cgUSD is issued by Cygnus Information Limited (confirmed from website footer copyright), operated by ARKS Labs which is HK-based with a US FinCEN MSB registration. Functionally fits payment-stablecoin profile but issuer domicile ambiguity keeps applicability as unclear. GENIUS Act still in proposed-rules phase; no PPSI approvals exist for any issuer as of 2026-06-18.",
+    "notes": "cgUSD is issued by Cygnus Information Limited (confirmed from the Cygnus website footer), operated by ARKS Labs, which presents Hong Kong and U.S. presence including a FinCEN MSB registration. Functionally it fits the payment-stablecoin profile, but issuer-domicile ambiguity keeps applicability as unclear. The GENIUS framework remains in proposed-rules phase; no token-specific PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found as of 2026-08-14.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cygnus cgUSD overview",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/what-is-cgusd-v1.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cygnus cgUSD token docs",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cygnus cgUSD redemption",
         "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption.md",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "ARKS Labs website — FinCEN MSB registration and addresses",
         "url": "https://www.arkslabs.io/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cygnus Finance website — Cygnus Information Limited entity",
         "url": "https://www.cygnus.finance/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications — no Cygnus/ARKS/cgUSD applicant identified",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
@@ -75,21 +99,17 @@
         "https://www.cygnus.finance/ — issuer website; entity identified as Cygnus Information Limited; no regulatory authorization disclosed",
         "https://www.arkslabs.io/ — ARKS Labs; FinCEN MSB registration confirmed; no PPSI application",
         "https://wiki.cygnus.finance/whitepaper/ — token docs; no licensing or authorization disclosure",
-        "https://app.rwa.xyz/platforms/cygnus-finance — RWA tracker; no regulatory status listed",
-        "https://www.coingecko.com/en/coins/cygnus-finance-global-usd — CoinGecko; no regulatory status listed",
-        "OCC Bulletin 2026-3 GENIUS proposed rule",
-        "OCC Bulletin 2026-24 GENIUS reporting proposal",
-        "OCC digital asset licensing applications tracker",
-        "Treasury state-regime comparability NPRM",
-        "Treasury/FinCEN/OFAC AML/CFT NPRM",
-        "FDIC GENIUS Act NPRM",
-        "NCUA PPSI application and standards proposals"
+        "OCC digital assets licensing applications page, searched for Cygnus Information Limited, ARKS Labs, and cgUSD",
+        "Federal Reserve GENIUS customer-identification proposal",
+        "GENIUS Act Public Law 119-27",
+        "Cygnus official website and documentation",
+        "ARKS Labs official website"
       ],
-      "summary": "No GENIUS Act PPSI approval, state-qualified status, official application, or foreign exception registration found across issuer disclosures, OCC NPRM materials, and third-party trackers. ARKS Labs holds a FinCEN MSB registration but no PPSI-pathway filing.",
+      "summary": "As of 2026-08-14, no GENIUS Act PPSI approval, state-qualified status, official application, or foreign exception registration was found across the OCC and Federal Reserve materials reviewed, the GENIUS statute, or Cygnus/ARKS issuer materials. ARKS Labs has a FinCEN MSB registration, but no PPSI-pathway filing was located.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-08-14"
   }
 }

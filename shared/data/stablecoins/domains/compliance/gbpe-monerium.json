@@ -16,5 +16,112 @@
         "url": "https://docs.monerium.com/tokens/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "GBPe is a GBP-denominated e-money token issued and redeemable by Monerium, so its token-level design is a payment stablecoin even though no U.S. GENIUS authorization was found.",
+      "references": [
+        {
+          "label": "Monerium token integration — regulated e-money tokens redeemable via API",
+          "url": "https://docs.monerium.com/token-integration/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Monerium supervised entities register entry",
+          "url": "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type=",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Monerium hf",
+    "issuerDomicile": "Iceland",
+    "licensingRegulator": "Financial Supervisory Authority of the Central Bank of Iceland",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://monerium.com/financial-information/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Monerium hf is an Icelandic EMI and GBPe is documented as a regulated, redeemable e-money token. No token-specific GENIUS approval, state-qualified status, official application, or OCC foreign-issuer registration was found in the public U.S. materials reviewed on 2026-08-14. The OCC foreign-issuer registration and Treasury comparability materials reviewed remain proposed-rulemaking, so foreignExceptionStatus stays unknown rather than asserting a qualification failure.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule — foreign payment stablecoin issuer registration",
+        "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Reserve GENIUS Act customer-identification proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act enacted text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Central Bank of Iceland supervised entities — Monerium hf",
+        "url": "https://cb.is/financial-supervision/regulated-activities/supervised-entities/?q=monerium&type=",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Monerium tokens — GBPe and supported networks",
+        "url": "https://docs.monerium.com/tokens/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Monerium financial information — EMI supervision and safeguarded assets",
+        "url": "https://monerium.com/financial-information/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC digital assets licensing applications and Corporate Applications Search materials",
+        "OCC GENIUS Act proposed rule and foreign payment stablecoin issuer registration provisions",
+        "Federal Reserve GENIUS Act rulemaking proposal materials",
+        "Federal Register foreign payment stablecoin comparability rulemaking materials",
+        "Central Bank of Iceland supervised entities register",
+        "Monerium issuer pages, token documentation, and financial information",
+        "Public web search for Monerium, GBPe, GENIUS Act approval, OCC registration, and state-qualified status"
+      ],
+      "summary": "On 2026-08-14, Monerium hf was found in Iceland's electronic-money register and GBPe token and redemption disclosures were found, but no Monerium entry or token-specific approval, application, or OCC foreign-issuer registration was found in the public U.S. GENIUS materials reviewed. The foreign-issuer and comparability framework remains in proposed-rulemaking in the sources checked.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule — foreign payment stablecoin issuer registration",
+          "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

@@ -1,0 +1,16 @@
+{
+  "id": "inalpha-nest",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Nest Alpha Vault — nALPHA RWA and yield vault token",
+        "url": "https://docs.nest.credit/about/available-vaults/"
+      }
+    ]
+  }
+}

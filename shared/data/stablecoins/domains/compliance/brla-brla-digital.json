@@ -1,0 +1,113 @@
+{
+  "id": "brla-brla-digital",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Avenia BRLA product and reserve disclosures",
+        "url": "https://avenia.io/brla"
+      },
+      {
+        "label": "Avenia terms — BRLA backed 1:1 by Brazilian real",
+        "url": "https://app.avenia.io/Avenia-TC.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "BRLA is marketed as a Brazilian-real stablecoin backed 1:1 by Brazilian fiat and used for digital transactions. It is therefore potentially within the payment-stablecoin fact pattern, although the public materials reviewed describe a Brazil-focused product rather than a U.S. GENIUS authorization pathway.",
+      "references": [
+        {
+          "label": "Avenia BRLA product and reserve disclosures",
+          "url": "https://avenia.io/brla",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act statutory summary — payment stablecoins and permitted issuers",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "BRLA Digital LTDA (Avenia)",
+    "issuerDomicile": "Brazil",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://avenia.io/brla",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "Avenia describes BRLA as a 1:1 BRL-backed stablecoin with monthly collateral reporting and attestations. The public materials reviewed identify a Brazil-focused issuer/correspondent context, but no U.S. GENIUS PPSI approval, state-qualified pathway, official application, or foreign-issuer exception registration was found as of 2026-08-14. GENIUS remains in proposed-rules phase.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Avenia BRLA product and reserve disclosures",
+        "url": "https://avenia.io/brla",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Avenia terms — BRLA backing and transparency report policy",
+        "url": "https://app.avenia.io/Avenia-TC.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS Act proposed rules",
+        "OCC Digital Assets Licensing Applications table (checked 2026-08-14; BRLA/Avenia not listed)",
+        "Congress.gov GENIUS Act / Public Law 119-27",
+        "Treasury FinCEN/OFAC GENIUS proposed rule",
+        "Avenia BRLA product, terms, and reserve disclosures",
+        "Public search for BRLA/Avenia U.S. GENIUS approval, application, or foreign-issuer registration"
+      ],
+      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for BRLA or BRLA Digital LTDA. Brazilian local-law and correspondent disclosures do not establish a U.S. GENIUS pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Treasury FinCEN/OFAC GENIUS Act proposed rule announcement",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

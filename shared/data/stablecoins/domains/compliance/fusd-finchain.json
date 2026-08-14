@@ -1,5 +1,18 @@
 {
   "id": "fusd-finchain",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — ART/EMT register page reviewed; no FUSD/FinChain EU issuer entry located on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "FinChain FUSD product page — FUSD is a yield-bearing token backed by tokenized T-bills/MMFs and distributed to eligible customers",
+        "url": "https://fusd.finchain.global/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

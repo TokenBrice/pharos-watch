@@ -1,0 +1,52 @@
+{
+  "id": "paxg-paxos",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "PAXG represents ownership of one fine troy ounce of physical gold whose value follows the gold market, rather than serving as a fixed-value fiat payment instrument.",
+      "references": [
+        {
+          "label": "Pax Gold official product page",
+          "url": "https://www.paxos.com/pax-gold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Paxos Trust Company, N.A.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "OCC; national trust bank",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "PAXG is a tokenized physical-gold claim, not a GENIUS payment stablecoin. Paxos's OCC trust-bank supervision is not a GENIUS permitted-payment-stablecoin approval.",
+    "references": [
+      {
+        "label": "Pax Gold official product page",
+        "url": "https://www.paxos.com/pax-gold",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act — Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

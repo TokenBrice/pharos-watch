@@ -1,0 +1,62 @@
+{
+  "id": "dusd-fluid",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Fluid Finance SA",
+    "issuerDomicile": "Switzerland",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "unknown",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "DUSD was publicly offered to EU/UK account holders in Fluid's 2021-22 materials and described as 1:1 redeemable, but current operations and reserve reporting are not verified. No token-specific U.S. GENIUS approval, official application, state qualification, or foreign-issuer registration was located as of 2026-08-14; the foreign-issuer and state-qualified frameworks remain in proposed rulemaking.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule (91 FR 10202)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury state-regime comparability NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Fluid Finance DUSD FAQ",
+        "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2021-12-31",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Fluid Finance EU/UK DUSD rollout",
+        "url": "https://medium.com/fluidfi/were-live-what-our-progressive-roll-out-will-look-like-6b69ea24ad2f",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2022-02-14",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal (91 FR 10202)",
+        "OCC GENIUS Act AML/CFT proposed rule and reporting proposal",
+        "FDIC GENIUS Act application and prudential proposals",
+        "Treasury state-regime comparability and AML/CFT proposals",
+        "Public search of Federal Register, OCC, FDIC, Treasury, and state-qualified/foreign-issuer materials for Fluid Finance SA and DUSD",
+        "Fluid Finance issuer disclosures and current repository context"
+      ],
+      "summary": "No public GENIUS approval, official application, state-qualified approval, or registered foreign-issuer exception was located for Fluid Finance SA or DUSD as of 2026-08-14. Public issuer materials document a historical EU/UK account and redemption product, but not a U.S. GENIUS filing or registration.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

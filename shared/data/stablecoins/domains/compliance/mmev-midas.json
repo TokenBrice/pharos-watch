@@ -1,0 +1,20 @@
+{
+  "id": "mmev-midas",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Midas base prospectus — blockchain-based certificates and debt instruments",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+      },
+      {
+        "label": "Midas mMEV documentation — crypto-denominated yield strategy",
+        "url": "https://docs.midas.app/tokens/mmev"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  }
+}

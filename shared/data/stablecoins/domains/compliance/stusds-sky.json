@@ -1,0 +1,20 @@
+{
+  "id": "stusds-sky",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Sky stUSDS product page — risk capital and yield",
+        "url": "https://sky.money/stusds"
+      },
+      {
+        "label": "Sky Protocol stUSDS documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/stusds/"
+      }
+    ]
+  }
+}

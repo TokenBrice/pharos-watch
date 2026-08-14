@@ -1,0 +1,99 @@
+{
+  "id": "bold-liquity",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "BOLD is a decentralized borrowing-protocol stablecoin minted against ETH and liquid-staking collateral and redeemed for collateral through immutable contracts. Its stablecoin-shaped design is payment-like, but no conventional legal issuer obligated to redeem a fixed monetary value is identified, so GENIUS applicability remains unclear.",
+      "references": [
+        {
+          "label": "GENIUS Act — payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Liquity V2 official documentation",
+          "url": "https://docs.liquity.org/v2-faq/general",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Liquity BOLD repository overview",
+          "url": "https://github.com/liquity/bold",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Explicitly assessed because BOLD is a roughly $30.7M tracked stablecoin and is likely to be confused with payment stablecoins. Liquity's public materials describe decentralized borrowing, immutable contracts, collateral redemption, and no central frontend; they do not establish a GENIUS issuer pathway. No public GENIUS approval, state-qualified approval, official application, or foreign-issuer exception registration was located; rulemaking remains in proposed-rules phase.",
+    "references": [
+      {
+        "label": "GENIUS Act — payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury state-level GENIUS regime NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Liquity V2 official documentation",
+        "url": "https://docs.liquity.org/v2-faq/general",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Liquity BOLD repository overview",
+        "url": "https://github.com/liquity/bold",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "GENIUS Act statutory text and payment-stablecoin issuer definitions",
+        "OCC GENIUS Act proposed rule and 2026 implementation bulletins",
+        "OCC digital assets licensing applications table",
+        "Treasury state-level GENIUS comparability NPRM",
+        "Federal Register and federal-regulator searches for Liquity/BOLD authorization or application",
+        "Liquity V2 documentation and BOLD protocol repository",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "The review found no token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for BOLD. Liquity materials identify an immutable decentralized borrowing protocol and collateral redemptions, not a legal GENIUS payment-stablecoin issuer.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

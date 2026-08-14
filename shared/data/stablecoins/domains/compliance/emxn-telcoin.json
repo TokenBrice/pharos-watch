@@ -1,5 +1,22 @@
 {
   "id": "emxn-telcoin",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register landing page (last update 12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA Q&A — EMTs offered or admitted to trading in the Union require an authorised EU issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "Telcoin Digital Cash — eMXN live globally while eEUR is the stated EEA/MiCA preparation",
+        "url": "https://www.telcoin.co.jp/en/digital-cash"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -76,9 +93,9 @@
       ],
       "summary": "No GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for eMXN or Telcoin. The Nebraska charter is a state-law instrument and no state has been certified as substantially similar under GENIUS as of June 2026. Telcoin publicly frames its Nebraska charter as GENIUS-aligned but has not filed a formal GENIUS PPSI application; the application framework itself remains in proposed rulemaking.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-08-14"
   }
 }

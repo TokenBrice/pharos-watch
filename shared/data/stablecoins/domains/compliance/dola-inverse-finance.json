@@ -1,0 +1,24 @@
+{
+  "id": "dola-inverse-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Inverse Finance DOLA documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola"
+      },
+      {
+        "label": "Inverse Finance introduction — DAO and decentralized stablecoin",
+        "url": "https://docs.inverse.finance/inverse-finance"
+      }
+    ]
+  }
+}

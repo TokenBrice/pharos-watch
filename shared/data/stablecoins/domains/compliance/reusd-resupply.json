@@ -1,0 +1,20 @@
+{
+  "id": "reusd-resupply",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Resupply official site — decentralized protocol where users borrow reUSD against lending positions",
+        "url": "https://resupply.finance/"
+      },
+      {
+        "label": "Resupply documentation — reUSD repayment is protocol debt against collateralized positions",
+        "url": "https://docs.resupply.fi/how-to-guides/using-resupply/repaying-withdrawing-collateral"
+      },
+      {
+        "label": "ESMA Interim MiCA Register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  }
+}

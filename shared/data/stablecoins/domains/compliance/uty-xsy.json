@@ -1,0 +1,83 @@
+{
+  "id": "uty-xsy",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page — no UTY EMT/ART authorization located in the reviewed register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "EUR-Lex MiCA Regulation — Union offer/admission scope and token classification framework",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
+      },
+      {
+        "label": "XSY Unity overview — UTY is a synthetic dollar interface to yield mechanisms and minting was not available to the general public",
+        "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "UTY is XSY's synthetic dollar and crypto-yield product: its value is defined by delta-hedged, lending, liquidity, and structured-yield mechanisms rather than a fixed-value payment obligation offered to the general public.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "XSY Unity overview",
+          "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "XSY risks — UTY is not a bank deposit, investment account, or claim on underlying assets",
+          "url": "https://xsy-1.gitbook.io/xsy-main/risks",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Explicitly assessed because the dashboard-listed $20M+ UTY is described as a dollar-referenced synthetic asset and could be confused with a payment stablecoin. XSY describes it as a crypto-yield product, with minting initially unavailable to the general public; this is a GENIUS applicability exclusion, not an authorization finding.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "XSY Unity overview",
+        "url": "https://xsy-1.gitbook.io/xsy-main/unity-uty-overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "XSY risks",
+        "url": "https://xsy-1.gitbook.io/xsy-main/risks",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "safo-spiko-usd",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 — funds and financial instruments are outside MiCA scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Spiko — SAFO is a UCITS fund regulated by the AMF",
+        "url": "https://www.spiko.io/blog/spiko-amundi-safo"
+      },
+      {
+        "label": "Amundi and Spiko — SAFO is a tokenized sub-fund of SPIKO SICAV",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4"
+      }
+    ]
+  }
+}

@@ -1,5 +1,22 @@
 {
   "id": "honey-berachain",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Q&A — Union offer and admission requirements",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "Berachain HONEY documentation — collateralized native stablecoin",
+        "url": "https://docs.berachain.com/general/tokens/honey"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

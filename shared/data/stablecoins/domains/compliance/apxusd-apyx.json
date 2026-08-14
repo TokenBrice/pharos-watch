@@ -1,5 +1,18 @@
 {
   "id": "apxusd-apyx",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no Apyx/apxUSD entry found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Apyx terms of service — apxUSD is a protocol-generated asset and EU persons are excluded",
+        "url": "https://docs.apyx.fi/resources/terms-of-service"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

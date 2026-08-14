@@ -1,5 +1,22 @@
 {
   "id": "usdsc-startale",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — ART/EMT issuer CSVs reviewed; no Startale/USDSC match found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Startale USD Terms — Startale Development (BVI) Ltd describes the swap as unregulated and makes no EU MiCA authorization disclosure",
+        "url": "https://usd.startale.com/terms"
+      },
+      {
+        "label": "Startale USD — USDSC is a branded M0 stablecoin extension issued by Startale Group",
+        "url": "https://usd.startale.com/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",

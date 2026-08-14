@@ -32,5 +32,99 @@
         "url": "https://www.eurite.com/download-whitepaper/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EURI is a euro-denominated electronic money token with 1:1 cash backing and par redemption, designed for settlement and payments. Banking Circle S.A. is a Luxembourg credit institution, but the public U.S. sources reviewed do not show a GENIUS permitted-issuer approval, application, or foreign-issuer registration for EURI.",
+      "references": [
+        {
+          "label": "EURI issuer and product disclosures",
+          "url": "https://www.eurite.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act statutory summary — payment stablecoins and permitted issuers",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Banking Circle S.A.",
+    "issuerDomicile": "Luxembourg",
+    "licensingRegulator": "CSSF (Luxembourg credit institution; EU MiCA issuer context)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.eurite.com/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "EURI is officially MiCA-authorized in the EU, but that Luxembourg/CSSF authorization is not a U.S. GENIUS approval. The OCC proposed-rule materials and current OCC licensing-applications table were reviewed; no EURI/Banking Circle PPSI approval, official application, or registered foreign-issuer exception was found as of 2026-08-14. The GENIUS regime remains in proposed-rules phase.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "EURI issuer and product disclosures",
+        "url": "https://www.eurite.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act statutory summary",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS Act proposed rules",
+        "OCC Digital Assets Licensing Applications table (checked 2026-08-14; Banking Circle/EURI not listed)",
+        "Congress.gov GENIUS Act / Public Law 119-27",
+        "EURI and Banking Circle regulatory disclosures",
+        "Treasury FinCEN/OFAC GENIUS proposed rule",
+        "Public search for Banking Circle/EURI U.S. GENIUS approval, application, or foreign-issuer registration"
+      ],
+      "summary": "Banking Circle S.A.'s CSSF credit-institution and MiCA authorization were confirmed, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for EURI or its issuer.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Treasury FinCEN/OFAC GENIUS Act proposed rule announcement",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

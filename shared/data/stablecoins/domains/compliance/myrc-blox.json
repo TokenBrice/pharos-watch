@@ -1,0 +1,113 @@
+{
+  "id": "myrc-blox",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MYRC is a Blox-issued 1:1 Malaysian Ringgit stablecoin with public minting and redemption through the Blox platform. Blox's materials describe remittance, commerce, payment, and value-transfer uses, although its terms also say MYRC is not a payment instrument under Malaysian law without required local approvals.",
+      "references": [
+        {
+          "label": "Blox MYRC product term sheet",
+          "url": "https://www.blox.my/policies/product-term-sheet",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Blox MYRC whitepaper",
+          "url": "https://cdn.blox.my/misc/MYRC-Whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "BLOX Blockchain Sdn. Bhd.",
+    "issuerDomicile": "Malaysia",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.blox.my/myrc/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-06-30",
+    "notes": "Blox's current MYRC materials identify BLOX Blockchain Sdn. Bhd. as issuer, require Malaysia-focused eKYC and banking details, and describe MYRC as 1:1 redeemable for MYR. The product term sheet says MYRC is not legal tender, electronic money, a payment instrument, or remittance tool under Malaysian law unless Blox obtains required approvals; that local-law disclaimer does not remove the token's confusable payment-stablecoin characteristics for GENIUS review. No U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located. The latest independently assured reserve report reviewed was dated 2026-06-30.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Blox MYRC product term sheet",
+        "url": "https://www.blox.my/policies/product-term-sheet",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Blox MYRC transparency",
+        "url": "https://www.blox.my/myrc/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "MYRC reserve assurance report (2026-06-30)",
+        "url": "https://cdn.blox.my/attestations/2026/Blox%20Attestation%20Report-2026-06-June.pdf",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-06-30",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA interim MiCA register landing page and ART/EMT register files, last updated 2026-08-12",
+        "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+        "Federal Register joint PPSI CIP NPRM, 91 FR 37234",
+        "FDIC GENIUS Act PPSI proposed rule materials",
+        "Blox MYRC website, product term sheet, user-facing documentation, whitepaper, and transparency materials",
+        "Securities Commission Malaysia list of registered digital asset exchanges, updated 2026-07-20",
+        "Targeted searches for Blox Blockchain Sdn. Bhd., MYRC, and GENIUS authorization or application records"
+      ],
+      "summary": "No reviewed U.S. regulator, Federal Register, or issuer source identifies BLOX Blockchain Sdn. Bhd. or MYRC as a GENIUS permitted payment stablecoin issuer, state-qualified issuer, official applicant, or registered foreign issuer. Blox's materials instead identify a Malaysia-focused issuer and platform, with no U.S. regulatory pathway disclosed.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-06-22",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Securities Commission Malaysia registered digital asset exchange list",
+          "url": "https://www.sc.com.my/regulation/guidelines/recognizedmarkets/list-of-registered-digital-asset-exchanges",
+          "sourceKind": "foreign-regulator",
+          "sourceDate": "2026-07-20",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

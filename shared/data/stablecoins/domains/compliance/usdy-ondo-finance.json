@@ -1,5 +1,8 @@
 {
   "id": "usdy-ondo-finance",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {

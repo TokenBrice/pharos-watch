@@ -1,5 +1,26 @@
 {
   "id": "usdat-saturn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Saturn USDat overview",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview"
+      },
+      {
+        "label": "Saturn documentation — USDat payment and settlement stablecoin",
+        "url": "https://saturncredit.gitbook.io/saturn-docs"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",
@@ -13,40 +34,48 @@
     "reserveDisclosureUrl": "https://app.saturn.credit/insights/saturn-protocol",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Saturn documents USDaT reserve and redemption mechanics, but no public GENIUS issuer approval or registration was located. USDat is explicitly geofenced away from US and EEA users per protocol design; Saturn is BVI-domiciled with no known US regulatory registration.",
+    "notes": "Saturn's current documentation describes USDat as a permissioned, fully collateralized stablecoin for liquidity and settlement, with minting and redemption through USDC. No public GENIUS issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was located for Saturn or USDat; no legal issuer entity or GENIUS pathway was resolved.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
         "sourceKind": "federal-regulator",
-        "accessedAt": "2026-06-07"
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Saturn docs",
         "url": "https://saturncredit.gitbook.io/saturn-docs",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "USDaT overview",
         "url": "https://saturncredit.gitbook.io/saturn-docs/solution/usdat-overview",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Saturn transparency and audits",
         "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/transparency-and-audits",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-06-07"
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "OCC GENIUS Act NPRM (Bulletin 2026-3, Feb 25 2026) — no Saturn/USDat listing",
+        "OCC GENIUS Act NPRM, Bulletin 2026-3 — no Saturn/USDat listing",
+        "OCC Digital Assets Licensing Applications table — no Saturn/USDat listing",
         "Federal Register 2026-04089 (OCC GENIUS NPRM, Mar 2 2026) — no Saturn/USDat listing",
-        "Saturn issuer disclosures and GitBook documentation — no GENIUS application or registration disclosed",
-        "Web search for Saturn USDat GENIUS Act authorization (Jun 7 2026) — no results found",
-        "Web search for Saturn Credit US regulatory compliance issuer entity (Jun 7 2026) — no public authorization found",
+        "Saturn issuer disclosures and GitBook documentation — permissioned USDat mechanics found, but no GENIUS application or registration disclosed",
+        "Web search for Saturn/USDat GENIUS Act authorization, August 2026 — no results found",
+        "Web search for Saturn Credit U.S. regulatory compliance issuer entity, August 2026 — no public authorization found",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",
@@ -55,11 +84,11 @@
         "FDIC GENIUS Act NPRM",
         "NCUA PPSI application and standards proposals"
       ],
-      "summary": "No public GENIUS approval, state-qualified approval, official application, foreign-exception registration, or issuer-announced intent was located for USDaT. Saturn is BVI-domiciled and geofences US persons; no GENIUS pathway disclosure found in issuer materials.",
+      "summary": "No public GENIUS approval, state-qualified approval, official application, foreign-exception registration, or issuer-announced intent was located for USDat. Current Saturn documentation confirms a permissioned payment/settlement stablecoin and reserve/redemption mechanics, but does not disclose a legal issuer entity or GENIUS pathway.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-08-14"
   }
 }

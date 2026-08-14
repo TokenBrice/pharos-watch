@@ -1,0 +1,74 @@
+{
+  "id": "nopal-nest",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Nest nOPAL disclosure — yield-bearing vault token representing exposure to BlackOpal LiquidStone II",
+        "url": "https://docs.nest.credit/about/available-vaults/"
+      },
+      {
+        "label": "Nest terms — vault tokens accrue yield based on baskets of digital and real-world assets",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope — funds and financial instruments are excluded from MiCA",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "nOPAL is a yield-bearing vault share whose value accrues from tokenized credit and other real-world asset exposures, rather than a payment or settlement token.",
+      "references": [
+        {
+          "label": "Nest nOPAL vault disclosure",
+          "url": "https://docs.nest.credit/about/available-vaults/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Nest terms and conditions — vault-token structure and Nest DAO LLC",
+          "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Nest DAO LLC",
+    "issuerDomicile": "Republic of the Marshall Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Explicitly recorded as outside the GENIUS payment-stablecoin authorization posture because nOPAL is a yield-bearing vault share with NAV/yield exposure, not a payment stablecoin. The underlying and vault-token legal classification should be rechecked if Nest changes the product structure or begins U.S. payment-token marketing.",
+    "references": [
+      {
+        "label": "Nest terms and conditions — Nest DAO LLC and yield-bearing vault tokens",
+        "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Nest nOPAL vault disclosure",
+        "url": "https://docs.nest.credit/about/available-vaults/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

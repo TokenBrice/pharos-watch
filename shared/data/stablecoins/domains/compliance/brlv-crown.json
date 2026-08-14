@@ -1,0 +1,95 @@
+{
+  "id": "brlv-crown",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Crown BRLV — Brazilian Real stablecoin and Brazilian-market infrastructure",
+        "url": "https://www.crown-brlv.com/en/brlv/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "BRLV is marketed as a 1:1 Brazilian Real stablecoin for settlement and international money movement, with issuer redemption for one Brazilian Real.",
+      "references": [
+        {
+          "label": "Crown BRLV product and compliance disclosures",
+          "url": "https://www.crown-brlv.com/en/brlv/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act text — payment stablecoin definition",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerDomicile": "Brazil",
+    "licensingRegulator": "Banco Central do Brasil; Crown says its PSAV authorization is pending and that it operates under a temporary/grandfathered regime",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.crown-brlv.com/transparencia/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "latestReportDate": "2026-05-31",
+    "notes": "Crown's Brazilian PSAV licensing context is not a U.S. GENIUS approval, state-qualified status, official application, or foreign-issuer registration. BRLV's international-use language makes U.S. availability worth re-checking, but no token-specific U.S. authorization or foreign-exception registration was located. Brazilian regulatory authorization should not be conflated with GENIUS authorization.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC public digital-assets licensing applications tracker",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act Federal Register proposed rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Crown BRLV product and Brazilian regulatory disclosures",
+        "url": "https://www.crown-brlv.com/en/brlv/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Crown BRLV transparency and redemption disclosure",
+        "url": "https://www.crown-brlv.com/transparencia/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and Federal Register proposed rule",
+        "OCC public digital-assets licensing applications tracker",
+        "Crown BRLV English product, compliance, and transparency pages",
+        "GENIUS Act statutory foreign-issuer exception and registration provisions",
+        "Search for a BRLV/Crown U.S. PPSI approval, official application, state-qualified approval, or OCC foreign-issuer registration"
+      ],
+      "summary": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found for BRLV or Crown in the reviewed U.S. regulator materials and issuer disclosures. Crown's Brazilian PSAV application and temporary regime are not U.S. GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -1,0 +1,127 @@
+{
+  "id": "audm-macropod",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AUDM is explicitly marketed as a 1:1 redeemable Australian-dollar payment token, not a yield product or bank deposit, so its product profile is a payment stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/index.php/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Macropod AUDM FAQ",
+          "url": "https://www.macropod.com/frequently-asked-questions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Catena Digital Pty Ltd trading as Macropod Global",
+    "issuerDomicile": "Australia",
+    "licensingRegulator": "ASIC; AFSL 566313; AUSTRAC DCE100887005-001",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.macropod.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "latestReportDate": "2026-08-01",
+    "notes": "Macropod publicly identifies an Australian AFSL and AUSTRAC context for AUDM, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Australian licensing was not treated as U.S. GENIUS authorization; foreign-exception status remains unknown.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act regulations proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Reserve GENIUS customer-identification proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+        "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-06-09",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Macropod AUDM FAQ",
+        "url": "https://www.macropod.com/frequently-asked-questions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Macropod transparency page",
+        "url": "https://www.macropod.com/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AUSTRAC public VASP register notice",
+        "url": "https://www.austrac.gov.au/virtual-asset-service-provider-register-goes-public",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-06-30",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA interim MiCA register EMT and ART files",
+        "OCC GENIUS Act proposed rule and current Digital Assets Licensing Applications table",
+        "Federal Register GENIUS implementation proposals, including OCC 91 FR 10202 and the joint 91 FR 37234 CIP proposal",
+        "Federal Reserve GENIUS customer-identification proposal",
+        "FDIC GENIUS Act proposed rules",
+        "New York DFS GENIUS-aligned state-qualified stablecoin proposal",
+        "U.S. Treasury state-regime comparability proposal",
+        "Macropod FAQ, transparency page, and public AUDM legal/regulatory disclosures",
+        "AUSTRAC public VASP register notice"
+      ],
+      "summary": "Australian AFSL/AUSTRAC and reserve/redemption disclosures were found, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found for AUDM or Macropod as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act regulations proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+          "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+          "sourceKind": "state-regulator",
+          "sourceDate": "2026-06-09",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

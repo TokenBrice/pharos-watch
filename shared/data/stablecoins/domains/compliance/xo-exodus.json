@@ -1,5 +1,31 @@
 {
   "id": "xo-exodus",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA statement on non-MiCA-compliant ARTs and EMTs",
+        "url": "https://www.esma.europa.eu/sites/default/files/2025-01/ESMA75-223375936-6099_Statement_on_stablecoins.pdf"
+      },
+      {
+        "label": "Exodus, MoonPay, and M0 XO announcement",
+        "url": "https://www.exodus.com/investors/news-events/press-releases/detail/95/exodus-moonpay-and-m0-unveil-a-new-digital-dollar-for-everyday-payments"
+      },
+      {
+        "label": "MoonPay MiCA CASP announcement (not an EMT issuer authorization)",
+        "url": "https://www.moonpay.com/newsroom/mica"
+      },
+      {
+        "label": "Exodus support: MoonPay asset availability",
+        "url": "https://www.exodus.com/support/en/articles/8598776-how-do-i-buy-crypto-with-moonpay-in-exodus"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

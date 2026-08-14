@@ -1,0 +1,101 @@
+{
+  "id": "weusd-picwe",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "PicWe markets WEUSD as an omni-chain USD stablecoin with 1:1 USDC minting and redemption plus RWA settlement and payment uses, so it is treated as payment-stablecoin-shaped despite unresolved issuer and backing details.",
+      "references": [
+        {
+          "label": "PicWe WEUSD documentation",
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-27",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.picwe.org/what-is-weusd",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "PicWe's public documentation describes current 1:1 USDC backing, instant mint/redeem, and future RWA collateral, but does not identify a legal issuer or a GENIUS pathway. No token-specific PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located. The status is conservative because the public backing and market posture remain disputed.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury GENIUS Act AML/CFT proposed rule release",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "PicWe WEUSD documentation",
+        "url": "https://docs.picwe.org/what-is-weusd",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-27",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and related bulletins",
+        "OCC digital assets licensing applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act rulemaking materials",
+        "Public Law 119-27 foreign-issuer exception text",
+        "PicWe WEUSD documentation and public product materials",
+        "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "No public token-specific GENIUS approval, state-qualified approval, official application, or foreign-issuer registration was located for WEUSD or a legally identified PicWe issuer as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "PicWe WEUSD documentation",
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-27",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -12,5 +12,87 @@
         "url": "https://www.frankencoin.com/20260209%20ZCHF%20MiCA%20Frankencoin%20Association%20Public%20Summary%20FINAL.pdf"
       }
     ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "ZCHF is prominently described as a Swiss-franc payment token and stablecoin, but Frankencoin's legal materials describe a decentralized protocol with no identifiable issuer and no contractual redemption claim, leaving GENIUS payment-stablecoin applicability unresolved.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory definition of payment stablecoin",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Frankencoin compliance summary — ZCHF payment-token marketing and no identifiable issuer",
+          "url": "https://frankencoin.com/compliance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "No ZCHF- or Frankencoin-specific GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Frankencoin's public legal materials say ZCHF has no identifiable issuer and no contractual redemption claim; this supports a conservative unclear applicability call rather than a payment-stablecoin approval or a definitive exclusion.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule; rulemaking remains proposed",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act statutory text — payment stablecoin and issuer definitions",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Frankencoin compliance summary — ZCHF payment-token characterization and issuer analysis",
+        "url": "https://frankencoin.com/compliance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "LEXR public summary — ZCHF has no identifiable issuer or contractual redemption claim",
+        "url": "https://www.frankencoin.com/20260209%20ZCHF%20MiCA%20Frankencoin%20Association%20Public%20Summary%20FINAL.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-09",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS Act proposed rule",
+        "GENIUS Act statutory text and payment-stablecoin definition",
+        "Frankencoin compliance summary and ZCHF legal classification materials",
+        "Public search for ZCHF/Frankencoin GENIUS approval, application, state qualification, and foreign-issuer registration"
+      ],
+      "summary": "No token-specific U.S. GENIUS approval, official application, state-qualified pathway, or registered foreign-issuer exception was located for ZCHF or Frankencoin. The available issuer-side materials characterize ZCHF as a decentralized payment token without an identifiable issuer, so applicability remains unclear.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Frankencoin compliance summary",
+          "url": "https://frankencoin.com/compliance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

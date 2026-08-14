@@ -1,5 +1,22 @@
 {
   "id": "mxne-real-mxn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register landing page (last update 2026-08-12); no MXNe, Brale, or Etherfuse entry identified in the ART, EMT, other-white-paper, or non-compliant files checked on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Brale MXNe page — Mexican-peso stablecoin issued through Brale for the Mexican economy; no EU offer or admission disclosed",
+        "url": "https://brale.xyz/stablecoins/MXNe"
+      },
+      {
+        "label": "Brale MXNe launch disclosure — local Mexican payments, remittances, and payroll focus; U.S. businesses in supported states can mint and redeem",
+        "url": "https://brale.xyz/blog/introducing-mxne"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",

@@ -1,5 +1,22 @@
 {
   "id": "xsgd-straitsx",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed (12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "StraitsX purchasing and redemption terms — Singapore MPI distribution",
+        "url": "https://www.straitsx.com/legal/purchasing-and-redemption"
+      },
+      {
+        "label": "StraitsX XSGD supported networks and trading availability",
+        "url": "https://straitsx.freshdesk.com/support/solutions/articles/157000366370-which-blockchain-protocol-does-xsgd-support-"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

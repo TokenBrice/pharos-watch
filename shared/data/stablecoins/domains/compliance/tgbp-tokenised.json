@@ -1,0 +1,104 @@
+{
+  "id": "tgbp-tokenised",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "tGBP is presented as a GBP-backed stablecoin with mint-and-redeem functionality, so its token-level design is an apparent payment stablecoin under the GENIUS definition even though its U.S. distribution was not established.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "tGBP transparency and redemption disclosures",
+          "url": "https://www.tokenisedgbp.com/transparency",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "BCP Technologies Ltd",
+    "issuerDomicile": "United Kingdom",
+    "licensingRegulator": "UK Financial Conduct Authority cryptoasset AML registration (FRN 928840); this is not a GENIUS authorization",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.tokenisedgbp.com/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "BCP's FCA registration and sandbox participation establish UK regulatory context only. No public GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for BCP Technologies Ltd or tGBP. The reviewed product materials also did not establish that tGBP is offered to U.S. persons, so the payment-stablecoin applicability call is product-based rather than a finding of U.S. distribution.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act statutory text — foreign issuer exception",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "FCA accepted firms — BCP Technologies / BCP Markets",
+        "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox/accepted-firms",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "tGBP transparency",
+        "url": "https://www.tokenisedgbp.com/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and foreign-issuer supervision materials",
+        "GENIUS Act statutory text, including the foreign payment stablecoin issuer exception",
+        "FDIC GENIUS Act proposed rule materials",
+        "Treasury GENIUS Act state-regime comparability proposal",
+        "Public regulator searches for BCP Technologies, BCP Markets, and tGBP",
+        "FCA accepted-firms and BCP regulatory disclosures",
+        "tGBP issuer transparency, redemption, and reserve materials",
+        "Public web search for BCP/tGBP GENIUS approval, application, or foreign-issuer registration"
+      ],
+      "summary": "The review found UK FCA AML-registration and sandbox evidence plus issuer reserve and redemption disclosures, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception for BCP Technologies Ltd or tGBP.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "tGBP transparency",
+          "url": "https://www.tokenisedgbp.com/transparency",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

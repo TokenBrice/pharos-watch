@@ -1,0 +1,70 @@
+{
+  "id": "mf-one-midas",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page — MiCA covers crypto-assets not already regulated by financial-services legislation",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Midas Software GmbH base prospectus — blockchain-based certificates/debt instruments offered in the EEA",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mF-ONE is a Midas blockchain-based certificate and tokenized debt instrument, not a payment stablecoin. The GENIUS Act excludes digital assets that are securities from the payment-stablecoin definition.",
+      "references": [
+        {
+          "label": "GENIUS Act text — payment stablecoin definition excludes securities",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Midas Software GmbH base prospectus — blockchain-based certificates/debt instruments",
+          "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
+          "sourceKind": "issuer-filing",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "Liechtenstein FMA prospectus approval only; the prospectus states the issuer is not authorized or prudentially supervised",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "mF-ONE is a prominent dashboard asset and is explicitly treated as a tokenized debt/security product, so an explicit GENIUS exclusion is useful despite the normal omission for out-of-scope instruments. The EEA offer and Liechtenstein prospectus approval do not constitute MiCA authorization or a U.S. GENIUS approval.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text — payment stablecoin definition excludes securities",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Midas Software GmbH base prospectus",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
+        "sourceKind": "issuer-filing",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

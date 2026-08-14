@@ -1,0 +1,93 @@
+{
+  "id": "brl1-brl1",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA statement on non-MiCA-compliant ARTs and EMTs",
+        "url": "https://www.esma.europa.eu/sites/default/files/2025-01/ESMA75-223375936-6099_Statement_on_stablecoins.pdf"
+      },
+      {
+        "label": "OKX Europe BRL1 listing",
+        "url": "https://www.okx.com/en-eu/help/okx-to-list-brl1-brl1-for-spot-trading"
+      },
+      {
+        "label": "BRL1 official how-it-works",
+        "url": "https://brl1.io/como_funciona"
+      },
+      {
+        "label": "Bitso BRL1 business page",
+        "url": "https://bitso.com/br/business/products/brl1-brazilian-real-stablecoin"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerDomicile": "Brazil",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://brl1.io/como_funciona",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "BRL1 is a Brazilian-real payment stablecoin developed by a consortium and listed on OKX Europe, but public materials do not identify a single legal issuer or any U.S. GENIUS approval, official application, state qualification, or foreign-issuer registration as of 2026-08-14. The issuer/pathway and foreign-exception posture therefore remain unknown.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule (91 FR 10202)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury state-regime comparability NPRM",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "BRL1 official how-it-works",
+        "url": "https://brl1.io/como_funciona",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OKX Europe BRL1 listing",
+        "url": "https://www.okx.com/en-eu/help/okx-to-list-brl1-brl1-for-spot-trading",
+        "sourceKind": "news",
+        "sourceDate": "2025-12-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Bitso BRL1 business page",
+        "url": "https://bitso.com/br/business/products/brl1-brazilian-real-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal (91 FR 10202)",
+        "OCC GENIUS Act AML/CFT proposed rule and reporting proposal",
+        "FDIC GENIUS Act application and prudential proposals",
+        "Treasury state-regime comparability and AML/CFT proposals",
+        "Public search of Federal Register, OCC, FDIC, Treasury, and state-qualified/foreign-issuer materials for BRL1, BRL1 Network, and consortium members",
+        "BRL1, Bitso, and OKX Europe issuer/venue disclosures"
+      ],
+      "summary": "No public GENIUS approval, official application, state-qualified approval, or registered foreign-issuer exception was located for BRL1 or the BRL1 consortium as of 2026-08-14. Public materials establish a Brazilian-real payment token and reserve/redemption disclosures, but not a U.S. GENIUS filing or registration.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

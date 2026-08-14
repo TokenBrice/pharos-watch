@@ -16,5 +16,97 @@
         "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EURØP is a euro-denominated, 1:1 redeemable electronic money token designed for settlement and payment use; its issuer's own materials describe it as an EMT and document direct redemption at face value.",
+      "references": [
+        {
+          "label": "EURØP white paper — issuer, EMT classification, redemption and payment use",
+          "url": "https://schuman.io/wp-content/uploads/EUROP-White-Paper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Schuman Financial — issuer and business description",
+          "url": "https://schuman.io/about/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "SALVUS SAS",
+    "issuerDomicile": "France",
+    "licensingRegulator": "ACPR",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://schuman.io/reserve-audits/",
+    "redemptionPolicyPresent": true,
+    "notes": "SALVUS SAS has an official French MiCA/EMT authorization recorded in the MiCA field, but that EU authorization is not a GENIUS approval. Schuman's public GENIUS references discuss the U.S. framework at a general policy level; no token-specific U.S. approval, official application, state qualification, or OCC foreign-issuer registration was found. Because the GENIUS framework remains in proposed-rules phase, the conservative status is no-public-authorization-found.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register 91 FR 37234 — GENIUS Act proposed CIP rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Schuman Financial — issuer and ACPR authorization disclosure",
+        "url": "https://schuman.io/about/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Schuman Financial CEO discussion of MiCA and the U.S. GENIUS Act",
+        "url": "https://schuman.io/blog/schuman-financial-ceo-at-ripple-swell-why-private-euro-stablecoins-will-define-europes-financial-future/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-11-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — OCC GENIUS proposed rule and foreign-issuer registration framework",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-24.html — OCC reporting proposal for permitted and foreign issuers",
+        "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf — Federal Register proposed GENIUS CIP rule",
+        "https://schuman.io/about/ — SALVUS SAS issuer and French ACPR authorization",
+        "https://schuman.io/blog/schuman-financial-ceo-at-ripple-swell-why-private-euro-stablecoins-will-define-europes-financial-future/ — issuer discussion mentioning GENIUS but no token-specific U.S. filing",
+        "Federal Register/OCC searches for SALVUS, Schuman Financial, EURØP, and EUROP — no token-specific U.S. authorization or pending application found"
+      ],
+      "summary": "The review found SALVUS SAS's French MiCA authorization and general issuer commentary about the U.S. GENIUS Act, but no public U.S. permitted-issuer approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration for SALVUS SAS or EURØP.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register 91 FR 37234 — GENIUS Act proposed CIP rule",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-06-22",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

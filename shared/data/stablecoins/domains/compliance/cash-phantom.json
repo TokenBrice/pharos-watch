@@ -1,5 +1,23 @@
 {
   "id": "cash-phantom",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — EMT issuers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requires an authorised credit or e-money institution",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
+      },
+      {
+        "label": "CASH — Bridge identifies EEA flows through its EU subsidiary, transitioning to CASP and EMI licenses",
+        "url": "https://www.usecash.xyz/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

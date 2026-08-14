@@ -1,0 +1,20 @@
+{
+  "id": "autousd-auto-finance",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — current ART/EMT register page (last update 12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Auto Finance autoUSD launch — DeFi autopool aggregating lending, DEX, and yield-bearing stablecoin destinations",
+        "url": "https://blog.auto.finance/post/the-stablecoin-autopool-autousd-is-now-live"
+      },
+      {
+        "label": "Auto Finance autoUSD pool — receipt-token value appreciates with DeFi yield and rewards",
+        "url": "https://app.auto.finance/pools/autoUSD"
+      }
+    ]
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "id": "slvon-ondo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page — no SLVon EMT/ART authorization located in the reviewed register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "EUR-Lex MiCA Regulation — financial instruments are outside MiCA scope",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
+      },
+      {
+        "label": "Ondo Important Notes — Ondo Stocks are tokenized securities offered in the EEA under qualified-investor/professional-client restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "SLVon is an Ondo tokenized ETF exposure tracking the iShares Silver Trust, with security-style economic exposure rather than a fixed-value payment instrument. The GENIUS Act security exclusion therefore applies.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Ondo Important Notes — tokenized stocks and ETFs are security exposures, not underlying shares",
+          "url": "https://docs.ondo.finance/ondo-stocks/important-notes",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Ondo Global Markets (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Explicitly assessed because this dashboard-listed $25M+ tokenized ETF could be confused with a payment stablecoin. Ondo's disclosures identify the product as tokenized security exposure and describe EEA distribution under investor-eligibility restrictions; no GENIUS payment-stablecoin authorization posture applies.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ondo Stocks Important Notes",
+        "url": "https://docs.ondo.finance/ondo-stocks/important-notes",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ondo Stocks overview",
+        "url": "https://docs.ondo.finance/ondo-stocks/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

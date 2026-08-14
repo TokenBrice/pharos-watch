@@ -1,5 +1,18 @@
 {
   "id": "usdon-ondo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Ondo USDon documentation — internal settlement stablecoin for Ondo Stocks",
+        "url": "https://docs.ondo.finance/ondo-global-markets/available-assets"
+      },
+      {
+        "label": "Ondo Stocks legal and regulatory — BVI SPV and Regulation S offering restrictions",
+        "url": "https://docs.ondo.finance/ondo-stocks/legal-and-regulatory"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",

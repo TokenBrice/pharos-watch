@@ -1,5 +1,22 @@
 {
   "id": "eusd-electronic-usd",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page — no eUSD EMT/ART authorization located in the reviewed register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "EUR-Lex MiCA Regulation — financial-instrument/deposit/fund exclusions and Union offer scope",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:02023R1114-20240109"
+      },
+      {
+        "label": "Reserve terms — permissionless DTF creation, no identifiable central issuer, and no control by ABC Labs",
+        "url": "https://reserve.org/terms-and-conditions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

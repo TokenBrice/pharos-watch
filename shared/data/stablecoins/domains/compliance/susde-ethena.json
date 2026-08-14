@@ -1,0 +1,55 @@
+{
+  "id": "susde-ethena",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDe is a reward-accruing ERC-4626 staking receipt for USDe, with a changing exchange rate and no fixed-value payment function; Ethena also excludes EU and EEA acquisition.",
+      "references": [
+        {
+          "label": "Ethena — Staking USDe",
+          "url": "https://docs.ethena.fi/solution-design/staking-usde",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Ethena Terms of Service",
+          "url": "https://docs.ethena.fi/resources/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Ethena OpCo Ltd.",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "sUSDe is a yield-bearing savings wrapper: users stake USDe, receive sUSDe, and the sUSDe/USDe exchange rate rises as rewards accrue. It is not a fixed-value payment stablecoin, and Ethena states that acquisition is not offered to EU/EEA persons.",
+    "references": [
+      {
+        "label": "Ethena — Staking USDe",
+        "url": "https://docs.ethena.fi/solution-design/staking-usde",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ethena Terms of Service",
+        "url": "https://docs.ethena.fi/resources/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

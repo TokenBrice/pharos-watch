@@ -1,0 +1,107 @@
+{
+  "id": "jpysc-sbi-startale",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requirements",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
+      },
+      {
+        "label": "ESMA interim MiCA register — EMT issuers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Startale/SBI — JPYSC initially limited to SBI VC Trade accounts; public-chain circulation is prospective",
+        "url": "https://startale.com/ja/blog/jpysc-launch"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "JPYSC is a yen-denominated stablecoin issued by a Japanese trust bank for payment and settlement use, but its current distribution is limited to SBI VC Trade accounts.",
+      "references": [
+        {
+          "label": "Startale/SBI JPYSC launch announcement",
+          "url": "https://startale.com/ja/blog/jpysc-launch",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-06-24",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Japan FSA — trust-bank route for electronic payment instruments",
+          "url": "https://www.fsa.go.jp/en/news/2018/20180717.html",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "SBI Shinsei Trust Bank, Ltd.",
+    "issuerDomicile": "Japan",
+    "licensingRegulator": "Japan FSA; trust-bank / electronic payment instrument framework",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "unknown",
+    "notes": "The issuer's announcement describes JPYSC as a Japanese electronic payment instrument, initially usable only inside SBI VC Trade accounts; public-chain circulation, including overseas use, is prospective after legal, tax, and supervisory treatment is clarified. The current U.S. GENIUS rulemaking materials and OCC application list contain no JPYSC or SBI Shinsei Trust Bank approval, application, or foreign-issuer registration. issuerPathway remains unknown because Japanese authorization is not a GENIUS pathway and no U.S. or GENIUS foreign-exception route was found.",
+    "references": [
+      {
+        "label": "OCC Digital Assets Licensing Applications — no JPYSC or SBI Shinsei Trust Bank applicant listed",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC proposed GENIUS Act rule",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury proposed GENIUS Act AML/sanctions rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Startale/SBI JPYSC launch announcement",
+        "url": "https://startale.com/ja/blog/jpysc-launch",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-06-24",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Digital Assets Licensing Applications list, checked 2026-08-14",
+        "OCC GENIUS Act proposed-rule announcement and Federal Register proposal",
+        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials",
+        "Federal Reserve GENIUS Act proposed-rule materials",
+        "Startale/SBI JPYSC issuer and launch disclosures",
+        "Japan FSA electronic-payment-instrument and trust-bank materials",
+        "ESMA/EBA MiCA registers and official register guidance"
+      ],
+      "summary": "No public U.S. GENIUS permitted-payment-stablecoin approval, state-qualified approval, official application, or registered foreign-issuer exception was located for JPYSC or SBI Shinsei Trust Bank. The reviewed issuer materials describe a Japan-only closed-loop launch and do not disclose a U.S. offering or GENIUS pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Treasury proposed GENIUS Act AML/sanctions rule",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

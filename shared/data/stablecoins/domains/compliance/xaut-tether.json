@@ -1,0 +1,60 @@
+{
+  "id": "xaut-tether",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "ART",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register — ART white papers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+      },
+      {
+        "label": "Tether Gold FAQ",
+        "url": "https://gold.tether.to/faq"
+      },
+      {
+        "label": "OKX Europe XAUT spot listing",
+        "url": "https://www.okx.com/de/help/okx-to-list-xaut-tether-gold-for-spot-trading"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "XAUt represents one fine troy ounce of physical gold and is not a fixed-value U.S.-dollar payment stablecoin.",
+      "references": [
+        {
+          "label": "Tether Gold FAQ",
+          "url": "https://gold.tether.to/faq",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "TG Commodities, S.A. de C.V.",
+    "issuerDomicile": "El Salvador",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "XAUt is a gold-backed commodity token, not a payment stablecoin within the GENIUS tracker. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "Tether Gold FAQ",
+        "url": "https://gold.tether.to/faq",
+        "sourceKind": "issuer-disclosure"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

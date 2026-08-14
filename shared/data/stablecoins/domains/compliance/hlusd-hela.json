@@ -1,0 +1,111 @@
+{
+  "id": "hlusd-hela",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "HLUSD is documented as a dollar-redeemable stablecoin used for HeLa gas fees and ecosystem transactions, so it is an apparent payment stablecoin for GENIUS-scope review.",
+      "references": [
+        {
+          "label": "HLUSD benefits and reserve disclosure",
+          "url": "https://docs.helalabs.com/hlusd/markdown",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "HLUSD trading and ecosystem use",
+          "url": "https://docs.helalabs.com/hlusd/minting-redemption-of-hlusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.helalabs.com/hlusd/markdown",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Public HeLa materials describe HLUSD as backed by USDC held by a licensed Australian financial institution, but do not identify that institution, a legal issuer entity separate from the HeLa project, a U.S. regulator, a GENIUS application, or a foreign-issuer registration. The generic references to regulated oversight and an Australian custodian are not evidence of GENIUS approval; foreign-exception status remains unknown while rulemaking is proposed.",
+    "references": [
+      {
+        "label": "GENIUS Act, 12 U.S.C. chapter 56",
+        "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "HLUSD benefits and reserve disclosure",
+        "url": "https://docs.helalabs.com/hlusd/markdown",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "HLUSD trading and ecosystem use",
+        "url": "https://docs.helalabs.com/hlusd/minting-redemption-of-hlusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA Interim MiCA Register EMTWP.csv and ARTZZ.csv, update dated 2026-08-12",
+        "GENIUS Act text in 12 U.S.C. chapter 56",
+        "OCC GENIUS Act proposed rule and foreign-issuer registration framework",
+        "OCC Digital Assets Licensing Applications public table",
+        "Federal Reserve GENIUS Act customer-identification proposal",
+        "HeLa Labs and StableHodl HLUSD documentation, including reserve and redemption pages",
+        "Exact-name searches for HLUSD and HeLa USD in OCC and Federal Register materials"
+      ],
+      "summary": "No token-specific GENIUS permitted-issuer approval, state-qualified approval, official application, OCC foreign registration, or Treasury comparability determination was found for HeLa Labs/HLUSD as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "GENIUS Act, 12 U.S.C. chapter 56",
+          "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "HLUSD benefits and reserve disclosure",
+          "url": "https://docs.helalabs.com/hlusd/markdown",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

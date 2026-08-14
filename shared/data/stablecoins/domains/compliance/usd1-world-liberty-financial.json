@@ -1,5 +1,23 @@
 {
   "id": "usd1-world-liberty-financial",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register — EMT white papers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "OKX Europe USD1 spot listing",
+        "url": "https://www.okx.com/en-eu/help/okx-to-list-usd1-world-liberty-financial-usd-for-spot-trading"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

@@ -1,0 +1,119 @@
+{
+  "id": "wars-argentine-peso",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Q&A — Union offer and admission requirements",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      },
+      {
+        "label": "Ripio wFIAT — Latin American product scope and wARS reserves",
+        "url": "https://www.ripio.com/en/wfiat"
+      },
+      {
+        "label": "Ripio local stablecoins — wARS issuance, parity, and markets",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "wARS is a 1:1 Argentine-peso token intended to provide local-currency access, transfers, and mint/redeem functionality, so its token-level use is an apparent payment-stablecoin use case.",
+      "references": [
+        {
+          "label": "Ripio wFIAT — local stablecoins and 1:1 mint/redeem model",
+          "url": "https://www.ripio.com/en/wfiat",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Moonbird S.R.L. (Ripio)",
+    "issuerDomicile": "Argentina",
+    "licensingRegulator": "Argentina Comisión Nacional de Valores PSAV registration; Ripio terms state this is not a license or supervision",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.ripio.com/en/wfiat",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "latestReportDate": "2026-03-31",
+    "notes": "No token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located for wARS or its Ripio/Moonbird issuer. Ripio materials identify an Argentine PSAV registration and regional compliance, not a U.S. permitted-issuer pathway. The GENIUS rulemaking remains in proposed-rules phase as of this review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications tracker",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS proposed rule — 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ripio wFIAT — wARS markets, reserves, and regional scope",
+        "url": "https://www.ripio.com/en/wfiat",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ripio Argentina wallet terms — Moonbird S.R.L. and PSAV disclosure",
+        "url": "https://terms.ripio.com/ar/wallet",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and foreign-issuer provisions",
+        "OCC digital assets licensing applications tracker",
+        "Public search for wARS/Ripio GENIUS approval, application, or foreign-issuer registration",
+        "Ripio wFIAT issuer, reserve, and regional-scope disclosures",
+        "Ripio Argentina wallet terms and regulatory disclosures"
+      ],
+      "summary": "As of 2026-08-14, no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for wARS or its Ripio/Moonbird issuer. Ripio materials identify an Argentine PSAV registration and local/regional compliance, not a U.S. permitted-payment-stablecoin pathway. The OCC rulemaking remains proposed, so the absence of a final authorization register is not itself evidence of approval.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications tracker",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Ripio Argentina wallet terms — issuer and regulatory disclosure",
+          "url": "https://terms.ripio.com/ar/wallet",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

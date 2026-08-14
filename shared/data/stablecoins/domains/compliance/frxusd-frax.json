@@ -1,5 +1,27 @@
 {
   "id": "frxusd-frax",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — EMT issuers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requires an authorised credit or e-money institution",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
+      },
+      {
+        "label": "Frax — frxUSD is globally accessible and available through DEXs",
+        "url": "https://docs.frax.com/frxusd"
+      },
+      {
+        "label": "FraxNet — EUR/SEPA conversion to frxUSD is live in Europe",
+        "url": "https://docs.frax.com/frxusd/fiat-onramp-offramp"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "issuer-announced-intent",

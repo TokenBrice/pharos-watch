@@ -1,9 +1,30 @@
 {
   "id": "cusd-cap",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Cap cUSD vault mechanics — protocol mint and proportional redemption",
+        "url": "https://docs.cap.app/concepts/vault"
+      },
+      {
+        "label": "Cap platform terms — Covered Agents S.A. operator and EU user clause",
+        "url": "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "cUSD is USD-pegged and vault-redeemable at ~1:1, which superficially resembles a payment stablecoin, but its proportional basket redemption mechanism (socializing losses across redeemers), absence of a disclosed legal issuer entity, and the protocol's self-description as code-enforced rather than institutionally backed create genuine ambiguity about whether a legal 'permitted issuer' exists under the GENIUS Act definition. The stcUSD product separates yield; cUSD itself does not natively pay yield."
+      "summary": "cUSD is USD-pegged and vault-redeemable at roughly 1:1, which superficially resembles a payment stablecoin, but its proportional basket redemption mechanism and protocol-operated issuance create genuine ambiguity about whether a legal permitted issuer exists under the GENIUS Act definition. Cap's terms identify Covered Agents S.A. as platform operator, not clearly as cUSD's legal issuer."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -15,48 +36,63 @@
     "reserveDisclosureUrl": "https://cap.app/vault/reserves/cUSD",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "Cap documents basket-based vault redemption rather than a clean fiat issuer redemption promise. No legal entity is publicly disclosed as the issuer. The protocol operates code-enforced protection without named regulatory oversight. Until a legal issuer entity is disclosed and pathway to GENIUS compliance clarified, applicability remains unclear.",
+    "notes": "Cap documents basket-based vault redemption rather than a clean fiat issuer redemption promise. Current platform terms name Covered Agents S.A. of Panama as the platform operator, but do not establish it as cUSD's legal issuer. No public GENIUS authorization, state-qualified approval, official application, or registered foreign-issuer exception was located; applicability remains unclear and the regime is still in proposed-rulemaking.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
         "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
-        "sourceKind": "federal-regulator"
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "FDIC GENIUS Act prudential requirements NPRM (FR 2026-06974)",
         "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-10"
+        "sourceDate": "2026-04-10",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "FinCEN/OFAC AML NPRM (FR 2026-06963)",
         "url": "https://www.federalregister.gov/documents/2026/04/10/2026-06963/permitted-payment-stablecoin-issuer-anti-money-launderingcountering-the-financing-of-terrorism",
         "sourceKind": "federal-regulator",
-        "sourceDate": "2026-04-10"
+        "sourceDate": "2026-04-10",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cap docs — introduction",
         "url": "https://docs.cap.app/",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cap vault docs",
         "url": "https://docs.cap.app/concepts/vault",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
       },
       {
         "label": "Cap cUSD reserves dashboard",
         "url": "https://cap.app/vault/reserves/cUSD",
-        "sourceKind": "issuer-disclosure"
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
       }
     ],
     "negativeEvidenceReview": {
       "sourcesChecked": [
-        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — OCC GENIUS Act NPRM; no Cap Protocol mention",
+        "OCC GENIUS Act NPRM, Bulletin 2026-3 — no Cap Protocol or Covered Agents S.A. approval listed",
+        "OCC Digital Assets Licensing Applications table — no Cap Protocol or Covered Agents S.A. application listed",
         "https://www.federalregister.gov/documents/2026/04/10/2026-06974/genius-act-requirements-and-standards-for-fdic-supervised-permitted-payment-stablecoin-issuers-and — FDIC prudential NPRM; no Cap Protocol application listed",
-        "https://docs.cap.app/ — Cap issuer docs; no regulatory authorization disclosed",
-        "https://docs.cap.app/concepts/vault — vault mechanism; basket redemption confirmed, no issuer entity named",
-        "Web search for Cap Protocol GENIUS Act regulatory filing, June 2026: no results found",
+        "https://docs.cap.app/ — Cap issuer and protocol docs; no GENIUS authorization disclosed",
+        "https://docs.cap.app/concepts/vault — vault mechanism and proportional redemption confirmed",
+        "https://docs.cap.app/resources/terms-and-conditions/platform-terms-of-use — Covered Agents S.A. named as platform operator; no GENIUS authorization disclosed",
+        "Web search for Cap Protocol or Covered Agents S.A. GENIUS Act regulatory filing, August 2026: no results found",
         "OCC Bulletin 2026-3 GENIUS proposed rule",
         "OCC Bulletin 2026-24 GENIUS reporting proposal",
         "OCC digital asset licensing applications tracker",
@@ -65,11 +101,11 @@
         "FDIC GENIUS Act NPRM",
         "NCUA PPSI application and standards proposals"
       ],
-      "summary": "Cap Protocol has no publicly disclosed GENIUS authorization, application, or state-qualified status; no legal issuer entity is named in public documentation; basket redemption design diverges from GENIUS payment-stablecoin model; no PPSI application framework exists yet.",
+      "summary": "No public GENIUS approval, state-qualified approval, official application, or foreign-exception registration was located for Cap Protocol or Covered Agents S.A. Cap's current terms identify a Panama platform operator but do not resolve cUSD's legal issuer; basket redemption also diverges from a straightforward fixed-value issuer redemption model.",
       "reviewer": "Pharos compliance research",
-      "reviewedAt": "2026-06-18"
+      "reviewedAt": "2026-08-14"
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-06-18"
+    "reviewedAt": "2026-08-14"
   }
 }

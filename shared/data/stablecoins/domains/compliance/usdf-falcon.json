@@ -1,5 +1,8 @@
 {
   "id": "usdf-falcon",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

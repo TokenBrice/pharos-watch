@@ -1,0 +1,81 @@
+{
+  "id": "tryb-bilira",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "TRYB is marketed as a Turkish-lira stablecoin with 1:1 reserve and redemption mechanics for payments and transfers.",
+      "references": [
+        {
+          "label": "BiLira TRYB product page",
+          "url": "https://www.bilira.co/en/product/tryb-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "BiLira TRYB Terms of Use",
+          "url": "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Bilira Kripto Varlık Alım Satım Platformu A.Ş.",
+    "issuerDomicile": "Turkey",
+    "licensingRegulator": "Turkey; BiLira states it is on the temporary list of active crypto-asset service providers and is not an electronic-money institution, credit institution, or licensed entity",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.bilira.co/en/product/tryb-stablecoin",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "references": [
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "BiLira TRYB product page",
+        "url": "https://www.bilira.co/en/product/tryb-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "BiLira TRYB Terms of Use",
+        "url": "https://www.bilira.co/en/legal-information/tryb-terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and Federal Register implementation materials",
+        "OCC digital-assets licensing applications page",
+        "Federal Register and official U.S. regulator searches for BiLira, TRYB, and Bilira Kripto Varlık Alım Satım Platformu A.Ş.",
+        "Treasury foreign-issuer comparability and OCC registration materials",
+        "BiLira TRYB product page and Terms of Use",
+        "BiLira audit and disclosure pages"
+      ],
+      "summary": "BiLira's Turkish issuer and domestic reserve/redemption disclosures were confirmed, but no token-specific U.S. PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found as of 2026-08-14. The Turkish crypto-asset-service-provider listing is not GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "notes": "No official GENIUS authorization or U.S. application was found. The Turkish issuer's temporary crypto-asset-service-provider listing is not a U.S. GENIUS pathway.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

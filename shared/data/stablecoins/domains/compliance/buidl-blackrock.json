@@ -1,5 +1,22 @@
 {
   "id": "buidl-blackrock",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "SEC filing — BlackRock USD Institutional Digital Liquidity Fund Ltd.",
+        "url": "https://www.sec.gov/Archives/edgar/data/2094496/000121390026042685/ea026411904ex10-9.htm"
+      },
+      {
+        "label": "Securitize BlackRock BUIDL",
+        "url": "https://securitize.io/blackrock/buidl"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "authorizationStatus": "not-applicable",

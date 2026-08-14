@@ -1,0 +1,16 @@
+{
+  "id": "fxusd-f-x-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "EUR-Lex — Regulation (EU) 2023/1114 (MiCA)",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?qid=1704374130422&uri=CELEX:32023R1114"
+      }
+    ]
+  }
+}

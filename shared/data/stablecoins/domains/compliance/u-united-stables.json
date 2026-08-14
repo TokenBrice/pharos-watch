@@ -21,13 +21,13 @@
         "sourceKind": "federal-regulator"
       },
       {
-        "label": "United Stables website — regulatory disclosure",
+        "label": "United Stables website \u2014 regulatory disclosure",
         "url": "https://www.u.tech/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "United Stables terms — regulatory disclosure",
+        "label": "United Stables terms \u2014 regulatory disclosure",
         "url": "https://u.tech/terms/",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"
@@ -36,7 +36,7 @@
     "negativeEvidenceReview": {
       "sourcesChecked": [
         "OCC GENIUS Act proposed rule and public releases",
-        "United Stables website (u.tech) regulatory disclosure — issuer explicitly states no GENIUS Act authorization obtained",
+        "United Stables website (u.tech) regulatory disclosure \u2014 issuer explicitly states no GENIUS Act authorization obtained",
         "United Stables terms page regulatory disclosure",
         "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-exception materials",
         "OCC Bulletin 2026-3 GENIUS proposed rule",

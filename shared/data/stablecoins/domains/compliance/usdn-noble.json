@@ -1,5 +1,8 @@
 {
   "id": "usdn-noble",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

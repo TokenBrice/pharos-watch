@@ -1,0 +1,4 @@
+interface:
+  display_name: "Issuer Questionnaire"
+  short_description: "Draft prioritized questions for a collaborating stablecoin team"
+  default_prompt: "Use $issuer-questionnaire to draft the 4-6 most load-bearing questions for this stablecoin's team from its open Pharos data points."

@@ -1,5 +1,22 @@
 {
   "id": "dai-makerdao",
+  "mica": {
+    "status": "non-compliant",
+    "references": [
+      {
+        "label": "Kraken EEA DAI delisting notice",
+        "url": "https://support.kraken.com/articles/dai-update-for-eea-clients"
+      },
+      {
+        "label": "Coinbase MiCA restricted stablecoins — DAI",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "ESMA MiCA Q&A — crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",

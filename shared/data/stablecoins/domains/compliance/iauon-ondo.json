@@ -1,0 +1,20 @@
+{
+  "id": "iauon-ondo",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Ondo Stocks regulatory disclosure",
+        "url": "https://ondo.finance/ondo-stocks"
+      },
+      {
+        "label": "Ondo IAUon product page",
+        "url": "https://app.ondo.finance/assets/iauon"
+      }
+    ]
+  }
+}

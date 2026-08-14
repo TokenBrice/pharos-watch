@@ -1,0 +1,24 @@
+{
+  "id": "acred-apollo-securitize",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope — funds and financial instruments excluded",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Securitize ACRED product page",
+        "url": "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+      },
+      {
+        "label": "SEC Form D — Securitize Tokenized Apollo Diversified Credit Fund, Ltd.",
+        "url": "https://www.sec.gov/Archives/edgar/data/0002056038/000205603825000001/0002056038-25-000001-index.htm"
+      }
+    ]
+  }
+}

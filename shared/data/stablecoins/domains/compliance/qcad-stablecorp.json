@@ -1,0 +1,108 @@
+{
+  "id": "qcad-stablecorp",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — ART/EMT register page reviewed; no QCAD/Stablecorp EU issuer entry located on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Stablecorp QCAD page — QCAD is a Canadian CAD stablecoin offered to qualified holders through authorized partners under the Canadian interim framework",
+        "url": "https://stablecorp.ca/"
+      },
+      {
+        "label": "Stablecorp transparency — QCAD reserves and mint/redeem process are documented for authorized partners",
+        "url": "https://stablecorp.ca/transparency"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "QCAD is a 1:1 CAD-backed, redeemable stablecoin used for institutional payments and settlement through authorized partners.",
+      "references": [
+        {
+          "label": "Stablecorp QCAD product page",
+          "url": "https://stablecorp.ca/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Stablecorp QCAD transparency",
+          "url": "https://stablecorp.ca/transparency",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "QCAD Digital Trust",
+    "issuerDomicile": "Canada",
+    "licensingRegulator": "FINTRAC MSB M22234558; Canadian Securities Administrators / VRCA framework",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://stablecorp.ca/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "QCAD's Canadian prospectus/interim-framework posture and FINTRAC MSB registration are not U.S. GENIUS authorization. No token-specific PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. The foreign-issuer framework remains in proposed-rulemaking, and QCAD's U.S. eligibility is not established.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register — permitted payment stablecoin issuer CIP proposed rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury — state-regime comparability proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Stablecorp QCAD product page",
+        "url": "https://stablecorp.ca/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Stablecorp QCAD transparency",
+        "url": "https://stablecorp.ca/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and Federal Register CIP proposed rule",
+        "OCC digital-asset licensing applications tracker",
+        "U.S. Treasury state-regime comparability proposed rule",
+        "Stablecorp QCAD product, transparency, and Canadian regulatory disclosures",
+        "Public searches for QCAD, QCAD Digital Trust, Stablecorp, PPSI approval, and GENIUS foreign-issuer registration"
+      ],
+      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for QCAD Digital Trust or Stablecorp. The Canadian framework and FINTRAC MSB registration are foreign licensing context only, not U.S. GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}
