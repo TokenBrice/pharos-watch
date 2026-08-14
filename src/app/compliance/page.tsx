@@ -2,7 +2,8 @@ import Link from "next/link";
 import { FaqSection } from "@/components/faq-section";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { ComplianceLoadingState } from "@/app/compliance/loading";
-import { buildComplianceSummary } from "@/app/compliance/model";
+import { buildComplianceStatusDistribution, buildComplianceSummary } from "@/app/compliance/model";
+import { ComplianceStatusDistributionBars } from "@/app/compliance/status-distribution-bar";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import type { FaqItem } from "@/lib/faq";
@@ -43,6 +44,7 @@ const COMPLIANCE_FAQ_ITEMS = [
 ] as const satisfies readonly FaqItem[];
 
 const COMPLIANCE_SUMMARY = buildComplianceSummary();
+const COMPLIANCE_STATUS_DISTRIBUTION = buildComplianceStatusDistribution();
 
 const COMPLIANCE_HERO = (
   <section aria-label="Compliance coverage summary" className="pharos-card-shell overflow-hidden">
@@ -83,6 +85,7 @@ const COMPLIANCE_HERO = (
         </dd>
       </div>
     </dl>
+    <ComplianceStatusDistributionBars distribution={COMPLIANCE_STATUS_DISTRIBUTION} />
   </section>
 );
 
