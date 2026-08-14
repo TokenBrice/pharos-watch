@@ -18,20 +18,19 @@ The route is statically exported, indexable, and included in the sitemap. It use
 
 ## Page Composition
 
-The page composes two regimes:
+The page has three URL-backed views:
 
-- EU MiCA authorization rows projected from each assessed coin's `mica` metadata
-- U.S. GENIUS rows projected from the dedicated compliance client projection
+- **Overview** shows one compact directory row per coin, with its peg and MiCA and GENIUS status badges. A status badge opens the matching regime view with that status filter applied; a dash means the coin has no assessment for that regime.
+- **MiCA** groups the full-detail MiCA rows into ordered status bands.
+- **GENIUS** groups rows into ordered status bands while preserving the model-owned main-table versus Implementation Watch split and effective-state empty state.
 
-`src/app/compliance/model.ts` is the authority for which rows appear in the main authorization table versus Implementation Watch. The main table contains active assets only; pre-launch GENIUS rows may appear in Implementation Watch, while frozen, quarantined, and delisted rows are excluded. GENIUS placement also depends on the centralized effective-state contract.
+`src/app/compliance/model.ts` is the authority for view projection, band order, default-collapsed statuses, and which GENIUS rows appear in the main table versus Implementation Watch. Default-collapsed bands render as one disclosure row until expanded. Search results and specific status-filter results automatically expose matching rows in those bands.
 
-The route includes:
+Regime tables keep the scan surface to Coin, Status, Pathway / Type, Authority, and Issuer Entity. Rows with source or review detail expose a button-controlled full-width fold. The fold owns source links and, for GENIUS, review evidence and reserve-disclosure details. The Overview directory has no row folds and does not require horizontal scrolling.
 
-1. a summary hero derived from the unfiltered model
-2. regime, status, MiCA token-type, peg, and search controls
-3. the authorization table
-4. Implementation Watch when applicable
-5. source links and regime-state context
+The unfiltered summary hero also includes linked MiCA and GENIUS status-distribution bars. Each labeled segment opens the corresponding regime/status filter; GENIUS statuses without a positive public authorization signal are combined into the neutral "No public signal" segment.
+
+Peg and search filters apply in all three views. Status filters appear only in regime views, and MiCA token type appears only in the MiCA view.
 
 Do not restate regime eligibility or legal classification logic in this route doc. Canonical modeling and research rules live in:
 
@@ -46,7 +45,7 @@ Do not restate regime eligibility or legal classification logic in this route do
 - `peg=<PegCurrency>`
 - `q=<search>`
 
-The client accepts legacy `tokenType` and `pegCurrency` aliases and writes canonical `type` and `peg` parameters. When a regime is absent, MiCA-only status/type values or GENIUS-only status values can infer the appropriate regime. Search state stays synchronized with browser Back/Forward navigation.
+Absent `regime` selects Overview unless a legacy deep link can infer a regime from a MiCA-only status/type value or GENIUS-only status value. The client accepts legacy `tokenType` and `pegCurrency` aliases and writes canonical `type` and `peg` parameters. Changing views clears regime-specific status and token-type state; status badges and hero segments write the destination regime and status together. Search state stays synchronized with browser Back/Forward navigation.
 
 ## Data Projection
 

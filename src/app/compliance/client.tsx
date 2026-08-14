@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
@@ -38,18 +38,28 @@ import {
   MICA_TOKEN_TYPE_LABELS,
   MICA_SIGNIFICANT_BADGE_CLS,
 } from "@shared/lib/mica";
-import type { MicaTokenType, PegCurrency } from "@shared/types";
+import type {
+  GeniusAuthorizationStatus,
+  MicaStatus,
+  MicaTokenType,
+  PegCurrency,
+} from "@shared/types";
 import {
   COMPLIANCE_REGIME_FILTER_OPTIONS,
+  GENIUS_STATUS_DISPLAY_ORDER,
   GENIUS_STATUS_FILTER_OPTIONS,
+  MICA_STATUS_DISPLAY_ORDER,
   MICA_STATUS_FILTER_OPTIONS,
   MICA_TOKEN_TYPE_FILTER_OPTIONS,
+  buildComplianceOverviewModel,
   buildComplianceViewModel,
+  groupComplianceRowsIntoBands,
   isGeniusAuthorizationStatus,
   isMicaStatus,
   normalizeComplianceRegimeFilter,
   normalizeComplianceStatusFilter,
   normalizeMicaTokenTypeFilter,
+  type ComplianceOverviewRow,
   type ComplianceRegimeFilter,
   type ComplianceRow,
   type ComplianceStatusFilter,
@@ -93,8 +103,39 @@ function CompliancePillGroup<T extends string>({
   );
 }
 
-function hasGeniusRows(rows: readonly ComplianceRow[]): boolean {
-  return rows.some((row) => row.regime === "genius");
+function ComplianceViewTabs({
+  value,
+  onChange,
+}: {
+  value: ComplianceRegimeFilter;
+  onChange: (value: ComplianceRegimeFilter) => void;
+}) {
+  return (
+    <div role="tablist" aria-label="Compliance view" className="flex border-b border-border/60">
+      {COMPLIANCE_REGIME_FILTER_OPTIONS.map((option) => {
+        const isActive = option.value === value;
+        const label = option.value === "all" ? "Overview" : option.label;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            aria-controls="compliance-view-panel"
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "pharos-focus-ring min-h-11 border-b-2 px-4 text-sm font-medium transition-colors",
+              isActive
+                ? "border-frost-blue text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function normalizePegFilter(value: string): PegCurrency | "all" {
@@ -138,6 +179,7 @@ export function ComplianceClient() {
   const setRegimeFilter = useCallback(
     (v: ComplianceRegimeFilter) => {
       trackEvent("filter_applied", { page: "compliance", filter_type: "regime", filter_value: v });
+      trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: v });
       setParams({ regime: v, status: "all", type: "all", tokenType: "all" });
     },
     [setParams],
@@ -167,6 +209,15 @@ export function ComplianceClient() {
     [setParam],
   );
 
+  const openOverviewStatus = useCallback(
+    (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => {
+      trackEvent("filter_applied", { page: "compliance", filter_type: "view", filter_value: regime });
+      trackEvent("filter_applied", { page: "compliance", filter_type: "status", filter_value: status });
+      setParams({ regime, status, type: "all", tokenType: "all" });
+    },
+    [setParams],
+  );
+
   const { searchInput, setSearchInput, deferredSearch } = useUrlSearchSync("compliance");
 
   const { rows, watchRows, totalTracked, isGeniusEffective } = useMemo(
@@ -180,38 +231,39 @@ export function ComplianceClient() {
       }),
     [regimeFilter, statusFilter, tokenTypeFilter, pegFilter, deferredSearch],
   );
+  const overview = useMemo(
+    () => buildComplianceOverviewModel({ peg: pegFilter, search: deferredSearch }),
+    [pegFilter, deferredSearch],
+  );
 
   const statusOptions = regimeFilter === "genius" ? GENIUS_STATUS_FILTER_OPTIONS : MICA_STATUS_FILTER_OPTIONS;
-  const matchingCount = rows.length + watchRows.length;
+  const matchingCount = regimeFilter === "all" ? overview.rows.length : rows.length + watchRows.length;
+  const totalCount = regimeFilter === "all" ? overview.totalCoins : totalTracked;
+  const forceCollapsedBandsOpen = statusFilter !== "all" || deferredSearch.trim().length > 0;
 
   return (
     <div className="space-y-6">
       <section id="data" aria-label="Compliance data" tabIndex={-1} className="space-y-5">
-        <div className="pharos-table-toolbar rounded-xl border border-border/60">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="pharos-table-toolbar overflow-hidden rounded-xl border border-border/60">
+          <ComplianceViewTabs value={regimeFilter} onChange={setRegimeFilter} />
+          <div className="flex flex-col gap-3 p-3 xl:flex-row xl:items-start xl:justify-between">
             <div className="min-w-0 space-y-1">
               <p className="pharos-kicker">Compliance Workbench</p>
               <p className="pharos-meta">
-                {matchingCount === totalTracked ? (
+                {matchingCount === totalCount ? (
                   <>
-                    <span className="pharos-numeric">{totalTracked.toLocaleString()}</span> assessed regime
-                    rows
+                    <span className="pharos-numeric">{totalCount.toLocaleString()}</span>{" "}
+                    {regimeFilter === "all" ? "stablecoins" : "assessed regime rows"}
                   </>
                 ) : (
                   <>
                     <span className="pharos-numeric">{matchingCount.toLocaleString()}</span>/
-                    <span className="pharos-numeric">{totalTracked.toLocaleString()}</span> matching
+                    <span className="pharos-numeric">{totalCount.toLocaleString()}</span> matching
                   </>
                 )}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 xl:justify-end">
-              <CompliancePillGroup
-                value={regimeFilter}
-                options={COMPLIANCE_REGIME_FILTER_OPTIONS}
-                ariaLabel="Filter by compliance regime"
-                onChange={setRegimeFilter}
-              />
               {regimeFilter !== "all" ? (
                 <CompliancePillGroup
                   value={statusFilter}
@@ -220,7 +272,7 @@ export function ComplianceClient() {
                   onChange={setStatusFilter}
                 />
               ) : null}
-              {regimeFilter !== "genius" ? (
+              {regimeFilter === "mica" ? (
                 <CompliancePillGroup
                   value={tokenTypeFilter}
                   options={MICA_TOKEN_TYPE_FILTER_OPTIONS}
@@ -246,210 +298,528 @@ export function ComplianceClient() {
           </div>
         </div>
 
-        <div className="space-y-5">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="pharos-kicker">Authorization Table</p>
-                <p className="text-xs text-muted-foreground">
-                  Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
-                </p>
+        <div id="compliance-view-panel" role="tabpanel">
+          {regimeFilter === "all" ? (
+            <OverviewDirectory rows={overview.rows} logos={logos} onStatusClick={openOverviewStatus} />
+          ) : (
+            <div className="space-y-5">
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <p className="pharos-kicker">Authorization Table</p>
+                    <p className="text-xs text-muted-foreground">
+                      Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
+                    </p>
+                  </div>
+                  <span className="pharos-numeric text-xs text-muted-foreground">
+                    {rows.length.toLocaleString()} rows
+                  </span>
+                </div>
+                {rows.length === 0 ? (
+                  <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
+                    {regimeFilter === "genius" && !isGeniusEffective
+                      ? "GENIUS rows remain in implementation watch until the regime is effective."
+                      : "No stablecoins match these filters."}
+                  </div>
+                ) : (
+                  <ComplianceTable
+                    rows={rows}
+                    regime={regimeFilter}
+                    logos={logos}
+                    tableId="compliance-authorization"
+                    testId="compliance-authorization-table"
+                    ariaLabel="Compliance authorization table"
+                    forceCollapsedBandsOpen={forceCollapsedBandsOpen}
+                  />
+                )}
               </div>
-              <span className="pharos-numeric text-xs text-muted-foreground">{rows.length.toLocaleString()} rows</span>
-            </div>
-            {rows.length === 0 ? (
-              <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
-                {regimeFilter === "genius" && !isGeniusEffective
-                  ? "GENIUS rows remain in implementation watch until the regime is effective."
-                  : "No stablecoins match these filters."}
-              </div>
-            ) : (
-              <ComplianceTable
-                rows={rows}
-                logos={logos}
-                tableId="compliance-authorization"
-                testId="compliance-authorization-table"
-                ariaLabel="Compliance authorization table"
-                showReserveDisclosure={hasGeniusRows(rows)}
-              />
-            )}
-          </div>
 
-          {watchRows.length > 0 || regimeFilter === "genius" ? (
-            <div id="implementation-watch" className="space-y-2">
-              <div className="flex flex-wrap items-end justify-between gap-2">
-                <div>
-                  <p className="pharos-kicker">GENIUS Implementation Watch</p>
-                  <p className="text-xs text-muted-foreground">
-                    Source-backed signals before the Act is generally effective; these rows are not compliance
-                    determinations.
-                  </p>
+              {watchRows.length > 0 || regimeFilter === "genius" ? (
+                <div id="implementation-watch" className="space-y-2">
+                  <div className="flex flex-wrap items-end justify-between gap-2">
+                    <div>
+                      <p className="pharos-kicker">GENIUS Implementation Watch</p>
+                      <p className="text-xs text-muted-foreground">
+                        Source-backed signals before the Act is generally effective; these rows are not compliance
+                        determinations.
+                      </p>
+                    </div>
+                    <span className="pharos-numeric text-xs text-muted-foreground">
+                      {watchRows.length.toLocaleString()} rows
+                    </span>
+                  </div>
+                  {watchRows.length === 0 ? (
+                    <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
+                      No GENIUS implementation-watch rows match these filters.
+                    </div>
+                  ) : (
+                    <ComplianceTable
+                      rows={watchRows}
+                      regime="genius"
+                      logos={logos}
+                      tableId="compliance-genius-watch"
+                      testId="compliance-genius-watch-table"
+                      ariaLabel="GENIUS implementation watch table"
+                      forceCollapsedBandsOpen={forceCollapsedBandsOpen}
+                    />
+                  )}
                 </div>
-                <span className="pharos-numeric text-xs text-muted-foreground">
-                  {watchRows.length.toLocaleString()} rows
-                </span>
-              </div>
-              {watchRows.length === 0 ? (
-                <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
-                  No GENIUS implementation-watch rows match these filters.
-                </div>
-              ) : (
-                <ComplianceTable
-                  rows={watchRows}
-                  logos={logos}
-                  tableId="compliance-genius-watch"
-                  testId="compliance-genius-watch-table"
-                  ariaLabel="GENIUS implementation watch table"
-                  showReserveDisclosure={hasGeniusRows(watchRows)}
-                />
-              )}
+              ) : null}
             </div>
-          ) : null}
+          )}
         </div>
       </section>
     </div>
   );
 }
 
+type OverviewSortColumn = "mica" | "genius";
+interface OverviewSort {
+  column: OverviewSortColumn;
+  direction: "asc" | "desc";
+}
+
+function OverviewSortHeaderButton({
+  column,
+  label,
+  sort,
+  onToggle,
+}: {
+  column: OverviewSortColumn;
+  label: string;
+  sort: OverviewSort | null;
+  onToggle: (column: OverviewSortColumn) => void;
+}) {
+  const isActive = sort?.column === column;
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(column)}
+      aria-label={`Sort by ${label} status`}
+      className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm hover:text-foreground"
+    >
+      {label}
+      <ChevronDown
+        aria-hidden="true"
+        className={cn(
+          "h-3 w-3 transition-transform",
+          !isActive && "opacity-40",
+          isActive && sort?.direction === "desc" && "rotate-180",
+        )}
+      />
+    </button>
+  );
+}
+
+function OverviewDirectory({
+  rows,
+  logos,
+  onStatusClick,
+}: {
+  rows: ComplianceOverviewRow[];
+  logos: Record<string, string> | undefined;
+  onStatusClick: (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => void;
+}) {
+  const [sort, setSort] = useState<OverviewSort | null>(null);
+
+  const toggleSort = useCallback((column: OverviewSortColumn) => {
+    setSort((previous) => {
+      const next: OverviewSort | null =
+        previous?.column !== column
+          ? { column, direction: "asc" }
+          : previous.direction === "asc"
+            ? { column, direction: "desc" }
+            : null;
+      trackEvent("filter_applied", {
+        page: "compliance",
+        filter_type: "overview_sort",
+        filter_value: next ? `${next.column}:${next.direction}` : "default",
+      });
+      return next;
+    });
+  }, []);
+
+  const sortedRows = useMemo(() => {
+    if (!sort) return rows;
+    const order: readonly string[] = sort.column === "mica" ? MICA_STATUS_DISPLAY_ORDER : GENIUS_STATUS_DISPLAY_ORDER;
+    const statusOf = (row: ComplianceOverviewRow) =>
+      sort.column === "mica" ? row.mica?.status : row.genius?.status;
+    const direction = sort.direction === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const statusA = statusOf(a);
+      const statusB = statusOf(b);
+      // Unassessed rows stay last in either direction.
+      if (!statusA || !statusB) {
+        if (statusA) return -1;
+        if (statusB) return 1;
+        return a.symbol.localeCompare(b.symbol);
+      }
+      const delta = (order.indexOf(statusA) - order.indexOf(statusB)) * direction;
+      if (delta !== 0) return delta;
+      return a.symbol.localeCompare(b.symbol);
+    });
+  }, [rows, sort]);
+
+  const ariaSortFor = (column: OverviewSortColumn): "ascending" | "descending" | "none" =>
+    sort?.column === column ? (sort.direction === "asc" ? "ascending" : "descending") : "none";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <p className="pharos-kicker">Stablecoin Directory</p>
+          <p className="text-xs text-muted-foreground">One row per tracked coin with its assessed regime statuses.</p>
+        </div>
+        <span className="pharos-numeric text-xs text-muted-foreground">{rows.length.toLocaleString()} coins</span>
+      </div>
+      {rows.length === 0 ? (
+        <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
+          No stablecoins match these filters.
+        </div>
+      ) : (
+        <TableFrame
+          tableId="compliance-overview"
+          testId="compliance-overview-table"
+          chrome="bare"
+          className="pharos-table-shell"
+          tableClassName="table-fixed"
+          tableProps={{ "aria-label": "Compliance overview directory" }}
+          viewportClassName="relative w-full"
+          viewportProps={{
+            compactBottomPadding: false,
+            horizontal: false,
+            mobileScrollHint: false,
+            overscrollX: false,
+            scrollShadow: false,
+          }}
+        >
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[38%] px-1.5 sm:px-3">Coin</TableHead>
+              <TableHead className="w-[14%] px-1.5 sm:px-3">Peg</TableHead>
+              <TableHead className="w-[24%] px-1.5 text-center sm:px-3" aria-sort={ariaSortFor("mica")}>
+                <OverviewSortHeaderButton column="mica" label="MiCA" sort={sort} onToggle={toggleSort} />
+              </TableHead>
+              <TableHead className="w-[24%] px-1.5 text-center sm:px-3" aria-sort={ariaSortFor("genius")}>
+                <OverviewSortHeaderButton column="genius" label="GENIUS" sort={sort} onToggle={toggleSort} />
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {sortedRows.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="px-1.5 sm:px-3">
+                  <CoinLink row={row} logo={logos?.[row.id]} />
+                </TableCell>
+                <TableCell className="px-1.5 text-xs text-muted-foreground sm:px-3">
+                  {PEG_METADATA[row.peg]?.filterLabel ?? row.peg}
+                </TableCell>
+                <TableCell className="px-1.5 text-center sm:px-3">
+                  {row.mica ? (
+                    <OverviewStatusButton
+                      regime="mica"
+                      status={row.mica.status}
+                      coinSymbol={row.symbol}
+                      onClick={onStatusClick}
+                    />
+                  ) : (
+                    <EmptyCell />
+                  )}
+                </TableCell>
+                <TableCell className="px-1.5 text-center sm:px-3">
+                  {row.genius ? (
+                    <OverviewStatusButton
+                      regime="genius"
+                      status={row.genius.status}
+                      coinSymbol={row.symbol}
+                      inWatch={row.genius.inWatch}
+                      onClick={onStatusClick}
+                    />
+                  ) : (
+                    <EmptyCell />
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </TableFrame>
+      )}
+    </div>
+  );
+}
+
+function OverviewStatusButton({
+  regime,
+  status,
+  coinSymbol,
+  inWatch = false,
+  onClick,
+}: {
+  regime: "mica" | "genius";
+  status: MicaStatus | GeniusAuthorizationStatus;
+  coinSymbol: string;
+  inWatch?: boolean;
+  onClick: (regime: "mica" | "genius", status: MicaStatus | GeniusAuthorizationStatus) => void;
+}) {
+  const badge = regime === "mica"
+    ? MICA_STATUS_BADGE_STYLES[status as MicaStatus]
+    : GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status as GeniusAuthorizationStatus];
+  const description = regime === "mica"
+    ? MICA_STATUS_DESCRIPTIONS[status as MicaStatus]
+    : GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[status as GeniusAuthorizationStatus];
+
+  return (
+    <button
+      type="button"
+      title={inWatch ? `${description} Implementation Watch.` : description}
+      aria-label={`Show ${regime === "mica" ? "MiCA" : "GENIUS"} ${badge.label} stablecoins; selected from ${coinSymbol}`}
+      onClick={() => onClick(regime, status)}
+      className={cn(
+        "pharos-focus-ring inline-flex max-w-full items-center justify-center whitespace-normal rounded-full border px-1.5 py-1 text-center text-[10px] font-semibold leading-tight sm:px-3 sm:text-xs",
+        badge.cls,
+      )}
+    >
+      {badge.label}
+    </button>
+  );
+}
+
 function ComplianceTable({
   rows,
+  regime,
   logos,
   tableId,
   testId,
   ariaLabel,
-  showReserveDisclosure = false,
+  forceCollapsedBandsOpen,
 }: {
   rows: ComplianceRow[];
+  regime: "mica" | "genius";
   logos: Record<string, string> | undefined;
   tableId: string;
   testId: string;
   ariaLabel: string;
-  showReserveDisclosure?: boolean;
+  forceCollapsedBandsOpen: boolean;
 }) {
+  const bands = groupComplianceRowsIntoBands(rows, regime);
+  const [expandedBands, setExpandedBands] = useState<Record<string, boolean>>({});
+
   return (
     <TableFrame
       tableId={tableId}
       testId={testId}
       chrome="bare"
       className="pharos-table-shell"
-      tableClassName="table-fixed min-w-[1120px]"
+      tableClassName="table-fixed min-w-[860px]"
       tableProps={{ "aria-label": ariaLabel }}
       viewportClassName="relative w-full"
-      viewportProps={{
-        compactBottomPadding: false,
-        mobileScrollHint: false,
-        overscrollX: false,
-        scrollShadow: false,
-      }}
+      viewportProps={{ compactBottomPadding: false }}
     >
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead className="w-[190px]">Coin</TableHead>
-          <TableHead className="w-[80px]">Regime</TableHead>
-          <TableHead className="w-[130px]">Status</TableHead>
-          <TableHead className="w-[150px]">Pathway / Type</TableHead>
-          <TableHead className="w-[160px]">Authority</TableHead>
-          <TableHead className="w-[260px]">Issuer Entity</TableHead>
-          {showReserveDisclosure ? <TableHead className="w-[180px]">Reserve Disclosure</TableHead> : null}
-          <TableHead className="w-[300px] text-right">Sources</TableHead>
+          <TableHead className="w-[180px]">Coin</TableHead>
+          <TableHead className="w-[140px]">Status</TableHead>
+          <TableHead className="w-[165px]">Pathway / Type</TableHead>
+          <TableHead className="w-[150px]">Authority</TableHead>
+          <TableHead>Issuer Entity</TableHead>
+          <TableHead className="w-12"><span className="sr-only">Details</span></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map((row) => (
-          <ComplianceTableRow
-            key={`${row.regime}:${row.id}`}
-            row={row}
-            logo={logos?.[row.id]}
-            showReserveDisclosure={showReserveDisclosure}
-          />
-        ))}
+        {bands.map((band) => {
+          const canCollapse = band.collapsedByDefault && !forceCollapsedBandsOpen;
+          const isExpanded = canCollapse ? (expandedBands[band.status] ?? false) : true;
+          return (
+            <ComplianceBand
+              key={band.status}
+              band={band}
+              logos={logos}
+              tableId={tableId}
+              canCollapse={canCollapse}
+              isExpanded={isExpanded}
+              onToggle={() => {
+                setExpandedBands((current) => ({ ...current, [band.status]: !isExpanded }));
+              }}
+            />
+          );
+        })}
       </TableBody>
     </TableFrame>
+  );
+}
+
+function ComplianceBand({
+  band,
+  logos,
+  tableId,
+  canCollapse,
+  isExpanded,
+  onToggle,
+}: {
+  band: ReturnType<typeof groupComplianceRowsIntoBands>[number];
+  logos: Record<string, string> | undefined;
+  tableId: string;
+  canCollapse: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  const countLabel = `${band.rows.length.toLocaleString()} ${band.rows.length === 1 ? "stablecoin" : "stablecoins"}`;
+
+  return (
+    <>
+      <TableRow rowIntent="static" className="bg-muted/25 hover:bg-muted/25">
+        <TableCell colSpan={6} className="p-0">
+          {canCollapse ? (
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              onClick={onToggle}
+              className="pharos-focus-ring flex min-h-11 w-full items-center justify-between gap-3 rounded-sm px-3 py-2 text-left text-sm font-medium text-foreground"
+            >
+              <span>
+                {band.label} <span className="font-normal text-muted-foreground">— {countLabel}, {isExpanded ? "collapse" : "expand"}</span>
+              </span>
+              <ChevronDown
+                className={cn("h-4 w-4 shrink-0 transition-transform", isExpanded && "rotate-180")}
+                aria-hidden="true"
+              />
+            </button>
+          ) : (
+            <div className="flex min-h-11 items-center gap-2 px-3 py-2">
+              <ComplianceStatusBadge regime={band.rows[0].regime} status={band.status} />
+              <span className="pharos-numeric text-xs text-muted-foreground">{countLabel}</span>
+            </div>
+          )}
+        </TableCell>
+      </TableRow>
+      {isExpanded
+        ? band.rows.map((row) => (
+            <ComplianceTableRow key={`${row.regime}:${row.id}`} row={row} logo={logos?.[row.id]} tableId={tableId} />
+          ))
+        : null}
+    </>
   );
 }
 
 function ComplianceTableRow({
   row,
   logo,
-  showReserveDisclosure,
+  tableId,
 }: {
   row: ComplianceRow;
   logo: string | undefined;
-  showReserveDisclosure: boolean;
+  tableId: string;
 }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const hasExtraDetail = hasComplianceRowDetails(row);
+  const detailId = `${tableId}-${row.regime}-${row.id}-details`;
+
   return (
-    <TableRow>
-      <TableCell>
-        <Link
-          href={buildStablecoinUrl(row.id)}
-          className="pharos-focus-ring inline-flex min-w-0 items-center gap-2 rounded-sm hover:text-foreground"
-        >
-          <StablecoinLogo src={logo} name={row.name} size={28} />
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-medium">{row.symbol}</span>
-            <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
-          </span>
-        </Link>
-      </TableCell>
-      <TableCell>
-        <span className="inline-flex items-center rounded-full border border-border/60 bg-muted/30 px-2.5 py-1 text-xs font-semibold">
-          {row.regime === "mica" ? "MiCA" : "GENIUS"}
-        </span>
-      </TableCell>
-      <TableCell>{row.regime === "mica" ? <MicaStatusCell row={row} /> : <GeniusStatusCell row={row} />}</TableCell>
-      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
-        {row.regime === "mica" ? <MicaPathwayCell row={row} /> : <GeniusPathwayCell row={row} />}
-      </TableCell>
-      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
-        {row.regime === "mica" ? <MicaAuthorityCell row={row} /> : <GeniusAuthorityCell row={row} />}
-      </TableCell>
-      <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
-        {row.regime === "mica" ? (
-          row.authorizedEntity ? <span className="text-sm">{row.authorizedEntity}</span> : <EmptyCell />
-        ) : row.issuerEntity ? (
-          <span className="text-sm">
-            {row.issuerEntity}
-            {row.issuerDomicile ? <span className="block text-xs text-muted-foreground">{row.issuerDomicile}</span> : null}
-          </span>
-        ) : (
-          <EmptyCell />
-        )}
-      </TableCell>
-      {showReserveDisclosure ? (
-        <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
-          {row.regime === "mica" ? <EmptyCell /> : <GeniusReserveCell row={row} />}
+    <>
+      <TableRow>
+        <TableCell>
+          <CoinLink row={row} logo={logo} />
         </TableCell>
+        <TableCell>{row.regime === "mica" ? <MicaStatusCell row={row} /> : <GeniusStatusCell row={row} />}</TableCell>
+        <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+          {row.regime === "mica" ? <MicaPathwayCell row={row} /> : <GeniusPathwayCell row={row} />}
+        </TableCell>
+        <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+          {row.regime === "mica" ? <MicaAuthorityCell row={row} /> : <GeniusAuthorityCell row={row} />}
+        </TableCell>
+        <TableCell className={COMPLIANCE_TEXT_CELL_CLASS}>
+          {row.regime === "mica" ? (
+            row.authorizedEntity ? <span className="text-sm">{row.authorizedEntity}</span> : <EmptyCell />
+          ) : row.issuerEntity ? (
+            <span className="text-sm">
+              {row.issuerEntity}
+              {row.issuerDomicile ? <span className="block text-xs text-muted-foreground">{row.issuerDomicile}</span> : null}
+            </span>
+          ) : (
+            <EmptyCell />
+          )}
+        </TableCell>
+        <TableCell className="px-1 text-right">
+          {hasExtraDetail ? (
+            <button
+              type="button"
+              aria-expanded={isExpanded}
+              aria-controls={detailId}
+              aria-label={`${isExpanded ? "Collapse" : "Expand"} details for ${row.symbol}`}
+              onClick={() => setIsExpanded((open) => !open)}
+              className="pharos-focus-ring inline-flex min-h-11 min-w-11 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground md:min-h-8 md:min-w-8"
+            >
+              <ChevronDown
+                className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-180")}
+                aria-hidden="true"
+              />
+            </button>
+          ) : null}
+        </TableCell>
+      </TableRow>
+      {hasExtraDetail && isExpanded ? (
+        <TableRow id={detailId} rowIntent="static" className="bg-muted/15 hover:bg-muted/15">
+          <TableCell colSpan={6} className="whitespace-normal px-4 py-4">
+            <ComplianceRowDetails row={row} />
+          </TableCell>
+        </TableRow>
       ) : null}
-      <TableCell className="w-[300px] whitespace-normal text-right align-top">
-        <SourceLinks references={row.references} />
-        {row.regime === "genius" ? <GeniusReviewDetails row={row} /> : null}
-      </TableCell>
-    </TableRow>
+    </>
   );
 }
 
-function MicaStatusCell({ row }: { row: Extract<ComplianceRow, { regime: "mica" }> }) {
-  const status = MICA_STATUS_BADGE_STYLES[row.status];
+function CoinLink({
+  row,
+  logo,
+}: {
+  row: Pick<ComplianceOverviewRow, "id" | "name" | "symbol">;
+  logo: string | undefined;
+}) {
+  return (
+    <Link
+      href={buildStablecoinUrl(row.id)}
+      className="pharos-focus-ring inline-flex min-w-0 max-w-full items-center gap-2 rounded-sm hover:text-foreground"
+    >
+      <StablecoinLogo src={logo} name={row.name} size={28} />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium">{row.symbol}</span>
+        <span className="block truncate text-xs text-muted-foreground">{row.name}</span>
+      </span>
+    </Link>
+  );
+}
+
+function ComplianceStatusBadge({
+  regime,
+  status,
+}: {
+  regime: "mica" | "genius";
+  status: MicaStatus | GeniusAuthorizationStatus;
+}) {
+  const badge = regime === "mica"
+    ? MICA_STATUS_BADGE_STYLES[status as MicaStatus]
+    : GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[status as GeniusAuthorizationStatus];
+  const description = regime === "mica"
+    ? MICA_STATUS_DESCRIPTIONS[status as MicaStatus]
+    : GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[status as GeniusAuthorizationStatus];
   return (
     <span
-      title={MICA_STATUS_DESCRIPTIONS[row.status]}
-      className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${status.cls}`}
+      title={description}
+      className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold", badge.cls)}
     >
-      {status.label}
+      {badge.label}
     </span>
   );
 }
 
+function MicaStatusCell({ row }: { row: Extract<ComplianceRow, { regime: "mica" }> }) {
+  return <ComplianceStatusBadge regime="mica" status={row.status} />;
+}
+
 function GeniusStatusCell({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
-  const status = GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES[row.status];
   return (
     <div className="space-y-1">
-      <span
-        title={GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS[row.status]}
-        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${status.cls}`}
-      >
-        {status.label}
-      </span>
+      <ComplianceStatusBadge regime="genius" status={row.status} />
       {row.enforcementStatus ? (
         <span className="block text-xs text-muted-foreground">
           Enforcement: {GENIUS_ENFORCEMENT_STATUS_LABELS[row.enforcementStatus]}
@@ -471,7 +841,10 @@ function MicaPathwayCell({ row }: { row: Extract<ComplianceRow, { regime: "mica"
       {tokenType ? (
         <span
           title={MICA_TOKEN_TYPE_LABELS[row.tokenType!]}
-          className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${tokenType.cls}`}
+          className={cn(
+            "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold",
+            tokenType.cls,
+          )}
         >
           {tokenType.label}
         </span>
@@ -486,7 +859,10 @@ function MicaPathwayCell({ row }: { row: Extract<ComplianceRow, { regime: "mica"
       {row.significant ? (
         <span
           title="EBA-supervised significant EMT/ART"
-          className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${MICA_SIGNIFICANT_BADGE_CLS}`}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
+            MICA_SIGNIFICANT_BADGE_CLS,
+          )}
         >
           <Check className="h-3 w-3" aria-hidden="true" />
           Significant
@@ -532,6 +908,44 @@ function GeniusAuthorityCell({ row }: { row: Extract<ComplianceRow, { regime: "g
   );
 }
 
+function hasGeniusReviewDetails(row: Extract<ComplianceRow, { regime: "genius" }>): boolean {
+  return Boolean(
+    row.notes ||
+      row.applicabilitySummary ||
+      row.foreignExceptionSummary ||
+      row.negativeEvidenceSummary ||
+      row.negativeEvidenceSourcesChecked.length > 0 ||
+      row.reviewer ||
+      row.reviewedAt,
+  );
+}
+
+function hasComplianceRowDetails(row: ComplianceRow): boolean {
+  if (row.references.length > 0) return true;
+  return row.regime === "genius" && (row.hasAnyDisclosure || hasGeniusReviewDetails(row));
+}
+
+function ComplianceRowDetails({ row }: { row: ComplianceRow }) {
+  const hasReviewDetails = row.regime === "genius" && hasGeniusReviewDetails(row);
+  return (
+    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+      {row.references.length > 0 ? (
+        <div className="min-w-0 space-y-2">
+          <p className="pharos-kicker">Sources</p>
+          <SourceLinks references={row.references} />
+        </div>
+      ) : null}
+      {hasReviewDetails ? <GeniusReviewDetails row={row} /> : null}
+      {row.regime === "genius" && row.hasAnyDisclosure ? (
+        <div className="min-w-0 space-y-2">
+          <p className="pharos-kicker">Reserve Disclosure</p>
+          <GeniusReserveCell row={row} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
   if (!row.hasAnyDisclosure) return <EmptyCell />;
   const content = (
@@ -558,50 +972,39 @@ function GeniusReserveCell({ row }: { row: Extract<ComplianceRow, { regime: "gen
 }
 
 function GeniusReviewDetails({ row }: { row: Extract<ComplianceRow, { regime: "genius" }> }) {
-  const hasReviewDetails = Boolean(
-    row.notes ||
-      row.applicabilitySummary ||
-      row.foreignExceptionSummary ||
-      row.negativeEvidenceSummary ||
-      row.negativeEvidenceSourcesChecked.length > 0 ||
-      row.reviewer ||
-      row.reviewedAt,
-  );
-  if (!hasReviewDetails) return null;
+  if (!hasGeniusReviewDetails(row)) return null;
 
   return (
-    <details className="ml-auto mt-2 max-w-[300px] rounded border border-border/60 bg-muted/20 px-2 py-1 text-left text-xs text-muted-foreground">
-      <summary className="pharos-focus-ring cursor-pointer select-none rounded-sm text-right font-medium text-foreground">Review details</summary>
-      <div className="mt-2 space-y-2">
-        {row.reviewedAt || row.reviewer ? (
-          <p>
-            Reviewed{row.reviewedAt ? ` ${row.reviewedAt}` : ""}
-            {row.reviewer ? ` by ${row.reviewer}` : ""}
-          </p>
-        ) : null}
-        {row.applicabilitySummary ? <p>{row.applicabilitySummary}</p> : null}
-        {row.foreignExceptionSummary ? <p>{row.foreignExceptionSummary}</p> : null}
-        {row.negativeEvidenceSummary ? <p>{row.negativeEvidenceSummary}</p> : null}
-        {row.notes ? <p>{row.notes}</p> : null}
-        {row.negativeEvidenceSourcesChecked.length > 0 ? (
-          <div className="space-y-1">
-            <p className="font-medium text-foreground">Sources checked</p>
-            <ul className="list-inside list-disc space-y-0.5">
-              {row.negativeEvidenceSourcesChecked.slice(0, 5).map((source) => (
-                <li key={source}>{source}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-      </div>
-    </details>
+    <div className="min-w-0 space-y-2 text-xs text-muted-foreground">
+      <p className="pharos-kicker">Review Details</p>
+      {row.reviewedAt || row.reviewer ? (
+        <p>
+          Reviewed{row.reviewedAt ? ` ${row.reviewedAt}` : ""}
+          {row.reviewer ? ` by ${row.reviewer}` : ""}
+        </p>
+      ) : null}
+      {row.applicabilitySummary ? <p>{row.applicabilitySummary}</p> : null}
+      {row.foreignExceptionSummary ? <p>{row.foreignExceptionSummary}</p> : null}
+      {row.negativeEvidenceSummary ? <p>{row.negativeEvidenceSummary}</p> : null}
+      {row.notes ? <p>{row.notes}</p> : null}
+      {row.negativeEvidenceSourcesChecked.length > 0 ? (
+        <div className="space-y-1">
+          <p className="font-medium text-foreground">Sources checked</p>
+          <ul className="list-inside list-disc space-y-0.5">
+            {row.negativeEvidenceSourcesChecked.slice(0, 5).map((source) => (
+              <li key={source}>{source}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 function SourceLinks({ references }: { references: readonly { label: string; url: string }[] }) {
   if (references.length === 0) return <EmptyCell />;
   return (
-    <div className="ml-auto flex max-w-[300px] flex-col items-end gap-1 overflow-hidden">
+    <div className="flex min-w-0 flex-col items-start gap-1 overflow-hidden">
       {references.map((reference) => (
         <TableSourceLink
           key={`${reference.label}:${reference.url}`}

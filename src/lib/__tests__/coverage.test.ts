@@ -7,7 +7,9 @@ import { coverageFeature as blacklistCoverageFeature } from "@/lib/coverage/blac
 import { coverageFeature as dependencyCoverageFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexCoverageFeature } from "@/lib/coverage/dex";
 import { coverageFeature as flowCoverageFeature } from "@/lib/coverage/flows";
+import { coverageFeature as geniusCoverageFeature } from "@/lib/coverage/genius";
 import { coverageFeature as mintAuthorityCoverageFeature } from "@/lib/coverage/mint-authority";
+import { coverageFeature as micaCoverageFeature } from "@/lib/coverage/mica";
 import { coverageFeature as priceCoverageFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionCoverageFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
@@ -315,6 +317,50 @@ describe("coverage helpers", () => {
     expect(blacklistCoverageFeature.resolve(makeCoin({ symbol: "TBD" }), null).kind).toBe("data-unavailable");
   });
 
+  it("maps MiCA assessments and missing metadata into coverage states", () => {
+    const authorized = micaCoverageFeature.resolve({
+      status: "authorized",
+      tokenType: "EMT",
+      competentAuthority: "ACPR",
+    });
+
+    expect(authorized).toMatchObject({
+      kind: "authorized",
+      label: "Authorized",
+      available: true,
+    });
+    expect(authorized.detail).toContain("Token type: EMT.");
+    expect(authorized.detail).toContain("Authority: ACPR.");
+
+    expect(micaCoverageFeature.resolve({ status: "out-of-scope" })).toMatchObject({
+      kind: "out-of-scope",
+      available: true,
+    });
+    expect(micaCoverageFeature.resolve(null)).toMatchObject({
+      kind: "unassessed",
+      label: "Not Assessed",
+      available: false,
+    });
+  });
+
+  it("maps GENIUS assessments and missing metadata into coverage states", () => {
+    expect(geniusCoverageFeature.resolve({ authorizationStatus: "issuer-announced-intent" })).toMatchObject({
+      kind: "issuer-announced-intent",
+      label: "Issuer Intent",
+      available: true,
+    });
+    expect(geniusCoverageFeature.resolve({ authorizationStatus: "no-public-authorization-found" })).toMatchObject({
+      kind: "no-public-authorization-found",
+      label: "None Found",
+      available: true,
+    });
+    expect(geniusCoverageFeature.resolve(null)).toMatchObject({
+      kind: "unassessed",
+      label: "Not Assessed",
+      available: false,
+    });
+  });
+
   it("emits role-aware dependency coverage states", () => {
     expect(
       dependencyCoverageFeature.resolve({
@@ -525,6 +571,24 @@ describe("coverage helpers", () => {
     }
   });
 
+  it("defines coverage snapshot visuals for every compliance breakdown key", () => {
+    for (const key of ["authorized", "pending", "transitional", "non-compliant", "out-of-scope", "unassessed"]) {
+      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.mica?.[key]).toBeDefined();
+    }
+    for (const key of [
+      "ppsi-approved",
+      "state-qualified",
+      "official-application-pending",
+      "issuer-announced-intent",
+      "no-public-authorization-found",
+      "not-applicable",
+      "unknown",
+      "unassessed",
+    ]) {
+      expect(COVERAGE_BREAKDOWN_VISUAL_CLASSES.genius?.[key]).toBeDefined();
+    }
+  });
+
   it("defines coverage snapshot visuals for every redemption breakdown key", () => {
     for (const key of [
       "modeled-heuristic",
@@ -649,6 +713,49 @@ describe("coverage helpers", () => {
     // curation-route buckets above stay curated.
     expect(rows[0].statuses.mintAuthority).toMatchObject({ score: null, scoreBand: "nr" });
     expect(summary.breakdown).toContainEqual({ key: "score-nr", label: "NR", count: 2 });
+  });
+
+  it("summarizes compliance coverage as assessed status breadth", () => {
+    const rows = [
+      makeCoverageRow(["assessed", "ASM"], {
+        coin: {
+          ...makeCoin(),
+          mica: { status: "authorized", tokenType: "EMT" },
+          genius: { authorizationStatus: "issuer-announced-intent" },
+        },
+        marketCapUsd: 800,
+      }),
+      makeCoverageRow(["missing", "MIS"], {
+        marketCapUsd: 200,
+      }),
+    ];
+
+    const micaSummary = buildCoverageFeatureSummary(coverageFeature("mica"), rows, 1_000);
+    const geniusSummary = buildCoverageFeatureSummary(coverageFeature("genius"), rows, 1_000);
+
+    expect(micaSummary).toMatchObject({
+      countLabel: "Assessed assets",
+      availableCount: 1,
+      coveragePct: 50,
+      mcapSharePct: 80,
+      coverageLabel: "50% with MiCA assessment",
+    });
+    expect(micaSummary.breakdown).toContainEqual({ key: "authorized", label: "authorized", count: 1 });
+    expect(micaSummary.breakdown).toContainEqual({ key: "unassessed", label: "not assessed", count: 1 });
+
+    expect(geniusSummary).toMatchObject({
+      countLabel: "Assessed assets",
+      availableCount: 1,
+      coveragePct: 50,
+      mcapSharePct: 80,
+      coverageLabel: "50% with GENIUS assessment",
+    });
+    expect(geniusSummary.breakdown).toContainEqual({
+      key: "issuer-announced-intent",
+      label: "issuer intent",
+      count: 1,
+    });
+    expect(geniusSummary.breakdown).toContainEqual({ key: "unassessed", label: "not assessed", count: 1 });
   });
 
   it("sets sourceCount and sourceNames on tracked price coverage when consensusSources provided", () => {

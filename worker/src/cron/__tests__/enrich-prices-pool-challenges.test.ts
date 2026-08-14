@@ -10,6 +10,8 @@ import {
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "./enrich-prices.test-support";
+import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";
+import type { PoolEntry } from "../dex-liquidity/types";
 
 describe("pool challenge — soft-only high confidence downgrade", () => {
   afterEach(() => {
@@ -241,6 +243,76 @@ describe("applyPoolChallenge", () => {
   function makeStats(): PriceValidationStats {
     return { attempted: 1, high: 1, singleSource: 0, cgOnly: 0, low: 0 };
   }
+
+  it("replaces a bad soft price when a dominant and minority DEX protocol agree", () => {
+    const makePool = (poolId: string, project: string, tvlUsd: number, price: number): PoolEntry => ({
+      poolId,
+      project,
+      chain: "MegaETH",
+      tvlUsd,
+      symbol: "USDm-pair",
+      volumeUsd1d: 10_000,
+      volumeUsd7d: 70_000,
+      poolType: "generic",
+      source: "gecko_terminal",
+      price,
+    });
+    const selectedRows = selectDexPriceChallengerRowsFromPools(
+      "usdm-mega",
+      [
+        makePool("megaeth:kumbaya-btc", "kumbaya", 2_737_890, 0.99911),
+        makePool("megaeth:kumbaya-mega", "kumbaya", 665_442, 1.00165),
+        makePool("megaeth:kumbaya-stcusd", "kumbaya", 431_793, 1.00091),
+        makePool("megaeth:kumbaya-usdt0", "kumbaya", 194_442, 1.0013),
+        makePool("megaeth:prism-usdt0", "prism-megaeth", 173_064, 1.0013),
+      ],
+      100_000,
+    );
+    const results = new Map<string, PrimaryPriceResult>([
+      [
+        "usdm-mega",
+        {
+          price: 0.94012,
+          source: "coingecko",
+          selectedSource: "coingecko",
+          priceEstimator: "selected_source",
+          confidence: "low",
+          dlPrice: null,
+          cgPrice: 0.94012,
+          candidateSources: ["coingecko", "dex-promoted"],
+          agreeSources: ["coingecko"],
+          disagreeSources: ["dex-promoted"],
+          allPrices: { coingecko: 0.94012, "dex-promoted": 0.99911 },
+        },
+      ],
+    ]);
+    const pools = new Map([
+      [
+        "usdm-mega",
+        selectedRows.map((row) => ({
+          price: row.priceUsd,
+          tvlUsd: row.tvlUsd,
+          protocol: row.protocol,
+          chain: row.chain,
+        })),
+      ],
+    ]);
+    const stats: PriceValidationStats = { attempted: 1, high: 0, singleSource: 0, cgOnly: 0, low: 1 };
+
+    const downgrades = fixtureApplyPoolChallenge(
+      results,
+      pools,
+      new Map([["usdm-mega", "peggedUSD"]]),
+      stats,
+    );
+
+    expect(downgrades).toBe(1);
+    expect(results.get("usdm-mega")).toMatchObject({
+      source: "pool-tvl-weighted",
+      price: 0.99911,
+      confidence: "low",
+    });
+  });
 
   it("fires for non-USD peg at 300 bps divergence (single protocol: downgrade only, no price replace)", () => {
     const results = new Map<string, PrimaryPriceResult>([

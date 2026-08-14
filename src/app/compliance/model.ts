@@ -91,7 +91,24 @@ export interface ComplianceViewModel {
   isGeniusEffective: boolean;
 }
 
-const MICA_STATUS_DISPLAY_ORDER: MicaStatus[] = [
+export interface ComplianceOverviewRow extends BaseComplianceRow {
+  mica?: { status: MicaStatus };
+  genius?: { status: GeniusAuthorizationStatus; inWatch: boolean };
+}
+
+export interface ComplianceStatusBand {
+  status: MicaStatus | GeniusAuthorizationStatus;
+  label: string;
+  rows: ComplianceRow[];
+  collapsedByDefault: boolean;
+}
+
+export interface ComplianceStatusDistribution {
+  mica: { status: MicaStatus; count: number }[];
+  genius: { status: GeniusAuthorizationStatus; count: number }[];
+}
+
+export const MICA_STATUS_DISPLAY_ORDER: MicaStatus[] = [
   "authorized",
   "pending",
   "transitional",
@@ -99,7 +116,7 @@ const MICA_STATUS_DISPLAY_ORDER: MicaStatus[] = [
   "out-of-scope",
 ];
 
-const GENIUS_STATUS_DISPLAY_ORDER: GeniusAuthorizationStatus[] = [
+export const GENIUS_STATUS_DISPLAY_ORDER: GeniusAuthorizationStatus[] = [
   "ppsi-approved",
   "state-qualified",
   "official-application-pending",
@@ -310,6 +327,90 @@ function sortComplianceRows(a: ComplianceRow, b: ComplianceRow): number {
       GENIUS_STATUS_DISPLAY_ORDER.indexOf(b.status as GeniusAuthorizationStatus);
   if (statusDelta !== 0) return statusDelta;
   return a.symbol.localeCompare(b.symbol);
+}
+
+function getOverviewStatusRank(row: ComplianceOverviewRow): number {
+  return Math.min(
+    row.mica ? MICA_STATUS_DISPLAY_ORDER.indexOf(row.mica.status) : Number.POSITIVE_INFINITY,
+    row.genius ? GENIUS_STATUS_DISPLAY_ORDER.indexOf(row.genius.status) : Number.POSITIVE_INFINITY,
+  );
+}
+
+export function buildComplianceOverviewModel(filters: { peg: PegCurrency | "all"; search: string }): {
+  rows: ComplianceOverviewRow[];
+  totalCoins: number;
+} {
+  const all = buildAllComplianceRows();
+  const byId = new Map<string, { overview: ComplianceOverviewRow; searchRows: ComplianceRow[] }>();
+  const watchIds = new Set(all.watchRows.map((row) => row.id));
+
+  for (const row of [...all.rows, ...all.watchRows]) {
+    const entry = byId.get(row.id) ?? {
+      overview: {
+        id: row.id,
+        name: row.name,
+        symbol: row.symbol,
+        peg: row.peg,
+      },
+      searchRows: [],
+    };
+    if (row.regime === "mica") {
+      entry.overview.mica = { status: row.status };
+    } else {
+      entry.overview.genius = { status: row.status, inWatch: watchIds.has(row.id) };
+    }
+    entry.searchRows.push(row);
+    byId.set(row.id, entry);
+  }
+
+  const q = filters.search.toLowerCase().trim();
+  const rows = [...byId.values()]
+    .filter(({ overview, searchRows }) =>
+      (filters.peg === "all" || overview.peg === filters.peg) &&
+      (!q || searchRows.some((row) => buildSearchText(row).includes(q))))
+    .map(({ overview }) => overview)
+    .sort((a, b) => getOverviewStatusRank(a) - getOverviewStatusRank(b) || a.symbol.localeCompare(b.symbol));
+
+  return { rows, totalCoins: byId.size };
+}
+
+export function groupComplianceRowsIntoBands(
+  rows: readonly ComplianceRow[],
+  regime: "mica" | "genius",
+): ComplianceStatusBand[] {
+  const displayOrder = regime === "mica" ? MICA_STATUS_DISPLAY_ORDER : GENIUS_STATUS_DISPLAY_ORDER;
+  const filterOptions = regime === "mica" ? MICA_STATUS_FILTER_OPTIONS : GENIUS_STATUS_FILTER_OPTIONS;
+  const collapsedStatuses = regime === "mica"
+    ? new Set<MicaStatus | GeniusAuthorizationStatus>(["out-of-scope"])
+    : new Set<MicaStatus | GeniusAuthorizationStatus>([
+        "no-public-authorization-found",
+        "not-applicable",
+        "unknown",
+      ]);
+
+  return displayOrder.flatMap((status) => {
+    const statusRows = rows.filter((row) => row.regime === regime && row.status === status);
+    if (statusRows.length === 0) return [];
+    const label = filterOptions.find((option) => option.value === status)?.label;
+    if (!label) return [];
+    return [{ status, label, rows: statusRows, collapsedByDefault: collapsedStatuses.has(status) }];
+  });
+}
+
+export function buildComplianceStatusDistribution(): ComplianceStatusDistribution {
+  const { rows, watchRows } = buildAllComplianceRows();
+  const all = [...rows, ...watchRows];
+
+  return {
+    mica: MICA_STATUS_DISPLAY_ORDER.flatMap((status) => {
+      const count = all.filter((row) => row.regime === "mica" && row.status === status).length;
+      return count > 0 ? [{ status, count }] : [];
+    }),
+    genius: GENIUS_STATUS_DISPLAY_ORDER.flatMap((status) => {
+      const count = all.filter((row) => row.regime === "genius" && row.status === status).length;
+      return count > 0 ? [{ status, count }] : [];
+    }),
+  };
 }
 
 export interface ComplianceSummary {

@@ -151,7 +151,7 @@ Reminder: Tailwind classes must be static strings -- never construct class names
 
 ## Coverage Subsystem
 
-The `/coverage` page model lives under `src/lib/coverage/` as one module per feature (`price`, `safety`, `dex`, `reserves`, `redemption`, `yield`, `flows`, `blacklist`, `dependency`, `mint-authority`), plus a `shared.ts` with primitives (`createStatus`, `createPresetStatus`, `createDataUnavailableStatus`, `resolveBooleanCoverageStatus`). Each per-feature module owns:
+The `/coverage` page model lives under `src/lib/coverage/` as one module per feature (`price`, `safety`, `dex`, `reserves`, `redemption`, `yield`, `flows`, `blacklist`, `mica`, `genius`, `dependency`, `mint-authority`), plus a `shared.ts` with primitives (`createStatus`, `createPresetStatus`, `createDataUnavailableStatus`, `resolveBooleanCoverageStatus`). Each per-feature module owns:
 
 - The feature's preset table (when applicable).
 - The `resolve<Feature>Coverage(...)` function that maps a `StablecoinMeta` (plus auxiliary inputs) to a `CoverageStatus`.

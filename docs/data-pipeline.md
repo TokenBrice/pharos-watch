@@ -75,6 +75,8 @@ Before the enrichment pipeline runs, `fetchPrimaryPrices()` collects prices from
 
 Dead or explicitly blocked DEX ids are removed upstream from DEX crawl intake, pool scoring, challenger publication, and `dex_prices` publication. The current runtime blocklist includes Retro variants and Bunni variants, so those venues cannot leak into primary consensus through the DEX bridge or pool challenge.
 
+Pool-challenge snapshots retain the highest-TVL qualifying pool from each protocol before filling toward the 95% qualifying-TVL coverage target, subject to the existing 50-row hard cap. This preserves independent protocol evidence when one venue dominates an asset's DEX liquidity, without changing the pool TVL floor or replacement thresholds.
+
 **Consensus algorithm** (`worker/src/lib/price-consensus.ts`):
 
 - Collects all available source prices for each asset

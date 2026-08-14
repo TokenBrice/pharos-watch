@@ -9,6 +9,8 @@ export type CoverageFeatureKey =
   | "yield"
   | "flows"
   | "blacklist"
+  | "mica"
+  | "genius"
   | "dependency"
   | "mintAuthority";
 

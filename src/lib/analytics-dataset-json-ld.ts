@@ -94,6 +94,15 @@ const COVERAGE_VARIABLES = [
     description: "Freeze and blacklist event-tracker coverage for directly blacklistable stablecoins.",
   },
   {
+    name: "micaCoverage",
+    description: "EU MiCA assessment status coverage for each active stablecoin where compliance metadata is available.",
+  },
+  {
+    name: "geniusCoverage",
+    description:
+      "U.S. GENIUS Act assessment status coverage for each active stablecoin where compliance metadata is available.",
+  },
+  {
     name: "dependencyMapCoverage",
     description:
       "Resolved dependency-map role for each active stablecoin, including upstream hubs, dependents, resolved no-dependency rows, and unmapped gaps.",
@@ -193,7 +202,7 @@ export function buildCoverageDatasetJsonLd() {
     "@id": `${SITE_URL}/coverage/#dataset`,
     name: "Pharos Stablecoin Feature Coverage Dataset",
     description:
-      "Methodological dataset descriptor for the Pharos coverage matrix, which maps active stablecoins to user-facing feature availability across peg tracking, safety scores, DEX price coverage, reserve views, redemption backstops, yield intelligence, mint and burn flows, blacklist tracking, and dependency-map visibility.",
+      "Methodological dataset descriptor for the Pharos coverage matrix, which maps active stablecoins to user-facing feature availability across peg tracking, safety scores, DEX price coverage, reserve views, redemption backstops, yield intelligence, mint and burn flows, blacklist tracking, MiCA and GENIUS compliance assessments, dependency-map visibility, and mint-authority reviews.",
     url: `${SITE_URL}/coverage/`,
     inLanguage: "en",
     creator: organization,

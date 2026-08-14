@@ -40,6 +40,8 @@ The matrix currently exposes these columns:
 - `Yield`
 - `Flows`
 - `Freezable Status`
+- `MiCA`
+- `GENIUS`
 - `Dependency Map`
 - `Mint Authority`
 
@@ -54,6 +56,8 @@ Status semantics are intentionally user-facing:
 - `Yield`: `Ranked`, `Gap`, or `Data n/a`
 - `Flows`: `Full`, `Partial`, `Lagging`, `Bootstr.`, `Unknown`, `Disabled`, `Not Covered`, or `Data n/a`
 - `Freezable Status`: `Live`, `Yes`, `Upstream`, `Possible`, `No`, or `Data n/a`
+- `MiCA`: `Authorized`, `Pending`, `Transitional`, `Non-Comp.`, `Out Scope`, or `Not Assessed`
+- `GENIUS`: `PPSI Approved`, `State Qualified`, `Filing Pending`, `Issuer Intent`, `None Found`, `Not Applicable`, `Unknown`, or `Not Assessed`
 - `Dependency Map`: `Both`, `Dep.`, `Hub`, `No deps`, `Gap`, or `Data n/a`
 - `Mint Authority`: `No priv.`, `Governed`, `Multisig`, `Issuer`, `Bridge`, `Inherited`, or `Unknown`, with optional score-band breakdowns
 
@@ -79,6 +83,8 @@ The page deliberately mixes structural coverage and live dataset coverage. The i
 | `Yield`               | `useYieldRankings().data.rankings[].id`                                                                                                                                                                                                                    | Coverage reflects current inclusion in the yield rankings, not theoretical yield-bearing eligibility.                                                                                                                                                                                                                                                                                                     |
 | `Flows`               | `useMintBurnFlows().data.coins[].coverage.status`                                                                                                                                                                                                          | Mirrors the configured issuance-chain mint/burn coverage state exposed on `/flows`. Quiet assets can prove mature windows from completed block-scan span when no retained event row remains, so aggregate retention does not regress established coverage to `Bootstr.`.                                                                                                                              |
 | `Freezable Status`    | `getResolvedBlacklistStatus(coin.id)` from `src/lib/blacklist-status.ts`, reading the reviewed client-registry `blacklistStatus`; `BLACKLIST_STABLECOINS` only upgrades direct-true assets into the `Live` event-tracker bucket                                                                 | Reviewed freeze/blacklist exposure across every active stablecoin. `Live` means direct freeze controls plus live FreezeWatch event tracking; `Yes`, `Upstream`, `Possible`, and `No` are reviewed status states and all count as available coverage.                                                                                                                                                       |
+| `MiCA`                | `ACTIVE_STABLECOINS[*].mica` from the client registry                                                                                                                                                                                                       | Static compliance sidecar metadata merged into the generated client registry. `Authorized`, `Pending`, `Transitional`, `Non-Comp.`, and `Out Scope` are reviewed assessment states and count as assessed coverage. Missing metadata renders `Not Assessed` and is the coverage gap; it must not be interpreted as in scope, out of scope, authorized, or non-compliant. |
+| `GENIUS`              | `ACTIVE_STABLECOINS[*].genius.authorizationStatus` from the compact client registry projection                                                                                                                                                              | Static GENIUS implementation-watch metadata generated from compliance sidecars. `PPSI Approved`, `State Qualified`, `Filing Pending`, `Issuer Intent`, `None Found`, `Not Applicable`, and `Unknown` are reviewed assessment states and count as assessed coverage. Missing metadata renders `Not Assessed`. |
 | `Dependency Map`      | `useReportCardsV9().data.cards[].rawInputs.dependencies` plus `useReportCardsV9().data.dependencyGraph.edges`                                                                                                                                              | `buildDependencyCoverageFacts(...)` filters graph edges to live report-card IDs and classifies each coin as both dependent/upstream, dependent-only, upstream-only, resolved with no tracked dependency, or an unmapped gap when dependency evidence exists but no live edge remains. The coverage page does not fall back to the static graph when report-card data is unavailable; it emits `Data n/a`. |
 | `Mint Authority`      | `coin.mintAuthoritySummary` from the slim client registry projection (curation routes) plus the published V9 mint component (`cards[].breakdowns.control.components`)                                                                                                                                           | Structural coverage of curated mint-authority reviews. Reviewed statuses count as available; `Unknown` does not. The row also exposes the published V9 mint posture band where the publication carries one.                                                                                                                                                               |
 
@@ -124,6 +130,8 @@ Breakdowns are intentionally dense and should stay short:
 - Flows: `full / partial / lagging / bootstrapping / unknown / data n/a`
 - Price: `tracked / price-only`
 - Freezable status: `live / yes / upstream / possible / no`
+- MiCA: `authorized / pending / transitional / non-compliant / out-of-scope / not assessed`
+- GENIUS: `ppsi approved / state qualified / filing pending / issuer intent / none found / not applicable / unknown / not assessed`
 - Mint Authority: `no privileged / governed / multisig / issuer/backend / bridge / inherited / unknown / score-hardened / score-governed / score-managed / score-concentrated / score-exposed / score-nr`
 
 #### Source count enrichment

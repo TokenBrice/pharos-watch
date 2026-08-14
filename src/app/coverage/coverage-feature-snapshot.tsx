@@ -48,6 +48,18 @@ const BAR_LABELS: Partial<Record<string, string>> = {
   upstream: "upstr",
   possible: "poss",
   no: "no",
+  authorized: "auth",
+  pending: "pend",
+  transitional: "trans",
+  "non-compliant": "non-comp",
+  "out-of-scope": "out",
+  unassessed: "not assessed",
+  "ppsi-approved": "PPSI",
+  "state-qualified": "state",
+  "official-application-pending": "filing",
+  "issuer-announced-intent": "intent",
+  "no-public-authorization-found": "none",
+  "not-applicable": "N/A",
 };
 
 export interface CoverageFeatureSnapshotRowProps {

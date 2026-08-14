@@ -206,27 +206,53 @@ export function selectDexPriceChallengerRowsFromPools(
   );
 
   const totalQualifyingTvl = dedupedQualifying.reduce((sum, pool) => sum + pool.tvlUsd, 0);
-  const rows: DexPriceChallengerPoolRow[] = [];
-  let retainedTvl = 0;
+  const toChallengerRow = (pool: (typeof dedupedQualifying)[number]): DexPriceChallengerPoolRow => ({
+    stablecoinId,
+    poolId: pool.poolId,
+    chain: pool.chain,
+    protocol: pool.project,
+    sourceFamily: pool.source,
+    priceUsd: pool.price as number,
+    tvlUsd: pool.tvlUsd,
+  });
 
+  const poolsByProtocol = new Map<string, (typeof dedupedQualifying)[number][]>();
   for (const pool of dedupedQualifying) {
-    rows.push({
-      stablecoinId,
-      poolId: pool.poolId,
-      chain: pool.chain,
-      protocol: pool.project,
-      sourceFamily: pool.source,
-      priceUsd: pool.price as number,
-      tvlUsd: pool.tvlUsd,
-    });
-    retainedTvl += pool.tvlUsd;
-
-    const coverageRatio = totalQualifyingTvl > 0 ? retainedTvl / totalQualifyingTvl : 1;
-    if (rows.length >= CHALLENGER_HARD_CAP) break;
-    if (coverageRatio >= CHALLENGER_COVERAGE_TARGET) break;
+    const protocolPools = poolsByProtocol.get(pool.project) ?? [];
+    protocolPools.push(pool);
+    poolsByProtocol.set(pool.project, protocolPools);
   }
 
-  return rows;
+  // Preserve the protocol diversity consumed by pool-challenge replacement
+  // before the TVL coverage target can truncate a smaller independent venue.
+  const protocolRepresentatives = [...poolsByProtocol.entries()]
+    .map(([protocol, protocolPools]) => ({
+      protocol,
+      totalTvlUsd: protocolPools.reduce((sum, pool) => sum + pool.tvlUsd, 0),
+      pool: protocolPools[0]!,
+    }))
+    .sort((a, b) =>
+      b.totalTvlUsd - a.totalTvlUsd ||
+      a.protocol.localeCompare(b.protocol) ||
+      a.pool.poolId.localeCompare(b.pool.poolId)
+    )
+    .slice(0, CHALLENGER_HARD_CAP);
+
+  const selectedPoolIds = new Set(protocolRepresentatives.map(({ pool }) => pool.poolId));
+  const selectedPools = protocolRepresentatives.map(({ pool }) => pool);
+  let retainedTvl = selectedPools.reduce((sum, pool) => sum + pool.tvlUsd, 0);
+
+  for (const pool of dedupedQualifying) {
+    if (selectedPools.length >= CHALLENGER_HARD_CAP) break;
+    if (retainedTvl / totalQualifyingTvl >= CHALLENGER_COVERAGE_TARGET) break;
+    if (selectedPoolIds.has(pool.poolId)) continue;
+
+    selectedPools.push(pool);
+    selectedPoolIds.add(pool.poolId);
+    retainedTvl += pool.tvlUsd;
+  }
+
+  return selectedPools.map(toChallengerRow);
 }
 
 export async function publishDexPriceChallengerSnapshots(
