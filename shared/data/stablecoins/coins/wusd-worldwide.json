@@ -70,5 +70,12 @@
       }
     }
   },
-  "launchDate": "2024-12-13"
+  "launchDate": "2024-12-13",
+  "notices": [
+    {
+      "type": "danger",
+      "title": "Material secondary-market access risk",
+      "message": "WUSD has recently lost major centralized-exchange trading venues. MEXC placed WUSD under its ST Warning on July 22, 2026 with an estimated delisting date of July 25, 2026, and Bitget delisted WUSD/USDT on July 31, 2026."
+    }
+  ]
 }
