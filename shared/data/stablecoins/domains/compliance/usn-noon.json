@@ -1,5 +1,22 @@
 {
   "id": "usn-noon",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Noon USN and sUSN product documentation",
+        "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+      },
+      {
+        "label": "Noon terms and geographic restrictions",
+        "url": "https://noon.capital/terms-and-conditions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",

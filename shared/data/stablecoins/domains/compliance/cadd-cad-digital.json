@@ -1,0 +1,98 @@
+{
+  "id": "cadd-cad-digital",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "CADD Terms — Canadian issuer and Canadian-law redemption framework",
+        "url": "https://tetradg.com/cadd-terms-and-conditions/"
+      },
+      {
+        "label": "CADD supported blockchains — current network list and issuer terms",
+        "url": "https://tetradg.com/supported-blockchains/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "CADD is a fully backed, fixed-CAD redeemable stablecoin intended for payments and settlement, so it was reviewed as an apparent payment stablecoin despite its Canadian issuance.",
+      "references": [
+        {
+          "label": "CADD Terms and Conditions",
+          "url": "https://tetradg.com/cadd-terms-and-conditions/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-04",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tetra Trust Company (through CAD Digital Inc.)",
+    "issuerDomicile": "Canada",
+    "licensingRegulator": "Alberta Treasury Board and Finance; Loan and Trust Corporations Act (Alberta)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://tetradg.com/cadd-reserve-attestations/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "CADD's issuer terms identify Tetra Trust Company as the Canadian issuer acting through CAD Digital. No public U.S. permitted-issuer approval, state-qualified approval, OCC application, or GENIUS foreign-issuer registration was located for Tetra Trust/CADD. The GENIUS framework remains in proposed-rules phase and is not yet effective.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule bulletin",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule — Federal Register 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "CADD Terms and Conditions",
+        "url": "https://tetradg.com/cadd-terms-and-conditions/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-04",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "CADD reserve attestations",
+        "url": "https://tetradg.com/cadd-reserve-attestations/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule bulletin 2026-3",
+        "OCC GENIUS Act proposed rule, Federal Register 91 FR 10202",
+        "OCC digital assets licensing applications list",
+        "CADD Terms and Conditions and CADD product materials",
+        "CADD reserve attestations and issuer disclosure pages",
+        "Public U.S. permitted-issuer, state-qualified, official-application, and foreign-issuer registration materials searched for Tetra Trust/CADD"
+      ],
+      "summary": "The reviewed OCC and Federal Register materials establish the proposed U.S. payment-stablecoin approval and foreign-issuer registration framework, but no token-specific CADD/Tetra Trust approval, state-qualified pathway, official application, or foreign registration was found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

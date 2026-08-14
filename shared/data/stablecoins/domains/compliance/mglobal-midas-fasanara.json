@@ -1,0 +1,70 @@
+{
+  "id": "mglobal-midas-fasanara",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Midas mGLOBAL disclosure — security token and NAV-linked investment product, explicitly not a stablecoin",
+        "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope — financial instruments and funds are excluded from MiCA",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mGLOBAL is a NAV-linked security token issued through a Luxembourg securitisation vehicle for a private-credit strategy, not a payment stablecoin.",
+      "references": [
+        {
+          "label": "Midas mGLOBAL disclosure",
+          "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Midas mGLOBAL product page",
+          "url": "https://midas.app/mGLOBAL",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Aureum Securitisation Fund, Compartment mGLOBAL / Midas Software GmbH",
+    "issuerDomicile": "Luxembourg / Germany",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Explicit GENIUS exclusion: Midas describes mGLOBAL as a security token with fluctuating NAV and a dedicated Luxembourg securitisation vehicle. The product is tracked here for boundary clarity because its on-chain stablecoin collateral use could otherwise be confused with payment-stablecoin compliance.",
+    "references": [
+      {
+        "label": "Midas mGLOBAL disclosure — security token, not a stablecoin",
+        "url": "https://blog.midas.app/mglobal-is-now-live-on-the-aave-horizon-rwa-market/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Midas mGLOBAL product page and eligibility notice",
+        "url": "https://midas.app/mGLOBAL",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

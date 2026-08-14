@@ -1,5 +1,8 @@
 {
   "id": "ussd-sonic-labs",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

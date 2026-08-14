@@ -1,0 +1,104 @@
+{
+  "id": "a7a5-old-vector",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "EUR-Lex: Old Vector LLC / A7A5 restrictive-measures entry",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32025R2035"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "A7A5 is presented as a RUB-backed issuer-minted stablecoin, so it appears to fit the payment-stablecoin concept; its issuer is a Kyrgyz entity subject to separate sanctions measures.",
+      "references": [
+        {
+          "label": "GENIUS Act text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC proposed GENIUS implementation rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Old Vector LLC",
+    "issuerDomicile": "Kyrgyzstan",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "references": [
+      {
+        "label": "OCC proposed GENIUS implementation rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury: Old Vector LLC designation",
+        "url": "https://home.treasury.gov/news/press-releases/sb0225",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OFAC recent actions: Old Vector LLC",
+        "url": "https://ofac.treasury.gov/recent-actions/20250814",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act foreign-issuer exception provisions",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS proposed-rule bulletin and federal-register proposal",
+        "OCC digital-asset licensing applications tracker and CAS search",
+        "Treasury and OFAC public sanctions materials",
+        "GENIUS Act foreign-issuer exception and registration provisions",
+        "issuer-facing A7A5 materials"
+      ],
+      "summary": "No public GENIUS approval, state qualification, official application, or foreign-exception registration was found for Old Vector LLC or A7A5. The Treasury/OFAC and EU measures are sanctions actions, not GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC digital-asset licensing applications tracker",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act foreign-issuer exception provisions",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "notes": "The official sanctions findings are relevant risk evidence but are not a GENIUS enforcement determination. Re-check if Old Vector obtains a U.S. registration or if the issuer's legal identity/pathway changes.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

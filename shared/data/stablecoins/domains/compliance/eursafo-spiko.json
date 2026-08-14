@@ -1,0 +1,66 @@
+{
+  "id": "eursafo-spiko",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "EURSAFO is a tokenized share of the Spiko Amundi Overnight Swap Fund, a French UCITS sub-fund with NAV-based investment returns, not a payment stablecoin.",
+      "references": [
+        {
+          "label": "AFM investment-fund register — SPIKO SICAV and SAFO",
+          "url": "https://www.afm.nl/nl-nl/sector/registers/vergunningenregisters/beleggingsinstellingen/details?id=3EB284BB-7CF7-F011-8406-000D3A4674CC",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Spiko and Amundi SAFO launch announcement",
+          "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-19",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "SPIKO SICAV",
+    "issuerDomicile": "France",
+    "licensingRegulator": "AMF; UCITS governed by Directive 2009/65/EC",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "EURSAFO is a tokenized UCITS fund share, with its value determined by the fund NAV and investment returns. The AMF/UCITS authorization is a securities/fund authorization, not a GENIUS permitted-payment-stablecoin approval.",
+    "references": [
+      {
+        "label": "AFM investment-fund register — SPIKO SICAV and SAFO",
+        "url": "https://www.afm.nl/nl-nl/sector/registers/vergunningenregisters/beleggingsinstellingen/details?id=3EB284BB-7CF7-F011-8406-000D3A4674CC",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Spiko SICAV prospectus — SAFO UCITS sub-fund",
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-29",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Spiko and Amundi SAFO launch announcement",
+        "url": "https://int.media.amundi.com/files/nuxeo/dl/be27cca1-ad67-4fc4-87a9-7ec68766e2d4",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-19",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

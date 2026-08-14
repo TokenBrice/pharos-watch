@@ -1,0 +1,70 @@
+{
+  "id": "kau-kinesis",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "ART",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register — ART issuer CSV reviewed; no KMS Labs/KAU entry found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+      },
+      {
+        "label": "KMS Labs terms — KMS Labs S.A. issues ERC20 KAU against Kinesis-native KAU and does not list an EU prohibition",
+        "url": "https://kmslabs.money/kms-labs-tcs/"
+      },
+      {
+        "label": "Kinesis supported assets — KAU is available on Kinesis Pay and the platform supports SEPA/EUR rails",
+        "url": "https://support.kinesis.money/hc/en-gb/articles/23830420583069-What-currencies-are-supported-on-the-Kinesis-platform-and-exchange"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions — ART covers crypto-assets referencing value or rights other than a single official currency",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "KAU represents a claim on physical gold and is not a fixed-value U.S.-dollar payment stablecoin under the GENIUS Act definition.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/app/details/PLAW-119publ27",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Kinesis support — KAU and KAG are digitalized, redeemable physical-metal payment assets",
+          "url": "https://support.kinesis.money/hc/en-gb/articles/12356541049117-What-are-KAU-and-KAG",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "KMS Labs S.A.",
+    "issuerDomicile": "Panama",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "KAU is a gold-backed commodity token rather than a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.govinfo.gov/app/details/FR-2026-03-02/2026-04089",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "KMS Labs terms — ERC20 KAU issuer and gold backing",
+        "url": "https://kmslabs.money/kms-labs-tcs/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

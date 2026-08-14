@@ -1,0 +1,129 @@
+{
+  "id": "idrt-rupiah-token",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope information",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "IDRT FAQ — Indonesian issuer and rupiah stablecoin description",
+        "url": "https://rupiahtoken.com/faq/apa-itu-rupiah-token-idrt"
+      },
+      {
+        "label": "IDRT registration page — Indonesian distribution disclosures",
+        "url": "https://rupiahtoken.com/id/register"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "IDRT is a rupiah-backed payment stablecoin issued by PT Rupiah Token Indonesia, with issuer materials describing fiat conversion and blockchain transfer use.",
+      "references": [
+        {
+          "label": "IDRT FAQ",
+          "url": "https://rupiahtoken.com/faq/apa-itu-rupiah-token-idrt",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "IDRT whitepaper",
+          "url": "https://rupiahtoken.com/whitepaper.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2019-12-01",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "PT Rupiah Token Indonesia",
+    "issuerDomicile": "Indonesia",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "latestReportDate": "2026-03-31",
+    "notes": "IDRT has an Indonesian issuer and reserve/AUP evidence, but no public U.S. GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception registration was located. The Indonesian/Bappebti context does not substitute for a U.S. GENIUS authorization, and no pathway is inferred while federal rules remain proposed.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "IDRT FAQ",
+        "url": "https://rupiahtoken.com/faq/apa-itu-rupiah-token-idrt",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "IDRT registration page",
+        "url": "https://rupiahtoken.com/id/register",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "IDRT March 31, 2026 independent accountant AUP",
+        "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-03-31",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule (Bulletin 2026-3), including foreign-issuer registration and PPSI application provisions",
+        "OCC Digital Assets Licensing Applications table, checked for PT Rupiah Token Indonesia, IDRT, and related entities",
+        "Congress.gov GENIUS Act text and public U.S. permitted-issuer, state-qualified, and foreign-issuer materials",
+        "IDRT issuer FAQ, whitepaper, registration page, and March 31, 2026 reserve AUP",
+        "Public search for IDRT/PT Rupiah Token Indonesia GENIUS Act approval, application, or foreign-issuer exception registration"
+      ],
+      "summary": "IDRT is issued by the Indonesian PT Rupiah Token Indonesia and is supported by Indonesian issuer/AUP disclosures, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception source was located for IDRT as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "IDRT FAQ",
+          "url": "https://rupiahtoken.com/faq/apa-itu-rupiah-token-idrt",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "IDRT March 31, 2026 independent accountant AUP",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_March_31_2026_64e7edee6b.pdf?updated_at=2026-04-13T14%3A14%3A20.108Z",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-03-31",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

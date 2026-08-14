@@ -1,0 +1,116 @@
+{
+  "id": "trusd-tori",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Tori trUSD terms — discretionary repurchase only, no stable-value or repurchase guarantee",
+        "url": "https://docs.tori.finance/legal/trusd-terms"
+      },
+      {
+        "label": "Tori trUSD product disclosure — synthetic dollar backed by trading positions",
+        "url": "https://docs.tori.finance/products/trusd"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "trUSD is a BVI-issued synthetic dollar used through whitelisted purchase and repurchase services, but its terms disclaim a fixed-value or mandatory-repurchase obligation and permit reserve losses.",
+      "references": [
+        {
+          "label": "Tori trUSD terms and conditions",
+          "url": "https://docs.tori.finance/legal/trusd-terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Tori trUSD product disclosure",
+          "url": "https://docs.tori.finance/products/trusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Tori (BVI) Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.tori.finance/transparency",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "The current terms exclude U.S. users from becoming Protocol Users, while the separate strUSD staking product is expressly unavailable in the EU/EEA/U.S.; the terms do not state an equivalent EU exclusion for trUSD. Because trUSD's issuer disclaims a mandatory fixed-value repurchase obligation, payment-stablecoin applicability remains unresolved. No token-specific GENIUS approval, application, or foreign-exception registration was found.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "FDIC GENIUS Act proposed rule materials",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Tori trUSD terms and conditions",
+        "url": "https://docs.tori.finance/legal/trusd-terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Tori trUSD product disclosure",
+        "url": "https://docs.tori.finance/products/trusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register search for GENIUS Act issuer approvals, applications, and foreign-issuer registrations",
+        "OCC GENIUS proposed rule (Bulletin 2026-3) and OCC digital-assets licensing applications table",
+        "FDIC GENIUS Act proposed-rule materials",
+        "Congress.gov GENIUS Act text",
+        "Tori trUSD terms, product documentation, and transparency disclosures",
+        "Web search for Tori BVI, Tori Foundation, trUSD, GENIUS Act, PPSI, and foreign payment stablecoin registration — none found"
+      ],
+      "summary": "No public GENIUS approval, application, or foreign-exception registration naming Tori (BVI) Limited, Tori BVI, or trUSD was found in the reviewed federal or issuer materials as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

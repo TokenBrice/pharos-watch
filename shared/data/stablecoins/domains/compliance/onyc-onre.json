@@ -1,0 +1,66 @@
+{
+  "id": "onyc-onre",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no ONyc entry found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "OnRe FAQ — ONyc is not a stablecoin and its value follows NAV rather than a fixed $1 peg",
+        "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions"
+      },
+      {
+        "label": "OnRe ONyc documentation — tokenized share of a regulated Bermuda segregated account reinsurance pool",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ONyc is a NAV-based tokenized reinsurance investment asset and is explicitly not a stablecoin or fixed-$1 payment token.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/app/details/PLAW-119publ27",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OnRe FAQ — ONyc is not a stablecoin",
+          "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "On Re SAC Ltd.",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "Bermuda Monetary Authority",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "ONyc is a regulated Bermuda reinsurance-pool investment asset with NAV-based returns, not a payment stablecoin. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.govinfo.gov/app/details/FR-2026-03-02/2026-04089",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OnRe FAQ — BMA-regulated ONyc product description",
+        "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

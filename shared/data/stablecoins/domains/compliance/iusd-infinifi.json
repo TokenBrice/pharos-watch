@@ -1,0 +1,20 @@
+{
+  "id": "iusd-infinifi",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "infiniFi documentation — iUSD is a USDC receipt token in a DeFi fractional-reserve system",
+        "url": "https://docs.infinifi.xyz/"
+      },
+      {
+        "label": "infiniFi whitepaper — iUSD is minted when users deposit USDC into the protocol",
+        "url": "https://docs.infinifi.xyz/whitepaper"
+      },
+      {
+        "label": "ESMA Interim MiCA Register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  }
+}

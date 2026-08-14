@@ -8,5 +8,103 @@
         "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Token Teknoloji markets EUROT as a 1:1 euro-backed stablecoin intended to facilitate euro transactions and 24/7 trading, making it an apparent payment stablecoin despite its Turkish issuer and unresolved U.S. posture.",
+      "references": [
+        {
+          "label": "Token Teknoloji EUROT product page",
+          "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Token Teknoloji A.Ş.",
+    "issuerDomicile": "Turkey",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.token.com.tr/en/proof-of-reserves/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "As of 2026-08-14, no token-specific GENIUS permitted payment stablecoin approval, state-qualified approval, official application, or foreign-issuer exception registration was found in the reviewed Federal Register, OCC, Treasury, and issuer materials. Token Teknoloji's public pages describe 1:1 euro backing and conversion through Bitlo, but do not identify a U.S. GENIUS pathway. The product page and reserve page should be re-checked because the former describes euro backing while another FAQ line refers to Turkish-lira reserves.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury GENIUS Act proposed AML and sanctions rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Token Teknoloji EUROT product page",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Token Teknoloji proof of reserves",
+        "url": "https://www.token.com.tr/en/proof-of-reserves/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register OCC GENIUS Act issuance proposed rule (91 FR 10202)",
+        "OCC GENIUS Act proposed rule and public releases",
+        "U.S. Treasury/FinCEN/OFAC GENIUS Act proposed AML and sanctions rule",
+        "Public web search for EUROT/Token Teknoloji plus GENIUS, PPSI, and foreign-issuer registration",
+        "Token Teknoloji EUROT product and proof-of-reserves pages"
+      ],
+      "summary": "The reviewed regulator materials describe the GENIUS permitting and rulemaking framework but do not name Token Teknoloji, EUROT, or a Token Teknoloji issuer as a permitted issuer or pending applicant. The issuer's public pages describe a Turkish EUROT product and reserve disclosures, but no U.S. authorization, application, or foreign-exception registration was found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

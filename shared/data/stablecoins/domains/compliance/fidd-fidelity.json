@@ -1,5 +1,22 @@
 {
   "id": "fidd-fidelity",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Fidelity FIDD page — retail purchase and redemption are limited to eligible U.S. states and territories",
+        "url": "https://www.fidelitydigitalassets.com/stablecoin"
+      },
+      {
+        "label": "FIDD Terms and Conditions — issuer, U.S.-dollar redemption, and account eligibility terms",
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms"
+      },
+      {
+        "label": "ESMA Interim MiCA Register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

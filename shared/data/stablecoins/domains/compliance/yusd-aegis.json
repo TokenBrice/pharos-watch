@@ -1,0 +1,106 @@
+{
+  "id": "yusd-aegis",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Aegis YUSD product and legal disclosures",
+        "url": "https://aegis.im/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "YUSD is marketed as a 1:1 USD digital dollar and is integrated with wallets, exchanges, and card infrastructure, but it is BTC-backed, yield-bearing, and rewards holders through a delta-neutral funding strategy. Whether that synthetic yield product is a GENIUS payment stablecoin remains unresolved.",
+      "references": [
+        {
+          "label": "Aegis YUSD product and legal disclosures",
+          "url": "https://aegis.im/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act statutory summary — payment stablecoins and permitted issuers",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Aegis publicly describes YUSD as a BTC-backed, delta-neutral, yield-bearing digital dollar and says its offers are informational rather than a public offer. A legal issuer entity and domicile were not established from the public product materials reviewed. No public Aegis/YUSD GENIUS PPSI approval, official application, state-qualified pathway, or foreign-issuer exception registration was found as of 2026-08-14; GENIUS remains in proposed-rules phase.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Aegis YUSD product and legal disclosures",
+        "url": "https://aegis.im/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act statutory summary",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS Act proposed rules",
+        "OCC Digital Assets Licensing Applications table (checked 2026-08-14; Aegis/YUSD not listed)",
+        "Congress.gov GENIUS Act / Public Law 119-27",
+        "Treasury FinCEN/OFAC GENIUS proposed rule",
+        "Aegis YUSD product and legal disclosures",
+        "Public search for Aegis/YUSD U.S. GENIUS approval, application, or foreign-issuer registration"
+      ],
+      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for Aegis or YUSD. The public materials did not identify a legal issuer entity sufficient to map a foreign pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Treasury FinCEN/OFAC GENIUS Act proposed rule announcement",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

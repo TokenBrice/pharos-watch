@@ -1,5 +1,22 @@
 {
   "id": "usdkg-gold-dollar",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "USDKG official site — Kyrgyz oversight and distribution information reviewed; no EU offer or venue identified",
+        "url": "https://www.usdkg.com/"
+      },
+      {
+        "label": "USDKG: Building for Regulated Markets in 2026 — Kyrgyz legal framework and EU MiCA discussed, without an EU authorization or offer claim",
+        "url": "https://www.usdkg.com/blog/building-usdkg-for-regulated-markets-in-2026"
+      },
+      {
+        "label": "ESMA Interim MiCA Register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

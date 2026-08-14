@@ -1,5 +1,8 @@
 {
   "id": "aznd-mu-digital",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",

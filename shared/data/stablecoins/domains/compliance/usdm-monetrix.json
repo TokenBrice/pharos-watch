@@ -1,0 +1,107 @@
+{
+  "id": "usdm-monetrix",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "Monetrix documents base USDM as a 1:1 USDC mint and redemption token, while strategy yield is separated into sUSDM. That makes USDM an apparent payment-stablecoin product, although no public GENIUS issuer pathway is identified.",
+      "references": [
+        {
+          "label": "Monetrix mint documentation",
+          "url": "https://doc.monetrix.xyz/guide/mint",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Monetrix redemption documentation",
+          "url": "https://doc.monetrix.xyz/guide/redeem",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Monetrix delta-neutral strategy documentation",
+          "url": "https://doc.monetrix.xyz/how-it-works/delta-neutral-strategy",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "notes": "Monetrix's public material documents USDM mechanics but does not identify a permitted payment stablecoin issuer, state-qualified issuer, official GENIUS application, or foreign-issuer registration. The base USDM token is separated from the yield-bearing sUSDM wrapper, so it remains in the apparent-payment-stablecoin review rather than being treated as a savings wrapper.",
+    "references": [
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Federal Register proposed rule — foreign issuer registration",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "New York DFS virtual currency licensing and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Monetrix redemption documentation",
+        "url": "https://doc.monetrix.xyz/guide/redeem",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA MiCA EMT and ART registers",
+        "OCC Digital Assets Licensing Applications directory",
+        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal",
+        "Federal Reserve GENIUS Act customer-identification proposal",
+        "New York DFS virtual-currency licensing page and Greenlist",
+        "Monetrix mint, redemption, strategy, and transparency disclosures",
+        "Public searches for Monetrix/USDM GENIUS approval, application, or foreign registration"
+      ],
+      "summary": "No public GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration naming Monetrix or USDM was located. Monetrix documentation supports the payment-stablecoin-like product classification but does not announce a GENIUS pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act customer-identification proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260618a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-06-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "New York DFS virtual currency licensing and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

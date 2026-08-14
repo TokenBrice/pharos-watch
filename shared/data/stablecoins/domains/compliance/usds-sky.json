@@ -1,5 +1,22 @@
 {
   "id": "usds-sky",
+  "mica": {
+    "status": "non-compliant",
+    "references": [
+      {
+        "label": "Kraken EEA stablecoin offerings — USDS delisting",
+        "url": "https://support.kraken.com/articles/stablecoin-offerings-for-eea-clients"
+      },
+      {
+        "label": "Sky USDS protocol documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+      },
+      {
+        "label": "ESMA MiCA Q&A — crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "authorizationStatus": "no-public-authorization-found",

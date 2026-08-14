@@ -1,0 +1,63 @@
+{
+  "id": "susdc-spark",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no spUSDC entry found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Spark documentation — spUSDC is an ERC-4626 savings vault share whose value accrues USDC yield",
+        "url": "https://docs.spark.fi/"
+      },
+      {
+        "label": "Sky governance proposal — Spark Savings USDC (spUSDC)",
+        "url": "https://vote.sky.money/polling/QmUn84ag"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "spUSDC is an ERC-4626 savings-wrapper share whose value appreciates as USDC yield accrues; it is not itself a fixed-par payment stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act Public Law 119-27",
+          "url": "https://www.govinfo.gov/app/details/PLAW-119publ27",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Spark documentation",
+          "url": "https://docs.spark.fi/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "spUSDC is a savings vault wrapper around USDC, not a separate payment stablecoin. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.govinfo.gov/app/details/FR-2026-03-02/2026-04089",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Spark documentation — spUSDC savings product",
+        "url": "https://docs.spark.fi/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

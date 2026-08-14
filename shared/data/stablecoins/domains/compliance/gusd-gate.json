@@ -1,5 +1,22 @@
 {
   "id": "gusd-gate",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope page — ART/EMT issuer registers reviewed; no Gate/GUSD entry found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Gate GUSD product page — GUSD is a principal-protected flexible-term investment product with returns, not a fixed-par payment token",
+        "url": "https://www.gate.com/staking/GUSD"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions — EMT and ART scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

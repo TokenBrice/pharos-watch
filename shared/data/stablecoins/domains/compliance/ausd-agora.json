@@ -18,7 +18,7 @@
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "latestReportDate": "2026-05-31",
-    "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted — GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved).",
+    "notes": "Agora filed its OCC national trust bank charter application on April 20, 2026 (received by OCC; public portion available as PDF on OCC licensing page), pursuing the federal-qualified-nonbank pathway under GENIUS Act. CEO Nick van Eck confirmed in April 2026 that the OCC trust charter is Agora's intended GENIUS Act onshore PPSI pathway. No PPSI approval has been granted \u2014 GENIUS Act rulemaking is still in proposed-rules phase as of 2026-06-18. No registered foreign-issuer exception found. Application status: under review (not approved).",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -27,20 +27,20 @@
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "OCC digital asset licensing applications — Agora National Trust Bank application received 2026-04-20",
+        "label": "OCC digital asset licensing applications \u2014 Agora National Trust Bank application received 2026-04-20",
         "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
         "sourceKind": "federal-regulator",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "Agora blog — national trust bank charter filing",
+        "label": "Agora blog \u2014 national trust bank charter filing",
         "url": "https://www.agora.finance/blog/occ-national-trust-bank-charter",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2026-04-24",
         "accessedAt": "2026-06-07"
       },
       {
-        "label": "ChainCatcher — Agora CEO on OCC charter and GENIUS Act federal pathway intent",
+        "label": "ChainCatcher \u2014 Agora CEO on OCC charter and GENIUS Act federal pathway intent",
         "url": "https://www.chaincatcher.com/en/article/2262780",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-06-07"

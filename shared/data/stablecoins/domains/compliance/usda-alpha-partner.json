@@ -1,0 +1,92 @@
+{
+  "id": "usda-alpha-partner",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA/European Commission MiCA Q&A — crypto-assets without an identifiable issuer do not fall under Titles II–IV",
+        "url": "https://www.esma.europa.eu/print/pdf/node/219621"
+      },
+      {
+        "label": "ESMA MiCA register portal — no Alpha Partner/USDA issuer record located in the reviewed issuer registers",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Alpha Partner official site — no legal issuer, EU offer, or MiCA authorization disclosed in the reviewed public material",
+        "url": "https://alphapartner.vip/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "USDA is marketed as a dollar-backed stablecoin and is tracked as a one-dollar issuer-controlled token, so it is treated as an apparent payment stablecoin even though the public issuer and reserve disclosures are inadequate.",
+      "references": [
+        {
+          "label": "Alpha Partner official site",
+          "url": "https://alphapartner.vip/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AP Web3 / Alpha Partners (legal entity not disclosed in reviewed public materials)",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found. The reviewed public Alpha Partner material did not identify a legal issuer, reserve composition, redemption policy, or regulator; the applicability call is based on the token's marketed dollar-stablecoin function rather than evidence of compliance.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications — no Alpha Partner/USDA applicant identified",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Reserve GENIUS customer-identification proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Alpha Partner official site",
+        "url": "https://alphapartner.vip/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "OCC digital assets licensing applications page, searched for Alpha Partner, AP Web3, and USDA",
+        "Federal Reserve GENIUS customer-identification proposal",
+        "GENIUS Act Public Law 119-27",
+        "Alpha Partner official site and linked public materials"
+      ],
+      "summary": "As of 2026-08-14, no token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for Alpha Partner USDA. The public material did not identify a legal issuer or a U.S. regulatory filing, so no issuer pathway can be assigned.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

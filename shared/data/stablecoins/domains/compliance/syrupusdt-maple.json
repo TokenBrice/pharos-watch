@@ -1,0 +1,20 @@
+{
+  "id": "syrupusdt-maple",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Maple application: syrupUSDT yield product",
+        "url": "https://maple.finance/app"
+      },
+      {
+        "label": "Maple: syrupUSDT institutional-yield expansion",
+        "url": "https://maple.finance/insights/maple-expands-institutional-yield-through-ink"
+      }
+    ]
+  }
+}

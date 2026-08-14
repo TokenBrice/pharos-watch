@@ -1,0 +1,65 @@
+{
+  "id": "gldy-streamex",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed (12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Streamex GLDY privacy notice — restricted security and issuer disclosure",
+        "url": "https://www.streamex.com/privacy-policy/"
+      },
+      {
+        "label": "Streamex GLDY launch announcement",
+        "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-gldy-now-live-and-available-purchase"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "GLDY is described by its issuer as a restricted, gold-backed tokenized security available only to accredited investors, rather than a payment stablecoin."
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Streamex, Ltd.",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "GLDY is outside GENIUS payment-stablecoin tracking because Streamex describes it as a restricted security with gold-price exposure and yield paid in additional gold. This is an applicability exclusion, not evidence of GENIUS authorization.",
+    "references": [
+      {
+        "label": "GENIUS Act, Public Law 119-27 — payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Streamex GLDY privacy notice — issuer and restricted-security terms",
+        "url": "https://www.streamex.com/privacy-policy/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-01-26",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Streamex GLDY launch announcement",
+        "url": "https://ir.streamex.com/news-releases/news-release-details/streamex-corp-announces-gldy-now-live-and-available-purchase",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

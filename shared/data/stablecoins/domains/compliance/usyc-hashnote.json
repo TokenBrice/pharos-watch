@@ -1,5 +1,22 @@
 {
   "id": "usyc-hashnote",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Circle USYC — tokenized money market fund",
+        "url": "https://www.circle.com/usyc"
+      },
+      {
+        "label": "Circle USYC developer overview",
+        "url": "https://developers.circle.com/tokenized/usyc/overview"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {

@@ -1,0 +1,16 @@
+{
+  "id": "usdx-kava",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Kava App — Kava Mint collateralized borrowing protocol",
+        "url": "https://help.app.kava.io/article/13-what-kava-app-offers"
+      }
+    ]
+  }
+}

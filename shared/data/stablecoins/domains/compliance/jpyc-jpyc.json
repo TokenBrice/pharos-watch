@@ -1,0 +1,98 @@
+{
+  "id": "jpyc-jpyc",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "JPYC is a yen-linked stablecoin issued for payment and real-world spending use, with JPYC's materials describing use for purchases and the 2025 funds-transfer issuance of JPYC.",
+      "references": [
+        {
+          "label": "JPYC Inc. — company and JPY Coin description",
+          "url": "https://corporate.jpyc.co.jp/en",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "JPYC — Japanese funds-transfer registration and stablecoin issuance announcement",
+          "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-08-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "JPYC Inc.",
+    "issuerDomicile": "Japan",
+    "licensingRegulator": "Japan Financial Services Agency / Kanto Local Finance Bureau",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "JPYC Inc.'s Japanese funds-transfer registration is a foreign regulatory authorization, not a U.S. GENIUS approval. No token-specific U.S. permitted-issuer approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration was found. The conservative status is no-public-authorization-found while GENIUS rulemaking remains proposed-rules phase.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register 91 FR 37234 — GENIUS Act proposed CIP rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Japan FSA — registered funds-transfer service providers, including JPYC Inc.",
+        "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-07-31",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "JPYC — funds-transfer registration announcement",
+        "url": "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-08-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html — OCC GENIUS proposed rule and foreign-issuer framework",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-24.html — OCC reporting proposal for permitted and foreign issuers",
+        "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf — Federal Register proposed GENIUS CIP rule",
+        "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf — Japanese funds-transfer register, JPYC Inc. entry",
+        "https://corporate.jpyc.co.jp/en — JPYC issuer and product description",
+        "https://corporate.jpyc.co.jp/news/posts/first-yen-stablecoin-jpyc — JPYC Japanese registration and issuance disclosure",
+        "Federal Register/OCC searches for JPYC and JPYC Inc. — no token-specific U.S. approval or pending application found"
+      ],
+      "summary": "The review found JPYC Inc. registered in Japan as a funds-transfer service provider, but no public U.S. GENIUS approval, state qualification, regulator-confirmed application, or OCC foreign-issuer registration for JPYC Inc. or JPYC.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Japan FSA — registered funds-transfer service providers",
+          "url": "https://www.fsa.go.jp/menkyo/menkyoj/shikin_idou.pdf",
+          "sourceKind": "foreign-regulator",
+          "sourceDate": "2026-07-31",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

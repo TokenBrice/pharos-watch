@@ -21,5 +21,102 @@
         "url": "https://usual.money/blog/from-bank-account-to-eur0.-no-exchange-needed"
       }
     ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "EUR0 is marketed as a euro settlement stablecoin with par mint and redemption routes, but its Usual protocol issuer posture and tokenized money-market-fund collateral leave GENIUS payment-stablecoin applicability unresolved.",
+      "references": [
+        {
+          "label": "EUR0 official product documentation",
+          "url": "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "As of 2026-08-14, no token-specific GENIUS permitted payment stablecoin approval, state-qualified approval, official application, or foreign-issuer exception registration was found in the reviewed Federal Register, OCC, Treasury, and Usual materials. Usual's public EUR0 documentation describes permissioned and permissionless par mint/redemption routes and DeFi settlement use, but does not resolve a legal U.S. issuer entity or GENIUS pathway. The regime remains in proposed-rules phase, so EU-supervised collateral-provider status should not be treated as U.S. GENIUS authorization.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury GENIUS Act proposed AML and sanctions rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "EUR0 official product documentation",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/eur0-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register OCC GENIUS Act issuance proposed rule (91 FR 10202)",
+        "OCC GENIUS Act proposed rule and public releases",
+        "U.S. Treasury/FinCEN/OFAC GENIUS Act proposed AML and sanctions rule",
+        "Public web search for EUR0/Usual plus GENIUS, PPSI, and foreign-issuer registration",
+        "Usual EUR0 product and redemption disclosures"
+      ],
+      "summary": "The reviewed regulator materials describe the GENIUS permitting and rulemaking framework but do not name Usual, EUR0, or a Usual issuer as a permitted issuer or pending applicant. Usual's public EUR0 documentation shows par mint and redemption routes against euTBL/EURC and DeFi settlement use, but no U.S. authorization, application, or foreign-exception registration was found.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register — OCC GENIUS Act proposed rule, 91 FR 10202",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-03-02",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

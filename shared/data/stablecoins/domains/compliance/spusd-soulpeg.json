@@ -1,0 +1,20 @@
+{
+  "id": "spusd-soulpeg",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "SoulPeg FAQ — SPUSD wrapper and Venus yield",
+        "url": "https://docs.soulpeg.io/docs/faq/what-is-spusd"
+      },
+      {
+        "label": "SoulPeg whitepaper abstract — decentralized BSC protocol",
+        "url": "https://docs.soulpeg.io/docs/whitepaper/abstract"
+      }
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "id": "susds-sky",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Q&A — crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "Sky sUSDS protocol documentation",
+        "url": "https://developers.skyeco.com/protocol/tokens/susds/"
+      },
+      {
+        "label": "Sky sUSDS product explanation",
+        "url": "https://sky.money/blog/what-is-susds"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDS is a yield-generating, value-accruing ERC-4626 savings wrapper over USDS rather than a fixed-value dollar payment token.",
+      "references": [
+        {
+          "label": "Sky sUSDS protocol documentation",
+          "url": "https://developers.skyeco.com/protocol/tokens/susds/",
+          "sourceKind": "issuer-disclosure"
+        },
+        {
+          "label": "Sky sUSDS product explanation",
+          "url": "https://sky.money/blog/what-is-susds",
+          "sourceKind": "issuer-disclosure"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "sUSDS is treated as a non-payment token under the GENIUS tracker because its value accrues against USDS through the Sky Savings Rate and it is not pegged to one dollar. No GENIUS payment-stablecoin authorization is asserted.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

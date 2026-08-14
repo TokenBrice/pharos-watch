@@ -1,5 +1,22 @@
 {
   "id": "reusd-re-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Re Protocol — What is reUSD?",
+        "url": "https://docs.re.xyz/insurance-capital-layers/what-is-reusd"
+      },
+      {
+        "label": "Re Protocol — How the Re Protocol Works",
+        "url": "https://docs.re.xyz/protocol/how-the-re-protocol-works"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

@@ -20,5 +20,85 @@
         "url": "https://www.sgforge.com/wp-content/uploads/2025/10/EURCV-WP-Ethereum-Solana_XRPL_Stellar_2025.10.14.pdf"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Société Générale - Forge",
+    "issuerDomicile": "France",
+    "licensingRegulator": "ACPR; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.sgforge.com/product/coinvertible/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "EURCV has official MiCA authorization as an EMT, but that does not establish a U.S. GENIUS permitted-issuer approval or registered foreign-issuer exception. No token-specific U.S. PPSI approval, state-qualified approval, official application, OCC registration, Treasury comparability determination, or foreign-issuer exception was located. SG-FORGE's public U.S. selling restriction supports a conservative posture. Applicability is marked apparent-payment-stablecoin because the statute covers payment or settlement tokens redeemable for a fixed monetary value; the euro denomination and offshore restriction remain verifier review points.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 — payment-stablecoin definition and foreign-issuer exception",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule — Federal Register 2026-04089",
+        "url": "https://public-inspection.federalregister.gov/2026-04089.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury state-level GENIUS comparability rulemaking",
+        "url": "https://home.treasury.gov/news/press-releases/sb0428",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-01",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "SG-FORGE CoinVertible product page",
+        "url": "https://www.sgforge.com/product/coinvertible/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "SG-FORGE and Bitpanda EURCV European listing",
+        "url": "https://www.sgforge.com/wp-content/uploads/2024/09/PR_SG-FORGE_Bitpanda-25-Sept-2024.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-09-25",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 and Federal Register 2026-04089 — proposed GENIUS foreign-issuer and permitted-issuer framework",
+        "OCC Digital Assets Licensing Applications table checked on 2026-08-14",
+        "GENIUS Act Public Law 119-27, including the foreign-issuer exception",
+        "Treasury state-level GENIUS comparability rulemaking",
+        "Federal GENIUS implementation materials reviewed from OCC, Treasury, FinCEN/OFAC, FDIC, Federal Reserve, and NCUA",
+        "SG-FORGE CoinVertible product page and EURCV European listing announcement",
+        "Web search for SG-FORGE/EURCV GENIUS Act approval, application, OCC registration, and comparability determination"
+      ],
+      "summary": "No token-specific U.S. GENIUS PPSI approval, state-qualified approval, official application, OCC foreign-issuer registration, Treasury comparability determination, or registered foreign-issuer exception was located for EURCV or SG-FORGE. The federal and state implementation materials reviewed remain proposed-rulemaking, while SG-FORGE publicly restricts U.S. persons.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

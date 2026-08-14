@@ -1,5 +1,8 @@
 {
   "id": "usdm-mega",
+  "mica": {
+    "status": "out-of-scope"
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",

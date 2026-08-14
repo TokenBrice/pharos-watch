@@ -1,5 +1,22 @@
 {
   "id": "mtbill-midas",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope — financial instruments are excluded from MiCA",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Midas base prospectus — blockchain certificates are derivative financial instruments and issuer is not FMA-licensed",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+      },
+      {
+        "label": "Liechtenstein FMA register of approved securities prospectuses",
+        "url": "https://www.fma-li.li/de/finanzdienstleister/asset-management-und-maerkte/wertpapierprospekt/register"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {

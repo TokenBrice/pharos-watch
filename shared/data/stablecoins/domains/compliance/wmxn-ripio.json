@@ -1,0 +1,102 @@
+{
+  "id": "wmxn-ripio",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "wMXN is a Ripio local-currency token intended to maintain 1:1 MXN parity and is presented for on-chain transfers and payments.",
+      "references": [
+        {
+          "label": "Ripio wFiat product page",
+          "url": "https://www.ripio.com/en/wfiat",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act definition of payment stablecoin",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Ripio's wFiat materials identify Ripio as the issuer but do not identify a token-specific legal issuer for wMXN. They disclose local-currency backing and on-chain payment use, but no GENIUS-era approval, application, or foreign-issuer registration. The public Spanish Ripio terms identify Ripiotech, S.L. as the Spanish wallet operator and list supported cryptoassets without wMXN; that does not establish wMXN availability or issuer identity in the EU or U.S. The apparent-payment classification is retained because the token is marketed as a local-currency stablecoin for payment/settlement use; a direct holder redemption obligation is not clearly documented.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ripio wFiat product page",
+        "url": "https://www.ripio.com/en/wfiat",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ripio local stablecoins page",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Ripio Spain wallet terms",
+        "url": "https://terms.ripio.com/es/wallet",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and digital-asset licensing applications tracker",
+        "Federal Reserve GENIUS Act customer-identification proposal",
+        "GENIUS Act statutory foreign-issuer registration and comparable-regime provisions",
+        "Ripio wFiat and local-stablecoin product pages",
+        "Ripio Spain terms and supported-asset disclosure",
+        "Public web search for Ripio/wMXN GENIUS Act approval, application, or foreign registration"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for wMXN as of 2026-08-14. Ripio's issuer and product disclosures identify the token family but do not disclose a U.S. GENIUS pathway.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act customer-identification proposal",
+          "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Ripio wFiat product page",
+          "url": "https://www.ripio.com/en/wfiat",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

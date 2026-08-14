@@ -1,0 +1,68 @@
+{
+  "id": "savusd-avant",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 — MiCA scope and exclusions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "ESMA MiCA Article 3 — EMT must reference one official currency and an issuer",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      },
+      {
+        "label": "Avant — savUSD is a yield-bearing senior-tranche token received by staking avUSD",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "savUSD is a yield-bearing senior-tranche wrapper received by staking avUSD; its exchange rate accrues value and its exit is a conversion back to avUSD, not fixed-value payment redemption.",
+      "references": [
+        {
+          "label": "GENIUS Act text — payment stablecoin definition and yield restriction",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Avant — savUSD senior tranche and accruing exchange rate",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "savUSD is the yield-bearing senior tranche of Avant's avUSD system, not the base dollar token: Avant says staking avUSD produces savUSD and that its exchange rate continuously increases as strategy yield accrues. It is therefore treated as a non-payment-token for GENIUS and no payment-stablecoin authorization status is asserted.",
+    "references": [
+      {
+        "label": "OCC proposed GENIUS Act rule",
+        "url": "https://www.occ.gov/news-issuances/news-releases/2026/nr-occ-2026-9.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Avant core tokens documentation",
+        "url": "https://docs.avantprotocol.com/overview/core-tokens",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

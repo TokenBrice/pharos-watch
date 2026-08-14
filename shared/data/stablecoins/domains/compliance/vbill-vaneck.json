@@ -1,0 +1,66 @@
+{
+  "id": "vbill-vaneck",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "MiCA Regulation — financial instruments excluded from scope",
+        "url": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj"
+      },
+      {
+        "label": "Securitize/VanEck VBILL launch disclosure",
+        "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "VBILL is a tokenized share of a British Virgin Islands Treasury fund, with NAV, yield, qualified-investor restrictions, and underlying Treasury obligations; the GENIUS Act definition excludes securities from payment stablecoin scope.",
+      "references": [
+        {
+          "label": "GENIUS Act — payment stablecoin definition excludes securities",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Securitize/VanEck VBILL launch disclosure",
+          "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-05-13",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "VanEck Treasury Fund, Ltd.",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "VBILL is a qualified-investor tokenized fund share, not a payment stablecoin. No GENIUS authorization status is asserted; the exclusion is based on the product's fund/share structure and the statute's security exclusion.",
+    "references": [
+      {
+        "label": "GENIUS Act — payment stablecoin definition excludes securities",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Securitize/VanEck VBILL launch disclosure",
+        "url": "https://www.prnewswire.com/news-releases/vaneck-launches-first-tokenized-fund-vbill-on-securitize-302453863.html",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-05-13",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

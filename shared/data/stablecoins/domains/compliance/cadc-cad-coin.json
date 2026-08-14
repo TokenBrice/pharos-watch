@@ -1,0 +1,114 @@
+{
+  "id": "cadc-cad-coin",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "CADC is a Canadian-dollar stablecoin redeemable 1:1 for CAD and marketed for business settlement and payments, so it is an apparent payment stablecoin for GENIUS-scope review.",
+      "references": [
+        {
+          "label": "Loon CADC official site",
+          "url": "https://loon.finance/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Loon CADC support centre",
+          "url": "https://loon.finance/support-centre/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Loon Technology Inc.",
+    "issuerDomicile": "Canada",
+    "licensingRegulator": "FINTRAC; Money Services Business registration C10001420",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://loon.finance/transparency/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "FINTRAC MSB registration and Canadian compliance statements are not U.S. GENIUS authorization. No public GENIUS approval, state qualification, OCC foreign registration, official application, or Treasury comparability determination for Loon Technology Inc./CADC was located. Loon's public materials are Canada-focused while also describing settlement in Canada and abroad; the foreign-exception posture remains unknown while rulemaking is proposed.",
+    "references": [
+      {
+        "label": "GENIUS Act, 12 U.S.C. chapter 56",
+        "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-assets licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Loon CADC official site",
+        "url": "https://loon.finance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Loon CADC reserve transparency",
+        "url": "https://loon.finance/transparency/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA Interim MiCA Register EMTWP.csv and ARTZZ.csv, update dated 2026-08-12",
+        "GENIUS Act text in 12 U.S.C. chapter 56",
+        "OCC GENIUS Act proposed rule and foreign-issuer registration framework",
+        "OCC Digital Assets Licensing Applications public table",
+        "Federal Reserve GENIUS Act customer-identification proposal",
+        "Loon official site, support centre, privacy/legal materials, and CADC transparency page",
+        "Exact-name searches for CADC, CAD Coin, and Loon Technology in OCC and Federal Register materials"
+      ],
+      "summary": "No token-specific GENIUS permitted-issuer approval, state-qualified approval, official application, OCC foreign registration, or Treasury comparability determination was found for Loon Technology Inc. or CADC as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "GENIUS Act, 12 U.S.C. chapter 56",
+          "url": "https://uscode.house.gov/view.xhtml?edition=prelim&path=%2Fprelim%40title12%2Fchapter56",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital-assets licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Loon CADC reserve transparency",
+          "url": "https://loon.finance/transparency/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

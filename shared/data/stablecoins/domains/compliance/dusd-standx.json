@@ -1,0 +1,106 @@
+{
+  "id": "dusd-standx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "DUSD is marketed as a yield-bearing stablecoin, is minted and redeemed by its BVI issuer against USDT/USDC, and functions as a quote, settlement, and margin asset on StandX.",
+      "references": [
+        {
+          "label": "StandX DUSD solutions",
+          "url": "https://docs.standx.com/docs/dusd-solutions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "StandX DUSD product FAQ",
+          "url": "https://docs.standx.com/docs/dusd-overview/product-faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "StandX Issuer Ltd",
+    "issuerDomicile": "British Virgin Islands",
+    "licensingRegulator": "Issuer terms state that StandX Issuer Ltd and its group are not regulated, supervised, or licensed by a financial-services regulator, including the BVI Financial Services Commission.",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "DUSD is treated as an apparent payment stablecoin despite its yield-bearing and derivatives-margin functions because the issuer describes direct minting and redemption against USDT/USDC and a stablecoin role. U.S. users are geo-blocked, but no GENIUS foreign-exception registration or U.S. authorization was found. The MiCA row is separate: the issuer terms appear to permit EU users, while the current ESMA EMT issuer register contains no StandX row found in this review.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "FDIC GENIUS Act proposed rule materials",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-07",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "StandX user terms and conditions",
+        "url": "https://docs.standx.com/docs/resources/user-terms-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "StandX DUSD solutions",
+        "url": "https://docs.standx.com/docs/dusd-solutions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register search for GENIUS Act issuer approvals, applications, and foreign-issuer registrations",
+        "OCC GENIUS proposed rule (Bulletin 2026-3) and OCC digital-assets licensing applications table",
+        "FDIC GENIUS Act proposed-rule materials",
+        "Congress.gov GENIUS Act text",
+        "StandX user terms, DUSD solutions, DUSD product FAQ, and official DUSD mint/redeem pages",
+        "Web search for StandX Issuer Ltd, DUSD, GENIUS Act, PPSI, and foreign payment stablecoin registration \u2014 none found"
+      ],
+      "summary": "No public GENIUS approval, application, or foreign-exception registration naming StandX Issuer Ltd or DUSD was found in the reviewed federal or issuer materials as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

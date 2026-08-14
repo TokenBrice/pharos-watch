@@ -20,5 +20,109 @@
         "url": "https://allunity.com/news/allunity-secures-bafin-emi-license-to-launch-its-micar-compliant-euro-stablecoin/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "EURAU is a 1:1 euro-denominated EMT marketed for payments and settlement, but AllUnity's MiCA whitepaper expressly excludes U.S. offers; its GENIUS posture is therefore tracked without assuming U.S. authorization.",
+      "references": [
+        {
+          "label": "AllUnity EURAU whitepaper",
+          "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act, Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AllUnity GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "BaFin; MiCA electronic money institution",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://allunity.com/trust-center",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "AllUnity's MiCA whitepaper expressly states that EURAU may not be offered or sold in the United States or to U.S. persons. No token-specific U.S. PPSI approval, state-qualified approval, official application, or foreign-issuer registration was located. The negative status is not a finding that AllUnity is unauthorized under MiCA; the existing MiCA authorization is preserved above.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury GENIUS Act AML/CFT proposed rule release",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AllUnity EURAU whitepaper",
+        "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AllUnity Trust Center",
+        "url": "https://allunity.com/trust-center",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and related bulletins",
+        "OCC digital assets licensing applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act rulemaking materials",
+        "Public Law 119-27 foreign-issuer exception text",
+        "AllUnity EURAU whitepaper, Trust Center, and redemption materials",
+        "Public U.S. PPSI, state-qualified, official-application, and foreign-exception materials"
+      ],
+      "summary": "No public token-specific GENIUS approval, state-qualified approval, official application, or foreign-issuer registration was located for EURAU or AllUnity GmbH as of 2026-08-14; the issuer's whitepaper instead excludes U.S. offers and sales.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "AllUnity EURAU whitepaper",
+          "url": "https://allunity.com/wp-content/uploads/2026/02/EURAU-AllUnity-White-Paper_v1.2.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

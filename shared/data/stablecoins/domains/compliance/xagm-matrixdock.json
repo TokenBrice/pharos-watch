@@ -1,0 +1,69 @@
+{
+  "id": "xagm-matrixdock",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Interim Register and register guidance",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Matrixdock XAGm product page",
+        "url": "https://www.matrixdock.com/xagm"
+      },
+      {
+        "label": "Matrixdock XAGm launch announcement",
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain-under-the-frs-framework"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "XAGm is a tokenized silver claim, not a token designed to maintain a fixed value relative to a national currency or function as a payment stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory payment-stablecoin framework",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Matrixdock XAGm product page",
+          "url": "https://www.matrixdock.com/xagm",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "XAGm is described as an LBMA Good Delivery silver-backed token for collateral and trading. It is a commodity-referenced product, so GENIUS payment-stablecoin authorization is not applicable on the reviewed facts.",
+    "references": [
+      {
+        "label": "GENIUS Act statutory payment-stablecoin framework",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Matrixdock XAGm product page",
+        "url": "https://www.matrixdock.com/xagm",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Matrixdock XAGm launch announcement",
+        "url": "https://www.matrixdock.com/blog/announcements/matrixdock-launches-xagm-bringing-lbma-good-delivery-silver-on-chain-under-the-frs-framework",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-17",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

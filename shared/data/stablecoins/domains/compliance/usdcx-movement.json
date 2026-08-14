@@ -1,0 +1,98 @@
+{
+  "id": "usdcx-movement",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDCx on Movement is marketed as a dollar-denominated stablecoin for payments and remittances, but the token is deployed by Movement as a partner-chain token through Circle xReserve rather than being Circle-issued USDC. The issuer-level GENIUS classification is therefore unclear.",
+      "references": [
+        {
+          "label": "Movement USDCx announcement",
+          "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-03-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Circle xReserve overview",
+          "url": "https://www.circle.com/xreserve",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.circle.com/xreserve",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Circle's xReserve materials say the partner blockchain team deploys the USDC-backed token while Circle deploys the reserve contract. Movement's launch materials describe USDCx as intended for everyday payments, remittances, and fintech use, so this row is retained as an unclear, confusable payment-stablecoin case. No token-specific U.S. permitted-issuer approval, state qualification, official application, or foreign-issuer registration was located; Circle's separate MiCA/USDC status should not be transferred to USDCx.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Movement USDCx announcement",
+        "url": "https://www.movementnetwork.xyz/article/introducing-usdcx-movements-native-usdc-backed-stablecoin",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Circle xReserve overview",
+        "url": "https://www.circle.com/xreserve",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA interim MiCA register landing page and ART/EMT register files, last updated 2026-08-12",
+        "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+        "Federal Register joint PPSI CIP NPRM, 91 FR 37234",
+        "FDIC GENIUS Act PPSI proposed rule materials",
+        "Movement USDCx launch disclosure",
+        "Circle xReserve overview and Movement USDCx integration disclosure",
+        "Targeted searches for Movement, USDCx, Circle xReserve, and GENIUS authorization or application records"
+      ],
+      "summary": "The reviewed U.S. regulator and Federal Register materials describe a proposed GENIUS framework but do not identify Movement, Move Industries, Circle xReserve, or USDCx on Movement as an approved or pending permitted payment stablecoin issuer. The ESMA ART/EMT register review also found no assigned-token or issuer match.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act regulations NPRM (Bulletin 2026-3)",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register joint PPSI CIP NPRM (91 FR 37234)",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+          "sourceKind": "federal-register",
+          "sourceDate": "2026-06-22",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

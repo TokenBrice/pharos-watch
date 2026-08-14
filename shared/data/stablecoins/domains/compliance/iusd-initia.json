@@ -1,0 +1,101 @@
+{
+  "id": "iusd-initia",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "iUSD is presented as Initia's native USD stablecoin, backed 1:1 by Agora AUSD and redeemable through the underlying AUSD path. The product is payment-stablecoin-like, but its legal issuer and GENIUS pathway are not publicly resolved.",
+      "references": [
+        {
+          "label": "Independent iUSD asset profile",
+          "url": "https://defillama.com/stablecoin/initia-iusd",
+          "sourceKind": "news",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Agora company disclosure — AUSD issuer",
+          "url": "https://www.agora.finance/company",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "notes": "The OCC applications directory lists Agora National Trust Bank as an application received on 2026-04-20, but the public entry does not identify iUSD or Initia. No token-specific GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration was located for iUSD. The conservative status is no-public-authorization-found, not official-application-pending.",
+    "references": [
+      {
+        "label": "OCC Digital Assets Licensing Applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Federal Register proposed rule — foreign issuer registration",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "New York DFS virtual currency licensing and Greenlist",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Independent iUSD asset profile",
+        "url": "https://defillama.com/stablecoin/initia-iusd",
+        "sourceKind": "news",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA MiCA EMT and ART registers",
+        "OCC Digital Assets Licensing Applications directory",
+        "OCC GENIUS Act proposed rule and foreign-issuer registration proposal",
+        "Federal Reserve GENIUS Act customer-identification proposal",
+        "New York DFS virtual-currency licensing page and Greenlist",
+        "Initia and Agora public disclosures",
+        "Public searches for Initia/iUSD GENIUS approval, application, or foreign registration"
+      ],
+      "summary": "No public GENIUS approval, official application, state-qualified authorization, or foreign-issuer registration naming Initia or iUSD was found. The Agora bank application is for a related AUSD issuer and does not establish a token-specific iUSD authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Reserve GENIUS Act customer-identification proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260618a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-06-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "New York DFS virtual currency licensing and Greenlist",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "bc3m-backed",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "Backed bC3M product and eligibility disclosure",
+        "url": "https://assets.backed.fi/products/bc3m"
+      }
+    ]
+  }
+}

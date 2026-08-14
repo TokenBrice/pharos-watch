@@ -1,0 +1,116 @@
+{
+  "id": "wm-m0",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA/European Commission MiCA Q&A — crypto-assets without an identifiable issuer do not fall under Titles II–IV",
+        "url": "https://www.esma.europa.eu/print/pdf/node/219621"
+      },
+      {
+        "label": "ESMA MiCA register portal — no wM/M0 issuer record located in the reviewed issuer registers",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "M0 developer docs — M0 describes itself as modular stablecoin infrastructure and an issuer-partner platform",
+        "url": "https://docs.m0.org/"
+      },
+      {
+        "label": "M0 Wrapped M contract repository — wM is a non-rebasing M-token wrapper",
+        "url": "https://github.com/m0-platform/wrapped-m-token"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "wM is a non-rebasing 1:1 wrapper around M and presents dollar-stable transfer and unwrap functionality, so it is treated as an apparent payment stablecoin even though the wrapper is not the underlying M minter.",
+      "references": [
+        {
+          "label": "M0 Wrapped M contract repository",
+          "url": "https://github.com/m0-platform/wrapped-m-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "M0 Foundation / M0 protocol; underlying M is minted by permissioned Minters",
+    "issuerDomicile": "Switzerland",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://dashboard.m0.org/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "No token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for wM, M0 Foundation, or the underlying M token. M0 describes an issuer-partner infrastructure model, so a future GENIUS posture may attach to an individual permissioned Minter rather than to the wrapper or protocol layer.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications — reviewed for wM/M0 and named M0 Minters",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Reserve GENIUS customer-identification proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "M0 developer docs",
+        "url": "https://docs.m0.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "M0 website",
+        "url": "https://www.m0.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "M0 reserve dashboard",
+        "url": "https://dashboard.m0.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "M0 Wrapped M contract repository",
+        "url": "https://github.com/m0-platform/wrapped-m-token",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and public releases",
+        "OCC digital assets licensing applications page, searched for wM, M0 Foundation, M, and named permissioned Minters",
+        "Federal Reserve GENIUS customer-identification proposal",
+        "GENIUS Act Public Law 119-27",
+        "M0 docs, website, reserve dashboard, and Wrapped M contract repository"
+      ],
+      "summary": "As of 2026-08-14, no token-specific GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for wM, M0 Foundation, or the underlying M token. The public M0 materials describe infrastructure and permissioned issuer partners, not a wM-specific U.S. authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

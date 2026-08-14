@@ -1,0 +1,79 @@
+{
+  "id": "xaum-matrixdock",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register and scope page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Matrixdock XAUm — tokenized physical gold with Singapore/Hong Kong redemption",
+        "url": "https://www.matrixdock.com/xaum"
+      },
+      {
+        "label": "Matrixdock XAUm token features — gold claim and KYC primary mint/redemption",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "XAUm is a gold-backed commodity token representing physical gold and redeemable for gold, not a fixed-value national-currency payment instrument.",
+      "references": [
+        {
+          "label": "Matrixdock XAUm product page",
+          "url": "https://www.matrixdock.com/xaum",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act text — payment stablecoin definition",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerDomicile": "Singapore",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.matrixdock.com/xaum",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "XAUm is a prominent dashboard asset and could be confused with a payment stablecoin, so the usual omission for out-of-scope commodity products is replaced with an explicit non-payment-token row. Its gold backing and physical-gold redemption do not establish a GENIUS payment-stablecoin pathway or approval.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act text — payment stablecoin definition",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Matrixdock XAUm product page",
+        "url": "https://www.matrixdock.com/xaum",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Matrixdock XAUm token features",
+        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/token-features",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

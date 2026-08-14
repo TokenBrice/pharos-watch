@@ -1,0 +1,85 @@
+{
+  "id": "usd3-3jane",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA Article 2 — financial instruments and funds are outside MiCA scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      },
+      {
+        "label": "3Jane Terms of Use — USD3 is a yieldcoin backed by credit lines and the platform is operated by Tulkum Assets Corp.",
+        "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf"
+      },
+      {
+        "label": "3Jane official site — USD3 is a credit-backed yieldcoin with auto-compounded yield",
+        "url": "https://www.3jane.xyz/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "USD3 is a credit-backed, yield-bearing vault/yieldcoin whose value accrues through the pool and whose terms describe credit-line exposure, not a fixed-value payment obligation. It is treated as a prominent non-payment token rather than a GENIUS payment stablecoin.",
+      "references": [
+        {
+          "label": "3Jane Terms of Use",
+          "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "3Jane official site",
+          "url": "https://www.3jane.xyz/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — payment stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Tulkum Assets Corp. / 3Jane Protocol",
+    "issuerDomicile": "Panama",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "USD3 is a credit-backed yieldcoin/vault share, not a fixed-dollar payment stablecoin. The issuer's terms identify Tulkum Assets Corp., a Panamanian corporation, and describe USD3 as a yieldcoin backed by credit lines. No GENIUS payment-stablecoin authorization posture applies.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "3Jane Terms of Use",
+        "url": "https://www.3jane.xyz/pdf/terms-of-service.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "3Jane official site",
+        "url": "https://www.3jane.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

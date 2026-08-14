@@ -1,0 +1,90 @@
+{
+  "id": "idrx-idrx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "IDRX is a 1:1 IDR-backed, redeemable stablecoin explicitly marketed for global payments and transfers.",
+      "references": [
+        {
+          "label": "IDRX official site",
+          "url": "https://home.idrx.co/en/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "IDRX redemption documentation",
+          "url": "https://docs.idrx.co/services/redeem-idr",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "PT IDRX Indo Inovasi",
+    "issuerDomicile": "Indonesia",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://home.idrx.co/en/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "IDRX is a non-USD foreign-currency stablecoin with global availability language and an Indonesian issuer. No U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was found. Its U.S. eligibility and the final-rule treatment of a non-USD foreign payment stablecoin should be re-checked.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-03-02",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register \u2014 permitted payment stablecoin issuer CIP proposed rule",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr37234.pdf",
+        "sourceKind": "federal-register",
+        "sourceDate": "2026-06-22",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "U.S. Treasury \u2014 state-regime comparability proposed rule",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital-asset licensing applications tracker",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "IDRX official site",
+        "url": "https://home.idrx.co/en/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "IDRX redemption documentation",
+        "url": "https://docs.idrx.co/services/redeem-idr",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and Federal Register CIP proposed rule",
+        "OCC digital-asset licensing applications tracker",
+        "U.S. Treasury state-regime comparability proposed rule",
+        "IDRX official site and redemption documentation",
+        "Public searches for IDRX, PT IDRX Indo Inovasi, PPSI approval, and GENIUS foreign-issuer registration"
+      ],
+      "summary": "No public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered foreign-issuer exception was located for PT IDRX Indo Inovasi or IDRX. Indonesian regulatory context and global availability do not establish U.S. GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

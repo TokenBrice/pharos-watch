@@ -1,0 +1,20 @@
+{
+  "id": "usda-avalon",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register landing page",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Avalon MiCAR white paper — DeFi/CeDeFi protocol and no fiat currency",
+        "url": "https://729569225-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FlcdCcIXgWo7dKoZEUxKp%2Fuploads%2F1R2vC6XKZq24RHJcoH5R%2FAvalon%20Labs%20MiCAR%20White%20Paper.pdf?alt=media&token=55e4e094-d2e5-4847-a47d-4277fc8e70c3"
+      },
+      {
+        "label": "Avalon Labs — introducing USDa Bitcoin-backed CDP stablecoin",
+        "url": "https://medium.com/@avalonlabs/introducing-usda-bitcoin-powered-stablecoin-f95b3fedf529"
+      }
+    ]
+  }
+}

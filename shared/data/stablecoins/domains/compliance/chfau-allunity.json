@@ -1,28 +1,91 @@
 {
   "id": "chfau-allunity",
-  "mica": {
-    "status": "authorized",
-    "tokenType": "EMT",
-    "authorizationType": "emi",
-    "competentAuthority": "BaFin",
-    "authorizedEntity": "AllUnity GmbH",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "CHFAU is marketed as a 1:1 CHF-redeemable EMT for payments, settlement, and treasury use. That functional profile is close to a GENIUS payment stablecoin, although AllUnity is a German foreign issuer and no U.S. GENIUS pathway was found.",
+      "references": [
+        {
+          "label": "AllUnity CHFAU product page — 1:1 redemption and payments use",
+          "url": "https://allunity.com/chfau",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "GENIUS Act — payment stablecoin definition and foreign issuer framework",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AllUnity GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "BaFin; electronic money institution under MiCA/EMT framework",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://allunity.com/trust-center/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "The ESMA EMT register reviewed on 2026-08-14 contains an official CHFAU entry naming AllUnity GmbH and BaFin, which is MiCA evidence only and not GENIUS approval. No public U.S. permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was located. AllUnity's own site limits direct minting to institutional and professional clients and states that reserve audit reporting is coming soon. The GENIUS rulemaking phase remains proposed-rules.",
     "references": [
       {
-        "label": "AllUnity secures BaFin EMI license (July 2025)",
-        "url": "https://allunity.com/news/allunity-secures-bafin-emi-license-to-launch-its-micar-compliant-euro-stablecoin/"
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "AllUnity CHFAU launch (February 2026)",
-        "url": "https://allunity.com/news/allunity-launches-the-first-fully-reserved-micar-compliant-swiss-franc-stablecoin-chfau/"
+        "label": "OCC Digital Assets Licensing Applications — current pending-application table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "ESMA MiCA register (issuers of EMTs)",
-        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+        "label": "Federal Register 91 FR 10202 — OCC GENIUS proposed rules",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-08-14"
       },
       {
-        "label": "AllUnity CHFAU whitepaper",
-        "url": "https://allunity.com/whitepaper/"
+        "label": "ESMA Interim MiCA Register — EMTWP.csv entry for CHFAU / AllUnity GmbH",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-08-12",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AllUnity CHFAU product page",
+        "url": "https://allunity.com/chfau",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AllUnity Trust Center — reserve transparency and regulatory disclosures",
+        "url": "https://allunity.com/trust-center/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
       }
-    ]
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "Federal Register 91 FR 10202 OCC GENIUS proposed rules",
+        "OCC Digital Assets Licensing Applications table and Corporate Applications Search",
+        "GENIUS Act Public Law 119-27",
+        "Treasury proposed state-regime comparability rule",
+        "AllUnity CHFAU page, Trust Center, and public regulatory disclosures",
+        "ESMA EMT register and AllUnity/BaFin record"
+      ],
+      "summary": "No token-specific public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found for AllUnity GmbH or CHFAU. The official MiCA authorization evidence does not establish a U.S. GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

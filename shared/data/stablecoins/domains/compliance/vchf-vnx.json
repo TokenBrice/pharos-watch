@@ -17,5 +17,82 @@
         "url": "https://blog.bitstamp.net/post/mica-regulation-update-on-select-assets-in-the-eueea/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "VCHF is a CHF-referenced token with issuer redemption and a current foreign digital-asset business license, so it is reviewed as an apparent payment stablecoin.",
+      "references": [
+        {
+          "label": "Bermuda Monetary Authority regulated entities — VNX Global Ltd Class M digital-asset license includes issuing, selling, and redeeming digital assets",
+          "url": "https://www.bma.bm/regulated-entities",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "VNX Global Ltd",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "Bermuda Monetary Authority; Digital Asset Business Class M, registration no. 202605548",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "notes": "The BMA Class M license is a foreign digital-asset business license, not a GENIUS approval or registered foreign-issuer exception. Issuer mapping needs care: older VCHF reserve records name VNX Commodities AG, while the current BMA record names VNX Global Ltd; the VNX group’s migration and VCHF coverage should be re-checked.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act regulations proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications — current pending application table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Bermuda Monetary Authority regulated entities — VNX Global Ltd",
+        "url": "https://www.bma.bm/regulated-entities",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "VNX current website — group site currently under construction",
+        "url": "https://vnx.li/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and OCC Digital Assets Licensing Applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials and foreign-issuer framework materials",
+        "GENIUS Act statutory text on permitted and foreign issuers",
+        "Bermuda Monetary Authority regulated-entities register",
+        "VNX current site and VNX public notices/search results",
+        "Web searches for VCHF/VNX GENIUS Act approval, application, or foreign-exception registration"
+      ],
+      "summary": "VNX Global Ltd has a current Bermuda digital-asset business license, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for VCHF. The current issuer transition from VNX Commodities AG should be independently verified.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Bermuda Monetary Authority regulated entities",
+          "url": "https://www.bma.bm/regulated-entities",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
   }
 }

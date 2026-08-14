@@ -1,5 +1,22 @@
 {
   "id": "moveusd-cfx",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA Article 48 — Union EMT offer/admission requirements",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-48-requirements-offer-public-or"
+      },
+      {
+        "label": "CFX — MoveUSD services are limited to verified residents of listed U.S. states",
+        "url": "https://cfx.to/"
+      },
+      {
+        "label": "ESMA interim MiCA register — EMT issuers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

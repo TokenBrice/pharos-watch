@@ -1,0 +1,81 @@
+{
+  "id": "mhyper-midas",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register and scope",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Midas mHYPER — tokenised investment strategy and EU Prospectus Regulation offer",
+        "url": "https://midas.app/mhyper"
+      },
+      {
+        "label": "Midas Software GmbH base prospectus — blockchain-based certificates and debt instruments",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "mHYPER is a NAV-accreting tokenized investment product structured as a Midas blockchain-based certificate/debt instrument, not a fixed-value payment stablecoin. Its value tracks a market-neutral strategy and the Midas prospectus excludes U.S. persons; the GENIUS payment-stablecoin perimeter is therefore not the right authorization track.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory summary — payment stablecoins and permitted issuers",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Midas mHYPER product page",
+          "url": "https://midas.app/mhyper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "licensingRegulator": "Liechtenstein FMA (prospectus-approving authority under the EU Prospectus Regulation; Midas Software GmbH is not FMA-licensed)",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "mHYPER is a Midas NAV-accreting, yield-bearing blockchain-based certificate/debt instrument tracking Hyperithm market-neutral stablecoin strategies, not a fixed-value payment stablecoin. The Liechtenstein FMA prospectus approval is a securities-prospectus approval, not a MiCA or GENIUS issuer authorization; Midas documentation also excludes U.S. persons. No GENIUS approval/application/foreign-exception registration was assessed because the asset is an excluded security.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act proposed rules",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Midas mHYPER product page",
+        "url": "https://midas.app/mhyper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Midas Software GmbH base prospectus — blockchain-based certificates and U.S. restrictions",
+        "url": "https://www.mfsa.mt/wp-content/uploads/2024/11/Midas-Software-GmbH-Base-Prospectus-Document-dated-17-July-2024.pdf",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-07-17",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act S.1582 — payment stablecoin framework",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "sourceKind": "statute",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -1,0 +1,103 @@
+{
+  "id": "axcnh-anchorx",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — ART/EMT issuer CSVs reviewed; no AnchorX/AxCNH match found on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "AnchorX — AxCNH is a Kazakhstan-authorized CNH stablecoin focused on cross-border BRI use; no EU offer or admission to trading identified",
+        "url": "https://www.anchorx.org/about-us"
+      },
+      {
+        "label": "AFSA — AnchorX.KZ Limited authorized as a fiat stablecoin issuer in Kazakhstan",
+        "url": "https://afsa.aifc.kz/afsa-grants-first-stablecoin-issuer-license/"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AxCNH is a 1:1 CNH-redeemable fiat-backed stablecoin marketed for cross-border payments and settlement.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "AnchorX AxCNH description",
+          "url": "https://www.anchorx.org/about-us",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AnchorX.KZ Limited",
+    "issuerDomicile": "Kazakhstan",
+    "licensingRegulator": "Astana Financial Services Authority (AFSA); fiat stablecoin issuer authorization",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "notes": "AFSA authorization is a Kazakhstan stablecoin-issuer approval, not a U.S. GENIUS PPSI approval. No token-specific U.S. PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was found; the OCC implementation materials remain at proposed-rule stage as of this review.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 — GENIUS Act regulations proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC Digital Assets Licensing Applications — current pending application table",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AFSA — AnchorX.KZ Limited fiat stablecoin issuer authorization",
+        "url": "https://afsa.aifc.kz/afsa-grants-first-stablecoin-issuer-license/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "AnchorX AxCNH issuer disclosure",
+        "url": "https://www.anchorx.org/about-us",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act proposed rule and OCC Digital Assets Licensing Applications table",
+        "Treasury/FinCEN/OFAC GENIUS Act proposed-rule materials and foreign-issuer framework materials",
+        "GENIUS Act statutory text on permitted and foreign issuers",
+        "AFSA official stablecoin issuer announcement and AIFC public register",
+        "AnchorX official AxCNH disclosures",
+        "Web searches for AnchorX/AxCNH GENIUS Act approval, application, or foreign-exception registration"
+      ],
+      "summary": "AnchorX has a foreign AFSA stablecoin-issuer authorization, but no token-specific public U.S. GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer exception was located for AxCNH.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Digital Assets Licensing Applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Treasury GENIUS Act proposed rule on illicit-finance requirements",
+          "url": "https://home.treasury.gov/news/press-releases/sb0435",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

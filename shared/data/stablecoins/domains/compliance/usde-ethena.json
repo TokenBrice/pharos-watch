@@ -1,5 +1,23 @@
 {
   "id": "usde-ethena",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "ART",
+    "references": [
+      {
+        "label": "ESMA MiCA interim register — ART white papers",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+      },
+      {
+        "label": "Ethena USDe Terms and Conditions — EEA",
+        "url": "https://docs.ethena.fi/resources/usde-terms-and-conditions-eea"
+      },
+      {
+        "label": "ESMA MiCA Article 3 definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

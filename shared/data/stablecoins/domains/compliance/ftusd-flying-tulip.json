@@ -1,0 +1,113 @@
+{
+  "id": "ftusd-flying-tulip",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "ftUSD targets a dollar value and is described as an on-chain settlement currency, but it is also a DeFi delta-neutral product and Flying Tulip's terms exclude U.S. persons.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory payment-stablecoin framework",
+          "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+          "sourceKind": "statute",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Flying Tulip ftUSD documentation",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Flying Tulip terms of use",
+          "url": "https://flyingtulip.com/terms-of-use/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Flying Tulip Ltd",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "notes": "Flying Tulip describes ftUSD as a non-yielding dollar-pegged base token used for trading, settlement, and collateral, with optional sftUSD staking and delta-neutral strategies. The reviewed public materials did not identify a GENIUS PPSI approval, state-qualified approval, official application, or foreign-issuer exception. Applicability remains unclear because the product is payment-like in wording but DeFi-native and U.S.-restricted in the reviewed terms.",
+    "references": [
+      {
+        "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "GENIUS Act statutory payment-stablecoin framework",
+        "url": "https://www.congress.gov/bill/119th-congress/senate-bill/1582",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Treasury: FinCEN and OFAC GENIUS Act proposed rulemaking",
+        "url": "https://home.treasury.gov/news/press-releases/sb0435",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-08",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications table",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Flying Tulip ftUSD documentation",
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Flying Tulip terms of use",
+        "url": "https://flyingtulip.com/terms-of-use/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA MiCA Interim Register page and linked register categories (reviewed 2026-08-14)",
+        "OCC GENIUS Act proposed rule and foreign payment-stablecoin registration/application provisions (Bulletin 2026-3)",
+        "OCC digital assets licensing applications table (reviewed 2026-08-14)",
+        "Treasury/FinCEN/OFAC GENIUS Act proposed rulemaking and foreign-issuer comparability rulemaking",
+        "FDIC and NCUA GENIUS Act proposal pages",
+        "Flying Tulip ftUSD documentation and terms of use",
+        "Web searches for Flying Tulip, ftUSD, GENIUS Act, PPSI, and permitted issuer"
+      ],
+      "summary": "Review found no public GENIUS PPSI approval, state-qualified approval, official application, or registered/comparable foreign-issuer determination for ftUSD or Flying Tulip Ltd as of 2026-08-14. The token's DeFi structure and U.S.-person restriction leave final applicability unresolved.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications table",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Flying Tulip ftUSD documentation",
+          "url": "https://docs.flyingtulip.com/product-suite/ft-usd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

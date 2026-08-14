@@ -1,0 +1,16 @@
+{
+  "id": "pmusd-precious-metals",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "RAAC whitepaper — pmUSD is a synthetic CDP stablecoin in a DeFi silo system backed by tokenized gold",
+        "url": "https://docs.raac.io/whitepaper-q1.pdf"
+      },
+      {
+        "label": "ESMA MiCA Article 2 scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  }
+}

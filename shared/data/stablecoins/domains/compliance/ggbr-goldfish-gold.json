@@ -1,0 +1,89 @@
+{
+  "id": "ggbr-goldfish-gold",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA MiCA register portal — no GGBR/GGBR Inc. issuer record located in the reviewed issuer registers",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Goldfish official site — GGBR is gold-backed crypto structured under Wyoming and British Virgin Islands law; no Union offer/admission or MiCA authorization disclosed",
+        "url": "https://goldfishgold.com/"
+      },
+      {
+        "label": "Goldfish whitepaper — GGBR is tokenized gold backed by the ION.au asset-backed security",
+        "url": "https://goldfishgold.com/whitepaper"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "GGBR references and redeems against gold priced per troy ounce rather than a fixed amount of U.S. monetary value. It is therefore a commodity token, not a GENIUS payment stablecoin, even though Goldfish calls it a gold-backed stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act — payment stablecoin definition tied to fixed monetary value",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Goldfish whitepaper",
+          "url": "https://goldfishgold.com/whitepaper",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "GGBR Inc.",
+    "issuerDomicile": "United States",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://goldfishgold.com/collateral",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "GGBR is a gold-backed commodity claim and not a fixed-dollar payment stablecoin. The SEC-hosted I-ON Digital exhibit identifies GGBR Inc. as a Wyoming company and describes the Goldfish product, but it is not a GENIUS Act authorization or application.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications — no GGBR Inc./Goldfish applicant identified",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Goldfish official site",
+        "url": "https://goldfishgold.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Goldfish whitepaper",
+        "url": "https://goldfishgold.com/whitepaper",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "SEC-hosted I-ON Digital exhibit describing the GGBR partnership",
+        "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315225015719/ex99-1.htm",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2025-09-22",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

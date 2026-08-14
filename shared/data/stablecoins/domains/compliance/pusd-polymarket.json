@@ -1,0 +1,51 @@
+{
+  "id": "pusd-polymarket",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "pUSD is described as Polymarket-only USDC-backed collateral for prediction-market trading, rather than a general-purpose payment stablecoin offered for ordinary payments.",
+      "references": [
+        {
+          "label": "Polymarket pUSD documentation",
+          "url": "https://docs.polymarket.com/concepts/pusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Federal Register: proposed GENIUS payment-stablecoin definition",
+          "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-applicable",
+    "references": [
+      {
+        "label": "Polymarket pUSD documentation",
+        "url": "https://docs.polymarket.com/concepts/pusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Polymarket geographic restrictions",
+        "url": "https://help.polymarket.com/en/articles/13364163-geographic-restrictions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Register: proposed GENIUS payment-stablecoin definition",
+        "url": "https://www.occ.gov/news-issuances/federal-register/2026/91fr10202.pdf",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "notes": "No GENIUS authorization was assessed because the reviewed product description makes pUSD platform collateral, not a payment stablecoin. Re-check if pUSD is later externally listed or marketed for general payments, and confirm the token issuer's legal entity.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

@@ -1,0 +1,126 @@
+{
+  "id": "mxnb-juno",
+  "mica": {
+    "status": "out-of-scope"
+  },
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "MXNB is a 1:1 Mexican-peso token with issuer mint and redemption rails and payment infrastructure; its foreign issuer is locally registered rather than U.S.-approved.",
+      "references": [
+        {
+          "label": "GENIUS Act statutory text",
+          "url": "https://www.congress.gov/index.php/bill/119th-congress/senate-bill/1582/text",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "Juno MXNB basic operations",
+          "url": "https://docs.bitso.com/juno/docs/overview-of-basic-operations",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Nvío Pagos El Salvador, S.A. de C.V. (Juno)",
+    "issuerDomicile": "El Salvador",
+    "licensingRegulator": "CNAD (El Salvador), stablecoin issuer registration EME-0005",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://mxnb.mx/transparency",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "CNAD's public register lists Nvío Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005 and lists MXNB as eligible for trading. That foreign authorization is not a U.S. GENIUS approval or foreign-issuer exception registration. No token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found; foreign-exception status remains unknown.",
+    "references": [
+      {
+        "label": "OCC GENIUS Act regulations proposed rule",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-02-25",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "OCC digital assets licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "Federal Reserve GENIUS customer-identification proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0005-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "New York DFS GENIUS-aligned proposed stablecoin regulation",
+        "url": "https://www.dfs.ny.gov/reports_and_publications/press_releases/pr20260609",
+        "sourceKind": "state-regulator",
+        "sourceDate": "2026-06-09",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "CNAD public issuer register",
+        "url": "https://cnad.gob.sv/issuers/",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-04-28",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "CNAD stablecoins eligible for trading",
+        "url": "https://cnad.gob.sv/stablecoins-eligible-for-trading/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-08-14"
+      },
+      {
+        "label": "MXNB transparency page",
+        "url": "https://mxnb.mx/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-08-14"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "ESMA interim MiCA register EMT and ART files",
+        "OCC GENIUS Act proposed rule and current Digital Assets Licensing Applications table",
+        "Federal Register GENIUS implementation proposals, including OCC 91 FR 10202 and the joint 91 FR 37234 CIP proposal",
+        "Federal Reserve GENIUS customer-identification proposal",
+        "FDIC GENIUS Act proposed rules",
+        "New York DFS GENIUS-aligned state-qualified stablecoin proposal",
+        "U.S. Treasury state-regime comparability proposal",
+        "CNAD public issuer and eligible-stablecoin registers",
+        "MXNB whitepaper, Juno operations documentation, and transparency page"
+      ],
+      "summary": "CNAD authorization evidence was found for Nvío and MXNB, but no token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found for MXNB as of 2026-08-14.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-08-14",
+      "references": [
+        {
+          "label": "OCC GENIUS Act regulations proposed rule",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-3.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-02-25",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "OCC digital assets licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-08-14"
+        },
+        {
+          "label": "CNAD public issuer register",
+          "url": "https://cnad.gob.sv/issuers/",
+          "sourceKind": "foreign-regulator",
+          "sourceDate": "2026-04-28",
+          "accessedAt": "2026-08-14"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-08-14"
+  }
+}

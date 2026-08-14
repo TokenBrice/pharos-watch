@@ -1,0 +1,16 @@
+{
+  "id": "bbqusdc-steakhouse",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Interim MiCA Register — ART/EMT issuer files reviewed (12 August 2026)",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Morpho Smokehouse USDC vault",
+        "url": "https://app.morpho.org/ethereum/vault/0xBEeFFF209270748ddd194831b3fa287a5386f5bC/smokehouse-usdc?_rsc=1gwxv"
+      }
+    ]
+  }
+}

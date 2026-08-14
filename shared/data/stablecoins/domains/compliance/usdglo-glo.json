@@ -1,5 +1,27 @@
 {
   "id": "usdglo-glo",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "ESMA interim MiCA register — ART/EMT register page reviewed; no USDGLO/Brale issuer entry located on 2026-08-14",
+        "url": "https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica"
+      },
+      {
+        "label": "Glo Dollar availability — USDGLO is offered through OTC desks including Keyrock for non-U.S. users",
+        "url": "https://www.glodollar.org/articles/glo-dollar-availability"
+      },
+      {
+        "label": "Brale USDGLO — USDGLO is a 1:1 redeemable U.S. dollar token issued by Brale",
+        "url": "https://brale.xyz/stablecoins/USDGLO"
+      },
+      {
+        "label": "AMF DASP register — Keyrock FR SAS registration was withdrawn after its MiCA license was granted",
+        "url": "https://www.amf-france.org/sites/institutionnel/files/pdf/61000/en/Obtaining_a_DASP_registration_optional_licensing.pdf?1732509066="
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
