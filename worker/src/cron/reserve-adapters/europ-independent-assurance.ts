@@ -7,7 +7,40 @@ import {
   type IndependentAssuranceProfile,
 } from "./independent-assurance";
 
-const PROFILE: IndependentAssuranceProfile = {
+function formatDate(year: number, month: number, day: number): string | null {
+  if (
+    year < 2000 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > new Date(Date.UTC(year, month, 0)).getUTCDate()
+  ) {
+    return null;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function europReportDate(href: string): string | null {
+  const fileName = decodeURIComponent(new URL(href).pathname.split("/").pop() ?? "");
+  const yearFirst = fileName.match(/((?:19|20)\d{2})[._-](\d{1,2})[._-](\d{1,2})/);
+  const dayFirst = fileName.match(/(\d{1,2})[._-](\d{1,2})[._-]((?:19|20)?\d{2})/);
+  const quarter = fileName.match(/Q([1-4])[_-]((?:19|20)\d{2})/i);
+  if (yearFirst) {
+    return formatDate(Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3]));
+  }
+  if (dayFirst) {
+    const year = dayFirst[3].length === 2 ? 2000 + Number(dayFirst[3]) : Number(dayFirst[3]);
+    return formatDate(year, Number(dayFirst[2]), Number(dayFirst[1]));
+  }
+  if (quarter) {
+    const month = Number(quarter[1]) * 3;
+    const day = new Date(Date.UTC(Number(quarter[2]), month, 0)).getUTCDate();
+    return formatDate(Number(quarter[2]), month, day);
+  }
+  return null;
+}
+
+export const EUROP_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = {
   adapterName: "europ-independent-assurance",
   product: "EUROP",
   profile: "europ-v1",
@@ -40,8 +73,11 @@ const PROFILE: IndependentAssuranceProfile = {
       relativePpm: 1,
     },
   },
-  isReportCandidate: (href, text) =>
-    !/whitepaper/i.test(`${href} ${text}`) && /europ|reserve|attestation|audit/i.test(`${href} ${text}`),
+  isReportCandidate: (href) => {
+    const decoded = decodeURIComponent(href);
+    return /(?:SALVUS.*Attestation.*(?:EUROP|Letter)|Attestation.*(?:number|nombre).*EUROP)/i.test(decoded);
+  },
+  reportDateFromCandidate: europReportDate,
 };
 
 export async function fetchEuropIndependentAssuranceReserves(
@@ -52,5 +88,12 @@ export async function fetchEuropIndependentAssuranceReserves(
 ): Promise<AdapterResult> {
   const params = parseLiveReserveAdapterParams("europ-independent-assurance", config.params) as
     LiveReserveAdapterParamsByKey["europ-independent-assurance"];
-  return fetchIndependentAssuranceReserves(coin, config, signal, PROFILE, params, ctx);
+  return fetchIndependentAssuranceReserves(
+    coin,
+    config,
+    signal,
+    EUROP_INDEPENDENT_ASSURANCE_PROFILE,
+    params,
+    ctx,
+  );
 }

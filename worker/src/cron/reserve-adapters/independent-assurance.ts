@@ -35,6 +35,7 @@ export interface IndependentAssuranceProfile {
   classifications: Readonly<Record<string, AssuranceSliceClassification>>;
   reconciliation?: IndependentAssuranceReconciliationOptions;
   isReportCandidate: (href: string, text: string) => boolean;
+  reportDateFromCandidate?: (href: string, text: string) => string | null;
 }
 
 interface ReportCandidate {
@@ -238,7 +239,9 @@ export async function verifyIndependentAssuranceReport(args: {
   const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
   const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
   const datedCandidates = candidates.map((candidate) => {
-    const date = parseDiscoveryDate(`${candidate.url} ${candidate.text}`);
+    const date = args.profile.reportDateFromCandidate
+      ? args.profile.reportDateFromCandidate(candidate.url, candidate.text)
+      : parseDiscoveryDate(`${candidate.url} ${candidate.text}`);
     return { ...candidate, date };
   });
   const ambiguousDate = datedCandidates.some((candidate) => candidate.date == null);
