@@ -592,6 +592,40 @@ export const PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "The PSM collateral is placed into QiDao-approved yield strategies, so the route remains correlated with QiDao's own collateral and strategy liquidity rather than ordinary CDP repayment.",
     ],
   },
+  "iusd-indigo-protocol": {
+    ...psmSwapBase,
+    outputAssetType: "stable-basket",
+    unresolvedOutputAssetKeys: ["usdm-moneta", "usda-anzens", "USDCx (Cardano)"],
+    unresolvedOutputDisposition: "reviewed-external",
+    capacityModel: { kind: "supply-ratio", ratio: 0.15577082, confidence: "heuristic", basis: "psm-balance-share" },
+    costModel: fixedFee(100, "Indigo's current iUSD PSM data and app quote show a 1% redemption fee"),
+    routeExitCorrelation: "same-protocol-liquidity",
+    reviewedAt: "2026-08-13",
+    docs: [
+      sourceRef("Indigo redemptions", "https://docs.indigoprotocol.io/readme/redemptions", [
+        "route",
+        "access",
+        "settlement",
+        "fees",
+      ]),
+      sourceRef("Indigo v3 overview", "https://docs.indigoprotocol.io/readme/indigo-protocol-v3.md", ["route", "access"]),
+      sourceRef(
+        "Indigo governance proposal on RMR/redemption",
+        "https://forum.indigoprotocol.io/t/proposal-for-adjusting-rmr-and-enable-redemption-for-iusd/13967",
+        ["route", "fees"],
+      ),
+      sourceRef("Current Indigo protocol parameters API", "https://analytics.indigoprotocol.io/api/v3/protocol-params", ["access"]),
+      sourceRef("Current Indigo assets API", "https://analytics.indigoprotocol.io/api/v3/assets", ["route", "capacity", "fees"]),
+      sourceRef("Current Indigo asset analytics API", "https://analytics.indigoprotocol.io/api/v3/analytics/assets", ["capacity"]),
+      sourceRef("Current Indigo swap application", "https://app.indigoprotocol.io/", ["route", "access", "fees"]),
+    ],
+    notes: [
+      "The modeled holder-facing route is Indigo's funded PSM swap: iUSD exits to USDM, USDA, or USDCx at a 1% redemption fee; the separate CDP redemption signer path is not included.",
+      "USDM and USDA are verified tracked Pharos identities (`usdm-moneta` and `usda-anzens`); USDCx on Cardano is not tracked. Because the complete basket must remain unresolved when one member is untracked, all three reviewed identities are preserved in unresolvedOutputAssetKeys.",
+      "The 0.15577082 ratio is iUSD PSM supply divided by iUSD total supply from the reviewed Indigo analytics snapshot, representing a funded-PSM share rather than an immediate promise that all iUSD can exit.",
+      "The current PSM assets data reports redemption enabled for all three pools, a 1% fee, and a 10,000-unit minimum order; wallet connection is normal permissionless onchain access rather than an allowlist.",
+    ],
+  },
 };
 
 applyTrackedReviewedDocs(

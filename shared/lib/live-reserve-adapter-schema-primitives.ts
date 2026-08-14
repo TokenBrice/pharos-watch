@@ -218,6 +218,94 @@ const chronicleNavParamsSchema = z
   })
   .strict();
 
+const usdaiHubParamsSchema = z
+  .object({
+    hubAddress: EvmAddressSchema,
+    baseTokenAddress: EvmAddressSchema,
+    implementationAddress: EvmAddressSchema,
+    redemptionCapacity: z
+      .object({
+        holderEligibility: RedemptionHolderEligibilitySchema,
+        sourceUrls: z.array(AbsoluteUrlSchema).nonempty(),
+      })
+      .strict(),
+    rpcUrl: AbsoluteUrlSchema.optional(),
+    fallbackRpcUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+const xdaiBridgeParamsSchema = z
+  .object({
+    foreignBridgeAddress: EvmAddressSchema,
+    homeBridgeAddress: EvmAddressSchema,
+    blockRewardAddress: EvmAddressSchema,
+    usdsDepositContractAddress: EvmAddressSchema,
+    usdsAddress: EvmAddressSchema,
+    susdsAddress: EvmAddressSchema,
+    daiAddress: EvmAddressSchema,
+    sdaiAddress: EvmAddressSchema,
+    ethereumRpcUrl: AbsoluteUrlSchema.optional(),
+    ethereumFallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    gnosisRpcUrl: AbsoluteUrlSchema.optional(),
+    gnosisFallbackRpcUrl: AbsoluteUrlSchema.optional(),
+    finalityTag: z.enum(["safe", "finalized"]).optional(),
+    maxBlockAgeSec: z.number().int().positive().optional(),
+    maxFutureBlockSkewSec: z.number().int().nonnegative().optional(),
+    crossChainSkewWarningSec: z.number().int().nonnegative().optional(),
+    maxCrossChainSkewSec: z.number().int().positive().optional(),
+    coverageShortfallWarningRatio: z.number().finite().positive().max(1).optional(),
+    surplusWarningRatio: z.number().finite().gt(1).optional(),
+    maxSurplusRatio: z.number().finite().gt(1).optional(),
+    legacyWarningPct: z.number().finite().nonnegative().optional(),
+    legacyMaterialityPct: z.number().finite().positive().max(100).optional(),
+    maxWithdrawDivergencePct: z.number().finite().nonnegative().max(100).optional(),
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+  })
+  .strict()
+  .superRefine((params, ctx) => {
+    if (
+      params.crossChainSkewWarningSec != null &&
+      params.maxCrossChainSkewSec != null &&
+      params.crossChainSkewWarningSec > params.maxCrossChainSkewSec
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["crossChainSkewWarningSec"],
+        message: "crossChainSkewWarningSec must be less than or equal to maxCrossChainSkewSec",
+      });
+    }
+    if (
+      params.surplusWarningRatio != null &&
+      params.maxSurplusRatio != null &&
+      params.surplusWarningRatio > params.maxSurplusRatio
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["surplusWarningRatio"],
+        message: "surplusWarningRatio must be less than or equal to maxSurplusRatio",
+      });
+    }
+    if (
+      params.legacyWarningPct != null &&
+      params.legacyMaterialityPct != null &&
+      params.legacyWarningPct > params.legacyMaterialityPct
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["legacyWarningPct"],
+        message: "legacyWarningPct must be less than or equal to legacyMaterialityPct",
+      });
+    }
+  });
+
+const hiveHbdProtocolParamsSchema = z
+  .object({
+    chain: z.literal("hive-mainnet"),
+    hardfork: z.literal("hf26-plus"),
+    treasuryAccount: z.literal("hive.fund"),
+  })
+  .strict();
+
 const superstateLiquidityParamsSchema = chainlinkNavParamsSchema
   .extend({
     liquidityUrl: AbsoluteUrlSchema,
@@ -1183,6 +1271,9 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   tetherTransparency: tetherTransparencyParamsSchema,
   unitedPor: unitedPorParamsSchema,
   usd1BundleOracle: usd1BundleOracleParamsSchema,
+  hiveHbdProtocol: hiveHbdProtocolParamsSchema,
+  usdaiHub: usdaiHubParamsSchema,
+  xdaiBridge: xdaiBridgeParamsSchema,
   yamato: yamatoParamsSchema,
 } as const;
 

@@ -95,6 +95,51 @@
       "message": "xDAI is native to Gnosis Chain; the configured contract is listed as a traded wrapper rather than a canonical supply contract."
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "xdai-bridge",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "xdai-gnosis",
+    "display": {
+      "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+      "label": "Gnosis xDAI bridge collateral"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "foreignBridgeAddress": "0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016",
+      "homeBridgeAddress": "0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6",
+      "blockRewardAddress": "0x481c034c6d9441db23Ea48De68BCAe812C5d39bA",
+      "usdsDepositContractAddress": "0x5C183C8A49aBA6e31049997a56D75600E27FF8c9",
+      "usdsAddress": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+      "susdsAddress": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+      "daiAddress": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      "sdaiAddress": "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      "ethereumRpcUrl": "https://ethereum-rpc.publicnode.com",
+      "gnosisRpcUrl": "https://gnosis-rpc.publicnode.com",
+      "finalityTag": "safe",
+      "maxBlockAgeSec": 1800,
+      "maxFutureBlockSkewSec": 60,
+      "crossChainSkewWarningSec": 30,
+      "maxCrossChainSkewSec": 300,
+      "coverageShortfallWarningRatio": 0.995,
+      "surplusWarningRatio": 1.05,
+      "maxSurplusRatio": 1.2,
+      "legacyWarningPct": 0.01,
+      "legacyMaterialityPct": 0.1,
+      "maxWithdrawDivergencePct": 1,
+      "sourceUrls": [
+        "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "https://github.com/gnosischain/tokenbridge-contracts/blob/52afd25b05f1afa3347f2f18595748b2149df6aa/USDSMigration.md",
+        "https://developers.skyeco.com/protocol/tokens/susds/"
+      ]
+    }
+  },
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

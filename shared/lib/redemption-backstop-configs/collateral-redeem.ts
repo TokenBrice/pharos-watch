@@ -887,6 +887,77 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
         "The fee is dynamic and should be read from the deployed contract's current fee state/formula rather than treated as a fixed numeric charge.",
       ],
     },
+    "euro3-3a-dao": {
+      ...collateralRedeemBase,
+      outputAssetType: "mixed-collateral",
+      outputAssets: [
+        "asset:wmatic",
+        "asset:usdc.e",
+        "asset:weth",
+        "asset:wbtc",
+        "asset:wsteth",
+        "asset:dai",
+        "asset:meusdc",
+        "asset:meusdt",
+        "asset:meweth",
+        "asset:mewsteth",
+        "asset:mewbtc",
+      ],
+      capacityModel: {
+        kind: "supply-ratio",
+        ratio: 0.40290081,
+        confidence: "heuristic",
+        basis: "full-system-eventual",
+      },
+      costModel: documentedVariableFee(
+        "3A DAO's redemption fee is governance-settable; live Polygon and Linea factory reads returned redemptionRate 0, so the reviewed current fee is 0 bps but can change with governance",
+        "formula",
+      ),
+      reviewedAt: "2026-08-13",
+      docs: [
+        sourceRef("3A DAO redemptions", "https://docs.3adao.org/3a-protocol/protocol-documentation/lending/redemptions", [
+          "route",
+          "access",
+          "fees",
+        ]),
+        sourceRef(
+          "3A DAO collateral interaction reference",
+          "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/interacting-with-contracts/adding-and-removing-collateral",
+          ["route", "settlement"],
+        ),
+        sourceRef("3A DAO EURO3 price stability", "https://docs.3adao.org/3a-protocol/protocol-documentation/euro3-coin/euro3-price-stability", [
+          "route",
+        ]),
+        sourceRef(
+          "Polygon contract registry",
+          "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/polygon-mainnet-contracts",
+          ["route", "access"],
+        ),
+        sourceRef(
+          "Linea contract registry",
+          "https://docs.3adao.org/3a-protocol/technical-documentation/smart-contracts/linea-mainnet-contracts",
+          ["route", "access"],
+        ),
+        sourceRef("Polygon EURO3 token RPC", "https://polygon-rpc.com", ["capacity"]),
+        sourceRef("Linea EURO3 token and factory RPC", "https://rpc.linea.build", ["capacity"]),
+        sourceRef(
+          "Polygon factory verified source",
+          "https://repo.sourcify.dev/contracts/full_match/137/0x4760847023fa0833221ae76e01db1e483a5d20e0/sources",
+          ["route", "fees", "access"],
+        ),
+        sourceRef(
+          "Linea factory verified source",
+          "https://repo.sourcify.dev/contracts/full_match/59144/0x65c6fd9b3a2a892096881e28f07c732ed128893e/sources",
+          ["route", "fees", "access"],
+        ),
+      ],
+      notes: [
+        "EURO3 holders can deposit EURO3 into another user's eligible vault and receive its collateral less the redemption fee; the route is gated by the vault health-factor condition rather than being a generic issuer buyback.",
+        "The 0.40290081 capacity ratio is the reviewed Polygon snapshot of eligible vault debt against total EURO3 debt, so it is a heuristic current-debt share and an eventual-system bound rather than a fixed liquidity guarantee.",
+        "The current live Polygon and Linea reads returned redemptionRate 0 (0 bps), while the factory and protocol materials expose a governance-adjustable fee, so the zero-fee observation is not treated as permanent.",
+        "The reviewed deployments are Polygon and Linea; Base was not present in the official registries checked and is intentionally not implied by this config.",
+      ],
+    },
   }),
 ];
 

@@ -65,5 +65,31 @@
       "message": "HBD is issued by the Hive protocol rather than an EVM-style token contract. Pharos does not list a contract address until Hive is supported in the chain metadata registry."
     }
   ],
-  "launchDate": "2020-03-20"
+  "launchDate": "2020-03-20",
+  "liveReservesConfig": {
+    "adapter": "hive-hbd-protocol",
+    "version": 1,
+    "semantics": "protocol-reserve",
+    "display": {
+      "url": "https://hive.io/hbd/",
+      "label": "Hive HBD protocol state"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-json",
+        "url": "https://api.hive.blog"
+      },
+      "fallbacks": [
+        {
+          "kind": "http-json",
+          "url": "https://api.openhive.network"
+        }
+      ]
+    },
+    "params": {
+      "chain": "hive-mainnet",
+      "hardfork": "hf26-plus",
+      "treasuryAccount": "hive.fund"
+    }
+  }
 }

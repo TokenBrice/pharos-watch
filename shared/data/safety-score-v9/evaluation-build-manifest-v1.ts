@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/constants.ts",
-      "sha256": "63f0b5c76a00afdd12d566593d8f262a803e1c07de938b4c7b752204c542530d"
+      "sha256": "6a218da6cd905152df41fcf97afbc8097f0552365c2576560ddae1afaa0f44ec"
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
@@ -82,7 +82,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "fac69be49a12113a8e749999ce7c3ace00042316e8b1ff16baa4068649ade954"
+      "sha256": "63f2b2f89ed9fdf23f1702d386f3e8b37d605220a416a6ddbd69411b6ed056a3"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -118,7 +118,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-      "sha256": "8cf6e9df68cf8bf1d1e2cab6eca177d12ab19cf6f3cd830d3c7f2bd6d62be4f0"
+      "sha256": "341b84f60f0db4a9bbe7bb3b7ba4efcb2cf0cd890cb4003990c955ff355b3985"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
@@ -134,7 +134,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-      "sha256": "48db1a97f4c87fc58923726bfd40295a338a2ea16f64492b16dec77e84117e04"
+      "sha256": "7909d583b6048fee7c27776aace4fc8e19c10bd90f69939c9ffe565de140326d"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
@@ -402,7 +402,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
-      "sha256": "aa64c3aa2b3df56532e902cd2f2dfcdcad75f87cb72aa12f90ccd45d8b619b7e"
+      "sha256": "070c89add05bcabb547ac67d455bdb629c34a5d660ce760143920fdcd5fe92a7"
     },
     {
       "path": "worker/src/lib/evm-selectors.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "57caf50f7f18eaf0adbffe87ddf0b5e62cd44ef7a36f81731e23090bb19d91a6"
+  "digest": "e7bdabdfd4b50df2bf9997b0a0d78e9e4300f0a0314dacfb6bf4090d35f5f96a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

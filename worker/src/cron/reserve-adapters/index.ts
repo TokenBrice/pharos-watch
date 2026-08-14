@@ -26,6 +26,7 @@ import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
 import { fetchFraxBalanceSheetReserves, fetchFraxFpiCollateralReserves } from "./frax";
 import { fetchFxReserves } from "./fx";
 import { fetchGhoReserves } from "./gho";
+import { fetchHiveHbdProtocolReserves } from "./hive-hbd-protocol";
 import { fetchInfiniFiReserves } from "./infinifi";
 import { fetchJupUsdReserves } from "./jupusd";
 import { fetchListaReserves } from "./lista";
@@ -60,10 +61,12 @@ import { fetchUnitedPorReserves } from "./united-por";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
 import { fetchUsdhNativeMarketsReserves } from "./usdh-native-markets";
 import { fetchUsdAiProofOfReserves } from "./usdai-proof-of-reserves";
+import { fetchUsdaiHubReserves } from "./usdai-hub";
 import { fetchUsd1BundleOracleReserves } from "./usd1-bundle-oracle";
 import { fetchUsddDataPlatformReserves } from "./usdd-data-platform";
 import { fetchUsdtbTransparencyReserves } from "./usdtb-transparency";
 import { fetchYamatoReserves } from "./yamato";
+import { fetchXdaiBridgeReserves } from "./xdai-bridge";
 import { fetchZephyrScannerReserves } from "./zephyr-scanner";
 import type { AdapterFn, ReserveAdapterDefinition } from "./types";
 
@@ -98,6 +101,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "frax-fpi-collateral": fetchFraxFpiCollateralReserves,
   fx: fetchFxReserves,
   gho: fetchGhoReserves,
+  "hive-hbd-protocol": fetchHiveHbdProtocolReserves,
   infinifi: fetchInfiniFiReserves,
   jupusd: fetchJupUsdReserves,
   lista: fetchListaReserves,
@@ -131,9 +135,11 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "usdgo-transparency": fetchUsdgoTransparencyReserves,
   "usdh-native-markets": fetchUsdhNativeMarketsReserves,
   "usdai-proof-of-reserves": fetchUsdAiProofOfReserves,
+  "usdai-hub": fetchUsdaiHubReserves,
   "usd1-bundle-oracle": fetchUsd1BundleOracleReserves,
   "usdd-data-platform": fetchUsddDataPlatformReserves,
   "usdtb-transparency": fetchUsdtbTransparencyReserves,
+  "xdai-bridge": fetchXdaiBridgeReserves,
   yamato: fetchYamatoReserves,
   "zephyr-scanner": fetchZephyrScannerReserves,
 } satisfies Record<LiveReserveAdapterKey, AdapterFn>;
