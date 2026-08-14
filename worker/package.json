@@ -11,15 +11,15 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20260730.1",
+    "@cloudflare/workers-types": "5.20260804.1",
     "typescript": "~5.9.0",
-    "wrangler": "4.116.0"
+    "wrangler": "4.119.0"
   },
   "dependencies": {
-    "@cf-wasm/resvg": "^0.3.5",
+    "@cf-wasm/resvg": "^0.4.0",
     "react": "^19.2.8",
     "satori": "^0.29.0",
-    "viem": "2.55.10",
+    "viem": "2.55.11",
     "zod": "^4.4.3"
   }
 }
