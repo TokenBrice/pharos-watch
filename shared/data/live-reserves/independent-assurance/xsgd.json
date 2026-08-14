@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "product": "XSGD",
+  "profile": "straitsx-v1",
+  "officialIndexUrl": "https://www.straitsx.com/xsgd",
+  "reportUrl": "https://cdn.prod.website-files.com/6119d1f2b05f8e65b1739721/6a6c78f17a4f92b635508f81_XSGD%20SCS%20Reserve%20Account%20Report%20(30%20June%202026).pdf",
+  "reportSha256": "51afebb832b1255ef26e6a93cc5597531568a3de86b9c1aebc7589891ac99e51",
+  "reportByteLength": 776338,
+  "reportDate": "2026-06-30",
+  "reportAsOf": "2026-06-30T23:59:00+08:00",
+  "reportTimeZone": "Singapore Time (GMT+8)",
+  "attestor": "KK Yap & Associates",
+  "engagement": "Independent accountant's reasonable-assurance examination under SSAE 3000 (Revised)",
+  "conclusion": "unqualified",
+  "unit": "SGD",
+  "assets": [
+    { "code": "cash", "label": "Cash", "amount": "11330779" },
+    {
+      "code": "short-dated-government-or-repo",
+      "label": "Bonds or notes denominated in SGD with no more than three months residual maturity or eligible overnight reverse repos",
+      "amount": "12343929"
+    }
+  ],
+  "liabilities": [
+    { "code": "erc20", "label": "XSGD ERC20 circulation", "amount": "10289766" },
+    { "code": "zrc2", "label": "XSGD ZRC2 circulation", "amount": "1252756" },
+    { "code": "pos", "label": "XSGD POS circulation", "amount": "2157245" },
+    { "code": "hts", "label": "XSGD HTS circulation", "amount": "50000" },
+    { "code": "avax", "label": "XSGD AVAX circulation", "amount": "1726082" },
+    { "code": "arb", "label": "XSGD ARB circulation", "amount": "16374" },
+    { "code": "xrp", "label": "XSGD XRP circulation", "amount": "10000" },
+    { "code": "lat", "label": "XSGD LAT circulation", "amount": "25590" },
+    { "code": "base", "label": "XSGD BASE circulation", "amount": "8087660" },
+    { "code": "sol", "label": "XSGD SOL circulation", "amount": "45696" }
+  ],
+  "reportedAssetTotal": "23674708",
+  "computedAssetTotal": "23674708",
+  "reportedLiabilityTotal": "23661169",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "3f992cfcf59e2bd33d219923721019dc3dc2644cc32031d44052ecf43fe9559f",
+    "pageCount": 6
+  }
+}

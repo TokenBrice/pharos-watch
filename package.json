@@ -149,6 +149,7 @@
     "check:feature-flag-inlining": "node scripts/ci/check-feature-flag-inlining.mjs",
     "check:docs-api-reference": "node scripts/maintenance/generate-api-reference.mjs --check",
     "refresh:html-fixtures": "tsx scripts/maintenance/refresh-reserve-html-fixtures.ts",
+    "refresh:assurance-reports": "tsx scripts/maintenance/refresh-independent-assurance-reports.ts",
     "refresh:markdown-fixtures": "tsx scripts/maintenance/refresh-markdown-export-fixtures.ts",
     "seo:live-smoke": "node scripts/ci/check-seo-live-smoke.mjs",
     "seo:check": "node scripts/ci/check-seo-static.mjs",

@@ -97,8 +97,8 @@
     }
   },
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "audx-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "audx-aussie-dollar-token",
     "scoring": {
@@ -115,13 +115,10 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "AUD cash and government-backed instruments",
-          "pct": 100,
-          "risk": "low"
-        }
-      ]
+      "product": "AUDX",
+      "profile": "audx-v1",
+      "indexHost": "www.audxtoken.com",
+      "reportHosts": ["www.audxtoken.com"]
     }
   },
   "launchDate": "2024-08-26"

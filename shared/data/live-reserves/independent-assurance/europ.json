@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "product": "EUROP",
+  "profile": "europ-v1",
+  "officialIndexUrl": "https://schuman.io/reserve-audits/",
+  "reportUrl": "https://schuman.io/wp-content/uploads/2026/07/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_30_06_2026.pdf",
+  "reportSha256": "f404b5a20d652108670316470e52ba61659ac9faef4f5cbcf1b8afa488d44042",
+  "reportByteLength": 531611,
+  "reportDate": "2026-06-30",
+  "reportAsOf": "2026-06-30T08:00:00Z",
+  "reportTimeZone": "UTC",
+  "reportIssuedAt": "2026-07-03T10:06:52+02:00",
+  "attestor": "KPMG S.A.",
+  "engagement": "Statutory-auditor attestation under French CNCC professional doctrine; neither an audit nor a review",
+  "conclusion": "nothing-came-to-attention",
+  "unit": "EUR",
+  "assets": [
+    {
+      "code": "cash",
+      "label": "Cash held at regulated financial institutions",
+      "amount": "2300280.35"
+    },
+    {
+      "code": "cash-equivalents",
+      "label": "Cash equivalents held at regulated financial institutions",
+      "amount": "4899995.78"
+    }
+  ],
+  "liabilities": [
+    { "code": "ethereum", "label": "Ethereum EURØP in circulation", "amount": "5681788.86" },
+    { "code": "polygon", "label": "Polygon EURØP in circulation", "amount": "253546.06" },
+    { "code": "avalanche", "label": "Avalanche EURØP in circulation", "amount": "654963.67" },
+    { "code": "plasma", "label": "Plasma EURØP in circulation", "amount": "249993.69" }
+  ],
+  "reportedAssetTotal": "7200276.54",
+  "computedAssetTotal": "7200276.13",
+  "reportedLiabilityTotal": "6840292.27",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "c4b107c0c9dee1a8e5c7c7b8404b071a8a5d7d11b9be0d5986fa23c2f12cd65e",
+    "pageCount": 5
+  }
+}

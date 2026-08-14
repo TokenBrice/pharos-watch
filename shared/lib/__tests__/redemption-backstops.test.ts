@@ -482,9 +482,9 @@ describe("getRedemptionBackstopConfig", () => {
     expect(getRedemptionBackstopConfig("usdo-openeden")).toMatchObject({
       routeFamily: "offchain-issuer",
       settlementModel: "same-day",
-      capacityModel: { kind: "reserve-sync-metadata" },
+      capacityModel: { kind: "supply-full", confidence: "documented-bound" },
       costModel: { kind: "fee-bps", feeBps: 10 },
-      reviewedAt: "2026-08-13",
+      reviewedAt: "2026-08-14",
     });
 
     expect(getRedemptionBackstopConfig("usdcv-societe-generale-forge")).toMatchObject({

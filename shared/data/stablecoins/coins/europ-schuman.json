@@ -100,8 +100,8 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "europ-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "europ-schuman",
     "scoring": {
@@ -118,18 +118,10 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "Euro cash and cash equivalents (EU banks incl. Societe Generale)",
-          "pct": 98,
-          "risk": "very-low"
-        },
-        {
-          "name": "Additional reserve fund",
-          "pct": 2,
-          "risk": "low"
-        }
-      ]
+      "product": "EUROP",
+      "profile": "europ-v1",
+      "indexHost": "schuman.io",
+      "reportHosts": ["schuman.io"]
     }
   },
   "launchDate": "2024-12-01"

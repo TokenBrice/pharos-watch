@@ -100,8 +100,8 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "straitsx-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "xsgd-straitsx",
     "scoring": {
@@ -118,13 +118,10 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "SGD deposits & MAS-eligible securities",
-          "pct": 100,
-          "risk": "very-low"
-        }
-      ]
+      "product": "XSGD",
+      "profile": "straitsx-v1",
+      "indexHost": "www.straitsx.com",
+      "reportHosts": ["cdn.prod.website-files.com"]
     }
   },
   "launchDate": "2020-03-25"

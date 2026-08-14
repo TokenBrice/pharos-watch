@@ -290,3 +290,4 @@ d4efe6c590e4429387ea91a9b4b73bad760042e4:shared/data/safety-score-v9/transfer-re
 94639a195379b809a7262563c9d8f20c474caf16:shared/data/safety-score-v9/mechanism-review-overlays-v1.json:generic-api-key:5384
 3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:739
 3717154f858c688984acb81d10f95fa3ecd849f4:worker/src/cron/reserve-adapters/erc4626-single-asset.ts:generic-api-key:741
+62c013cafc9e0d2420e5a12ffd68aa9e2f5434a2:worker/src/cron/reserve-adapters/usdrif-rif.ts:generic-api-key:28

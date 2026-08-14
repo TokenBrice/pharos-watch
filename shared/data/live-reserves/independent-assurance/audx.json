@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "product": "AUDX",
+  "profile": "audx-v1",
+  "officialIndexUrl": "https://www.audxtoken.com/transparency",
+  "reportUrl": "https://www.audxtoken.com/_files/ugd/539754_f60cd94b9a5148cfafd351f6157c8036.pdf",
+  "reportSha256": "6f310bc328c9373bb8e645a580d5e2ec5313086a50671ce4ea0e142619cc7eca",
+  "reportByteLength": 393979,
+  "reportDate": "2026-06-30",
+  "reportAsOf": "2026-06-30T23:59:00+11:00",
+  "reportTimeZone": "AEDT (as printed in the report; normalized conservatively to UTC)",
+  "attestor": "Aura Partners",
+  "engagement": "Independent limited assurance engagement under ASAE 3000 and ASAE 3100",
+  "conclusion": "nothing-came-to-attention",
+  "unit": "AUD",
+  "assets": [
+    {
+      "code": "designated-bank-accounts",
+      "label": "Australian Dollar reserves held in designated TAU accounts",
+      "amount": "3231280.83"
+    }
+  ],
+  "liabilities": [
+    { "code": "polygon", "label": "Polygon AUDX supply", "amount": "1321016.00" },
+    { "code": "ethereum", "label": "Ethereum AUDX supply", "amount": "1435040.00" },
+    { "code": "conflux", "label": "Conflux AUDX supply", "amount": "52000.00" },
+    { "code": "redbelly", "label": "Redbelly AUDX supply", "amount": "100000.00" },
+    { "code": "xdc", "label": "XDC AUDX supply", "amount": "50000.00" },
+    { "code": "ink", "label": "Ink AUDX supply", "amount": "50000.00" },
+    { "code": "solana", "label": "Solana AUDX supply", "amount": "1.00" }
+  ],
+  "reportedAssetTotal": "3231280.83",
+  "computedAssetTotal": "3231280.83",
+  "reportedLiabilityTotal": "3008057.00",
+  "extraction": {
+    "tool": "Poppler pdftotext -layout",
+    "parserVersion": "26.08.0",
+    "normalizedTextSha256": "0897c66b54cf3c964643cfcd7ed73e9fcf4e29d42256eb67b76c2469b9d25aa2",
+    "pageCount": 4
+  }
+}

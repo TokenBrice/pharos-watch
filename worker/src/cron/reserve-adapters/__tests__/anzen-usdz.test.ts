@@ -1,27 +1,46 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { encodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 
-vi.mock("../helpers", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../helpers")>();
+const EXPECTED_HASHES: Record<string, string> = {
+  "0x6000": "0x362165471d41a934b39e4b4ae9f54b35faa8835087f182881c2ba79756183ebd",
+  "0x6001": "0x313c96fdfbc97ae74b42b004cfb2f42384221747fc9d4e4dc983c75e5797350c",
+  "0x6002": "0x6ff74d8b44325ccad039711f6301af381f62a10a113d97fd8ae262dcd197fbeb",
+  "0x6003": "0xc873093927468efb942cd20c27b87ffb3df6f5c74e7db1467c3fe18619eb16ab",
+  "0x6004": "0x7991d52bae7602ae657da20ec722afa2e060aa0c76486c2e409619d2743e6eab",
+  "0x7000": "0xe72ed6f9f3222f61a7901b61e2a44bd7869bf79ac4146c777a97226137baeeaf",
+};
+
+vi.mock("viem/utils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("viem/utils")>();
   return {
     ...actual,
-    fetchErc20TotalSupply: vi.fn(),
-    fetchOnchainMulticall3: vi.fn(),
+    keccak256: vi.fn((value: `0x${string}`) => EXPECTED_HASHES[value] ?? actual.keccak256(value)),
   };
 });
 
-import { fetchErc20TotalSupply, fetchOnchainMulticall3 } from "../helpers";
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
+  return { ...actual, fetchEvmRpcBatch: vi.fn() };
+});
+
+import { fetchEvmRpcBatch } from "../../../lib/evm-rpc";
 import { fetchAnzenUsdzReserves } from "../anzen-usdz";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
 
-const signal = AbortSignal.timeout(5_000);
-
-const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
-const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const ORACLE_CONTRACT = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";
-const FEE_COEFFICIENT = 100_000_000n;
+const signal = new AbortController().signal;
+const ETHEREUM = "0xa469b7ee9ee773642b3e93e842e5d9b5baa10067";
+const BASE = "0x04d5ddf5f3a8939889f11e97f8c4bb48317f1938";
+const ARBITRUM = "0x5018609ab477cc502e170a5accf5312b86a4b94f";
+const BLAST = "0x52056ed29fe015f4ba2e3b079d10c0b87f46e8c6";
+const MANTA = "0x73d23f3778a90be8846e172354a115543df2a7e4";
+const SPCT = "0xf30a29f1c540724fd8c5c4be1af604a6c6800d29";
+const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const ORACLE = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";
+const ENDPOINT = "0x1a44076050125825900e736c501f859c50fe728c";
+const WAD = 10n ** 18n;
 
 function word(value: bigint | boolean | string): `0x${string}` {
   if (typeof value === "string") {
@@ -31,287 +50,172 @@ function word(value: bigint | boolean | string): `0x${string}` {
   return `0x${uint.toString(16).padStart(64, "0")}` as `0x${string}`;
 }
 
-/**
- * Route the mocked multicall by label: the probe reads the three pinned
- * identities, both pause flags, the SPCT reserve and both USDC balances in one
- * batch, so an ordered mock queue would be fragile here.
- */
-function primeUsdzRedeemMocks(overrides: Partial<Record<string, `0x${string}`>> = {}, options: { fail?: boolean } = {}) {
-  const defaults: Record<string, `0x${string}`> = {
-    "usdz:usdc": word(USDC_CONTRACT),
-    "usdz:spct": word(SPCT_POOL_CONTRACT),
-    "usdz:oracle": word(ORACLE_CONTRACT),
-    "usdz:paused": word(false),
-    "usdz:collateral-rate": word(1n),
-    "usdz:redeem-fee-rate": word(0n),
-    "usdz:fee-coefficient": word(FEE_COEFFICIENT),
-    "spct:reserve-usd": word(4_000_000_000n),
-    "spct:paused": word(false),
-    "spct:redeem-fee-rate": word(0n),
-    "spct:fee-coefficient": word(FEE_COEFFICIENT),
-    "spct:usdz-whitelisted": word(true),
-    "usdc:spct-balance": word(4_000_000_000n),
-    "usdc:usdz-balance": word(0n),
-    "oracle:price": word(10n ** 18n),
-  };
-  const values = { ...defaults, ...overrides };
-  vi.mocked(fetchOnchainMulticall3).mockImplementation((args: unknown) => {
-    if (options.fail) return Promise.resolve(null);
-    const { calls } = args as { calls: Array<{ label: string }> };
-    return Promise.resolve(
-      calls.map((call) => ({ label: call.label, success: true, returnData: values[call.label] ?? word(0n) })),
-    );
-  });
+const supplies = [
+  806422803388436303620608n,
+  6695168794918140000000000n,
+  77436723139500000000000n,
+  41012515268560000000000n,
+  500165777909000000000000n,
+] as const;
+const liability = supplies.reduce((sum, value) => sum + value, 0n);
+const pooled = liability + 86_77219n * 10n ** 13n;
+
+function encodeSymbol(): `0x${string}` {
+  return encodeAbiParameters([{ type: "string" }], ["USDz"]);
 }
 
-function primeSupplyMocks() {
-  vi.mocked(fetchErc20TotalSupply)
-    .mockResolvedValueOnce(10_000_000n * 10n ** 18n)
-    .mockResolvedValueOnce(4_000_000n * 10n ** 18n)
-    .mockResolvedValueOnce(2_500_000n * 10n ** 18n)
-    .mockResolvedValueOnce(750_000n * 10n ** 18n)
-    .mockResolvedValueOnce(250_000n * 10n ** 18n)
-    .mockResolvedValueOnce(17_600_000n * 10n ** 18n);
+function metadataResponse(): Response {
+  return new Response(JSON.stringify({
+    USDz: [{
+      sharedDecimals: 8,
+      endpointVersion: "v2",
+      deployments: {
+        ethereum: { address: ETHEREUM, localDecimals: 18, type: "OFT" },
+        base: { address: BASE, localDecimals: 18, type: "OFT" },
+      },
+    }],
+  }), { headers: { "content-type": "application/json" } });
+}
+
+function aggregateFor(chain: string, overrides: Record<number, `0x${string}`> = {}) {
+  const chainIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain);
+  const values: `0x${string}`[] = [
+    word(supplies[chainIndex] ?? 1n),
+    word(18n),
+    encodeSymbol(),
+    chain === "ethereum" || chain === "base" ? word(ENDPOINT) : word(0n),
+  ];
+  if (chain === "ethereum") {
+    values.push(
+      word(overrides[4] ? BigInt(overrides[4]) : pooled),
+      word(overrides[5] ?? word(SPCT)),
+      word(overrides[6] ?? word(USDC)),
+      word(overrides[7] ?? word(ORACLE)),
+      overrides[8] ?? word(false),
+      overrides[9] ?? word(WAD),
+      overrides[10] ?? word(0n),
+      overrides[11] ?? word(0n),
+      overrides[12] ?? word(100_000_000n),
+      overrides[13] ?? word(pooled),
+      overrides[14] ?? word(4_000_000_000n),
+      overrides[15] ?? word(false),
+      overrides[16] ?? word(0n),
+      overrides[17] ?? word(100_000_000n),
+      overrides[18] ?? word(true),
+      overrides[19] ?? word(4_000_000_000n),
+      overrides[20] ?? word(0n),
+      overrides[21] ?? word(WAD),
+    );
+  }
+  const encoded = encodeAbiParameters(
+    [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }],
+    [[...values.map<[boolean, `0x${string}`]>((returnData, index) => [!(!["ethereum", "base"].includes(chain) && index === 3), returnData])]],
+  );
+  return encoded;
+}
+
+function primeRpcMocks(overrides: Record<number, `0x${string}`> = {}, codeDrift = false): void {
+  vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain) => {
+    const codeIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain ?? "");
+    const code = codeDrift && chain === "blast" ? "0xdead" : `0x600${codeIndex}`;
+    if (chain === "ethereum") {
+      return [code, "0x7000", "0x7001", "0x7002", aggregateFor(chain, overrides)];
+    }
+    return [code, aggregateFor(chain ?? "")];
+  });
 }
 
 function makeCoin(): StablecoinMeta {
   return {
     id: "usdz-anzen",
     name: "Anzen USDz",
-    ticker: "USDz",
+    symbol: "USDz",
     contracts: [
-      { chain: "ethereum", address: "0xA469B7Ee9ee773642b3e93E842e5D9b5BaA10067", decimals: 18 },
-      { chain: "base", address: "0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938", decimals: 18 },
-      { chain: "arbitrum", address: "0x5018609AB477cC502e170A5aCcf5312B86a4b94f", decimals: 18 },
-      { chain: "blast", address: "0x52056ED29Fe015f4Ba2e3b079D10C0B87f46e8c6", decimals: 18 },
-      { chain: "manta", address: "0x73d23F3778a90Be8846E172354A115543dF2a7E4", decimals: 18 },
+      { chain: "ethereum", address: ETHEREUM, decimals: 18 },
+      { chain: "base", address: BASE, decimals: 18 },
+      { chain: "arbitrum", address: ARBITRUM, decimals: 18 },
+      { chain: "blast", address: BLAST, decimals: 18 },
+      { chain: "manta", address: MANTA, decimals: 18 },
     ],
   } as unknown as StablecoinMeta;
 }
 
 const config: LiveReservesConfig = {
   adapter: "anzen-usdz",
-  version: 1,
+  version: 2,
   semantics: "single-asset",
-  inputs: {
-    primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" },
-  },
+  inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
-  primeUsdzRedeemMocks();
+  primeRpcMocks();
+  vi.stubGlobal("fetch", vi.fn(async () => metadataResponse()));
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchAnzenUsdzReserves", () => {
-  it("computes multichain USDz supply against the onchain SPCT reserve pool", async () => {
-    vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(10_000_000n * 10n ** 18n)
-      .mockResolvedValueOnce(4_000_000n * 10n ** 18n)
-      .mockResolvedValueOnce(2_500_000n * 10n ** 18n)
-      .mockResolvedValueOnce(750_000n * 10n ** 18n)
-      .mockResolvedValueOnce(250_000n * 10n ** 18n)
-      .mockResolvedValueOnce(17_600_000n * 10n ** 18n);
-
+  it("uses pooled SPCT, held SPCT, and bridge-adjusted five-chain liabilities", async () => {
     const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
 
-    expect(result.slices).toEqual([
-      { name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" },
-    ]);
+    expect(result.slices).toEqual([{ name: "SPCT (Secured Private Credit Token)", pct: 100, risk: "high" }]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
-      totalReserveUsd: 17_600_000,
-      supplyUsd: 17_500_000,
-      collateralizationRatio: 17_600_000 / 17_500_000,
       details: {
-        proofKind: "multichain-usdz-vs-spct-total-supply",
-        reserveSourceLabel: "SPCT pool total supply",
-        supplyByChainUsd: {
-          ethereum: 10_000_000,
-          base: 4_000_000,
-          arbitrum: 2_500_000,
-          blast: 750_000,
-          manta: 250_000,
-        },
+        proofKind: "multichain-usdz-pooled-spct-v2",
+        accountedSpctRaw: pooled.toString(),
+        heldSpctRaw: pooled.toString(),
+        liabilityRaw: liability.toString(),
       },
     });
-
-    expect(fetchErc20TotalSupply).toHaveBeenCalledTimes(6);
-    expect(vi.mocked(fetchErc20TotalSupply).mock.calls[3]?.[4]).toBe("https://rpc.blast.io");
-    expect(vi.mocked(fetchErc20TotalSupply).mock.calls[4]?.[4]).toBe("https://pacific-rpc.manta.network/http");
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
+    expect(result.metadata?.supplyUsd).toBeCloseTo(Number(liability) / 1e18, 7);
+    expect(vi.mocked(fetchEvmRpcBatch)).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(fetchEvmRpcBatch).mock.calls.map(([chain]) => chain)).toEqual(
+      expect.arrayContaining(["ethereum", "base", "arbitrum", "blast", "manta"]),
+    );
+    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
   });
 
-  it("does not infer redemption capacity from SPCT collateralization alone", async () => {
-    vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(5_000_000n * 10n ** 18n)
-      .mockResolvedValueOnce(1n)
-      .mockResolvedValueOnce(1n)
-      .mockResolvedValueOnce(1n)
-      .mockResolvedValueOnce(1n)
-      .mockResolvedValueOnce(10_000_000n * 10n ** 18n);
+  it("fails closed when pooled SPCT is below liabilities, held SPCT is short, or surplus exceeds tolerance", async () => {
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).resolves.toBeTruthy();
 
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    primeRpcMocks({ 4: word(liability - 1n) });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("below USDz liabilities");
 
-    expect(result.metadata).toMatchObject({
-      totalReserveUsd: 10_000_000,
-      collateralizationRatio: expect.any(Number),
-    });
-    expect(result.metadata?.immediateRedeemableUsd).toBeUndefined();
-    expect(result.metadata?.immediateRedeemableRatio).toBeUndefined();
-    // Capacity tracks the redeem route's own USDC, never the $10m SPCT pool.
-    expect(result.metadata?.redemption?.capacityUsd).toBe(4_000);
+    primeRpcMocks({ 4: word(pooled), 13: word(pooled - 1n) });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("held SPCT");
+
+    primeRpcMocks({ 4: word(liability + 1_001n * WAD), 13: word(liability + 1_001n * WAD) });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("surplus");
   });
 
-  it("fails closed when required chain metadata is missing", async () => {
+  it("fails closed on reviewed topology, code, identity, pause, and redemption drift", async () => {
     const coin = makeCoin();
     coin.contracts = coin.contracts?.filter((entry) => entry.chain !== "blast");
+    await expect(fetchAnzenUsdzReserves(coin, config, signal)).rejects.toThrow("contract set");
 
-    await expect(fetchAnzenUsdzReserves(coin, config, signal)).rejects.toThrow(
-      "anzen-usdz missing blast contract metadata",
-    );
+    primeRpcMocks({}, true);
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("code hash drifted");
+
+    primeRpcMocks({ 5: word("0x1111111111111111111111111111111111111111") });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("spct() identity");
+
+    primeRpcMocks({ 8: word(true) });
+    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow("paused");
   });
 
-  it("fails closed when a supply probe returns zero or null", async () => {
-    vi.mocked(fetchErc20TotalSupply)
-      .mockResolvedValueOnce(10_000_000n * 10n ** 18n)
-      .mockResolvedValueOnce(4_000_000n * 10n ** 18n)
-      .mockResolvedValueOnce(2_500_000n * 10n ** 18n)
-      .mockResolvedValueOnce(null);
-
-    await expect(fetchAnzenUsdzReserves(makeCoin(), config, signal)).rejects.toThrow(
-      "anzen-usdz totalSupply probe failed for usdz-anzen on blast",
-    );
-  });
-});
-
-describe("fetchAnzenUsdzReserves redeem-route telemetry", () => {
-  it("reports the route open and binds capacity to the SPCT reserve and settleable USDC", async () => {
-    primeSupplyMocks();
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption).toMatchObject({
-      capacityUsd: 4_000,
-      capacityKind: "live-direct",
-      freshnessKind: "same-run-onchain",
-      holderEligibility: "any-holder",
-      settlementDelaySec: 0,
-      routeStatus: "open",
-      routeStatusSource: "onchain",
-      feeBps: 0,
-    });
-    expect(result.metadata?.redemption?.routeStatusReason).toContain("reserveUSD()");
-    expect(result.metadata?.details).toMatchObject({
-      redeemRoute: {
-        proofKind: "usdz-redeem-spct-reserve-and-usdc-settlement",
-        spctReserveUsdRaw: "4000000000",
-        spctUsdcBalanceRaw: "4000000000",
-        usdzUsdcBalanceRaw: "0",
-        routeOpen: true,
-      },
-    });
-    expect(result.warnings).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
-  });
-
-  it("binds capacity to the settlement leg when the SPCT pool cannot pay out its accounted reserve", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({
-      "spct:reserve-usd": word(9_000_000_000n),
-      "usdc:spct-balance": word(1_200_000_000n),
-      "usdc:usdz-balance": word(300_000_000n),
-    });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption?.capacityUsd).toBe(1_500);
-  });
-
-  it("publishes the measured zero capacity without claiming the route is open", async () => {
-    // A drained SPCT pool is not a paused one, so neither "open" nor "paused"
-    // is an honest claim while the route has nothing to pay out.
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({
-      "spct:reserve-usd": word(0n),
-      "usdc:spct-balance": word(0n),
-      "usdc:usdz-balance": word(0n),
-    });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 0, feeBps: 0 });
-    expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
-    expect(result.metadata?.redemption?.routeStatusSource).toBeUndefined();
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
-  });
-
-  it("withholds route openness while the SPCT pool is paused", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({ "spct:paused": word(true) });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption?.capacityUsd).toBe(4_000);
-    expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
-    expect(result.metadata?.details).toMatchObject({ redeemRoute: { routeOpen: false } });
-  });
-
-  it("withholds route openness while the oracle price sits under the collateral rate", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({ "oracle:price": word(10n ** 18n - 1n) });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption?.routeStatus).toBeUndefined();
-  });
-
-  it("composes the USDz and SPCT redeem fees instead of adding them", async () => {
-    primeSupplyMocks();
-    // 1% then 1% of the remainder retains 0.99 * 0.99, so 199bps rather than 200.
-    primeUsdzRedeemMocks({
-      "usdz:redeem-fee-rate": word(1_000_000n),
-      "spct:redeem-fee-rate": word(1_000_000n),
-    });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption?.feeBps).toBe(199);
-  });
-
-  it("withholds the fee when a rate exceeds its own contract coefficient", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({ "usdz:redeem-fee-rate": word(FEE_COEFFICIENT + 1n) });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption?.capacityUsd).toBe(4_000);
-    expect(result.metadata?.redemption?.feeBps).toBeUndefined();
-  });
-
-  it("withholds the whole redemption block when the pinned SPCT identity no longer matches", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({ "usdz:spct": word("0x1111111111111111111111111111111111111111") });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.metadata?.details).not.toHaveProperty("redeemRoute");
-    expect(result.warnings ?? []).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "anzen-usdz-redeem-route-unreadable", effect: "info" }),
-      ]),
-    );
-    expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
-  });
-
-  it("withholds the whole redemption block when the multicall cannot be read", async () => {
-    primeSupplyMocks();
-    primeUsdzRedeemMocks({}, { fail: true });
-
-    const result = await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-
-    expect(result.metadata?.redemption).toBeUndefined();
-    expect(result.warnings ?? []).toEqual(
-      expect.arrayContaining([expect.objectContaining({ code: "anzen-usdz-redeem-route-unreadable" })]),
-    );
+  it("does not call or use global SPCT totalSupply", async () => {
+    await fetchAnzenUsdzReserves(makeCoin(), config, signal);
+    for (const calls of vi.mocked(fetchEvmRpcBatch).mock.calls) {
+      const batch = calls[1] as Array<{ method: string; params: unknown[] }>;
+      const chain = calls[0] as string;
+      if (chain === "ethereum") {
+        expect(JSON.stringify(batch).toLowerCase().includes(SPCT)).toBe(true);
+        expect(batch.filter((call) => call.method === "eth_call")).toHaveLength(1);
+        expect(JSON.stringify(batch.find((call) => call.method === "eth_call")?.params).toLowerCase()).toContain("0xca11bde05977b3631167028862be2a173976ca11");
+      }
+    }
   });
 });

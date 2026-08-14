@@ -6,6 +6,7 @@ import { fetchAccountableReserves } from "./accountable";
 import { fetchAnzenUsdzReserves } from "./anzen-usdz";
 import { fetchAsymmetryReserves } from "./asymmetry";
 import { fetchAttestationPdfIndexReserves } from "./attestation-pdf-index";
+import { fetchAudxIndependentAssuranceReserves } from "./audx-independent-assurance";
 import { fetchBlastUsdbYieldManagerReserves } from "./blast-usdb-yield-manager";
 import { fetchBtcfiReserves } from "./btcfi";
 import { fetchCapVaultReserves } from "./cap-vault";
@@ -20,6 +21,7 @@ import { fetchDolaInverseReserves } from "./dola-inverse";
 import { fetchEscrowBalanceReserves } from "./escrow-balance";
 import { fetchEvmBranchBalancesReserves } from "./evm-branch-balances";
 import { fetchEthenaReserves } from "./ethena";
+import { fetchEuropIndependentAssuranceReserves } from "./europ-independent-assurance";
 import { fetchFalconReserves } from "./falcon";
 import { fetchFdusdTransparencyReserves } from "./fdusd-transparency";
 import { fetchFlyingTulipFtUsdReserves } from "./flying-tulip-ftusd";
@@ -37,6 +39,7 @@ import { fetchM0Reserves } from "./m0";
 import { fetchM0WrapperUnderlyingReserves } from "./m0-wrapper-underlying";
 import { fetchMakinaStrategyReserves } from "./makina-strategy";
 import { fetchMentoReserves } from "./mento";
+import { fetchUsdrifRifReserves } from "./usdrif-rif";
 import { fetchNestVaultPositionsReserves } from "./nest-vault-positions";
 import { fetchOpenEdenUsdoReserves } from "./openeden";
 import { fetchOriginVaultBalancesReserves } from "./origin-vault-balances";
@@ -56,6 +59,7 @@ import { fetchSkyMakercoreReserves } from "./sky-makercore";
 import { fetchSolsticeAttestationReserves } from "./solstice-attestation";
 import { fetchSpikoApiReserves } from "./spiko-api";
 import { fetchSuperstateLiquidityReserves } from "./superstate-liquidity";
+import { fetchStraitsxIndependentAssuranceReserves } from "./straitsx-independent-assurance";
 import { fetchTetherTransparencyReserves } from "./tether-transparency";
 import { fetchUnitedPorReserves } from "./united-por";
 import { fetchUsdgoTransparencyReserves } from "./usdgo-transparency";
@@ -79,6 +83,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "anzen-usdz": fetchAnzenUsdzReserves,
   asymmetry: fetchAsymmetryReserves,
   "attestation-pdf-index": fetchAttestationPdfIndexReserves,
+  "audx-independent-assurance": fetchAudxIndependentAssuranceReserves,
   "blast-usdb-yield-manager": fetchBlastUsdbYieldManagerReserves,
   btcfi: fetchBtcfiReserves,
   "cap-vault": fetchCapVaultReserves,
@@ -93,6 +98,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "erc4626-single-asset": fetchErc4626SingleAssetReserves,
   "escrow-balance": fetchEscrowBalanceReserves,
   ethena: fetchEthenaReserves,
+  "europ-independent-assurance": fetchEuropIndependentAssuranceReserves,
   "evm-branch-balances": fetchEvmBranchBalancesReserves,
   falcon: fetchFalconReserves,
   "fdusd-transparency": fetchFdusdTransparencyReserves,
@@ -112,6 +118,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "m0-wrapper-underlying": fetchM0WrapperUnderlyingReserves,
   "makina-strategy": fetchMakinaStrategyReserves,
   mento: fetchMentoReserves,
+  "moc-v3-buckets": fetchUsdrifRifReserves,
   "nest-vault-positions": fetchNestVaultPositionsReserves,
   "openeden-usdo": fetchOpenEdenUsdoReserves,
   "origin-vault-balances": fetchOriginVaultBalancesReserves,
@@ -130,6 +137,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS = {
   "sky-makercore": fetchSkyMakercoreReserves,
   "spiko-api": fetchSpikoApiReserves,
   "superstate-liquidity": fetchSuperstateLiquidityReserves,
+  "straitsx-independent-assurance": fetchStraitsxIndependentAssuranceReserves,
   "tether-transparency": fetchTetherTransparencyReserves,
   "united-por": fetchUnitedPorReserves,
   "usdgo-transparency": fetchUsdgoTransparencyReserves,

@@ -37,8 +37,12 @@ function inspectFixtureFreshness(file: string, content: string, now = new Date()
 // when the upstream HTML is large enough to justify out-of-test storage.
 const FIXTURE_EXEMPT_ADAPTERS: Record<string, string> = {
   "attestation-pdf-index": "Upstream is a gated PDF index; HTML page is not the parsed surface.",
+  "audx-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "europ-independent-assurance": "Compact index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
   "quantoz-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
   "ripple-transparency": "Adapter test uses inline HTML; upstream layout is stable and compact.",
+  "straitsx-independent-assurance": "Compact gated-asset index HTML for newer-report detection is covered inline; evidence is the exact official PDF bytes bound to a reviewed manifest SHA-256.",
+  "usdgo-transparency": "Reviewed PDF manifest, pinned on-chain reads, and issuer API cross-checks are covered with compact inline discovery and payload fixtures.",
 };
 
 function fixturePrefixCandidates(key: string): string[] {

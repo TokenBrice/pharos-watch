@@ -19,8 +19,11 @@ vi.mock("../chain-registry", () => ({
 const {
   MULTICALL3_ADDRESS,
   encodeMulticall3Aggregate3CallData,
+  fetchEvmRpcBatch,
+  fetchEvmRpcBatchDetailed,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmBlockHeader,
+  fetchEvmBlockHeaderAtTag,
   fetchEtherscanProxyHex,
   fetchEtherscanUint256AtBlock,
   fetchEvmBlockNumber,
@@ -176,6 +179,147 @@ describe("evm-rpc helpers", () => {
         "0000000000000000000000000000000000000000000000000000000000000004" +
         "1234567800000000000000000000000000000000000000000000000000000000",
     );
+  });
+
+  it("returns JSON-RPC batch results in request order", async () => {
+    const controller = new AbortController();
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { jsonrpc: "2.0", id: 2, result: "second" },
+          { jsonrpc: "2.0", id: 1, result: "first" },
+        ]),
+        { status: 200 },
+      ),
+    );
+    const calls = [
+      { method: "eth_blockNumber", params: [] },
+      { method: "eth_getCode", params: ["0xToken", "safe"] },
+    ];
+
+    await expect(
+      fetchEvmRpcBatch("gnosis", calls, {
+        extraRpcUrls: ["https://rpc.example"],
+        signal: controller.signal,
+        timeoutMs: 1_234,
+        maxRetries: 0,
+      }),
+    ).resolves.toEqual(["first", "second"]);
+
+    expect(fetchWithRetryMock).toHaveBeenCalledWith(
+      "https://rpc.example",
+      expect.objectContaining({ method: "POST", signal: controller.signal }),
+      0,
+      { timeoutMs: 1_234 },
+    );
+    const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body));
+    expect(body).toEqual([
+      { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] },
+      { jsonrpc: "2.0", id: 2, method: "eth_getCode", params: ["0xToken", "safe"] },
+    ]);
+  });
+
+  it("fails closed when JSON-RPC batch responses are malformed or error", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([null, { jsonrpc: "2.0", id: 2, result: "second" }]),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { jsonrpc: "2.0", id: 1, result: "first" },
+            { jsonrpc: "2.0", id: 2, error: { code: -32_000, message: "failure" } },
+          ]),
+          { status: 200 },
+        ),
+      )
+      .mockRejectedValueOnce(new Error("RPC unavailable"));
+
+    await expect(
+      fetchEvmRpcBatch(
+        "gnosis",
+        [{ method: "eth_blockNumber", params: [] }, { method: "eth_chainId", params: [] }],
+        {
+          extraRpcUrls: [
+            "https://rpc.malformed",
+            "https://rpc.error-envelope",
+            "https://rpc.unavailable",
+          ],
+          maxRetries: 0,
+        },
+      ),
+    ).resolves.toBeNull();
+  });
+
+  it("preserves per-call errors in detailed JSON-RPC batches", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify([
+          { jsonrpc: "2.0", id: 2, error: { code: 3, message: "execution reverted" } },
+          { jsonrpc: "2.0", id: 1, result: "0x2a" },
+        ]),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmRpcBatchDetailed(
+        "rootstock",
+        [{ method: "eth_call", params: ["first"] }, { method: "eth_call", params: ["second"] }],
+        { extraRpcUrls: ["https://rpc.example"] },
+      ),
+    ).resolves.toEqual({
+      results: ["0x2a", undefined],
+      errors: [{ index: 1, code: 3, message: "execution reverted" }],
+    });
+  });
+
+  it("fails closed across malformed detailed JSON-RPC batch fallbacks", async () => {
+    fetchWithRetryMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([null, { jsonrpc: "2.0", id: 2, result: "second" }]),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { jsonrpc: "2.0", id: 1, result: "first" },
+            { jsonrpc: "2.0", id: 1, result: "duplicate" },
+          ]),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { jsonrpc: "2.0", id: 1, result: "first" },
+            { jsonrpc: "2.0", id: 2 },
+          ]),
+          { status: 200 },
+        ),
+      )
+      .mockRejectedValueOnce(new Error("RPC unavailable"));
+
+    await expect(
+      fetchEvmRpcBatchDetailed(
+        "rootstock",
+        [{ method: "eth_call", params: ["first"] }, { method: "eth_call", params: ["second"] }],
+        {
+          extraRpcUrls: [
+            "https://rpc.malformed",
+            "https://rpc.duplicate",
+            "https://rpc.missing-result",
+            "https://rpc.unavailable",
+          ],
+          maxRetries: 0,
+        },
+      ),
+    ).resolves.toBeNull();
   });
 
   it("decodes Multicall3 aggregate3 partial failures from the canonical contract", async () => {
@@ -475,6 +619,92 @@ describe("evm-rpc helpers", () => {
       params: unknown[];
     };
     expect(body.params).toEqual(["finalized", false]);
+  });
+
+  it("resolves a canonical block header at the safe tag", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: {
+            number: "0x20",
+            timestamp: "0x80",
+            hash: `0x${"D".repeat(64)}`,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toEqual({
+      number: 32,
+      timestamp: 128,
+      hash: `0x${"d".repeat(64)}`,
+    });
+    const body = JSON.parse(String(fetchWithRetryMock.mock.calls[0]?.[1]?.body)) as {
+      params: unknown[];
+    };
+    expect(body.params).toEqual(["safe", false]);
+  });
+
+  it("rejects a malformed safe block header", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: {
+            number: "not-hex",
+            timestamp: "0x80",
+            hash: "0xmalformed",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("rejects a safe block header with a missing required field", async () => {
+    fetchWithRetryMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          result: {
+            number: "0x20",
+            hash: `0x${"e".repeat(64)}`,
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(
+      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
+        extraRpcUrls: ["https://rpc.example"],
+      }),
+    ).resolves.toBeNull();
+  });
+
+  it("returns null when the safe block header request errors", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchWithRetryMock.mockRejectedValueOnce(new Error("RPC unavailable"));
+
+    await expect(
+      fetchEvmBlockHeaderAtTag("gnosis", "safe", {
+        extraRpcUrls: ["https://rpc.example"],
+        maxRetries: 0,
+      }),
+    ).resolves.toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("[evm-rpc] eth_getBlockByNumber failed across 1 RPCs"),
+    );
+    warnSpy.mockRestore();
   });
 
   it("resolves the closest block at or before a target timestamp", async () => {
