@@ -14,7 +14,7 @@ const REPORT_TIMESTAMP = 1_782_863_999;
 const BUIDL_RAW = 170_977_843_010_000n;
 const CODE_HASH = "0xee8a105971995661291a9f284262a87abf2381b3cdc93b2c8fbeffe4cd636dd9";
 
-vi.mock("viem", async () => {
+vi.mock("viem/utils", async () => {
   const actual = await vi.importActual<typeof import("viem")>("viem");
   return { ...actual, keccak256: vi.fn(() => CODE_HASH) };
 });

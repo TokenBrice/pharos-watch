@@ -38,10 +38,12 @@ interface CompilerProfile {
 }
 
 function linePattern(label: string): RegExp {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- labels are fixed literals from the reviewed extraction tables below.
   return new RegExp(`^\\s*${label}\\d*\\s+\\$?${AMOUNT}\\s*$`, "im");
 }
 
 function usdgoScheduleAmountPattern(schedule: string, label: string): RegExp {
+  // eslint-disable-next-line security/detect-non-literal-regexp -- schedule/label are fixed literals from the reviewed extraction tables below.
   return new RegExp(`${schedule}[\\s\\S]*?^\\s*${label}\\s+\\$?${AMOUNT}\\s*$`, "im");
 }
 
@@ -153,18 +155,22 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
         assetRows: [
           { code: "cash", label: "Cash", pattern: linePattern("Cash") },
           { code: "buidl", label: "BUIDL at fair value", pattern: linePattern("BUIDL, at fair value") },
+          // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
           { code: "stbxx", label: "STBXX money market fund (CUSIP 38151N205)", pattern: /^\s*a\.\s+38151N205\s+N\/A\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
+          // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
           { code: "jltxx", label: "JLTXX money market fund (CUSIP 46655R119)", pattern: /^\s*b\.\s+46655R119\s+N\/A\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)\s*$/im },
         ],
         liabilityRows: [
           {
             code: "solana",
             label: "Solana USDGO redeemable tokens",
+            // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
             pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im,
           },
           {
             code: "morph",
             label: "Morph USDGO redeemable tokens",
+            // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
             pattern: /^\s*a\.\s+Total USDGO natively minted tokens\s+[0-9][0-9,]*(?:\.[0-9]+)?\s+([0-9][0-9,]*(?:\.[0-9]+)?)\s+[0-9][0-9,]*(?:\.[0-9]+)?\s*$/im,
           },
         ],
@@ -180,6 +186,7 @@ function profile(product: IndependentAssuranceProduct): CompilerProfile {
           { label: "qualified/adverse/disclaimed conclusion", pattern: /qualified opinion|adverse opinion|disclaimer of opinion|except for/i },
         ],
         reportedTotals: [
+          // eslint-disable-next-line security/detect-unsafe-regex -- anchored per-line pattern over an offline reviewed PDF text dump; bounded digit runs, no nested quantifier ambiguity.
           { label: "USDGO redeemable token total", expected: "859224943", pattern: /^\s*Total USDGO redeemable tokens outstanding\s+\$?([0-9][0-9,]*(?:\.[0-9]+)?)(?:\s+\(Schedule I\))?\s*$/im },
           { label: "USDGO reserve asset total", expected: "861072523", pattern: usdgoScheduleAmountPattern("Schedule II:", "Total") },
         ],

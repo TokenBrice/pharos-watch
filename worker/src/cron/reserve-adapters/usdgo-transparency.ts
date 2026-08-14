@@ -2,7 +2,7 @@ import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } fro
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { keccak256, toBytes } from "viem";
+import { keccak256, toBytes } from "viem/utils";
 import { fetchEvmRpcBatch } from "../../lib/evm-rpc";
 import type { AdapterContext, AdapterResult } from "./types";
 import {

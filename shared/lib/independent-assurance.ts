@@ -6,6 +6,7 @@ import xsgdManifest from "../data/live-reserves/independent-assurance/xsgd.json"
 import xusdManifest from "../data/live-reserves/independent-assurance/xusd.json";
 
 const HASH_PATTERN = /^[0-9a-f]{64}$/i;
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-shape decimal check; finite quantifiers, no backtracking ambiguity.
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
 
 const INDEPENDENT_ASSURANCE_PRODUCTS = [

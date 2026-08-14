@@ -2,7 +2,6 @@ import { decodeAbiParameters, keccak256 } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import type { AdapterContext, AdapterResult } from "./types";
-import { getPublicRpcUrl } from "../../lib/public-rpc-registry";
 import { encodeAddress } from "../../lib/evm-selectors";
 import { fetchJsonWithRetry } from "./request";
 import {
@@ -88,7 +87,6 @@ const SPCT_RESERVE_USD_SELECTOR = "0x664692f2";
 const SPCT_IS_WHITELIST_SELECTOR = "0xc683630d";
 const BALANCE_OF_SELECTOR = "0x70a08231";
 const ORACLE_GET_PRICE_SELECTOR = "0x98d5fdca";
-const ORACLE_PRICE_DECIMALS = 18;
 
 interface AnzenRedemptionProbe {
   capacityUsd: number;
@@ -116,12 +114,6 @@ interface LayerZeroMetadata {
     endpointVersion?: string;
     deployments?: Record<string, { address?: string; localDecimals?: number; type?: string }>;
   }>;
-}
-
-function getSupplyChainRpcUrl(chain: SupportedSupplyChain): string {
-  const registryUrl = getPublicRpcUrl(chain);
-  if (!registryUrl) throw new Error(`${ADAPTER_KEY} no RPC URL available for chain ${chain}`);
-  return registryUrl;
 }
 
 function getRequiredContract(coin: StablecoinMeta, chain: SupportedSupplyChain): { address: string; decimals: number } {
