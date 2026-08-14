@@ -114,7 +114,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/major-issuers.ts",
-      "sha256": "3ef030208d9aecb9e47d589239c4c4ecac3d35083a8f9c217398b5a51d29438e"
+      "sha256": "378add2cfd32738b0a0a6da5df68e9b38a086202c623780d45469b050d06f097"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
@@ -402,7 +402,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
-      "sha256": "070c89add05bcabb547ac67d455bdb629c34a5d660ce760143920fdcd5fe92a7"
+      "sha256": "f1eefb5d3a6d1a0135f65e999d9db8078a494ae1b23778168accaa575983a1a4"
     },
     {
       "path": "worker/src/lib/evm-selectors.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "e7bdabdfd4b50df2bf9997b0a0d78e9e4300f0a0314dacfb6bf4090d35f5f96a"
+  "digest": "7fc41577b27f0438a895375b84e17cbe48371181e947c386cda3df56c8202b62"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
