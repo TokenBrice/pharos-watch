@@ -7,10 +7,11 @@ import { fetchJsonWithRetry } from "./request";
 import {
   decodeMulticall3Aggregate3Result,
   encodeMulticall3Aggregate3CallData,
-  fetchEvmRpcBatch,
+  fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
   MULTICALL3_ADDRESS,
-  type EvmRpcBatchCall,
 } from "../../lib/evm-rpc";
+import { getPublicFallbackRpcUrls } from "../../lib/public-rpc-registry";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -64,12 +65,16 @@ const LAYERZERO_SHARED_DECIMALS = 8;
 
 // USDz.redeem() pays USDC out of the USDz contract after pulling it from the
 // SPCT pool. These identities and route controls are read in the same
-// Ethereum batch as pooledSPCT and the reserve/liability facts.
+// Ethereum Multicall3 request as pooledSPCT and the reserve/liability facts.
 const USDC_CONTRACT = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDC_DECIMALS = 6;
 const SPCT_PRICE_ORACLE_CONTRACT = "0x900fff3bbf47ded50fd4940d055e1324f38b0d4f";
 const ANZEN_REDEEM_DOC_URL = "https://docs.anzen.finance/usdz-101/overview";
 const SPCT_RUNTIME_CODE_HASH = "0xe72ed6f9f3222f61a7901b61e2a44bd7869bf79ac4146c777a97226137baeeaf";
+const ANZEN_ETHEREUM_FALLBACK_RPC_URL = "https://eth.drpc.org";
+const RPC_ATTEMPT_BUDGET_MS = 20_000;
+const RPC_DEADLINE_HEADROOM_MS = 2_000;
+const RPC_REQUEST_TIMEOUT_MS = 4_000;
 
 const TOTAL_SUPPLY_SELECTOR = "0x18160ddd";
 const SYMBOL_SELECTOR = "0x95d89b41";
@@ -141,6 +146,12 @@ function encodeAddressCall(selector: string, address: string): string {
 
 function wordCall(label: string, contract: string, data: string, allowFailure = false) {
   return { label, contract, data, allowFailure } as const;
+}
+
+function getAdapterRpcUrls(chain: SupportedSupplyChain): string[] {
+  const registered = getPublicFallbackRpcUrls(chain);
+  if (chain !== "ethereum") return registered;
+  return Array.from(new Set([registered[0], ANZEN_ETHEREUM_FALLBACK_RPC_URL].filter((url): url is string => Boolean(url))));
 }
 
 function buildStateCalls(chain: SupportedSupplyChain, usdz: string) {
@@ -278,49 +289,54 @@ async function readChain(
   chain: SupportedSupplyChain,
   contract: { address: string; decimals: number },
   signal: AbortSignal,
+  deadlineMs: number,
   ctx?: AdapterContext,
 ): Promise<ChainObservation> {
   const stateCalls = buildStateCalls(chain, contract.address);
-  const rpcCalls: EvmRpcBatchCall[] = [
-    { method: "eth_getCode", params: [contract.address, "latest"] },
-  ];
-  if (chain === "ethereum") {
-    rpcCalls.push(
-      { method: "eth_getCode", params: [SPCT_POOL_CONTRACT, "latest"] },
-      { method: "eth_getCode", params: [SPCT_PRICE_ORACLE_CONTRACT, "latest"] },
-      { method: "eth_getCode", params: [USDC_CONTRACT, "latest"] },
-    );
-  }
-  rpcCalls.push({
-    method: "eth_call",
-    params: [
-      {
-        to: MULTICALL3_ADDRESS,
-        data: encodeMulticall3Aggregate3CallData(stateCalls.map((call) => ({
+  const rpcOptions = {
+    signal,
+    timeoutMs: RPC_REQUEST_TIMEOUT_MS,
+    deadlineMs,
+    maxRetries: 0,
+    chainRpcs: ctx?.chainRpcs,
+    extraRpcUrls: getAdapterRpcUrls(chain),
+  };
+  const [code, supportingCodes, aggregate] = await runAdapterIo(
+    ctx,
+    `${ADAPTER_KEY}:rpc:${chain}`,
+    async () => {
+      const deploymentCode = await fetchEvmCodeAtBlock(chain, contract.address, "latest", rpcOptions);
+      const ethereumSupportingCodes: Array<`0x${string}` | null> = [];
+      if (chain === "ethereum") {
+        for (const address of [SPCT_POOL_CONTRACT, SPCT_PRICE_ORACLE_CONTRACT, USDC_CONTRACT]) {
+          ethereumSupportingCodes.push(await fetchEvmCodeAtBlock(chain, address, "latest", rpcOptions));
+        }
+      }
+      const state = await fetchEvmCallHexAtBlock(
+        chain,
+        MULTICALL3_ADDRESS,
+        encodeMulticall3Aggregate3CallData(stateCalls.map((call) => ({
           label: call.label,
           target: call.contract,
           callData: call.data,
           allowFailure: call.allowFailure,
         }))),
-      },
-      "latest",
-    ],
-  });
-  const responses = await runAdapterIo(ctx, `${ADAPTER_KEY}:rpc:${chain}`, () => fetchEvmRpcBatch(
-    chain,
-    rpcCalls,
-    { signal, timeoutMs: 12_000, maxRetries: 0 },
-  ), { signal });
-  if (!responses || responses.length !== rpcCalls.length) throw new Error(`${ADAPTER_KEY} ${chain} RPC batch failed`);
+        "latest",
+        rpcOptions,
+      );
+      return [deploymentCode, ethereumSupportingCodes, state] as const;
+    },
+    { signal },
+  );
   if (chain === "ethereum") {
-    for (const [index, expected] of [SPCT_RUNTIME_CODE_HASH].entries()) {
-      const code = responses[index + 1];
-      if (typeof code !== "string" || keccak256(code as `0x${string}`).toLowerCase() !== expected) {
-        throw new Error(`${ADAPTER_KEY} Ethereum supporting contract code hash drifted`);
-      }
+    if (supportingCodes.some((supportingCode) => typeof supportingCode !== "string")) {
+      throw new Error(`${ADAPTER_KEY} Ethereum supporting contract code is unavailable`);
+    }
+    if (keccak256(supportingCodes[0] as `0x${string}`).toLowerCase() !== SPCT_RUNTIME_CODE_HASH) {
+      throw new Error(`${ADAPTER_KEY} Ethereum supporting contract code hash drifted`);
     }
   }
-  return decodeChainObservation(chain, contract, responses[0], responses[responses.length - 1], stateCalls);
+  return decodeChainObservation(chain, contract, code, aggregate, stateCalls);
 }
 
 async function fetchLayerZeroMetadata(signal: AbortSignal, ctx?: AdapterContext): Promise<LayerZeroMetadata> {
@@ -399,11 +415,12 @@ export async function fetchAnzenUsdzReserves(
 ): Promise<AdapterResult> {
   assertContractInventory(coin);
   const contracts = Object.fromEntries(SUPPLY_CHAINS.map((chain) => [chain, getRequiredContract(coin, chain)])) as Record<SupportedSupplyChain, { address: string; decimals: number }>;
+  const rpcDeadlineMs = Date.now() + RPC_ATTEMPT_BUDGET_MS - RPC_DEADLINE_HEADROOM_MS;
   const observations = await Promise.all([
-    ...SUPPLY_CHAINS.map((chain) => readChain(chain, contracts[chain], signal, ctx)),
     fetchLayerZeroMetadata(signal, ctx),
+    ...SUPPLY_CHAINS.map((chain) => readChain(chain, contracts[chain], signal, rpcDeadlineMs, ctx)),
   ]);
-  const chainObservations = observations.slice(0, SUPPLY_CHAINS.length) as ChainObservation[];
+  const chainObservations = observations.slice(1) as ChainObservation[];
   const ethereum = chainObservations.find((observation) => observation.chain === "ethereum");
   if (!ethereum) throw new Error(`${ADAPTER_KEY} Ethereum observation missing`);
   const redemption = observeAnzenRedemption(ethereum.values);

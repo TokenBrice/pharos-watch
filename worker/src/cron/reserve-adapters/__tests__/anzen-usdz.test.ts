@@ -20,12 +20,21 @@ vi.mock("viem/utils", async (importOriginal) => {
   };
 });
 
+const rpc = vi.hoisted(() => ({
+  fetchEvmCallHexAtBlock: vi.fn(),
+  fetchEvmCodeAtBlock: vi.fn(),
+}));
+
 vi.mock("../../../lib/evm-rpc", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/evm-rpc")>();
-  return { ...actual, fetchEvmRpcBatch: vi.fn() };
+  return { ...actual, ...rpc };
 });
 
-import { fetchEvmRpcBatch } from "../../../lib/evm-rpc";
+import {
+  fetchEvmCallHexAtBlock,
+  fetchEvmCodeAtBlock,
+  MULTICALL3_ADDRESS,
+} from "../../../lib/evm-rpc";
 import { fetchAnzenUsdzReserves } from "../anzen-usdz";
 import { getReserveAdapter } from "../index";
 import { validateAdapterOutput } from "../validate";
@@ -115,14 +124,14 @@ function aggregateFor(chain: string, overrides: Record<number, `0x${string}`> = 
 }
 
 function primeRpcMocks(overrides: Record<number, `0x${string}`> = {}, codeDrift = false): void {
-  vi.mocked(fetchEvmRpcBatch).mockImplementation(async (chain) => {
+  vi.mocked(fetchEvmCodeAtBlock).mockImplementation(async (chain, address) => {
+    if (chain === "ethereum" && address.toLowerCase() === SPCT) return "0x7000";
+    if (chain === "ethereum" && address.toLowerCase() === ORACLE) return "0x7001";
+    if (chain === "ethereum" && address.toLowerCase() === USDC) return "0x7002";
     const codeIndex = ["ethereum", "base", "arbitrum", "blast", "manta"].indexOf(chain ?? "");
-    const code = codeDrift && chain === "blast" ? "0xdead" : `0x600${codeIndex}`;
-    if (chain === "ethereum") {
-      return [code, "0x7000", "0x7001", "0x7002", aggregateFor(chain, overrides)];
-    }
-    return [code, aggregateFor(chain ?? "")];
+    return codeDrift && chain === "blast" ? "0xdead" : `0x600${codeIndex}` as `0x${string}`;
   });
+  vi.mocked(fetchEvmCallHexAtBlock).mockImplementation(async (chain) => aggregateFor(chain ?? "", overrides));
 }
 
 function makeCoin(): StablecoinMeta {
@@ -171,10 +180,26 @@ describe("fetchAnzenUsdzReserves", () => {
     });
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(Number(pooled) / 1e18, 7);
     expect(result.metadata?.supplyUsd).toBeCloseTo(Number(liability) / 1e18, 7);
-    expect(vi.mocked(fetchEvmRpcBatch)).toHaveBeenCalledTimes(5);
-    expect(vi.mocked(fetchEvmRpcBatch).mock.calls.map(([chain]) => chain)).toEqual(
+    expect(vi.mocked(fetchEvmCodeAtBlock)).toHaveBeenCalledTimes(8);
+    expect(vi.mocked(fetchEvmCallHexAtBlock)).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(fetchEvmCallHexAtBlock).mock.calls.map(([chain]) => chain)).toEqual(
       expect.arrayContaining(["ethereum", "base", "arbitrum", "blast", "manta"]),
     );
+    for (const [chain, to, _data, block, options] of vi.mocked(fetchEvmCallHexAtBlock).mock.calls) {
+      expect(to).toBe(MULTICALL3_ADDRESS);
+      expect(block).toBe("latest");
+      expect(options).toMatchObject({
+        maxRetries: 0,
+        timeoutMs: 4_000,
+        extraRpcUrls: expect.arrayContaining([expect.stringMatching(/^https:\/\//)]),
+      });
+      expect(chain).toBeTypeOf("string");
+    }
+    const ethereumStateRead = vi.mocked(fetchEvmCallHexAtBlock).mock.calls.find(([chain]) => chain === "ethereum");
+    expect(ethereumStateRead?.[4]?.extraRpcUrls).toEqual([
+      "https://ethereum-rpc.publicnode.com",
+      "https://eth.drpc.org",
+    ]);
     expect(validateAdapterOutput(result, { adapter: getReserveAdapter("anzen-usdz") ?? undefined }).valid).toBe(true);
   });
 
@@ -208,13 +233,10 @@ describe("fetchAnzenUsdzReserves", () => {
 
   it("does not call or use global SPCT totalSupply", async () => {
     await fetchAnzenUsdzReserves(makeCoin(), config, signal);
-    for (const calls of vi.mocked(fetchEvmRpcBatch).mock.calls) {
-      const batch = calls[1] as Array<{ method: string; params: unknown[] }>;
-      const chain = calls[0] as string;
+    for (const [chain, to, data] of vi.mocked(fetchEvmCallHexAtBlock).mock.calls) {
       if (chain === "ethereum") {
-        expect(JSON.stringify(batch).toLowerCase().includes(SPCT)).toBe(true);
-        expect(batch.filter((call) => call.method === "eth_call")).toHaveLength(1);
-        expect(JSON.stringify(batch.find((call) => call.method === "eth_call")?.params).toLowerCase()).toContain("0xca11bde05977b3631167028862be2a173976ca11");
+        expect(to).toBe(MULTICALL3_ADDRESS);
+        expect(data.toLowerCase()).toContain(SPCT.slice(2));
       }
     }
   });
