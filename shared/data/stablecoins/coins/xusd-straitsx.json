@@ -74,8 +74,8 @@
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
-    "adapter": "attestation-pdf-index",
-    "version": 1,
+    "adapter": "straitsx-independent-assurance",
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "xusd-straitsx",
     "scoring": {
@@ -92,18 +92,10 @@
       }
     },
     "params": {
-      "slices": [
-        {
-          "name": "Cash deposits at Tier 1 banks (DBS, Standard Chartered, UOB)",
-          "pct": 50,
-          "risk": "very-low"
-        },
-        {
-          "name": "Short-term U.S. / MAS government securities",
-          "pct": 50,
-          "risk": "very-low"
-        }
-      ]
+      "product": "XUSD",
+      "profile": "straitsx-v1",
+      "indexHost": "www.straitsx.com",
+      "reportHosts": ["cdn.prod.website-files.com"]
     }
   },
   "launchDate": "2024-07-17"

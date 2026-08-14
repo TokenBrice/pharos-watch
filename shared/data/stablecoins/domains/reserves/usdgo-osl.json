@@ -2,16 +2,32 @@
   "id": "usdgo-osl",
   "reserves": [
     {
-      "name": "Money market funds (CUSIPs 38151N205 and 46655R119)",
-      "pct": 79.050766,
-      "risk": "very-low",
+      "name": "Goldman Sachs STBXX (CUSIP 38151N205)",
+      "pct": 11.510182,
+      "risk": "low",
       "assetClass": "money-market-fund",
-      "issuerOrObligor": "Undisclosed money market fund issuers",
+      "issuerOrObligor": "Goldman Sachs Financial Square Government Fund",
       "riskFactors": [
         "credit",
         "liquidity",
         "custody",
-        "concentration"
+        "counterparty",
+        "duration"
+      ],
+      "liquidityHorizon": "one-day"
+    },
+    {
+      "name": "JPMorgan JLTXX (CUSIP 46655R119)",
+      "pct": 67.540584,
+      "risk": "low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "JPMorgan Liquidity Funds",
+      "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "duration"
       ],
       "liquidityHorizon": "one-day"
     },
@@ -21,7 +37,7 @@
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
-      "assetClass": "tokenized-security",
+      "assetClass": "fund-share",
       "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
       "riskFactors": [
         "credit",

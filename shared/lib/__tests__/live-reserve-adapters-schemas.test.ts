@@ -17,6 +17,7 @@ import { ReserveEvidenceSourceOriginClassSchema } from "../report-card-evidence-
 import {
   LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
+  QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   adapterParamsSchemas,
   baseLiveReserveConfigSchema,
   liveReserveAdapterSchemaMetadata,
@@ -47,6 +48,12 @@ const LATE_MONTHLY_SOURCE_AGE_IDS = [
   "zarm-mento",
   "zchf-frankencoin",
 ] as const;
+
+const INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES = {
+  "audx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  "europ-independent-assurance": QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+  "straitsx-independent-assurance": LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+} as const;
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 
@@ -249,6 +256,33 @@ describe("LiveReservesConfigSchema URL validation", () => {
 });
 
 describe("LiveReservesConfigSchema adapter policy validation", () => {
+  it("requires independent-assurance coins to pin the declaration source-age cap", () => {
+    const failures: string[] = [];
+
+    for (const coin of ACTIVE_STABLECOINS) {
+      const config = coin.liveReservesConfig;
+      if (!config || !(config.adapter in INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES)) continue;
+
+      const expectedCap =
+        INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES[
+          config.adapter as keyof typeof INDEPENDENT_ASSURANCE_SOURCE_AGE_POLICIES
+        ];
+      const declarationCap = (
+        LIVE_RESERVE_ADAPTER_DESCRIPTORS[config.adapter] as {
+          validation?: { maxSourceAgeSec?: number };
+        }
+      ).validation?.maxSourceAgeSec;
+      const sourceConfig = readCoinSource(coin.id).liveReservesConfig;
+      if (declarationCap !== expectedCap || sourceConfig?.scoring?.maxSourceAgeSec !== expectedCap) {
+        failures.push(
+          `${coin.id}: declaration=${String(declarationCap)} coin=${String(sourceConfig?.scoring?.maxSourceAgeSec)} expected=${expectedCap}`,
+        );
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+
   it("derives every compatibility projection from the descriptor registry", () => {
     const keys = [...LIVE_RESERVE_ADAPTER_KEYS].sort();
     expect(Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS).sort()).toEqual(keys);

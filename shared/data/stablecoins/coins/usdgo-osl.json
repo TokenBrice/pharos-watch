@@ -22,7 +22,7 @@
       "publishedAt": "2026-07-28",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "partial",
+      "liabilityReconciliation": "full",
       "reviewer": "PoR verification sweep 2026-08 (June report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
@@ -64,18 +64,31 @@
   "governanceQuality": "regulated-entity",
   "liveReservesConfig": {
     "adapter": "usdgo-transparency",
-    "version": 1,
+    "version": 2,
     "semantics": "attestation-mix",
     "breakerScope": "usdgo-osl",
     "display": {
-      "url": "https://www.usdgo.com/en/transparency",
+      "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
       "label": "USDGO Transparency"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://www.usdgo.com/api/lark-bitable"
+        "kind": "http-html",
+        "url": "https://www.anchorage.com/platform/usdgo-reserve-attestations"
       }
+    },
+    "params": {
+      "product": "USDGO",
+      "profile": "usdgo-v1",
+      "indexHost": "www.anchorage.com",
+      "reportHosts": ["learn.anchorage.com"],
+      "issuerCrossCheckUrl": "https://www.usdgo.com/api/lark-bitable",
+      "avalancheRpcUrl": "https://api.avax.network/ext/bc/C/rpc",
+      "avalancheBuidlToken": "0x53fc82f14f009009b440a706e31c9021e1196a2f",
+      "avalancheBuidlWallet": "0xc1d56e817d8f6c53d42ed50ed0d789eeb1495b5e",
+      "avalancheBuidlBlock": 89166720,
+      "avalancheBuidlBlockHash": "0xf39651e0ea42f8f78d0d375fa39ddd531896083e3f5c1daef7e7efa987ee7939",
+      "expectedBuidlCodeHash": "0xee8a105971995661291a9f284262a87abf2381b3cdc93b2c8fbeffe4cd636dd9"
     }
   },
   "yieldConfig": {

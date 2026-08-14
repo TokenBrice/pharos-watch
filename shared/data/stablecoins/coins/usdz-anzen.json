@@ -69,7 +69,7 @@
   "governanceQuality": "multisig",
   "liveReservesConfig": {
     "adapter": "anzen-usdz",
-    "version": 1,
+    "version": 2,
     "semantics": "single-asset",
     "breakerScope": "usdz-anzen",
     "display": {

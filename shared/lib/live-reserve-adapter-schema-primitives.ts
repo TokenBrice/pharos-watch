@@ -115,6 +115,125 @@ const attestationPdfIndexParamsSchema = z
   })
   .strict();
 
+const assuranceHostSchema = z.string().regex(/^[A-Za-z0-9.-]+$/);
+
+const audxAssuranceParamsSchema = z
+  .object({
+    product: z.literal("AUDX"),
+    profile: z.literal("audx-v1"),
+    indexHost: assuranceHostSchema,
+    reportHosts: z.array(assuranceHostSchema).min(1),
+  })
+  .strict();
+
+const europAssuranceParamsSchema = z
+  .object({
+    product: z.literal("EUROP"),
+    profile: z.literal("europ-v1"),
+    indexHost: assuranceHostSchema,
+    reportHosts: z.array(assuranceHostSchema).min(1),
+  })
+  .strict();
+
+const straitsxAssuranceParamsSchema = z
+  .object({
+    product: z.enum(["XSGD", "XUSD"]),
+    profile: z.literal("straitsx-v1"),
+    indexHost: assuranceHostSchema,
+    reportHosts: z.array(assuranceHostSchema).min(1),
+  })
+  .strict();
+
+const usdgoAssuranceParamsSchema = z
+  .object({
+    product: z.literal("USDGO"),
+    profile: z.literal("usdgo-v1"),
+    indexHost: assuranceHostSchema,
+    reportHosts: z.array(assuranceHostSchema).min(1),
+    issuerCrossCheckUrl: z.literal("https://www.usdgo.com/api/lark-bitable"),
+    avalancheRpcUrl: z.literal("https://api.avax.network/ext/bc/C/rpc"),
+    avalancheBuidlToken: z.literal("0x53fc82f14f009009b440a706e31c9021e1196a2f"),
+    avalancheBuidlWallet: z.literal("0xc1d56e817d8f6c53d42ed50ed0d789eeb1495b5e"),
+    avalancheBuidlBlock: z.literal(89166720),
+    avalancheBuidlBlockHash: z.literal("0xf39651e0ea42f8f78d0d375fa39ddd531896083e3f5c1daef7e7efa987ee7939"),
+    expectedBuidlCodeHash: z.literal("0xee8a105971995661291a9f284262a87abf2381b3cdc93b2c8fbeffe4cd636dd9"),
+  })
+  .strict();
+
+const mocV3BucketSchema = z
+  .object({
+    address: EvmAddressSchema,
+    expectedProxyCodeHash: EvmCodeHashSchema,
+    expectedImplementationAddress: EvmAddressSchema,
+    expectedImplementationCodeHash: EvmCodeHashSchema,
+    collateralToken: EvmAddressSchema,
+    collateralDecimals: z.number().int().nonnegative().max(36),
+    expectedPegContainerProvider: EvmAddressSchema,
+    expectedPriceProvider: EvmAddressSchema,
+  })
+  .strict();
+
+const mocV3BucketsParamsSchema = z
+  .object({
+    rpcUrl: z.literal("https://public-node.rsk.co"),
+    fallbackRpcUrl: z.literal("https://mycrypto.rsk.co"),
+    confirmationDepth: z.number().int().positive().max(256),
+    maxBlockAgeSec: z.number().int().positive(),
+    maxFutureSkewSec: z.number().int().nonnegative(),
+    maxMarketProtocolDivergencePct: z.number().positive().max(100),
+    walletExcessInfoPct: z.number().nonnegative().max(100),
+    walletExcessDegradedPct: z.number().positive().max(100),
+    branchMaterialityPct: z.number().positive().max(100),
+    canonicalUsdrif: z
+      .object({
+        address: EvmAddressSchema,
+        expectedProxyCodeHash: EvmCodeHashSchema,
+        decimals: z.number().int().nonnegative().max(36),
+      })
+      .strict(),
+    rifToken: z
+      .object({
+        address: EvmAddressSchema,
+        expectedCodeHash: EvmCodeHashSchema,
+        decimals: z.number().int().nonnegative().max(36),
+      })
+      .strict(),
+    docToken: z
+      .object({
+        address: EvmAddressSchema,
+        expectedCodeHash: EvmCodeHashSchema,
+        decimals: z.number().int().nonnegative().max(36),
+      })
+      .strict(),
+    rifBucket: mocV3BucketSchema,
+    docBucket: mocV3BucketSchema,
+    sourceUrls: z.array(AbsoluteUrlSchema).min(1),
+  })
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.walletExcessInfoPct >= params.walletExcessDegradedPct) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["walletExcessInfoPct"],
+        message: "walletExcessInfoPct must be less than walletExcessDegradedPct",
+      });
+    }
+    if (params.rifBucket.collateralToken.toLowerCase() !== params.rifToken.address.toLowerCase()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["rifBucket", "collateralToken"],
+        message: "RIF bucket collateral token must match rifToken.address",
+      });
+    }
+    if (params.docBucket.collateralToken.toLowerCase() !== params.docToken.address.toLowerCase()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["docBucket", "collateralToken"],
+        message: "DOC bucket collateral token must match docToken.address",
+      });
+    }
+  });
+
 const btcfiParamsSchema = z
   .object({
     handlersUrl: AbsoluteUrlSchema,
@@ -1236,6 +1355,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   abracadabra: abracadabraParamsSchema,
   accountable: accountableParamsSchema,
   attestationPdfIndex: attestationPdfIndexParamsSchema,
+  audxAssurance: audxAssuranceParamsSchema,
   blastUsdbYieldManager: blastUsdbYieldManagerParamsSchema,
   btcfi: btcfiParamsSchema,
   capVault: capVaultParamsSchema,
@@ -1246,6 +1366,7 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   collateralPositions: collateralPositionsParamsSchema,
   curatedValidated: curatedValidatedParamsSchema,
   erc4626SingleAsset: erc4626SingleAssetParamsSchema,
+  europAssurance: europAssuranceParamsSchema,
   escrowBalance: escrowBalanceParamsSchema,
   evmBranchBalances: evmBranchBalancesParamsSchema,
   fraxFpiCollateral: fraxFpiCollateralParamsSchema,
@@ -1268,6 +1389,9 @@ export const LIVE_RESERVE_PARAM_SCHEMAS = {
   singleAsset: singleAssetParamsSchema,
   spikoApi: spikoApiParamsSchema,
   superstateLiquidity: superstateLiquidityParamsSchema,
+  straitsxAssurance: straitsxAssuranceParamsSchema,
+  usdgoAssurance: usdgoAssuranceParamsSchema,
+  mocV3Buckets: mocV3BucketsParamsSchema,
   tetherTransparency: tetherTransparencyParamsSchema,
   unitedPor: unitedPorParamsSchema,
   usd1BundleOracle: usd1BundleOracleParamsSchema,

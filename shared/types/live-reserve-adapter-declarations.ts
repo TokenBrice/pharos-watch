@@ -16,6 +16,7 @@ import {
   MATERIAL_UNKNOWN_EXPOSURE_PCT,
   MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   NOT_APPLICABLE_ONLY_FRESHNESS,
+  QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
   VERIFIED_ONLY_FRESHNESS,
   VERIFIED_OR_UNVERIFIED_FRESHNESS,
 } from "./live-reserve-adapter-policy";
@@ -53,6 +54,11 @@ const CONFIG_ATTESTATION_V1 = {
 const CONFIG_ATTESTATION_V1_V2 = {
   allowedSemantics: ["attestation-mix"],
   allowedVersions: [1, 2],
+} as const satisfies LiveReserveAdapterConfigValidationPolicy;
+
+const CONFIG_ATTESTATION_V2 = {
+  allowedSemantics: ["attestation-mix"],
+  allowedVersions: [2],
 } as const satisfies LiveReserveAdapterConfigValidationPolicy;
 
 const CONFIG_PROTOCOL_V1 = {
@@ -180,10 +186,24 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     primaryInputKinds: ["onchain-evm"],
     paramsSchema: "none",
     sourceModel: "single-bucket",
-    evidenceClass: "weak-live-probe",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
     sharedSourceMode: "none",
-    configValidation: CONFIG_SINGLE_ASSET_V1,
+    configValidation: CONFIG_SINGLE_ASSET_V2,
     redemptionTelemetry: { capacity: "direct", fee: "current-bps" },
+    validation: {
+      allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
+    },
+  },
+  "moc-v3-buckets": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: "mocV3Buckets",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "onchain-observation",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V2,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS,
     },
@@ -212,6 +232,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
       maxSourceAgeSec: MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
+  "audx-independent-assurance": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: "audxAssurance",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "independent-assurance",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V2,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
@@ -408,6 +442,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", capacityParamsGated: true, fee: "current-bps" },
     validation: { allowedFreshnessModes: NOT_APPLICABLE_ONLY_FRESHNESS },
+  },
+  "europ-independent-assurance": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: "europAssurance",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "independent-assurance",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V2,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: QUARTERLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
   },
   "xdai-bridge": {
     primaryInputKinds: ["onchain-evm"],
@@ -671,6 +719,13 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sharedSourceMode: "none",
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: { capacity: "direct", fee: "none" },
+    provenance: {
+      status: "parked",
+      rationale:
+        "Re-enable probe (2026-08-13) confirmed the issuer gateway serves ordinary clients, but the first production cron (2026-08-14) received HTTP 500 on every Worker fetch strategy; re-parked until OpenEden unblocks Cloudflare Worker egress.",
+      parkedSince: "2026-08-14",
+      nextReview: "2027-02-14",
+    },
     validation: {
       maxSourceAgeSec: DASHBOARD_SOURCE_MAX_AGE_SEC,
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
@@ -866,6 +921,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
       allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
     },
   },
+  "straitsx-independent-assurance": {
+    primaryInputKinds: ["http-html"],
+    paramsSchema: "straitsxAssurance",
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "independent-assurance",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_ATTESTATION_V2,
+    redemptionTelemetry: { capacity: "none", fee: "none" },
+    validation: {
+      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
+    },
+  },
   "river-protocol-info": {
     primaryInputKinds: ["http-json"],
     paramsSchema: "none",
@@ -913,16 +982,17 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   },
   "usdgo-transparency": {
-    primaryInputKinds: ["http-json"],
-    paramsSchema: "none",
+    primaryInputKinds: ["http-html"],
+    paramsSchema: "usdgoAssurance",
     sourceModel: "dynamic-mix",
-    evidenceClass: "weak-live-probe",
+    evidenceClass: "independent",
+    sourceOriginClass: "independent-assurance",
     sharedSourceMode: "none",
-    configValidation: CONFIG_ATTESTATION_V1,
+    configValidation: CONFIG_ATTESTATION_V2,
     redemptionTelemetry: { capacity: "none", fee: "none" },
     validation: {
-      maxSourceAgeSec: DISCLOSURE_SOURCE_MAX_AGE_SEC,
-      allowedFreshnessModes: VERIFIED_OR_UNVERIFIED_FRESHNESS,
+      maxSourceAgeSec: LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC,
+      allowedFreshnessModes: VERIFIED_ONLY_FRESHNESS,
     },
   },
   "usdh-native-markets": {

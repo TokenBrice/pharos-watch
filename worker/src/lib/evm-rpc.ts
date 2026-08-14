@@ -32,6 +32,22 @@ export interface EvmRpcOptions {
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
+export interface EvmRpcBatchCall {
+  method: string;
+  params: unknown[];
+}
+
+export interface EvmRpcBatchError {
+  index: number;
+  code?: number;
+  message?: string;
+}
+
+export interface EvmRpcBatchDetailedResult {
+  results: Array<unknown | undefined>;
+  errors: EvmRpcBatchError[];
+}
+
 export interface EtherscanProxyRequest {
   evmChainId: number;
   action: "eth_call" | "eth_getStorageAt";
@@ -320,6 +336,152 @@ function parseHexInteger(value: string | undefined): number | null {
 
 export function isHexResult(value: string | null | undefined): value is `0x${string}` {
   return typeof value === "string" && value.startsWith("0x") && value.length > 2;
+}
+
+/**
+ * Execute one JSON-RPC batch against the reviewed chain endpoint. The adapter
+ * owns the operation limiter; keeping the batch primitive here means code and
+ * state reads can share one provider request without weakening per-result
+ * validation.
+ */
+export async function fetchEvmRpcBatch(
+  chainId: string | undefined,
+  calls: readonly EvmRpcBatchCall[],
+  options?: EvmRpcOptions,
+): Promise<unknown[] | null> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0 || calls.length === 0) return null;
+
+  const maxRetries = options?.maxRetries ?? 1;
+  for (const rpcUrl of urls) {
+    try {
+      const result = await fetchJsonWithRetry<Array<JsonRpcEnvelope<unknown>>>(
+        rpcUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: options?.signal,
+          body: JSON.stringify(
+            calls.map((call, index) => ({
+              jsonrpc: "2.0",
+              id: index + 1,
+              method: call.method,
+              params: call.params,
+            })),
+          ),
+        },
+        maxRetries,
+        { timeoutMs: options?.timeoutMs ?? 10_000 },
+      );
+      if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
+
+      const byId = new Map<number, JsonRpcEnvelope<unknown>>();
+      for (const row of result.body) {
+        if (!row || typeof row !== "object" || !Number.isSafeInteger((row as { id?: unknown }).id)) {
+          byId.clear();
+          break;
+        }
+        byId.set((row as { id: number }).id, row);
+      }
+      if (byId.size !== calls.length) continue;
+
+      const values: unknown[] = [];
+      let valid = true;
+      for (let index = 0; index < calls.length; index += 1) {
+        const row = byId.get(index + 1);
+        if (!row || row.error || !("result" in row) || row.result === undefined) {
+          valid = false;
+          break;
+        }
+        values.push(row.result);
+      }
+      if (valid) return values;
+    } catch (error) {
+      rethrowIfAborted(error, options?.signal);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Batch variant that preserves per-call JSON-RPC errors. This is intentionally
+ * separate from fetchEvmRpcBatch: most reserve reads require every call to
+ * succeed, while a reviewed adapter may need to prove that one bounded probe
+ * reverts (for example, an out-of-range token index).
+ */
+export async function fetchEvmRpcBatchDetailed(
+  chainId: string | undefined,
+  calls: readonly EvmRpcBatchCall[],
+  options?: EvmRpcOptions,
+): Promise<EvmRpcBatchDetailedResult | null> {
+  const urls = buildRpcUrls(chainId, options?.extraRpcUrls, options?.chainRpcs);
+  if (urls.length === 0 || calls.length === 0) return null;
+
+  const maxRetries = options?.maxRetries ?? 1;
+  for (const rpcUrl of urls) {
+    try {
+      const result = await fetchJsonWithRetry<Array<JsonRpcEnvelope<unknown>>>(
+        rpcUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: options?.signal,
+          body: JSON.stringify(
+            calls.map((call, index) => ({
+              jsonrpc: "2.0",
+              id: index + 1,
+              method: call.method,
+              params: call.params,
+            })),
+          ),
+        },
+        maxRetries,
+        { timeoutMs: options?.timeoutMs ?? 10_000 },
+      );
+      if (!result?.response.ok || !Array.isArray(result.body) || result.body.length !== calls.length) continue;
+
+      const byId = new Map<number, JsonRpcEnvelope<unknown>>();
+      let valid = true;
+      for (const row of result.body) {
+        if (!row || typeof row !== "object" || !Number.isSafeInteger((row as { id?: unknown }).id)) {
+          valid = false;
+          break;
+        }
+        const id = (row as { id: number }).id;
+        if (id < 1 || id > calls.length || byId.has(id)) {
+          valid = false;
+          break;
+        }
+        byId.set(id, row);
+      }
+      if (!valid || byId.size !== calls.length) continue;
+
+      const results: Array<unknown | undefined> = [];
+      const errors: EvmRpcBatchError[] = [];
+      for (let index = 0; index < calls.length; index += 1) {
+        const row = byId.get(index + 1);
+        if (!row) {
+          valid = false;
+          break;
+        }
+        if (row.error) {
+          results.push(undefined);
+          errors.push({ index, code: row.error.code, message: row.error.message });
+        } else if ("result" in row && row.result !== undefined) {
+          results.push(row.result);
+        } else {
+          valid = false;
+          break;
+        }
+      }
+      if (valid) return { results, errors };
+    } catch (error) {
+      rethrowIfAborted(error, options?.signal);
+    }
+  }
+
+  return null;
 }
 
 export function parseUint256Hex(value: unknown): bigint | null {
