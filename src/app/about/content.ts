@@ -116,7 +116,7 @@ export const DATA_PIPELINE_STEPS = [
     ariaLabel: "Step 2: Cloudflare Worker + D1",
     title: "Cloudflare Worker + D1",
     description:
-      "Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize the data and cache the results for the public API.",
+      "Staggered 5-minute, 15-minute, 30-minute, hourly, multi-hour, daily, and monthly lanes normalize the data, preserve independent protocol evidence in DEX price challenges, and cache the results for the public API.",
   },
   {
     step: 3,

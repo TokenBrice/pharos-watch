@@ -211,6 +211,57 @@ describe("challenger publish", () => {
     ]);
   });
 
+  it("retains a qualifying minority protocol before applying the TVL coverage cutoff", () => {
+    const makePool = (poolId: string, project: string, tvlUsd: number, price: number): PoolEntry => ({
+      poolId,
+      project,
+      chain: "MegaETH",
+      tvlUsd,
+      symbol: "USDm-pair",
+      volumeUsd1d: 10_000,
+      volumeUsd7d: 70_000,
+      poolType: "generic",
+      source: "gecko_terminal",
+      price,
+    });
+    const rows = selectDexPriceChallengerRowsFromPools(
+      "usdm-mega",
+      [
+        makePool("megaeth:kumbaya-btc", "kumbaya", 2_737_890, 0.99911),
+        makePool("megaeth:kumbaya-mega", "kumbaya", 665_442, 1.00165),
+        makePool("megaeth:kumbaya-stcusd", "kumbaya", 431_793, 1.00091),
+        makePool("megaeth:kumbaya-usdt0", "kumbaya", 194_442, 1.0013),
+        makePool("megaeth:prism-usdt0", "prism-megaeth", 173_064, 1.0013),
+      ],
+      100_000,
+    );
+
+    expect(rows.map((row) => row.poolId)).toContain("megaeth:prism-usdt0");
+    expect(new Set(rows.map((row) => row.protocol))).toEqual(new Set(["kumbaya", "prism-megaeth"]));
+  });
+
+  it("caps protocol representatives deterministically when more than 50 protocols qualify", () => {
+    const pools = Array.from({ length: 55 }, (_, index): PoolEntry => ({
+      poolId: `pool-${String(index).padStart(2, "0")}`,
+      project: `protocol-${String(index).padStart(2, "0")}`,
+      chain: "Ethereum",
+      tvlUsd: 1_000_000 - index * 1_000,
+      symbol: "TEST-USDC",
+      volumeUsd1d: 10_000,
+      volumeUsd7d: 70_000,
+      poolType: "generic",
+      source: "gecko_terminal",
+      price: 1,
+    }));
+
+    const rows = selectDexPriceChallengerRowsFromPools("test-coin", pools, 100_000);
+
+    expect(rows).toHaveLength(50);
+    expect(rows.map((row) => row.protocol)).toEqual(
+      Array.from({ length: 50 }, (_, index) => `protocol-${String(index).padStart(2, "0")}`),
+    );
+  });
+
   it("constructs and executes challenger rows in bounded publication order", async () => {
     const retainedPools = challengerPools(60);
     const retainedPoolsByStablecoin = new Map([["usdt-tether", retainedPools]]);

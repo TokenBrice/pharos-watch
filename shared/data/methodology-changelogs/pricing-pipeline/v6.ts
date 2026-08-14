@@ -2,6 +2,21 @@ import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions
 
 export const PRICING_PIPELINE_V6: readonly MethodologyChangelogEntry[] = [
   {
+    version: "6.208",
+    title: "Protocol-diverse DEX challenger retention",
+    date: "2026-08-14",
+    effectiveAt: 1786719640,
+    summary:
+      "DEX challenger snapshots now preserve qualifying protocol diversity before applying their TVL coverage target, allowing the existing multi-protocol guard to replace an incorrect soft aggregator price.",
+    impact: [
+      "Challenger selection first retains the highest-TVL qualifying pool from each protocol, ordered by total qualifying protocol TVL, before filling remaining rows toward the existing 95% TVL coverage target",
+      "When more than 50 protocols qualify, the existing hard cap retains representatives from the 50 largest protocol groups; filtering, pool deduplication, freshness, and the per-pool TVL floor are unchanged",
+      "The existing requirement for at least two independently named divergent protocols remains unchanged, as do source weights, CoinGecko handling, DEX price calculation, validation bounds, and depeg-authority policy",
+    ],
+    commits: [],
+    reconstructed: false,
+  },
+  {
     version: "6.207",
     title: "DEX discovery and guarded-quote circuit alignment",
     date: "2026-08-07",

@@ -68,6 +68,7 @@ The page is organized into these sections, in order:
 - The `Get in Touch` copy describes Pharos as MIT-licensed open source and links to the GitHub repository.
 - When adding a new major data source or externally visible feature surfaced on this page, update this document and the route copy together. The visible source roster lives in `DATA_SOURCE_GROUPS` in `src/app/about/content.ts`; keep that module as the current roster source instead of duplicating long provider lists here.
 - Pricing copy should continue to disclose market-data sources, oracle sources, DEX-derived pricing, and protocol redemption quotes when they are externally visible in the UI.
+- The pipeline summary should disclose that DEX pool challenges preserve independent protocol evidence before applying their bounded TVL coverage selection.
 - Supply & Price copy should disclose scoped FX-par redemption quotes and curated fail-closed on-chain supply repairs when they affect public `priceSource` or `supplySource` fields.
 - Reserve copy should describe issuer/protocol APIs, proof portals, dashboards, and direct on-chain/accounting reads as source families; detailed adapter coverage belongs in `docs/live-reserves.md`.
 - Regulatory register copy should disclose both EU MiCA register/NCA sources and U.S. GENIUS implementation-watch sources when `/compliance/` surfaces them.
