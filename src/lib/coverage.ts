@@ -5,7 +5,9 @@ import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
 import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as geniusFeature } from "@/lib/coverage/genius";
 import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
+import { coverageFeature as micaFeature } from "@/lib/coverage/mica";
 import { coverageFeature as priceFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
@@ -25,7 +27,7 @@ import type {
   RedemptionBackstopEntry,
   StablecoinMeta,
 } from "@shared/types";
-import type { MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
+import type { GeniusClientProfile, MintAuthorityCoverageSummary } from "@shared/types/stablecoin-client-meta";
 import type { DependencyCoverageFact } from "@/lib/dependency-coverage-facts";
 import type { PublishedMintComponent } from "@/lib/mint-authority-display";
 
@@ -49,8 +51,9 @@ export { COVERAGE_FEATURES };
  */
 export type CoverageCoinMeta = Pick<
   StablecoinMeta,
-  "id" | "name" | "symbol" | "flags" | "reserves" | "collateralQuality"
+  "id" | "name" | "symbol" | "flags" | "reserves" | "collateralQuality" | "mica"
 > & {
+  genius?: GeniusClientProfile;
   liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
   liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
   mintAuthoritySummary?: MintAuthorityCoverageSummary | null;
@@ -178,6 +181,8 @@ export function buildCoverageRow({
     yield: yieldFeature.resolve(hasYieldCoverage, hasData("yield")),
     flows: flowsFeature.resolve(flowCoverageStatus, hasData("flows")),
     blacklist: blacklistFeature.resolve(coin, blacklistStatus),
+    mica: micaFeature.resolve(coin.mica),
+    genius: geniusFeature.resolve(coin.genius),
     dependency: dependencyFeature.resolve(dependencyCoverage ?? hasDependencyCoverage, hasData("dependency")),
     mintAuthority: mintAuthorityFeature.resolve(coin.mintAuthoritySummary, publishedMint, hasData("mintAuthority")),
   } satisfies Record<CoverageFeatureKey, CoverageStatus>;
@@ -201,6 +206,8 @@ export function buildCoverageRow({
       "yield",
       "flows",
       "blacklist",
+      "mica",
+      "genius",
       "dependency",
       "mintAuthority",
     ]),

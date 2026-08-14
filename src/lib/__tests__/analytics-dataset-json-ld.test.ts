@@ -39,6 +39,8 @@ describe("buildCoverageDatasetJsonLd", () => {
         expect.objectContaining({ name: "priceAndDepegCoverage", description: expect.any(String) }),
         expect.objectContaining({ name: "reserveViewCoverage", description: expect.any(String) }),
         expect.objectContaining({ name: "mintBurnFlowCoverage", description: expect.any(String) }),
+        expect.objectContaining({ name: "micaCoverage", description: expect.any(String) }),
+        expect.objectContaining({ name: "geniusCoverage", description: expect.any(String) }),
         expect.objectContaining({ name: "dependencyMapCoverage", description: expect.any(String) }),
       ]),
     );

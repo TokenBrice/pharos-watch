@@ -83,6 +83,8 @@ const COVERAGE_FEATURE_QUERY_KEYS = {
   yield: "yieldRankings",
   flows: "mintBurnFlows",
   blacklist: null,
+  mica: null,
+  genius: null,
   dependency: "reportCards",
   // Half query-backed since safety 9.1: the curated route bucket needs no query,
   // but the score and band are read from the published V9 mint component. It was

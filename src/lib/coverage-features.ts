@@ -2,7 +2,9 @@ import { coverageFeature as blacklistFeature } from "@/lib/coverage/blacklist";
 import { coverageFeature as dependencyFeature } from "@/lib/coverage/dependency";
 import { coverageFeature as dexFeature } from "@/lib/coverage/dex";
 import { coverageFeature as flowsFeature } from "@/lib/coverage/flows";
+import { coverageFeature as geniusFeature } from "@/lib/coverage/genius";
 import { coverageFeature as mintAuthorityFeature } from "@/lib/coverage/mint-authority";
+import { coverageFeature as micaFeature } from "@/lib/coverage/mica";
 import { coverageFeature as priceFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reservesFeature } from "@/lib/coverage/reserves";
@@ -100,6 +102,32 @@ export const COVERAGE_FEATURES: readonly CoverageFeatureDefinition[] = [
     formatBreakdown: blacklistFeature.formatBreakdown,
   },
   {
+    key: "mica",
+    label: "MiCA",
+    shortLabel: "MiCA",
+    description:
+      "Structured EU MiCA assessment status from the compliance tracker. Reviewed out-of-scope and non-compliant findings count as assessed coverage; missing metadata does not.",
+    headlineCountLabel: "Assessed assets",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with MiCA assessment`,
+    headlineShareLabel: "MiCA-assessed market-cap reach",
+    href: "/compliance/?regime=mica",
+    statusKinds: micaFeature.statusKinds,
+    formatBreakdown: micaFeature.formatBreakdown,
+  },
+  {
+    key: "genius",
+    label: "GENIUS",
+    shortLabel: "GENIUS",
+    description:
+      "Structured U.S. GENIUS Act implementation-watch posture from the compliance tracker. Reviewed no-authorization, not-applicable, and unknown findings count as assessed coverage; missing metadata does not.",
+    headlineCountLabel: "Assessed assets",
+    headlineCoverageLabel: (coveragePct) => `${coveragePct.toFixed(0)}% with GENIUS assessment`,
+    headlineShareLabel: "GENIUS-assessed market-cap reach",
+    href: "/compliance/?regime=genius",
+    statusKinds: geniusFeature.statusKinds,
+    formatBreakdown: geniusFeature.formatBreakdown,
+  },
+  {
     key: "dependency",
     label: "Dependency Map",
     shortLabel: "Dependency",
@@ -131,6 +159,8 @@ export const COVERAGE_FEATURE_LEGEND_ITEMS: Record<CoverageFeatureKey, readonly 
   yield: yieldFeature.legendItems,
   flows: flowsFeature.legendItems,
   blacklist: blacklistFeature.legendItems,
+  mica: micaFeature.legendItems,
+  genius: geniusFeature.legendItems,
   dependency: dependencyFeature.legendItems,
   mintAuthority: mintAuthorityFeature.legendItems,
 };

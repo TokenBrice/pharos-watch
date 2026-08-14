@@ -14,7 +14,7 @@ import {
 } from "@/lib/stablecoin-static-data";
 
 const coverageDescription =
-  "See per-coin Pharos coverage for depeg tracking, DEX liquidity, reserves, redemption backstops, yield, mint/burn flows, blacklist events, and dependency maps.";
+  "See per-coin Pharos coverage for depeg tracking, DEX liquidity, reserves, redemption, yield, flows, FreezeWatch, compliance, dependency maps, and mint authority.";
 
 const COVERAGE_DATASET_JSON_LD = buildCoverageDatasetJsonLd();
 
