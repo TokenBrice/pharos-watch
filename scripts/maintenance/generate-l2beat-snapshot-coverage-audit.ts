@@ -4,14 +4,14 @@ import { existsSync } from "node:fs";
 import {
   buildL2BeatChainCoverageAudit,
   type L2BeatChainCoverageAudit,
-} from "../../shared/lib/chains/l2beat-audit";
+} from "@shared/lib/chains/l2beat-audit";
 import {
   L2BEAT_CHAIN_RISK_FIELD_LABELS,
   L2BEAT_CHAIN_RISK_FIELDS,
   L2BEAT_CHAIN_RISK_SNAPSHOT,
   type L2BeatChainRiskSnapshot,
   type L2BeatRiskField,
-} from "../../shared/lib/chains/l2beat-risk";
+} from "@shared/lib/chains/l2beat-risk";
 import {
   isRecord,
   markdownValue,

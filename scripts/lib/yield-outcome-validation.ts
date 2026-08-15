@@ -1,5 +1,5 @@
-import { mean, median } from "../../shared/lib/stats";
-import { computePYS } from "../../shared/lib/yield-scoring";
+import { mean, median } from "@shared/lib/stats";
+import { computePYS } from "@shared/lib/yield-scoring";
 import {
   digestYieldOutcomeDataset,
   normalizeYieldOutcomeDataset,

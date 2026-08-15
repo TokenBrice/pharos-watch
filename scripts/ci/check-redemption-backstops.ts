@@ -5,7 +5,7 @@ import { dirname, posix, resolve } from "node:path";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   type RedemptionBackstopConfigManifestEntry,
-} from "../../shared/lib/redemption-backstop-configs/manifest";
+} from "@shared/lib/redemption-backstop-configs/manifest";
 import {
   validateRedemptionBackstopRegistry,
   type RedemptionRegistryValidationResult,

@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 const DEFAULT_FLAGS: StablecoinMeta["flags"] = {
   backing: "rwa-backed",

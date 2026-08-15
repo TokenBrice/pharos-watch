@@ -1,4 +1,4 @@
-import type { StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 export function getTrackedAlgorithmicBackingIssue(
   coin: Pick<StablecoinMeta, "flags">,

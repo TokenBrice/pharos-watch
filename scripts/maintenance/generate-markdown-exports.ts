@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { changelogs } from "../../src/data/changelogs";
-import { getGeneratedMarkdownAssetPath } from "../../shared/lib/markdown-route-policy";
+import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy";
 import {
   buildMethodologyChangelogMarkdown,
   buildMethodologyIndexMarkdown,

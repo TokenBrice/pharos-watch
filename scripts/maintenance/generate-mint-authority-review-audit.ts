@@ -4,7 +4,7 @@ import {
   buildMintAuthorityReviewAudit,
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 
 type AuditFormat = "markdown" | "json";

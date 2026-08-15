@@ -2,8 +2,8 @@
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
-import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import type { UnknownRecord } from "../lib/coverage-audit-cli";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";

@@ -10,12 +10,12 @@ import {
   readGeniusComplianceFields,
   readGeniusClientFields,
 } from "../build-data/build-client-registry.mjs";
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   GENIUS_CLIENT_PROFILE_FIELDS,
   GENIUS_COMPLIANCE_PROFILE_FIELDS,
   STABLECOIN_CLIENT_META_FIELDS,
-} from "../../shared/types/stablecoin-client-meta";
+} from "@shared/types/stablecoin-client-meta";
 
 describe("client registry field contract", () => {
   it("projects only the compact listing class from the decision ledger", () => {

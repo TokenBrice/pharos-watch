@@ -7,8 +7,8 @@ import {
   CRON_JOB_DEFINITIONS,
   CRON_SCHEDULES,
   CRON_TRIGGER_SCHEDULES,
-} from "../../shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
+} from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");

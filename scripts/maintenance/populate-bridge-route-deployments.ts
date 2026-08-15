@@ -2,13 +2,13 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
   BridgeRouteDeployment,
   BridgeRouteRiskProfile,
   BridgeRouteRiskTier,
   ContractDeployment,
-} from "../../shared/types/core";
+} from "@shared/types/core";
 
 const ROOT = resolve(import.meta.dirname, "../..");
 

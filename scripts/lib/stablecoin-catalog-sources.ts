@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 import {
   findDuplicateStablecoinCatalogIds,
   findStablecoinCatalogInvariantIssues,
@@ -13,7 +13,7 @@ import {
   StablecoinMetaCatalogInvariantsSchema,
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
-} from "../../shared/lib/stablecoins/schema";
+} from "@shared/lib/stablecoins/schema";
 
 export const STABLECOIN_DATA_DIR = "shared/data/stablecoins";
 // Retired category shards. They were emptied compatibility shells before deletion;

@@ -2,11 +2,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { sortCemeteryCoins } from "../../shared/lib/cemetery";
-import { CAUSE_META } from "../../shared/lib/dead-stablecoins";
-import { CEMETERY_ENTRIES, type CemeteryEntry } from "../../shared/lib/cemetery-merged";
-import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
-import type { DeadStablecoin } from "../../shared/types";
+import { sortCemeteryCoins } from "@shared/lib/cemetery";
+import { CAUSE_META } from "@shared/lib/dead-stablecoins";
+import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import type { DeadStablecoin } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 

@@ -3,8 +3,8 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { runAsMain, toPositiveInt } from "../lib/coverage-audit-cli";
 
 const DEFAULT_OUTPUT_DIR = "agents/mint-authority-candidates";

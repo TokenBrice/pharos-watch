@@ -1,5 +1,5 @@
 import type { TelegramLoadCheckReport } from "../ci/check-telegram-load";
-import { TELEGRAM_LOAD_GUARD_ASSUMPTIONS } from "../../shared/lib/telegram-delivery-policy";
+import { TELEGRAM_LOAD_GUARD_ASSUMPTIONS } from "@shared/lib/telegram-delivery-policy";
 
 function formatDuration(seconds: number): string {
   if (seconds === 0) return "same run";

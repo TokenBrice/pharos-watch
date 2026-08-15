@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type { LiveReserveAdapterKey, LiveReservesConfig } from "../../shared/types/live-reserves";
-import type { StablecoinMeta } from "../../shared/types";
+import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { StablecoinMeta } from "@shared/types";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 import {
   REVIEWED_LIVE_RESERVE_SOURCE_NOTES,

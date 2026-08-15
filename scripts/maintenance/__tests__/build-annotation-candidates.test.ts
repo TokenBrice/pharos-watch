@@ -4,7 +4,7 @@ import {
   filterAgainstExisting,
   type Candidate,
 } from "../build-annotation-candidates";
-import type { StablecoinMeta } from "../../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 function coin(id: string, symbol: string, name = symbol): StablecoinMeta {
   return { id, symbol, name, flags: {} } as StablecoinMeta;

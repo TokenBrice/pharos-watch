@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 import { analyzeOracleRiskCoverage } from "../lib/oracle-risk-coverage";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {

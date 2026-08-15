@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { computePYS } from "../../shared/lib/yield-scoring";
+import { computePYS } from "@shared/lib/yield-scoring";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { buildYieldOutcomeValidationReport, spearmanCorrelation } from "../lib/yield-outcome-validation";

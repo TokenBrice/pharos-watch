@@ -8,15 +8,15 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { classifyFreshnessRatio } from "../../shared/lib/status-thresholds";
+import { classifyFreshnessRatio } from "@shared/lib/status-thresholds";
 import {
   apiFetchHeaders,
   GENERATOR_API_KEY_ENV_NAMES,
   resolveApiPathUrl,
   resolveGeneratorApiBase,
 } from "../lib/sync-from-api";
-import { SITE_DATA_PATH_PREFIX } from "../../shared/lib/site-data-lane";
-import { ApiMetaSchema, type ApiMeta } from "../../shared/types/api-meta";
+import { SITE_DATA_PATH_PREFIX } from "@shared/lib/site-data-lane";
+import { ApiMetaSchema, type ApiMeta } from "@shared/types/api-meta";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "../../src/lib/api-query-descriptors";
 import { buildHomepageBootstrapDescriptors } from "../../src/lib/homepage-bootstrap-shared";
 import { resolveSchemaLike, type SchemaLikeSource } from "../../src/lib/schema-like";

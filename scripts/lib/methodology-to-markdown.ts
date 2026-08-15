@@ -1,11 +1,11 @@
 import {
   toMethodologyVersionLabel,
-} from "../../shared/lib/methodology-versions/base";
+} from "@shared/lib/methodology-versions/base";
 import {
   METHODOLOGY_CHANGELOG_MARKDOWN_KEYS,
   getMethodologyChangelogEntryByMarkdownKey,
   type MethodologyChangelogMarkdownKey,
-} from "../../shared/lib/methodology-versions/registry";
+} from "@shared/lib/methodology-versions/registry";
 import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/app/methodology/sections/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
 

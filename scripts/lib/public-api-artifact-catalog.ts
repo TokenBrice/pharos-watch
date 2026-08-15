@@ -1,5 +1,6 @@
-import { getEndpointDefinitionByKey, type EndpointKey } from "../../shared/lib/api-endpoints/definitions";
-import { BLACKLIST_STABLECOINS } from "../../shared/types/market";
+import { getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints/definitions";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { PublicApiResponseSchemaName } from "./public-api-response-schemas";
 
 export type QueryParamType = "string" | "integer" | "number" | "boolean";
 
@@ -18,7 +19,7 @@ export interface PublicApiArtifactEndpoint {
   description: string;
   tags: readonly string[];
   security?: "apiKey" | "none";
-  responseSchema?: string;
+  responseSchema?: PublicApiResponseSchemaName;
   parameters?: readonly PublicApiArtifactParameter[];
   postman?: PostmanRequestConfig | readonly PostmanRequestConfig[];
 }
@@ -65,6 +66,49 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
   "Status",
   "Reserves",
 ] as const;
+
+/**
+ * Existing public endpoints whose response is still documented as JsonValue.
+ * New endpoints fail closed in publicArtifact() until they either register a
+ * canonical Zod response schema or are deliberately added to this debt list.
+ */
+export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
+  "health",
+  "stablecoins",
+  "stablecoin-detail",
+  "stablecoin-summary",
+  "stablecoin-reserves",
+  "stablecoin-charts",
+  "peg-summary",
+  "depeg-events",
+  "events",
+  "usds-status",
+  "bluechip-ratings",
+  "dex-liquidity",
+  "dex-liquidity-history",
+  "depeg-resolver",
+  "depeg-resolver-review",
+  "redemption-backstops",
+  "stress-signals",
+  "stability-index",
+  "blacklist",
+  "blacklist-summary",
+  "mint-burn-flows",
+  "mint-burn-events",
+  "chains",
+  "non-usd-share",
+  "supply-history",
+  "safety-score-history",
+  "safety-score-history-v2",
+  "daily-digest",
+  "digest-archive",
+  "digest-snapshot",
+  "snapshots-index",
+  "snapshot-day",
+  "snapshot-coin",
+  "public-status-history",
+  "telegram-pulse",
+]);
 
 export const POSTMAN_FOLDERS: readonly { name: PostmanFolderName; description: string }[] = [
   {
@@ -187,6 +231,12 @@ function publicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
   const definition = getEndpointDefinitionByKey(artifact.key);
   if (!definition || definition.adminRequired || definition.methods.length !== 1 || definition.methods[0] !== "GET") {
     throw new Error(`Public artifact endpoint "${artifact.key}" must use a non-admin GET definition`);
+  }
+  const intentionallyGeneric = OPENAPI_JSON_VALUE_ENDPOINT_KEYS.has(artifact.key);
+  if ((artifact.responseSchema === undefined) !== intentionallyGeneric) {
+    throw new Error(
+      `Public artifact endpoint "${artifact.key}" must have exactly one response contract: a canonical Zod response schema or an explicit JsonValue debt entry`,
+    );
   }
   return {
     ...artifact,

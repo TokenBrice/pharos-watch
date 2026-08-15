@@ -3,7 +3,7 @@ import { relative, resolve } from "node:path";
 import ts from "typescript";
 import { collectSourceFiles } from "./source-files.mjs";
 import { getScriptKind } from "./ts-ast.mjs";
-import type { IsolateLocalStateRegistryEntry } from "../../shared/lib/isolate-local-state-registry";
+import type { IsolateLocalStateRegistryEntry } from "@shared/lib/isolate-local-state-registry";
 
 export interface IsolateLocalStateCandidate {
   sourcePath: string;

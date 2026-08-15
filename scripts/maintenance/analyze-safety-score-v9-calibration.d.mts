@@ -29,6 +29,15 @@ interface QualifyingCard {
   grade: string;
 }
 
+export function deriveCalibrationGradePolicy(formula: {
+  gradeThresholds: readonly { grade: string; minScore: number }[];
+  scoreDecimals: number;
+}): {
+  order: string[];
+  boundaries: number[];
+  ranges: Record<string, { minScore: number; maxScore: number }>;
+};
+
 export function computeCalibrationBaseInputGenerationId(input: unknown): string;
 export function computeCalibrationFactSetDigest(compiledFacts: unknown): string;
 export function computeCalibrationResultDigest(evaluatedSet: unknown): string;

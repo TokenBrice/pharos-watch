@@ -16,7 +16,7 @@ import {
   TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE,
   TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE,
-} from "../../shared/lib/telegram-delivery-policy";
+} from "@shared/lib/telegram-delivery-policy";
 type AlertType = "depeg" | "dews" | "safety" | "launch" | "reserve" | "freeze";
 type ScenarioId = "single-depeg" | "market-wide-burst" | "dews-safety-burst" | "freeze-event" | "admin-broadcast" | "telegram-429-storm";
 type SloStatus = "ok" | "slow" | "breach" | "outage-unavailable" | "exploratory";

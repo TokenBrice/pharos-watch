@@ -8,7 +8,7 @@ import {
   reconcileIndependentAssuranceManifest,
   type IndependentAssuranceManifest,
   type IndependentAssuranceProduct,
-} from "../../shared/lib/independent-assurance";
+} from "@shared/lib/independent-assurance";
 
 const MANIFEST_DIR = resolve("shared/data/live-reserves/independent-assurance");
 const PRODUCTS = ["AUDX", "EUROP", "USDGO", "XSGD", "XUSD"] as const satisfies readonly IndependentAssuranceProduct[];

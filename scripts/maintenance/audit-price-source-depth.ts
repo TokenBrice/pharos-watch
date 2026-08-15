@@ -2,11 +2,11 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import type { StablecoinMeta } from "../../shared/types";
-import { getPricingSourceRegistryEntry } from "../../shared/lib/pricing-source-registry";
-import { splitCompositePriceSource } from "../../shared/lib/pricing-sources";
-import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import { getCirculatingRaw } from "../../shared/lib/supply";
+import type { StablecoinMeta } from "@shared/types";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
+import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   fetchJson,
   formatNumber,

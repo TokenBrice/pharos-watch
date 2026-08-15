@@ -10,7 +10,7 @@ const {
   renderEnvExample,
   renderOperatorOriginAccessEnvBlock,
   renderWorkerInfrastructureEnvBlock,
-} = await import("../../shared/lib/env-contract.ts");
+} = await import("@shared/lib/env-contract.ts");
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildBridgeRouteCoverageAudit } from "../lib/bridge-route-coverage-audit";
 
 const generatedAtArg = process.argv.indexOf("--generated-at");

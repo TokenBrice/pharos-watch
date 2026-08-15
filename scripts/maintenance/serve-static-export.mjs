@@ -11,10 +11,10 @@ import {
   buildContentSecurityPolicy,
   createCspNonce,
   isTelegramMiniAppPath,
-} from "../../shared/lib/site-csp.ts";
-import canonicalOrder from "../../shared/data/stablecoins/canonical-order.json" with { type: "json" };
-import origins from "../../shared/lib/runtime-origins.json" with { type: "json" };
-import { setYieldWorkbenchFallbackParam } from "../../shared/lib/yield-workbench-fallback.ts";
+} from "@shared/lib/site-csp.ts";
+import canonicalOrder from "@shared/data/stablecoins/canonical-order.json" with { type: "json" };
+import origins from "@shared/lib/runtime-origins.json" with { type: "json" };
+import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const CONTENT_TYPES = {
@@ -139,7 +139,7 @@ let siteDataResolverPromise;
 
 async function getSiteDataResolver() {
   if (!siteDataResolverPromise) {
-    siteDataResolverPromise = import("../../shared/lib/site-data-lane.ts").then(
+    siteDataResolverPromise = import("@shared/lib/site-data-lane.ts").then(
       (module) => module.resolveSiteDataUpstreamPath,
     );
   }

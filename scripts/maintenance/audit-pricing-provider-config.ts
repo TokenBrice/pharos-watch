@@ -7,7 +7,7 @@ import {
   KRAKEN_MARKETS,
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
-} from "../../shared/lib/pricing-provider-config";
+} from "@shared/lib/pricing-provider-config";
 
 export interface AuditSection {
   provider: string;

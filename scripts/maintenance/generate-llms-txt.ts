@@ -5,17 +5,17 @@ import {
   BACKING_PROSE_LABELS,
   GOVERNANCE_PROSE_LABELS,
   PEG_LABELS_SHORT,
-} from "../../shared/lib/classification";
-import { CEMETERY_ENTRIES } from "../../shared/lib/cemetery-merged";
-import { SITE_ORIGIN } from "../../shared/lib/runtime-origins";
-import { ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import { PUBLIC_DOCS } from "../../shared/lib/public-docs";
-import { METHODOLOGY_CHANGELOG_REGISTRY } from "../../shared/lib/methodology-versions/registry";
-import { MECHANISM_ARCHETYPE_VALUES } from "../../shared/types/core";
+} from "@shared/lib/classification";
+import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
+import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { PUBLIC_DOCS } from "@shared/lib/public-docs";
+import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
+import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
 import { GLOSSARY_ENTRIES } from "../../src/app/learn/glossary/content";
 import { ARCHETYPE_CONTENT } from "../../src/app/learn/mechanisms/content";
-import type { StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

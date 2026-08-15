@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
-import { getCirculatingRaw } from "../../shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { isDirectRun } from "./smoke-runtime.mjs";
 

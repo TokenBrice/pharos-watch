@@ -14,10 +14,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
-import { sha256Hex } from "../../shared/lib/sha256";
-import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
-import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { ACTIVE_STABLECOINS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const OUTPUT_TS_REL = "shared/data/stablecoins/report-card-registry-fingerprint.generated.ts";

@@ -4,18 +4,46 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compileV9FactSetV2, compileV9FactSetV3 } from "../../shared/lib/safety-score-v9/compile.ts";
-import { evaluateV9FactSet } from "../../shared/lib/safety-score-v9/evaluate-set.ts";
-import { V9_CANDIDATE_POLICY_V1 } from "../../shared/lib/safety-score-v9/policy.ts";
-import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "../../shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
+import { compileV9FactSetV2, compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile.ts";
+import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set.ts";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy.ts";
+import { SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST } from "@shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const TSX_CLI_PATH = fileURLToPath(import.meta.resolve("tsx/cli"));
 const TRUSTED_REPLAY_CLI_PATH = resolve(REPO_ROOT, "worker/scripts/replay-safety-score-v9.ts");
 const trustedReplayCache = new Map();
 
-const GRADE_ORDER = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F", "NR"];
-const GRADE_BOUNDARIES = [40, 50, 55, 60, 65, 70, 75, 80, 83, 87, 100];
+export function deriveCalibrationGradePolicy(formula) {
+  const thresholds = formula.gradeThresholds;
+  const scoreQuantum = 10 ** -formula.scoreDecimals;
+  const ranges = Object.fromEntries(
+    thresholds.map((threshold, index) => [
+      threshold.grade,
+      {
+        minScore: threshold.minScore,
+        maxScore: index === 0 ? 100 : thresholds[index - 1].minScore - scoreQuantum,
+      },
+    ]),
+  );
+  return {
+    order: [...thresholds.map((threshold) => threshold.grade), "NR"],
+    boundaries: [
+      ...thresholds
+        .map((threshold) => threshold.minScore)
+        .filter((minimum) => minimum > 0)
+        .sort((left, right) => left - right),
+      100,
+    ],
+    ranges,
+  };
+}
+
+const CALIBRATION_GRADE_POLICY = deriveCalibrationGradePolicy(
+  V9_CANDIDATE_POLICY_V1.policy.semantic.formula,
+);
+const GRADE_ORDER = CALIBRATION_GRADE_POLICY.order;
+const GRADE_BOUNDARIES = CALIBRATION_GRADE_POLICY.boundaries;
 const ADVERSE_IDS = [
   "usdd-tron-dao-reserve",
   "u-united-stables",
@@ -1052,6 +1080,7 @@ function assetWideControlsResolved(evaluated, facts) {
 }
 
 export function evaluateRealACandidateChecks(card, evaluated, facts) {
+  const realARange = CALIBRATION_GRADE_POLICY.ranges.A;
   const supply = evaluated?.stressState?.exitPortfolio?.circulatingUsd ?? 0;
   const hasExecutableDexRoute =
     evaluated?.exit?.routes?.some(
@@ -1060,7 +1089,10 @@ export function evaluateRealACandidateChecks(card, evaluated, facts) {
   const evidenceFreshness = scoreBearingEvidenceFreshness(evaluated, facts);
   const controls = assetWideControlsResolved(evaluated, facts);
   const checks = {
-    gradeAndRange: card.grade === "A" && card.score >= 83 && card.score <= 86,
+    gradeAndRange:
+      card.grade === "A" &&
+      card.score >= realARange.minScore &&
+      card.score <= realARange.maxScore,
     positiveSupply: supply > 0,
     executableDexRoute: hasExecutableDexRoute,
     strongEvidence:
@@ -1472,10 +1504,15 @@ function changesFromBaseline(baseline, candidate) {
 }
 
 function realACandidatesForReplay(replay) {
+  const realARange = CALIBRATION_GRADE_POLICY.ranges.A;
   const evaluatedById = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
   const factsById = new Map(replay.pipeline.compiledFacts.assets.map((asset) => [asset.assetId, asset]));
   return replay.pipeline.candidate.cards
-    .filter((card) => card.grade === "A" || (card.score >= 83 && card.score <= 86))
+    .filter(
+      (card) =>
+        card.grade === "A" ||
+        (card.score >= realARange.minScore && card.score <= realARange.maxScore),
+    )
     .map((card) => ({
       assetId: card.id,
       score: card.score,
@@ -1584,8 +1621,9 @@ function validateFreshCaptureSeries(values, candidateAssetIds, candidateRealAIds
 
 export function qualifyingCompositeCards(cards) {
   if (!Array.isArray(cards)) throw new Error("composite cards must be an array");
+  const compositeMinimum = CALIBRATION_GRADE_POLICY.ranges["A+"].minScore;
   return cards
-    .filter((card) => card.grade === "A+" && card.score >= 87)
+    .filter((card) => card.grade === "A+" && card.score >= compositeMinimum)
     .map((card) => ({ assetId: card.id, score: card.score, grade: card.grade }));
 }
 

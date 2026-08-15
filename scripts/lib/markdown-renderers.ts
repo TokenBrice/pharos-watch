@@ -9,18 +9,18 @@ import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
   PEG_LABELS_SHORT,
-} from "../../shared/lib/classification";
+} from "@shared/lib/classification";
 import {
   DOC_GROUPS,
   PUBLIC_DOCS,
   preparePublicDocMarkdown,
   type PublicDoc,
-} from "../../shared/lib/public-docs";
-import { TRACKED_META_BY_ID } from "../../shared/lib/stablecoins/registry";
+} from "@shared/lib/public-docs";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
-} from "../../shared/types";
+} from "@shared/types";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 

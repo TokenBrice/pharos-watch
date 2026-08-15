@@ -1,5 +1,5 @@
-import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype";
-import type { StablecoinMeta } from "../../shared/types";
+import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
+import type { StablecoinMeta } from "@shared/types";
 
 export type MechanismArchetypeCoverageFindingKind =
   "missing-classification" | "missing-unresolved-review" | "invalid-override-review";

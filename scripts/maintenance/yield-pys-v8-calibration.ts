@@ -2,11 +2,11 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "../../shared/lib/yield-scoring";
-import { clamp } from "../../shared/lib/math";
-import { percentileNearestRank } from "../../shared/lib/stats";
-import { formatPercentFromRatio } from "../../shared/lib/format";
-import { YieldRankingsResponseSchema, type YieldRanking } from "../../shared/types/yield";
+import { computePYS, computePysComponents, yieldStabilityToApyVarianceScore } from "@shared/lib/yield-scoring";
+import { clamp } from "@shared/lib/math";
+import { percentileNearestRank } from "@shared/lib/stats";
+import { formatPercentFromRatio } from "@shared/lib/format";
+import { YieldRankingsResponseSchema, type YieldRanking } from "@shared/types/yield";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const DEFAULT_OUTPUT = "agents/yield-pys-v8-calibration-template.md";

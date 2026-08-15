@@ -7,19 +7,19 @@ import {
   aggregateV9SmoothBoundedHeadroom,
   type V9AggregationPillars,
   type V9WeakestPathAggregationTrace,
-} from "../../shared/lib/safety-score-v9/aggregation";
-import { decimalSnap } from "../../shared/lib/safety-score-v9/formula";
+} from "@shared/lib/safety-score-v9/aggregation";
+import { decimalSnap } from "@shared/lib/safety-score-v9/formula";
 import {
   resolveV9ReasonPolicy,
   V9_CANDIDATE_POLICY_V1,
-} from "../../shared/lib/safety-score-v9/policy";
-import { applyV9AllocatedScopedRiskAdjustments } from "../../shared/lib/safety-score-v9/scoped-risk";
+} from "@shared/lib/safety-score-v9/policy";
+import { applyV9AllocatedScopedRiskAdjustments } from "@shared/lib/safety-score-v9/scoped-risk";
 import {
   V9CapSourceSchema,
   V9ReasonCodeSchema,
   V9StructuralSignalSchema,
-} from "../../shared/types/safety-score-v9";
-import { V9EvidenceResponsibilitySchema } from "../../shared/types/safety-score-v9-fact-primitives";
+} from "@shared/types/safety-score-v9";
+import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 
 const AdverseAttributionSchema = z.object({
   source: z.enum([

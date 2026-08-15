@@ -6,8 +6,8 @@ import {
   buildL2BeatBridgeRouteReviewAudit,
   type L2BeatBridgeRouteReviewAudit,
   type L2BeatBridgeRouteReviewRow,
-} from "../../shared/lib/chains/l2beat-audit";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+} from "@shared/lib/chains/l2beat-audit";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   assertCandidateReportLimitChoice,
   createCandidateReportCliOptions,

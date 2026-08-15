@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { ENDPOINT_DEFINITIONS } from "../../shared/lib/api-endpoints/definitions";
+import { ENDPOINT_DEFINITIONS } from "@shared/lib/api-endpoints/definitions";
 import {
   POSTMAN_FOLDERS,
   PUBLIC_API_ARTIFACT_ENDPOINTS,

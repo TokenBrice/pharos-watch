@@ -1,10 +1,10 @@
 #!/usr/bin/env tsx
 
-import type { StablecoinMeta } from "../../shared/types";
-import type { RedemptionRouteFamily } from "../../shared/types/redemption";
-import { resolveCapacityConfidence } from "../../shared/lib/redemption-backstop-confidence";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "../../shared/lib/redemption-backstop-configs";
-import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
+import type { StablecoinMeta } from "@shared/types";
+import type { RedemptionRouteFamily } from "@shared/types/redemption";
+import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import {
   ACTIVE_STABLECOINS,
   DELISTED_STABLECOINS,
@@ -12,7 +12,7 @@ import {
   PRE_LAUNCH_STABLECOINS,
   QUARANTINED_STABLECOINS,
   TRACKED_STABLECOINS,
-} from "../../shared/lib/stablecoins/registry";
+} from "@shared/lib/stablecoins/registry";
 import { writeOutputFile } from "../lib/coverage-audit-cli";
 import {
   REDEMPTION_COVERAGE_DISPOSITIONS,
