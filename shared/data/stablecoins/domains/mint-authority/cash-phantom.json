@@ -355,6 +355,9 @@
         "evidence": "At block 40381118, direct verified OFT 0x1b64... named this no-code EOA as owner and trusted Solana OFTStore 3cQm... for destination EID 30168. The owner can change peers, tokenAuthority, and destination limits, but cannot create source supply: _debit first transfers real inner CASH and then burns it, so a no-op tokenAuthority does not manufacture tokens."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -386,9 +389,9 @@
           "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
         }
       ],
-      "evidence": "At the fixed cutoff, Solana slot 432714278 and HyperEVM block 40381118 resolved the complete CASH supply graph. The Bridge program had exactly two active minter routes and one immediate governance EOA, but its ProgramData retained a separate single-key upgrader, correcting the prior false immutable conclusion. The Solana OApp and shared Token-2022 and LayerZero Endpoint runtimes were independently upgradeable. The sole HyperEVM token administrator could create source CASH and upgrade both inner proxies; the direct OFT owner and Solana OApp admin could change route parameters but could not manufacture supply alone.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At the fixed cutoff, Solana slot 432714278 and HyperEVM block 40381118 resolved the complete CASH supply graph. The Bridge program had exactly two active minter routes and one immediate governance EOA, but its ProgramData retained a separate single-key upgrader, correcting the prior false immutable conclusion. The Solana OApp and shared Token-2022 and LayerZero Endpoint runtimes were independently upgradeable. The sole HyperEVM token administrator could create source CASH and upgrade both inner proxies; the direct OFT owner and Solana OApp admin could change route parameters but could not manufacture supply alone. Economic-posture fields reviewed 2026-08-15: issuer EOAs can reset allowances, raise the HyperEVM maximum, or replace mint logic immediately; no whole-supply reserve reconciliation is evidenced and money-transmitter licensing is not prudential product supervision.",
+      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

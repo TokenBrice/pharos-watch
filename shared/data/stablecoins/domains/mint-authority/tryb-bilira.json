@@ -119,6 +119,9 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -145,12 +148,10 @@
         }
       ]
     },
-    "reconciliation": "periodic",
-    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25294993: TRYB ETH is a FiatTokenProxy (0x2c537e5624e4af88a7ae4060c022609376c8d0eb, source verified as FiatTokenProxy on Blockscout). owner() = Safe 0xb9fda3c... (3 owners, 2/3, Gnosis 1.3.0, no modules). masterMinter() = Safe 0x68193b... (6 owners, 3/6, Gnosis 1.3.0, no modules). Both confirmed via getOwners(), getThreshold(), slot 0 masterCopy, and getModulesPaginated. EIP-1967 impl and admin slots are 0x0 (FiatTokenProxy uses custom storage). BSC chain: owner and masterMinter share a single EOA address (0x07913270..., confirmed code=0 on BSC). Ethereum mint surface fully resolved. Corpus Denetim ve Yeminli Mali Musavirlik A.S. performs recurring quarterly independent examinations; the latest reviewed report is dated May 21, 2026 and fully reconciles TRYB liabilities to reserve assets. Turkey's Capital Markets Board temporary operating list matches the BiLira platform but expressly says inclusion is not authorization, and BiLira was not matched in the Central Bank's authorized EMI register. Supervision is therefore attestation-only.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25294993: TRYB ETH is a FiatTokenProxy (0x2c537e5624e4af88a7ae4060c022609376c8d0eb, source verified as FiatTokenProxy on Blockscout). owner() = Safe 0xb9fda3c... (3 owners, 2/3, Gnosis 1.3.0, no modules). masterMinter() = Safe 0x68193b... (6 owners, 3/6, Gnosis 1.3.0, no modules). Both confirmed via getOwners(), getThreshold(), slot 0 masterCopy, and getModulesPaginated. EIP-1967 impl and admin slots are 0x0 (FiatTokenProxy uses custom storage). BSC chain: owner and masterMinter share a single EOA address (0x07913270..., confirmed code=0 on BSC). Ethereum mint surface fully resolved. Corpus Denetim ve Yeminli Mali Musavirlik A.S. performs recurring quarterly independent examinations; the latest reviewed report is dated May 21, 2026 and fully reconciles TRYB liabilities to reserve assets. Turkey's Capital Markets Board temporary operating list matches the BiLira platform but expressly says inclusion is not authorization, and BiLira was not matched in the Central Bank's authorized EMI register. Supervision is therefore attestation-only. Economic-posture fields reviewed 2026-08-15: unbounded issuer, owner, and upgrade paths include immediate self-controlled authorities; quarterly Corpus reconciliation exists without prudential product supervision.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "BiLira audit reports",

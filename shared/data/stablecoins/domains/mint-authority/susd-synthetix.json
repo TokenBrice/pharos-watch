@@ -80,10 +80,13 @@
         "evidence": "On-chain getOwners()/getThreshold() at block 25,360,249 confirmed 4-of-7 Gnosis Safe v1.3.0, nonce 3334 (highly active). No timelock between Safe and contracts. Controls both legacy sUSD token and V3 Core Proxy."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25,360,249: sUSD token owner() = V3 Core Proxy owner() = 0xeB3107117FEAd7de89Cd14D463D340A2E6917769 (Gnosis Safe v1.3.0, 4-of-7, nonce 3334, no modules). Full governance chain verified on-chain via getOwners()/getThreshold(). No timelock present.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25,360,249: sUSD token owner() = V3 Core Proxy owner() = 0xeB3107117FEAd7de89Cd14D463D340A2E6917769 (Gnosis Safe v1.3.0, 4-of-7, nonce 3334, no modules). Full governance chain verified on-chain via getOwners()/getThreshold(). No timelock present. Economic-posture fields reviewed 2026-08-15: the self-controlled Safe can raise collateralized issuance parameters without an independent timelock, reconciliation is not applicable to the on-chain CDP debt pool, and no supervisor or independent attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "SIP-420 (Synthetix SIPs)",

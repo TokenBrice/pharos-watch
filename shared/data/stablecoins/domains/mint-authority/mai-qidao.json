@@ -210,10 +210,13 @@
         }
       ]
     },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified. 2026-07-20 cur-8 extension (Polygon block 90573828): the vault/minter surface was resolved from on-chain reads. MAI token debtCeiling() = 206,000,000e18 under token-owner Safe 0x3feacf90 against a totalSupply() of 305,129,005.936e18, so the binding limits are the per-vault ceilings; collateral vaults are separate cap-limited contracts (camWMATIC and WETH sampled) whose owner() chain terminates in Gnosis Safe 0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc (v1.3.0, 3-of-4, no modules, zero guard), directly or via administration contract 0x257ff75bef85ca0c1517168ef27efc69e5c7016f. No mint entry point can raise its own ceiling, so cap raising is a separate multisig control. Three of the vault-admin signers also sign the Polygon token-owner Safe.",
-      "reviewer": "Claude Phase 0c continuation + cur-8 vault-surface resolution",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Polygon (block 88326121): 3/5 Safe owner, no modules. Ethereum (block 25361903): 4/6 Safe owner, no modules. Arbitrum (block 471552027): 2/4 Safe owner, no modules. All three chains use GnosisProxy multisigs with overlapping signers. masterMinter()/MINTER_ROLE both revert — owner-only mint pattern. Other minor chains (Optimism, Base, Avalanche, BSC, etc.) use the same Ownable pattern but their admins are note-only per brief scope; primary covered chains verified. 2026-07-20 cur-8 extension (Polygon block 90573828): the vault/minter surface was resolved from on-chain reads. MAI token debtCeiling() = 206,000,000e18 under token-owner Safe 0x3feacf90 against a totalSupply() of 305,129,005.936e18, so the binding limits are the per-vault ceilings; collateral vaults are separate cap-limited contracts (camWMATIC and WETH sampled) whose owner() chain terminates in Gnosis Safe 0x1d8a6b7941ef1349c1b5e378783cd56b001ecfbc (v1.3.0, 3-of-4, no modules, zero guard), directly or via administration contract 0x257ff75bef85ca0c1517168ef27efc69e5c7016f. No mint entry point can raise its own ceiling, so cap raising is a separate multisig control. Three of the vault-admin signers also sign the Polygon token-owner Safe. Economic-posture fields reviewed 2026-08-15: overlapping undelayed QiDao Safes can raise vault ceilings or replace authorized mint paths, while issuance remains on-chain collateral-gated with no named supervisor or attestor.",
+      "reviewer": "Claude Phase 0c continuation + cur-8 vault-surface resolution; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "QiDao docs",

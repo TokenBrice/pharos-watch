@@ -109,10 +109,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Current role reads resolve the control graph across Ethereum, BSC, and Tron: each deployment is immutable; a chain-local DEFAULT_ADMIN_ROLE EOA can grant or revoke MASTERMINTER_ROLE and can therefore re-enable direct minting, while the formerly recorded owner accounts no longer hold MASTERMINTER_ROLE at the observed blocks. No current MASTERMINTER_ROLE holder was identified, so the record does not assign direct mint authority to an unverified account.",
-      "reviewer": "Codex CTRL batch 15",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Current role reads resolve the control graph across Ethereum, BSC, and Tron: each deployment is immutable; a chain-local DEFAULT_ADMIN_ROLE EOA can grant or revoke MASTERMINTER_ROLE and can therefore re-enable direct minting, while the formerly recorded owner accounts no longer hold MASTERMINTER_ROLE at the observed blocks. No current MASTERMINTER_ROLE holder was identified, so the record does not assign direct mint authority to an unverified account. Economic-posture fields reviewed 2026-08-15: chain-local issuer admins can re-enable unrestricted minting, no recurring whole-supply attestation is evidenced, and no prudential authorization is recorded.",
+      "reviewer": "Codex CTRL batch 15; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

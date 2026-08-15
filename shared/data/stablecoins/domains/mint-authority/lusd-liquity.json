@@ -62,6 +62,9 @@
         "evidence": "Liquity v1 resources list TroveManager at this address as the core Trove accounting contract."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -69,9 +72,9 @@
           "url": "https://docs.liquity.org/liquity-v1/documentation/resources"
         }
       ],
-      "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and immutable protocol contracts rather than an issuer minter.",
-      "reviewer": "SONG-1 mint-authority evidence review",
-      "reviewedAt": "2026-07-14"
+      "evidence": "Liquity documentation describes LUSD as minted through collateralized Troves and immutable protocol contracts rather than an issuer minter. Economic-posture fields reviewed 2026-08-15: immutable ETH-collateralized Trove issuance has no privileged mint path, so reserve reconciliation and issuer supervision are not applicable.",
+      "reviewer": "SONG-1 mint-authority evidence review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

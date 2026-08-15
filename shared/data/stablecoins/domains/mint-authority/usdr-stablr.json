@@ -60,10 +60,13 @@
         "evidence": "At Ethereum block 25294990, EIP-1967 proxy-admin slot returned 0xbfFF92d76b74cF8F0A56AdDe7C89aA671a22953c. required()=2, getOwners() returned 2 addresses (0x881ba97132a35fd885f9091a68ffb3e94f29b90c, 0xac6db6e68252c5c7770245eafb55779cc1629a04). getModules() returned 0x (no modules). Note: prior record had threshold 1/1 — corrected to confirmed 2/2."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At block 25294990: token owner = 0xC7Dcd...0E4 (2/2 multisig, no modules confirmed). Proxy admin = 0xbfFF...953c (2/2 multisig, no modules confirmed; prior 1/1 record was incorrect — corrected from live reads). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958. USDR is a single-chain MiCAR EMT; the May 2026 exploit compromised the mint key; post-incident multisig state confirmed above.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At block 25294990: token owner = 0xC7Dcd...0E4 (2/2 multisig, no modules confirmed). Proxy admin = 0xbfFF...953c (2/2 multisig, no modules confirmed; prior 1/1 record was incorrect — corrected from live reads). Implementation = 0x76e0baef381656d51d733cf9aa60d7bf8017f958. USDR is a single-chain MiCAR EMT; the May 2026 exploit compromised the mint key; post-incident multisig state confirmed above. Economic-posture fields reviewed 2026-08-15: issuer multisigs can authorize or replace mint logic without an independent timelock, Grant Thornton reconciles reserves quarterly, and MFSA authorizes StablR Ltd as a MiCA EMT issuer.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Etherscan USDR contract",

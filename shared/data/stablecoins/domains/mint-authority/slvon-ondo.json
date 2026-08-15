@@ -383,13 +383,13 @@
         ]
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
-    "supervision": "unknown",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Sourcify verifies the Ethereum token and upgradeable beacon, and pinned RPC reads resolve the Ethereum, BSC, and HyperEVM beacons, implementations, and 2-hour owner timelocks. Ethereum's direct minters and 5-of-9 admin Safe were already resolved. At pinned BSC block 111360010 and HyperEVM block 41089232, the terminal timelock role graphs were enumerated; both timelocks include the same 5-of-9 Safe as admin. Separate pinned Safe reads found the same nine owners, threshold 5, no enabled modules, and no guard on both chains. At finalized Solana slot 434387395, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as mint authority, while the upgradeable program named a single funded system-account EOA as its no-delay upgrade authority. These observations close the previously identified deployment-wide authority questions; the centralized upgrade and mint paths remain scoring risks rather than evidence gaps.",
-      "reviewer": "P2 mint-free cohort; OpenAI Codex NR-recovery review",
-      "reviewedAt": "2026-07-21",
+      "evidence": "Sourcify verifies the Ethereum token and upgradeable beacon, and pinned RPC reads resolve the Ethereum, BSC, and HyperEVM beacons, implementations, and 2-hour owner timelocks. Ethereum's direct minters and 5-of-9 admin Safe were already resolved. At pinned BSC block 111360010 and HyperEVM block 41089232, the terminal timelock role graphs were enumerated; both timelocks include the same 5-of-9 Safe as admin. Separate pinned Safe reads found the same nine owners, threshold 5, no enabled modules, and no guard on both chains. At finalized Solana slot 434387395, the SLVon Token-2022 mint named Ondo's audited GM-program PDA as mint authority, while the upgradeable program named a single funded system-account EOA as its no-delay upgrade authority. These observations close the previously identified deployment-wide authority questions; the centralized upgrade and mint paths remain scoring risks rather than evidence gaps. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct minting plus a no-delay Solana upgrade EOA is economically unbounded, Ankura reconciles product liabilities to reserves daily, and independent attestation exists without a named prudential product supervisor.",
+      "reviewer": "P2 mint-free cohort; OpenAI Codex NR-recovery review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

@@ -127,6 +127,9 @@
         "evidence": "Official M0 deployments list Solana Wrapped M Token at mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp; Solana wrapper does not mint base M."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -142,9 +145,9 @@
           "url": "https://docs.m0.org/protocol/minting-burning"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295240: EIP-1967 minimal proxy, no admin slot. migrationAdmin confirmed as 2/2 Safe (v1.3.0, no modules); migration also requires TTG Registrar to have wm_migrator_v1 key populated (governance-gated). vault() and totalSupply() confirmed functional. Base M mint authority reviewed under m-m0.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Wrapper surface verified at Ethereum block 25295240: EIP-1967 minimal proxy, no admin slot. migrationAdmin confirmed as 2/2 Safe (v1.3.0, no modules); migration also requires TTG Registrar to have wm_migrator_v1 key populated (governance-gated). vault() and totalSupply() confirmed functional. Base M mint authority reviewed under m-m0. Economic-posture fields reviewed 2026-08-15: local issuance is 1:1 M-backed and changing wrapper logic requires both the 2/2 migration Safe and TTG-registered migrator governance, with real-time on-chain backing and independent M0 Validator attestations but no prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

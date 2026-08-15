@@ -159,10 +159,13 @@
         "evidence": "At BSC block 110184782, getOwners() returned the listed eight owners, getThreshold() returned four, getModulesPaginated() returned no modules, and the guard slot was zero. The configured fallback handler is the verified Safe CompatibilityFallbackHandler 1.3.0 at its canonical address; its reviewed source supplies signature, callback, module-enumeration, and reverting simulation helpers rather than an arbitrary Safe transaction executor."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At BSC block 110184782 (hash 0x6c69322d76d1b36ffd46305ea6f10ed181953df19fc71101762d43bf7f101155), asUSDF recognized timelock 0xe829...1861 as DEFAULT_ADMIN_ROLE, asUSDFEarn 0xdb57...3695 as MINTER_AND_BURN_ROLE, and Safe 0xa8c0...1c3f as ADMIN_ROLE. The wrapper's EIP-1967 implementation was 0x29f306...1662f and its immutable TIMELOCK_ADDRESS was the same timelock. At block 110184820 (hash 0x1cbfdbaa4bf8113a21bd4ca779bbcea56078f280c90f2431062970fa8560bc95), that timelock's only external proposer, executor, and canceller was the 4-of-8 Safe. BscScan's RoleGranted and RoleRevoked history for the token resolves five grants and two revocations, including revocation of the deployer's default-admin and ADMIN roles; it supports the current role inventory without an untracked minter. The wrapper's verified source requires USDF deposits for ordinary share issuance, while the reviewed timelock route can authorize a new minter or change wrapper mint logic after six hours. The parent USDF issuance path remains represented by inheritedFrom.",
-      "reviewer": "Codex Safety Score V9 TERRA-III",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At BSC block 110184782 (hash 0x6c69322d76d1b36ffd46305ea6f10ed181953df19fc71101762d43bf7f101155), asUSDF recognized timelock 0xe829...1861 as DEFAULT_ADMIN_ROLE, asUSDFEarn 0xdb57...3695 as MINTER_AND_BURN_ROLE, and Safe 0xa8c0...1c3f as ADMIN_ROLE. The wrapper's EIP-1967 implementation was 0x29f306...1662f and its immutable TIMELOCK_ADDRESS was the same timelock. At block 110184820 (hash 0x1cbfdbaa4bf8113a21bd4ca779bbcea56078f280c90f2431062970fa8560bc95), that timelock's only external proposer, executor, and canceller was the 4-of-8 Safe. BscScan's RoleGranted and RoleRevoked history for the token resolves five grants and two revocations, including revocation of the deployer's default-admin and ADMIN roles; it supports the current role inventory without an untracked minter. The wrapper's verified source requires USDF deposits for ordinary share issuance, while the reviewed timelock route can authorize a new minter or change wrapper mint logic after six hours. The parent USDF issuance path remains represented by inheritedFrom. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated, while any bypass minter or mint-logic change must pass the enforced six-hour timelock; no local attestor or prudential supervisor is evidenced.",
+      "reviewer": "Codex Safety Score V9 TERRA-III; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

@@ -101,6 +101,9 @@
         "evidence": "Solomon documents that approved entities mint and redeem USDv against assets moved into Ceffu off-exchange custody backing the delta-neutral position. Ceffu holds no Solana mint or freeze authority: at slot 432852804 the only SPL mint authority is the program PDA 7XAdHs5Q and the freeze authority is null, so this control carries custody risk, not mint capability."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -124,9 +127,9 @@
           "url": "https://docs.solomonlabs.org/usdv/usdv-and-susdv/minting-usdv"
         }
       ],
-      "evidence": "Snapshot at Solana finalized slot 432852804 (getMultipleAccounts, single context slot). USDv mint Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C: mintAuthority 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa, freezeAuthority null, supply 1512045.989548996. 7XAdHs5Q is owned by program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax, which was the prior review's open question: observed mint and burn transactions prove D4AiKFxj is Solomon's USDv mint/redeem program (Deposit CPI mintTo, Redeem CPI burn). D4AiKFxj is BPF-upgradeable via programData 9JWSfaJZ6iVARqkJvbVKCjW5xuy1LaZ3xfWRQmfCEWo2 with upgrade authority CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY, which PDA derivation and a Squads VaultTransactionExecute confirm is vault index 0 of Squads v4 multisig 71a1tEfnCULkcR1YokJiAt1M8JVMRFhcJPSTf3G3aLX8, decoding to threshold 3 of 9 members with time_lock 0. Solomon docs state that approved entities are able to mint and redeem USDv using select assets. Correction to the 2026-06-11 review: the upgrade authority is a 3-of-9 Squads multisig, not an EOA keypair.",
-      "reviewer": "Claude CTRL review (usdv-solomon)",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Snapshot at Solana finalized slot 432852804 (getMultipleAccounts, single context slot). USDv mint Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C: mintAuthority 7XAdHs5QBYaHPwi9Vkj7aSMA4ZzcfazBb8kB2LEPncoa, freezeAuthority null, supply 1512045.989548996. 7XAdHs5Q is owned by program D4AiKFxjZBrhd6MeRAAj6wNxFcZJuRMBrXW9UpqeS8Ax, which was the prior review's open question: observed mint and burn transactions prove D4AiKFxj is Solomon's USDv mint/redeem program (Deposit CPI mintTo, Redeem CPI burn). D4AiKFxj is BPF-upgradeable via programData 9JWSfaJZ6iVARqkJvbVKCjW5xuy1LaZ3xfWRQmfCEWo2 with upgrade authority CSJJKrBP32T71Zqto6hm7Yi8LXd7eBTWn7piFxCjQfsY, which PDA derivation and a Squads VaultTransactionExecute confirm is vault index 0 of Squads v4 multisig 71a1tEfnCULkcR1YokJiAt1M8JVMRFhcJPSTf3G3aLX8, decoding to threshold 3 of 9 members with time_lock 0. Solomon docs state that approved entities are able to mint and redeem USDv using select assets. Correction to the 2026-06-11 review: the upgrade authority is a 3-of-9 Squads multisig, not an EOA keypair.. Economic-posture fields reviewed 2026-08-15: the mint program has no cap and its 3-of-9 upgrade multisig has no timelock, while the issuer API leaves most backing unmapped and no prudential supervisor or independent attestor is evidenced.",
+      "reviewer": "Claude CTRL review (usdv-solomon); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

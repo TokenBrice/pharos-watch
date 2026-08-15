@@ -57,6 +57,22 @@ import {
   v9RouteReview as routeReview,
   v9Status as status,
 } from "../../test-helpers/v9-fixed-input";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+
+/**
+ * Fixture-local clone of the committed uusd-anything-labs registry meta with
+ * the mint-authority review date pinned before the pinned mechanism-gate
+ * clocks. The two date-gate cases below anchor on the coin's committed
+ * 2026-08-08 mechanism overlay; without this pin, every later live
+ * mint-authority curation pass (e.g. the 2026-08-15 economic-posture batch)
+ * would trip the unrelated future-dated mint-review guard and invalidate the
+ * anchor.
+ */
+function uusdMetaWithPinnedMintReview(): Map<string, V9ExtensionRegistryMeta> {
+  const meta = structuredClone(ACTIVE_META_BY_ID.get("uusd-anything-labs")!);
+  meta.mintAuthority!.review.reviewedAt = "2026-08-08";
+  return new Map([["uusd-anything-labs", meta as V9ExtensionRegistryMeta]]);
+}
 
 describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evidence", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   it("publishes a not-applicable oracle review for a commodity claim", () => {
@@ -166,7 +182,9 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       assetId: "uusd-anything-labs",
       clockSec: Date.parse("2026-08-08T09:17:27.000Z") / 1_000,
     });
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: uusdMetaWithPinnedMintReview(),
+    });
     expect(baseline.assets[0]).toMatchObject({
       mechanismRiskReview: {
         archetype: "fiat-cash",
@@ -203,7 +221,9 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
       assetId: "uusd-anything-labs",
       clockSec: Date.parse("2026-08-09T00:00:00.000Z") / 1_000,
     });
-    const baseline = buildSafetyScoreV9BaselineExtension(fixed);
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: uusdMetaWithPinnedMintReview(),
+    });
     expect(baseline.assets[0]).not.toHaveProperty("mechanismReviewGapDisposition");
 
     const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline);

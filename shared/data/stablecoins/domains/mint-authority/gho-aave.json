@@ -160,6 +160,9 @@
         "evidence": "GHO getFacilitator(0xe10C78A3AC7f016eD2DE1A89c5479b1039EAB9eA) returned this facilitator label and a nonzero bucket capacity at Ethereum block 25165911."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -171,9 +174,9 @@
           "url": "https://etherscan.io/address/0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f#readProxyContract"
         }
       ],
-      "evidence": "At Ethereum block 25530270, the verified non-proxy GHO token had zero EIP-1967 implementation and admin slots. Aave's ACL Admin executor held all three GHO administrative roles, and getFacilitatorsList() returned six cap-limited facilitator contracts. Contract-governed minting requires no off-chain reserve reconciliation; no mint-authority incident is recorded in the reviewed protocol sources.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "evidence": "At Ethereum block 25530270, the verified non-proxy GHO token had zero EIP-1967 implementation and admin slots. Aave's ACL Admin executor held all three GHO administrative roles, and getFacilitatorsList() returned six cap-limited facilitator contracts. Contract-governed minting requires no off-chain reserve reconciliation; no mint-authority incident is recorded in the reviewed protocol sources. Economic-posture fields reviewed 2026-08-15: six facilitators mint only within DAO-managed buckets and Aave governance can add facilitators or raise buckets, while GHO is a protocol liability without an off-chain reserve claim or prudential supervisor.",
+      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

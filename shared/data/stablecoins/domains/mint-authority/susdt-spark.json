@@ -130,6 +130,7 @@
         "evidence": "Inherited from reviewed `usdt-tether` mintAuthority."
       }
     ],
+    "economicCapSemantics": "raiseable",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -152,9 +153,9 @@
           "url": "https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25526129, spUSDT vault 0xe2e7a17dff93280dec073c995595155283e3c372 was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455. Its sole DEFAULT_ADMIN_ROLE member was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Arbitrary SubProxy execution flowed through DSPauseProxy and DSPause with a mandatory 172800-second delay under live Sky Chief governance. StarGuard's seven-day maxDelay was only an expiry bound. Wrapper shares remained collateralized by deposited USDT and did not create base USDT supply. Economic-control evidence reviewed 2026-07-15: spUSDT share issuance is deposit-only and wrapper upgrades require Sky's 48-hour DSPause, but the scored base-supply mint is inherited from Tether and remains issuer-controlled. BDO reconciles Tether reserves quarterly; the latest available report covers 2026-03-31. Tether's El Salvador registration is not treated as prudential stablecoin supervision.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25526129, spUSDT vault 0xe2e7a17dff93280dec073c995595155283e3c372 was a UUPS proxy using SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455. Its sole DEFAULT_ADMIN_ROLE member was Spark SubProxy 0x3300f198988e4c9c63f75df86de36421f06af8c4. Arbitrary SubProxy execution flowed through DSPauseProxy and DSPause with a mandatory 172800-second delay under live Sky Chief governance. StarGuard's seven-day maxDelay was only an expiry bound. Wrapper shares remained collateralized by deposited USDT and did not create base USDT supply. Economic-control evidence reviewed 2026-07-15: spUSDT share issuance is deposit-only and wrapper upgrades require Sky's 48-hour DSPause, but the scored base-supply mint is inherited from Tether and remains issuer-controlled. BDO reconciles Tether reserves quarterly; the latest available report covers 2026-03-31. Tether's El Salvador registration is not treated as prudential stablecoin supervision. Economic-posture fields reviewed 2026-08-15: local share issuance is deposit-gated and cap changes or mint-logic upgrades require Sky governance's enforced 48-hour DSPause; recurring third-party reserve reports support periodic attestation-only posture.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

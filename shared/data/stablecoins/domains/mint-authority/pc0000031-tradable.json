@@ -95,10 +95,13 @@
         "evidence": "At zkSync finalized block 71158867, this no-code EOA held AccessManager roles 0 and 1 with zero delay. It had immediate canCall() for upgradeTo(address) on both shared beacons and mintDealTokens() on this DealManager. The only other role-0 member is DealFactory 0x0ff03b6c9d30cbc4926c5773e7c72dfffd868809; its current UUPS implementation exposes no generic or beacon-upgrade call path and is itself immediately upgradeable under this same role-0 EOA."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At zkSync finalized block 71158867, token 0xac4de1e9a9e83524f24af77972dd39d588de8164 and DealManager 0xdc3dd9e94f3577ef8e6e91560ab9d69845d9b667 were BeaconProxy instances. Their beacon slots pointed respectively to shared beacons 0x1e2f5e41ea5dcb62c8303e240e1d513ed4ec3d74 and 0xcd00fef133fd9b01cd278b4f0fa78cb0c87c9a3c, resolving to Deal implementation 0x85774b6c4a2f72315050084efa3b982df5a7ea67 and DealManager implementation 0x14e6025079a15f03bb67a0dea11621dbb9237a47. Both beacons use AccessManager 0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717, where EOA 0x08aCeEACcD6aA12d547d64B63e8e815e8E7b29Ab has immediate role-0 upgrade permission and also immediate role-1 mint permission. EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe independently retains immediate role-1 mint permission.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At zkSync finalized block 71158867, token 0xac4de1e9a9e83524f24af77972dd39d588de8164 and DealManager 0xdc3dd9e94f3577ef8e6e91560ab9d69845d9b667 were BeaconProxy instances. Their beacon slots pointed respectively to shared beacons 0x1e2f5e41ea5dcb62c8303e240e1d513ed4ec3d74 and 0xcd00fef133fd9b01cd278b4f0fa78cb0c87c9a3c, resolving to Deal implementation 0x85774b6c4a2f72315050084efa3b982df5a7ea67 and DealManager implementation 0x14e6025079a15f03bb67a0dea11621dbb9237a47. Both beacons use AccessManager 0xd9a7937ceb7c8fc8629dde7c8557b24ae60c3717, where EOA 0x08aCeEACcD6aA12d547d64B63e8e815e8E7b29Ab has immediate role-0 upgrade permission and also immediate role-1 mint permission. EOA 0x1b8926351fdca73649ba1cf4388aeeffb8cc95fe independently retains immediate role-1 mint permission. Economic-posture fields reviewed 2026-08-15: immediate issuer EOA mint and upgrade authority is unbounded, no whole-supply reconciliation is evidenced, and no regulator or independent attestor is identified. Wave 2 external verification 2026-08-15: Tradable documentation, the exact deal page, public RWA records, SEC search, and zkSync explorers yielded no recurring whole-supply assurance report.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Tradable",

@@ -313,6 +313,9 @@
         "evidence": "At XDC block 104892489, this verified direct Chainlink BurnMintTokenPool 1.5.1 was the sole MINTER_ROLE member. getToken() returned the XDC USDf token and owner() returned the reviewed 4/6 USDf Safe; the deployer and Safe had revoked their mint roles."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -340,9 +343,9 @@
           "url": "https://xdcscan.com/address/0x33570299e0D73f07c82d005DE75De54cf4582FCC#code"
         }
       ],
-      "evidence": "Ethereum block 25526500 resolved the transparent proxy implementation and ProxyAdmin; ProxyAdmin.owner() is the reviewed 4/6 USDf Safe and there is no timelock. On BSC block 109823336, Base block 48595298, and XDC block 104892489, the token contracts are direct immutable Chainlink BurnMintERC20 deployments. Complete RoleGranted/RoleRevoked enumeration and current hasRole reads identified one local BurnMintTokenPool as MINTER_ROLE holder and the chain-local 4/6 Safe as sole DEFAULT_ADMIN_ROLE holder on each chain; prior deployer and temporary Safe mint roles are revoked.",
-      "reviewer": "Codex Safety Score V9 data research",
-      "reviewedAt": "2026-07-13"
+      "evidence": "Ethereum block 25526500 resolved the transparent proxy implementation and ProxyAdmin; ProxyAdmin.owner() is the reviewed 4/6 USDf Safe and there is no timelock. On BSC block 109823336, Base block 48595298, and XDC block 104892489, the token contracts are direct immutable Chainlink BurnMintERC20 deployments. Complete RoleGranted/RoleRevoked enumeration and current hasRole reads identified one local BurnMintTokenPool as MINTER_ROLE holder and the chain-local 4/6 Safe as sole DEFAULT_ADMIN_ROLE holder on each chain; prior deployer and temporary Safe mint roles are revoked. Economic-posture fields reviewed 2026-08-15: the 4/6 issuer Safe can replace minters and mint logic without a timelock, weekly whole-liability reports provide periodic reconciliation, and ht.digital provides independent assurance without prudential supervision.",
+      "reviewer": "Codex Safety Score V9 data research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

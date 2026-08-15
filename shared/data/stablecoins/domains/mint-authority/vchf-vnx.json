@@ -199,6 +199,7 @@
         "evidence": "At Ethereum block 25531301, this code-empty EOA was the second role-0 bearer in VNXProxyAdmin's RBAC manager. Upgrade role 1 had zero bearers, but self-administered role 0 administers role 1, so this EOA can grant itself direct upgrade authority without delay."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -238,11 +239,15 @@
         {
           "label": "Liechtenstein FMA register search - VNX",
           "url": "https://register.fma-li.li/search?searchText=VNX"
+        },
+        {
+          "label": "VNX exchange-operations suspension notice",
+          "url": "https://vnx.li/important-notice-upcoming-suspension-of-exchange-operations-on-the-vnx-platform/"
         }
       ],
-      "evidence": "Mint-path findings remain supported at Ethereum block 25295081: token rbacManager 0xCdB386...c9AE and 118 successful mint() calls identify EOA 0x7b0c15...9403 as the sole observed minter. Upgrade-path review at block 25531301 confirmed VNXProxyAdmin 0x817f8a...8165 as the EIP-1967 admin and showed that upgrade() and upgradeAndCall() require role 1 in manager 0x2B535E...114b rather than Ownable owner(). Role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers, 0x45a149...545a and 0xAcC56E...311A, either able to self-grant role 1 without delay. The first EOA also owned VNXProxyAdmin and could independently redirect the proxy admin through changeProxyAdmin(). Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited issued annual agreed-upon-procedures reports for 2023 and 2024, but the latest covers 2024-12-31 and was published 2025-02-05; the expected 2025 annual report is overdue as of 2026-07-15, so current recurring reconciliation is not established. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential EMT issuer.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Mint-path findings remain supported at Ethereum block 25295081: token rbacManager 0xCdB386...c9AE and 118 successful mint() calls identify EOA 0x7b0c15...9403 as the sole observed minter. Upgrade-path review at block 25531301 confirmed VNXProxyAdmin 0x817f8a...8165 as the EIP-1967 admin and showed that upgrade() and upgradeAndCall() require role 1 in manager 0x2B535E...114b rather than Ownable owner(). Role 1 had zero bearers, while self-administered role 0 had two code-empty EOA bearers, 0x45a149...545a and 0xAcC56E...311A, either able to self-grant role 1 without delay. The first EOA also owned VNXProxyAdmin and could independently redirect the proxy admin through changeProxyAdmin(). Mint-tier review (2026-07-15): AREVA General Auditing and Trust Company Limited issued annual agreed-upon-procedures reports for 2023 and 2024, but the latest covers 2024-12-31 and was published 2025-02-05; the expected 2025 annual report is overdue as of 2026-07-15, so current recurring reconciliation is not established. Liechtenstein FMA's register matches VNX Commodities AG only as a TT Service Provider, not a prudential EMT issuer. Economic-posture fields reviewed 2026-08-15: issuer-controlled EOAs can mint or alter mint logic without delay, and the stale partial annual report does not establish current whole-supply reconciliation. Wave 2 external verification 2026-08-15: VNX's transparency and report inventory still exposes no later VCHF whole-supply report, while the issuer has suspended exchange and bridging operations; reconciliation remains unknown.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

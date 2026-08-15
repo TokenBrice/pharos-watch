@@ -97,6 +97,9 @@
         "evidence": "At Ethereum block 25530956 and MegaETH block 21235969, owner() on both USDM proxies returns 0x141C03AbC062a9d5d4238e1666B849C929e53cB2. On-chain Safe review returned 9 owners, threshold 4, no enabled modules, a zero guard, and a zero fallback handler. Verified xUSDOFTUpgradeable source makes addMinter() and removeMinter() onlyOwner and authorizes UUPS upgradeToAndCall() through _authorizeUpgrade(...), also onlyOwner; the zero ERC-1967 admin slot does not renounce these UUPS powers."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -112,9 +115,9 @@
           "url": "https://docs.megaeth.com"
         }
       ],
-      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately.",
-      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately. Economic-posture fields reviewed 2026-08-15: the 4/9 owner Safe can install direct minters or replace mint logic immediately, no repo evidence reconciles both local deployments and all minters, and no local supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: MegaUSD and MegaETH materials plus Ethena and Anchorage USDtb disclosures identify upstream reserve components, but no recurring report or live feed reconciles both USDM deployments and every owner-managed mint path to the complete local wrapper supply.",
+      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

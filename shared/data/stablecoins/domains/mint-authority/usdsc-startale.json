@@ -99,6 +99,9 @@
         "evidence": "At Soneium block 24028800: SwapFacility at 0xB6807116b3B1B321a390594e31ECD6e0076f6278 confirmed TransparentUpgradeableProxy (code=3060 bytes, impl=0xc435b33c017da7ef313bf2d3132c99c7673a194b). EIP-1967 admin slot=0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin). ProxyAdmin owner=0xdcf79C332cB3Fe9d39A830a5f8de7cE6b1BD6fD1, a 2/3 EOA multisig with 3 EOA owners (verified eth_getCode=0x for all three), no modules (getModules() empty), guard=0x0. ProxyAdmin code confirmed present (2724 bytes). No upgrade path accessible without 2/3 Safe signers."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -114,9 +117,9 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). At Soneium block 24028800: SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5...; ProxyAdmin owner=2/3 EOA multisig 0xdcf79c... (3 EOA owners, no modules, no guard). All controls fully characterized.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false). At Soneium block 24028800: SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5...; ProxyAdmin owner=2/3 EOA multisig 0xdcf79c... (3 EOA owners, no modules, no guard). All controls fully characterized. Economic-posture fields reviewed 2026-08-15: independent M0 governance can raise base capacity, the 1:1 M extension and real-time validator attestations cover issuance, and no prudential supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

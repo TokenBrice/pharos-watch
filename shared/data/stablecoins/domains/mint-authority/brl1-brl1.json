@@ -85,6 +85,7 @@
         "evidence": "At Polygon block 90179923, DEFAULT_ADMIN_ROLE is held by this EOA and is the admin of MINTER_ROLE and UPGRADER_ROLE. No UPGRADER_ROLE account exists, but this EOA can grant the role and execute a UUPS upgrade without an enforced delay. EIP-1967 implementation is 0xf7c3aceabab5b505effeab0603e11f2ed54020ac; admin and beacon slots are zero. EOA 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 has BURNER_ROLE, not UPGRADER_ROLE."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -106,9 +107,9 @@
           "url": "https://www.plasma.to/learn/tools/stablecoin-regulation-map/brazil"
         }
       ],
-      "evidence": "At Polygon block 90179923, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 used UUPS implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac with zero EIP-1967 admin and beacon slots. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 was the sole live MINTER_ROLE holder. EOA 0xccfc24f563fbd798f171d16cc0706529c4739217 held DEFAULT_ADMIN_ROLE and could immediately grant MINTER_ROLE or UPGRADER_ROLE. No live UPGRADER_ROLE holder existed; 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 held BURNER_ROLE only. BRL1 is issued by a Brazilian consortium (Bitso, Mercado Bitcoin, Foxbit, Cainvest) with no single named regulated issuing entity; the latest reserve report (period end 2026-05-01) is a self-published PDF with ad-hoc cadence and self-verification and no named independent accounting firm, so reconciliation is unknown. Brazil's stablecoin framework (BCB Resolutions 519-521/2025) is still phasing in through 2026 and no BRL1-specific BCB or CVM registry entry was found, so supervision is none.",
-      "reviewer": "Codex Safety Score V9 registry pass; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16"
+      "evidence": "At Polygon block 90179923, BRL1 proxy 0x5c067c80c00ecd2345b05e83a3e758ef799c40b5 used UUPS implementation 0xf7c3aceabab5b505effeab0603e11f2ed54020ac with zero EIP-1967 admin and beacon slots. EOA 0x04412afc0a6fa21b255c6ccff28e97073d7750b3 was the sole live MINTER_ROLE holder. EOA 0xccfc24f563fbd798f171d16cc0706529c4739217 held DEFAULT_ADMIN_ROLE and could immediately grant MINTER_ROLE or UPGRADER_ROLE. No live UPGRADER_ROLE holder existed; 0xf0e67fb618496fbe0a44934d370738a611bc8fd1 held BURNER_ROLE only. BRL1 is issued by a Brazilian consortium (Bitso, Mercado Bitcoin, Foxbit, Cainvest) with no single named regulated issuing entity; the latest reserve report (period end 2026-05-01) is a self-published PDF with ad-hoc cadence and self-verification and no named independent accounting firm, so reconciliation is unknown. Brazil's stablecoin framework (BCB Resolutions 519-521/2025) is still phasing in through 2026 and no BRL1-specific BCB or CVM registry entry was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: the sole minter and default-admin EOAs can issue or authorize uncapped supply immediately; the self-published ad-hoc report is not recurring independent reconciliation and no product regulator is named. Wave 2 external review 2026-08-15: BRL1's current site repeats claims of regular audits but still exposes only the May 2026 self-produced, sign-in-gated report and names no independent accountant, so recurring whole-supply reconciliation remains unknown.",
+      "reviewer": "Codex Safety Score V9 registry pass; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

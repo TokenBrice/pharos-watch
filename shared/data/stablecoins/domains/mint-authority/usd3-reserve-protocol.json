@@ -126,10 +126,12 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25531015, USD3 Main proxy 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 had implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; Main.OWNER_ROLE() was held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6, whose getMinDelay() returned 259200 seconds. Main.rToken() and Main.basketHandler() returned the USD3 and BasketHandler addresses, with issuance not paused and the system not frozen. At Base block 48622147, the verified OptimismMintableERC20 representation 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned canonical L2StandardBridge 0x4200000000000000000000000000000000000010 as BRIDGE() and Ethereum USD3 as REMOTE_TOKEN(); the Base token itself is immutable. Governor Anastasius remains the stRSR governance path and the existing 3/5 guardian Safe remains the Ethereum timelock cancellation authority. Ethereum issuance requires the governed collateral basket and Base issuance requires a canonical bridge message; changing those economics or mint logic traverses the three-day governance timelock. The encoding-derived direct mint is therefore economically raiseable, not unbounded.",
-      "reviewer": "Codex CTRL curation batch 18; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25531015, USD3 Main proxy 0x81117e3e98910C3dCF956b5Fc97a7212E047AcF4 had implementation 0xc5bf686cfb85786fcfff557297d4aff8f4e15e44; Main.OWNER_ROLE() was held by TimelockController 0x848b923b5d99d5963608ff55acdfee51c443cca6, whose getMinDelay() returned 259200 seconds. Main.rToken() and Main.basketHandler() returned the USD3 and BasketHandler addresses, with issuance not paused and the system not frozen. At Base block 48622147, the verified OptimismMintableERC20 representation 0xefb97aaf77993922ac4be4da8fbc9a2425322677 returned canonical L2StandardBridge 0x4200000000000000000000000000000000000010 as BRIDGE() and Ethereum USD3 as REMOTE_TOKEN(); the Base token itself is immutable. Governor Anastasius remains the stRSR governance path and the existing 3/5 guardian Safe remains the Ethereum timelock cancellation authority. Ethereum issuance requires the governed collateral basket and Base issuance requires a canonical bridge message; changing those economics or mint logic traverses the three-day governance timelock. The encoding-derived direct mint is therefore economically raiseable, not unbounded. Economic-posture fields reviewed 2026-08-15: three-day token governance constrains economic changes, issuance is fully on-chain collateral-gated with canonical bridge accounting, and no named supervisor or independent attestor applies.",
+      "reviewer": "Codex CTRL curation batch 18; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Reserve Yield DTF overview",

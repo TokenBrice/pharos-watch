@@ -37,10 +37,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At HyperEVM block 37547275: MINTER_ROLE count=1, member=EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e (eth_getCode=0x); DEFAULT_ADMIN=EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (eth_getCode=0x); proxy impl=0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9. HyperCore tokenId 0x54e00a5988577cb0b0c9ab0cb6ef7f4b remains an issuer-controlled HyperCore asset; the on-chain EVM surface is fully confirmed. Issuer-controlled 1:1 mint/redeem through Bridge against HQLA with monthly BPM LLP attestations.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At HyperEVM block 37547275: MINTER_ROLE count=1, member=EOA 0x19810813f2e46cf01e7c543f6d8c3ecc8ea2001e (eth_getCode=0x); DEFAULT_ADMIN=EOA 0x178a0f2ad20e2abefe2cb86e4fc2db412edfb3b9 (eth_getCode=0x); proxy impl=0x0be1d5d7c5f9b8784fbf341c4c4a1eb732d4a7f9. HyperCore tokenId 0x54e00a5988577cb0b0c9ab0cb6ef7f4b remains an issuer-controlled HyperCore asset; the on-chain EVM surface is fully confirmed. Issuer-controlled 1:1 mint/redeem through Bridge against HQLA with monthly BPM LLP attestations. Economic-posture fields reviewed 2026-08-15: issuer EOAs control uncapped mint authority, BPM LLP reconciles reserves monthly, and the compliance record establishes no product-specific prudential authorization.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "USDH reserves",

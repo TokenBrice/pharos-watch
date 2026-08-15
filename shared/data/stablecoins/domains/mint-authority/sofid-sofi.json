@@ -91,10 +91,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25295030: proxy 0x0CB6d03B...678092E (ERC1967 UUPS) has impl 'Stablecoin' at 0x69edf9fa820df057e493635ed1db6b9e5f8124a0. owner()/DEFAULT_ADMIN = EOA 0xd84519fc... (no bytecode confirmed). MASTER_MINTER_ROLE = EOA 0x06720dec... (no bytecode confirmed, hasRole true). UPGRADER_ROLE = EOA 0x564fd... (no bytecode confirmed, hasRole true). No proxy admin (EIP-1967 admin slot = 0x0). All three EOAs confirmed as BitGo-operated; on-chain mint surface fully addressed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295030: proxy 0x0CB6d03B...678092E (ERC1967 UUPS) has impl 'Stablecoin' at 0x69edf9fa820df057e493635ed1db6b9e5f8124a0. owner()/DEFAULT_ADMIN = EOA 0xd84519fc... (no bytecode confirmed). MASTER_MINTER_ROLE = EOA 0x06720dec... (no bytecode confirmed, hasRole true). UPGRADER_ROLE = EOA 0x564fd... (no bytecode confirmed, hasRole true). No proxy admin (EIP-1967 admin slot = 0x0). All three EOAs confirmed as BitGo-operated; on-chain mint surface fully addressed. Economic-posture fields reviewed 2026-08-15: BitGo-operated EOAs can mint or replace mint logic without an independent timelock, public evidence does not establish recurring whole-supply reconciliation, and the OCC supervises issuer SoFi Bank, N.A. Economic-posture fields reviewed 2026-08-15: Wave 2 external research found SoFi's official page now publishes March, April, and May 2026 independent monthly reports on assets supporting all outstanding SOFID across its supported Ethereum and Solana networks.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "BitGo selected by SoFi to provide stablecoin infrastructure",
@@ -107,6 +110,10 @@
         {
           "label": "SOFID contract on Blockscout (impl: Stablecoin)",
           "url": "https://eth.blockscout.com/address/0x0CB6d03B0aC88A463F67B7Ad99f9f3ec4678092E"
+        },
+        {
+          "label": "SoFiUSD monthly attestation reports",
+          "url": "https://www.sofi.com/crypto/sofiusd/"
         }
       ]
     }

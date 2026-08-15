@@ -89,6 +89,7 @@
         "evidence": "Inherited from reviewed yusd-aegis mintAuthority."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -123,9 +124,9 @@
           "url": "https://paragraph.com/%40aegis-im-2/transparency-dashboard-guide"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295176 and BSC block 103632491: both deployments are transparent proxies controlled by same 3/5 Safe (v1.4.1, no modules, no guard) via per-chain ProxyAdmins. Base YUSD mint authority reviewed under yusd-aegis. Reserve reconciliation: Accountable independently retrieves backing data for inherited YUSD reserves and publishes signed proofs plus a reserve-history series. The primary API returned a signed snapshot at 2026-07-15 21:16:00 UTC, a Merkle update at 21:24:02 UTC, and daily history through 2026-07-15. This recurring third-party evidence supports periodic reconciliation; the conservative authoring does not treat the dashboard's Live label alone as continuous cadence. Neither Aegis's product materials nor the reviewed corporate information established an exact prudential supervisor for the YUSD/sYUSD issuer or product. Reviewed 2026-07-15. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified transparent-proxy/ProxyAdmin/Safe evidence into canChangeMintLogic/controlRef fields; no new on-chain read was required.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Wrapper surface verified at Ethereum block 25295176 and BSC block 103632491: both deployments are transparent proxies controlled by same 3/5 Safe (v1.4.1, no modules, no guard) via per-chain ProxyAdmins. Base YUSD mint authority reviewed under yusd-aegis. Reserve reconciliation: Accountable independently retrieves backing data for inherited YUSD reserves and publishes signed proofs plus a reserve-history series. The primary API returned a signed snapshot at 2026-07-15 21:16:00 UTC, a Merkle update at 21:24:02 UTC, and daily history through 2026-07-15. This recurring third-party evidence supports periodic reconciliation; the conservative authoring does not treat the dashboard's Live label alone as continuous cadence. Neither Aegis's product materials nor the reviewed corporate information established an exact prudential supervisor for the YUSD/sYUSD issuer or product. Reviewed 2026-07-15. 2026-07-21 gap-fill pass: the mintAuthority.upgradeability object was added, structuring this same already-verified transparent-proxy/ProxyAdmin/Safe evidence into canChangeMintLogic/controlRef fields; no new on-chain read was required. Economic-posture fields reviewed 2026-08-15: the local 3-of-5 Safe can replace wrapper mint logic without an enforced timelock; Accountable proofs support periodic attestation-only posture.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

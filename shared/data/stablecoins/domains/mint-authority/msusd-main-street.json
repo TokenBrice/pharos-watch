@@ -94,6 +94,9 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -105,9 +108,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
         }
       ],
-      "evidence": "Ethereum block 25294721: MSUSD proxy owner() = 0x0eAe4ACb (3/4 Safe, Safe API confirmed), minter() = 0x70c0c12 (contract, owner = same Safe). Sonic block 73491022: MSUSD proxy owner() = 0x861a58d3 (3/4 Safe, same 4 signers, Safe API sonic confirmed), minter() = 0x0 (direct owner minting). Both Safes: threshold 3, no modules, no guard, known masterCopies.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum block 25294721: MSUSD proxy owner() = 0x0eAe4ACb (3/4 Safe, Safe API confirmed), minter() = 0x70c0c12 (contract, owner = same Safe). Sonic block 73491022: MSUSD proxy owner() = 0x861a58d3 (3/4 Safe, same 4 signers, Safe API sonic confirmed), minter() = 0x0 (direct owner minting). Both Safes: threshold 3, no modules, no guard, known masterCopies. Economic-posture fields reviewed 2026-08-15: the shared signer set controls uncapped minting on both chains, reserve verification was terminated, and no prudential supervisor is evidenced. Wave 2 external review 2026-08-15: the Accountable proof-of-solvency page remains 0% verifiable with zero displayed supply and reserves and no usable history, so it does not restore current whole-supply reconciliation.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

@@ -108,9 +108,9 @@
           "url": "https://etherscan.io/address/0xb7400D2EA0f6DC1d7b153aA430B9E572F28afB79#code"
         }
       ],
-      "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned the immutable ControllerFactory, whose admin intermediary still resolved dao() to the Curve DAO Agent. Verified Vyper source establishes the path from token minter to per-market debt-ceiling inventory: DAO governance can raise ceilings, while the separately anchored 5-of-9 emergency multisig can only reduce them or adjust bounded controller parameters. The DAO Agent is an upstream governance executor and cannot change the immutable token or factory mint logic.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712135, crvUSD.minter() still returned the immutable ControllerFactory, whose admin intermediary still resolved dao() to the Curve DAO Agent. Verified Vyper source establishes the path from token minter to per-market debt-ceiling inventory: DAO governance can raise ceilings, while the separately anchored 5-of-9 emergency multisig can only reduce them or adjust bounded controller parameters. The DAO Agent is an upstream governance executor and cannot change the immutable token or factory mint logic. Economic-posture fields reviewed 2026-08-15: only broad Curve DAO governance can raise market ceilings, protocol collateral is fully on-chain, and no prudential supervisor or independent attestor applies.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

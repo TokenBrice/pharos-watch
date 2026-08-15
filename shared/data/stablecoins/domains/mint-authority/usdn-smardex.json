@@ -110,6 +110,9 @@
         "evidence": "At Ethereum block 25527046, this Safe remained the protocol proxy's default admin and owner, configured 2-of-3 with no modules, zero guard and module guard, and standard fallback handler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4. _authorizeUpgrade requires PROXY_UPGRADE_ROLE. No account currently held that role or its admin role, but this zero-delay default admin can grant ADMIN_PROXY_UPGRADE_ROLE and then PROXY_UPGRADE_ROLE, giving the Safe a complete immediate upgrade path."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -121,9 +124,9 @@
           "url": "https://etherscan.io/address/0x656cb8c6d154aad29d8771384089be5b5141f01a"
         }
       ],
-      "evidence": "At Ethereum block 25527046, immutable token 0xde17a000ba631c5d7c2bd9fb692efea52d90dee2 named UUPS protocol proxy 0x656cb8c6d154aad29d8771384089be5b5141f01a as its sole minter and rebaser. The proxy implementation was 0x271df5517a4daacb7cab988aa64d23debda4c498 and its fixed fallback was immutable contract 0xd4e615ab327324e9f2bb492c42d47ee8213959c0. Safe 0x1e3e1128f6bc2264a19d7a065982696d356879c5 can traverse the two-step role-admin chain and authorize an immediate UUPS upgrade.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Ethereum block 25527046, immutable token 0xde17a000ba631c5d7c2bd9fb692efea52d90dee2 named UUPS protocol proxy 0x656cb8c6d154aad29d8771384089be5b5141f01a as its sole minter and rebaser. The proxy implementation was 0x271df5517a4daacb7cab988aa64d23debda4c498 and its fixed fallback was immutable contract 0xd4e615ab327324e9f2bb492c42d47ee8213959c0. Safe 0x1e3e1128f6bc2264a19d7a065982696d356879c5 can traverse the two-step role-admin chain and authorize an immediate UUPS upgrade.. Economic-posture fields reviewed 2026-08-15: the 2-of-3 Safe can install new mint logic immediately, while current issuance is fully on-chain wstETH-collateralized and no off-chain reserve claim, prudential supervisor, or independent attestor applies.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

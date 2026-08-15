@@ -35,12 +35,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains. REUR proof-of-reserves is issuer-self-published (RIB Digital-signed snapshots, self-verification, no liability reconciliation) with no named independent accounting firm, so reconciliation is unknown. The only verifiable banking licence in the Royal-branded group (Labuan FSA investment-bank licence 220147BI) belongs to a separate Malaysian entity, The Royal Investment Bank of Kelantan, not the Hong Kong REUR issuer RIB Digital Holdings Limited, and no regulator supervising the actual issuer was found, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "evidence": "Ethereum block 25295037: owner = DEFAULT_ADMIN = MASTERMINTER = 0xc50ebe57 (EOA), not upgradeable, no sub-minters configured. BSC block 103629529: same owner confirmed. Tron (TXUi9vL8Ltz4dVpC6RM8CdtKSTHxFZuFbz): MASTERMINTER = 0x9a0c5f3a (EOA). All on-chain mint surfaces resolved across all deployed chains. REUR proof-of-reserves is issuer-self-published (RIB Digital-signed snapshots, self-verification, no liability reconciliation) with no named independent accounting firm, so reconciliation is unknown. The only verifiable banking licence in the Royal-branded group (Labuan FSA investment-bank licence 220147BI) belongs to a separate Malaysian entity, The Royal Investment Bank of Kelantan, not the Hong Kong REUR issuer RIB Digital Holdings Limited, and no regulator supervising the actual issuer was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: direct issuer EOAs can mint without a firm cap, while self-verified assets-only snapshots leave reconciliation unknown and no issuer supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "REUR Ethereum token",

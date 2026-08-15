@@ -211,6 +211,9 @@
         "evidence": "At Monad block 87714833, SwapFacility was a TransparentUpgradeableProxy using implementation 0xf7f9638cb444d65e5a40bf5ff98ebe4ff319f04e. Its canonical EIP-1967 admin slot returned ProxyAdmin 0x0f38d8a5583f9316084e9c40737244870c565924 and its runtime embedded the same immutable admin address. ProxyAdmin owner() returned Safe 0x48670B46380FE1645f0E3e821a25162dB2589D19; live Safe reads returned five owners, threshold three, and no enabled modules."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -234,9 +237,9 @@
           "url": "https://diligence.consensys.io/audits/2025/08/metamask-usd-token/"
         }
       ],
-      "evidence": "The MinterGateway remains an immutable non-proxy on Ethereum. At Ethereum block 25531380, Linea block 31369840, and Monad block 87714833, the tracked MUSD token and SwapFacility remained TransparentUpgradeableProxy deployments. On all six proxy reads, the canonical EIP-1967 admin slot returned the recorded token or SwapFacility ProxyAdmin and the runtime independently embedded that same OpenZeppelin v5 immutable admin. The MUSD token's common ProxyAdmin is owned by the same 259,200-second TimelockController on all three chains, with the same 3-of-5 Safe holding proposer, executor, and canceller roles. SwapFacility uses a separate common ProxyAdmin: its owner is a three-day timelock on Ethereum and Linea, but a direct 3-of-5 Safe on Monad. The MetaMask USD audit explicitly identifies the proxy-admin owner as able to replace token logic.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14"
+      "evidence": "The MinterGateway remains an immutable non-proxy on Ethereum. At Ethereum block 25531380, Linea block 31369840, and Monad block 87714833, the tracked MUSD token and SwapFacility remained TransparentUpgradeableProxy deployments. On all six proxy reads, the canonical EIP-1967 admin slot returned the recorded token or SwapFacility ProxyAdmin and the runtime independently embedded that same OpenZeppelin v5 immutable admin. The MUSD token's common ProxyAdmin is owned by the same 259,200-second TimelockController on all three chains, with the same 3-of-5 Safe holding proposer, executor, and canceller roles. SwapFacility uses a separate common ProxyAdmin: its owner is a three-day timelock on Ethereum and Linea, but a direct 3-of-5 Safe on Monad. The MetaMask USD audit explicitly identifies the proxy-admin owner as able to replace token logic. Economic-posture fields reviewed 2026-08-15: the Monad 3-of-5 Safe can replace the authorized SwapFacility without a timelock, while current M-backed issuance is reconciled in real time by M0 validators and no final product-specific prudential authorization is evidenced.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

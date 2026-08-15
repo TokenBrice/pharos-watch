@@ -68,6 +68,7 @@
         "evidence": "Inherited from reviewed usdc-circle parent; base USDC issuance is Circle-controlled."
       }
     ],
+    "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
@@ -98,9 +99,9 @@
           "url": "https://www.dfs.ny.gov/virtual_currency_businesses"
         }
       ],
-      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper.",
-      "reviewer": "Codex data review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "RPC and explorer review confirmed an immutable MetaMorpho vault over USDC, deposit-only wrapper minting, and Steakhouse Safe ownership (8 owners, threshold 5, no modules returned). Durable base-asset mint authority remains with Circle USDC. Economic-control evidence reviewed 2026-07-15: the immutable MetaMorpho wrapper mints shares only against deposited USDC; base issuance inherits Circle's monthly Deloitte reserve examination. The latest available USDC report covers May 2026, and the NYDFS virtual-currency list matches Circle Internet Financial, LLC. M-2 evidence review 2026-08-08: supervision and reconciliation downgraded to the wrapper-level convention (steakusdc precedent) - the coin's issuer of record is the vault curator, which no named prudential regime supervises (jurisdiction is correspondingly empty), and the deposit-only share wrapper is not a separate issuer reserve regime. Circle's NYDFS supervision and monthly Deloitte examinations are facts of the underlying USDC, credited on usdc-circle, not of this wrapper. Economic-posture fields reviewed 2026-08-15: the immutable vault mints shares only against deposited USDC, with no local attestation or prudential regime.",
+      "reviewer": "Codex data review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

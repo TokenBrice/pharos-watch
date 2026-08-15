@@ -173,12 +173,13 @@
         "evidence": "DEFAULT_ADMIN_ROLE was granted at block 39295633 and never revoked. The Safe directly administers TREASURY_ROLE and UUPS upgrades with no timelock. At the cutoff it was 3-of-5, version 1.4.1, with no modules, guard, or module guard."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Base block 48592766, GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 used UUPS implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5 with zero admin and beacon slots. Role history contained six grants and no revocations. Legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951 both held TREASURY_ROLE. Legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 independently held DEFAULT_ADMIN_ROLE and could immediately grant minters, change reserve configuration, or upgrade mint logic. The source-verified mint path retained its reserve check. EisnerAmper's first independent AICPA examination reconciled GLDY supply to allocated gold reserves at 31 March 2026, but the 1 July 2026 announcement only promises monthly reports going forward. No second report or established recurring series was available at review, and no prudential reserve supervisor was established, so reconciliation remains unknown.",
-      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Base block 48592766, GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 used UUPS implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5 with zero admin and beacon slots. Role history contained six grants and no revocations. Legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951 both held TREASURY_ROLE. Legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 independently held DEFAULT_ADMIN_ROLE and could immediately grant minters, change reserve configuration, or upgrade mint logic. The source-verified mint path retained its reserve check. EisnerAmper's first independent AICPA examination reconciled GLDY supply to allocated gold reserves at 31 March 2026, but the 1 July 2026 announcement only promises monthly reports going forward. No second report or established recurring series was available at review, and no prudential reserve supervisor was established, so reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: active issuer-controlled admin paths are unbounded, one EisnerAmper examination supports attestation-only supervision, and no recurring independent reconciliation series is established. Wave 2 external research reviewed 2026-08-15: Streamex's issuer and investor-relations pages still identify the March 2026 examination as the first and only published GLDY attestation, so recurring reconciliation remains unknown.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Streamex GLDY",

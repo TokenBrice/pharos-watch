@@ -94,10 +94,13 @@
         "evidence": "Anemoy operates the permissioned primary-market rail for JAAA on Centrifuge; subscriptions/redemptions process at fund NAV through issuer-gated, KYC-restricted access. Actual on-chain minting executed by BalanceSheet ward after manager approval."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25,296,225: JAAA Tranche is non-upgradeable, ward-based. Active wards: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Full mint surface confirmed on Ethereum; cross-chain deployments follow same Centrifuge ward pattern.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25,296,225: JAAA Tranche is non-upgradeable, ward-based. Active wards: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Full mint surface confirmed on Ethereum; cross-chain deployments follow same Centrifuge ward pattern. Economic-posture fields reviewed 2026-08-15: the issuer rail and undelayed Centrifuge Safe can authorize mint wards, while the Chainlink NAV feed does not establish whole-supply reconciliation and the sidecars name no prudential regulator. Wave 2 external review 2026-08-15: the BVI FSC registry confirms Anemoy Capital SPC Limited as a currently regulated professional fund and Anemoy Asset Management Limited as a currently regulated approved manager, supporting prudential supervision, but no recurring report reconciling NAV assets to all JAAA deployments was found.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Anemoy JAAA fund",
@@ -110,6 +113,14 @@
         {
           "label": "Safe API — Centrifuge protocol Safe",
           "url": "https://app.safe.global/eth:0x9711730060C73Ee7Fcfe1890e8A0993858a7D225"
+        },
+        {
+          "label": "BVI FSC — Anemoy Capital SPC Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-capital-spc-limited"
+        },
+        {
+          "label": "BVI FSC — Anemoy Asset Management Limited",
+          "url": "https://www.bvifsc.vg/regulated-entities/anemoy-asset-management-limited"
         }
       ]
     }

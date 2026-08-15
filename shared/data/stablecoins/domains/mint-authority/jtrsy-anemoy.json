@@ -100,10 +100,13 @@
         "evidence": "Anemoy operates the permissioned same-day subscription/redemption rail for JTRSY on Centrifuge, restricted to whitelisted non-U.S. Professional Investors at fund NAV. Actual on-chain minting executed by BalanceSheet ward."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
-      "evidence": "At Ethereum block 25,296,225: JTRSY Tranche is non-upgradeable, ward-based. Wards identical to JAAA: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Cross-chain deployments share the same Centrifuge protocol ward architecture.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25,296,225: JTRSY Tranche is non-upgradeable, ward-based. Wards identical to JAAA: Root (0x7Ed48C31f2fdC40d37407cBaBf0870B2b688368f), BalanceSheet (0x12a110cE5f0FC871cC72Bc7ECaF35cf39DD0f43e), Spoke (0xEC3582fcDc34078a4B7a8c75a5a3AE46f48525aB). Protocol guardian routes to Centrifuge 4-of-9 Safe (0x9711730060C73Ee7Fcfe1890e8A0993858a7D225, v1.4.1, no modules). Cross-chain deployments share the same Centrifuge protocol ward architecture. Economic-posture fields reviewed 2026-08-15: the issuer rail and undelayed Centrifuge Safe can authorize mint wards, the NAV feed does not establish whole-supply reconciliation, and the compliance sidecar identifies BVI FSC regulation for JTRSY.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Anemoy JTRSY fund",

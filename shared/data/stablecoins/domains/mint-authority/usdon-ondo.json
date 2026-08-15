@@ -106,12 +106,13 @@
         "address": "0x3715b2154d2ff4c5b027c7a1f734b53f27bc34f1"
       }
     ],
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
+    "economicCapSemantics": "unbounded",
     "review": {
-      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25295047 and BSC block 103630432 (2026-06-11): USDon ETH proxy (0xace8…) has EIP-1967 ProxyAdmin=0x5244… owned by TimelockController 0x3715… (2h delay). Token MINTER_ROLE has 2 holders: GMTokenManager (0x2c15…) and 3-of-6 Ondo Safe (0x7607…, no modules). DEFAULT_ADMIN = Timelock; Timelock PROPOSER = 4-of-7 Safe, EXECUTOR = 1-of-8 Safe + EOA. BSC structurally equivalent: MINTER_ROLE[0]=GMTokenManager(0x91f8…), MINTER_ROLE[1]=contract, DEFAULT_ADMIN=0x8860… (contract). Impl (USDon) confirmed on Blockscout. Regulation S restricts U.S.-person minting; no permissionless mint path. USDon is issued by Ondo Global Markets (BVI) Limited; Ondo's Trust & Transparency page scopes its only third-party feed (Ankura Trust) to tokenized-stock holdings, not USDon's brokerage cash, and no dated independent report of USDon's specific cash reserve was found, so reconciliation is unknown. Ondo's own disclaimer states the issuer and tokens are not registered or licensed by the BVI FSC, SEC, CFTC or any financial regulator, so supervision is none.. Economic-posture fields reviewed 2026-08-15: direct minters have no firm economic cap, and no USDon-specific recurring reserve reconciliation, prudential supervisor, or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: Ondo documents daily collateral reports reviewed by Ankura, monthly reconciliation, and annual audits; recurring dated Ankura reports enumerate USDon outstanding across Ethereum, BNB Chain, and Solana within total platform liabilities and reconcile those liabilities to reviewed brokerage assets.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Ondo GM trust and transparency",
@@ -128,6 +129,14 @@
         {
           "label": "Ondo Global Markets disclaimer (no regulator registration)",
           "url": "https://docs.ondo.finance/ondo-global-markets/disclaimer"
+        },
+        {
+          "label": "Ondo Stocks trust and transparency",
+          "url": "https://docs.ondo.finance/ondo-stocks/trust-and-transparency"
+        },
+        {
+          "label": "Ankura daily collateral report, 2026-06-30",
+          "url": "https://bin.bnbstatic.com/images/web3-data/public/token/ondo/pdf/daily-2026-06-30.pdf"
         }
       ]
     }

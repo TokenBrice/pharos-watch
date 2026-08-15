@@ -94,10 +94,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). At checkpoint 298463699, Bridge mint-package UpgradeCap 0x6b5accd5... for package 0x94e8cb8d... had policy 0, version 1, and was address-owned by 0xb7fec616.... Sui's upgrade documentation confirms a retained UpgradeCap can authorize compatible package upgrades that change function implementations. The separate USDsui coin-package UpgradeCap controls only the coin initialization package, not the active wrapped-TreasuryCap mint path.",
-      "reviewer": "Codex V9 mint-authority review",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Sui RPC: TreasuryCap 0x57eafc43... traced to wrapping tx CRwtcn7F... which called Bridge's stablecoin_manager::register_stablecoin; TreasuryCap is locked in Stablecoin<RESERVE_LEDGER, USDSUI> wrapper (obj 0x80954159...) inside TokenAuthority shared object 0xd4fc1ca0b... MinterRole confirmed at 0xb1e7dc9a5... (active operational Bridge minter). At checkpoint 298463699, Bridge mint-package UpgradeCap 0x6b5accd5... for package 0x94e8cb8d... had policy 0, version 1, and was address-owned by 0xb7fec616.... Sui's upgrade documentation confirms a retained UpgradeCap can authorize compatible package upgrades that change function implementations. The separate USDsui coin-package UpgradeCap controls only the coin initialization package, not the active wrapped-TreasuryCap mint path.. Economic-posture fields reviewed 2026-08-15: Bridge's operational EOA can mint without a firm cap, while no USDsui-specific recurring reserve reconciliation or product-level prudential authorization or independent attestation is evidenced. Wave 2 external research reviewed 2026-08-15: Bridge publishes real-time transparency and quarterly attestations for other issuance products, but Bridge and Sui materials plus targeted searches expose no USDsui-specific reserve balances, report, or endpoint reconciling the complete USDsui supply.",
+      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Bridge issuance overview",

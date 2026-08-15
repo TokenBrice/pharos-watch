@@ -209,13 +209,13 @@
         "evidence": "At Optimism block 155309063, this Safe remained owner of both the LayerZero bridge minter and ProxyAdmin 0xa44f69aeac480e23c0abfa9a55d99c9f098beac6; the xalUSD proxy retained implementation 0x29ef9f2fa6f636eafe74e5fba057c7949a37ffa6. Safe API returned 3-of-7 owners, no modules, and zero guards. It can raise bridge limits or replace xalUSD mint logic."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25712278, AlToken ADMIN_ROLE still had the 4-of-7 ten-minute multisig and 3-of-7 Safe as its only members, while AlchemistV2 remained cap-limited by the token ceiling. Correction: the Alchemist proxy admin is now the separate 3-of-7 Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d, not the stale ProxyAdmin path. At Optimism block 155309063, the material xalUSD route retained a 1,000,000 alUSD replenishing LayerZero bridge limit; its 3-of-7 Safe owns the bridge and token ProxyAdmin and can raise or replace those constraints. Aggregate cap semantics are raiseable; reconciliation is on-chain/not applicable and no prudential supervisor applies.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712278, AlToken ADMIN_ROLE still had the 4-of-7 ten-minute multisig and 3-of-7 Safe as its only members, while AlchemistV2 remained cap-limited by the token ceiling. Correction: the Alchemist proxy admin is now the separate 3-of-7 Safe 0xf56d660138815fc5d7a06cd0e1630225e788293d, not the stale ProxyAdmin path. At Optimism block 155309063, the material xalUSD route retained a 1,000,000 alUSD replenishing LayerZero bridge limit; its 3-of-7 Safe owns the bridge and token ProxyAdmin and can raise or replace those constraints. Aggregate cap semantics are raiseable; reconciliation is on-chain/not applicable and no prudential supervisor applies. Economic-posture fields reviewed 2026-08-15: no-delay 3-of-7 Safe paths can raise token and bridge ceilings or replace mint logic, making the aggregate cap unbounded; issuance remains on-chain and no prudential supervisor or independent attestor applies.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

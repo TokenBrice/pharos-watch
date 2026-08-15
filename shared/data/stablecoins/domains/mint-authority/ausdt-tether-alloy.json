@@ -63,10 +63,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295200: aUSDT token EIP-1967 proxy admin slot = 0xd32645695868555918c5c0c8339c71b84c9240de (ProxyAdmin); ProxyAdmin.owner() = 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828 (Safe); Safe.getOwners() = 6 addresses; Safe threshold = 3; getModulesPaginated = empty; guard = 0x0; fallbackHandler = 0x0. The aUSDT token owner() also returns the same Safe address. KYC-gated CMPVault mint with centralized Safe admin confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295200: aUSDT token EIP-1967 proxy admin slot = 0xd32645695868555918c5c0c8339c71b84c9240de (ProxyAdmin); ProxyAdmin.owner() = 0xc6cde7c39eb2f0f0095f41570af89efc2c1ea828 (Safe); Safe.getOwners() = 6 addresses; Safe threshold = 3; getModulesPaginated = empty; guard = 0x0; fallbackHandler = 0x0. The aUSDT token owner() also returns the same Safe address. KYC-gated CMPVault mint with centralized Safe admin confirmed. Economic-posture fields reviewed 2026-08-15: the issuer Safe controls upgradeable mint logic without an independent delay; ordinary issuance is on-chain XAUT-collateral-gated, and CNAD registration is not recorded as product prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Alloy Vaults docs",

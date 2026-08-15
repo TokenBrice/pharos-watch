@@ -134,6 +134,9 @@
         "evidence": "The Safe Transaction Service reported five owners, a threshold of three, no enabled modules, and no guard. The Safe holds proposer, executor, and canceller roles on the reviewed timelocks and is the strategy management and keeper."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -153,9 +156,9 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x33333333c480194b5b651987b7d00cb9427365b7/"
         }
       ],
-      "evidence": "At Ethereum block 25524745, USD3 was a TransparentUpgradeableProxy using implementation 0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9. A 3-of-5 Safe controls protocol operations through one-day and seven-day timelocks. Deposits were permissionless, the configured supply cap was 75 million USDC, and the reviewed implementation exposed no independent unbacked mint function.",
-      "reviewer": "OpenAI Codex mint-authority review",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At Ethereum block 25524745, USD3 was a TransparentUpgradeableProxy using implementation 0xb606fb370eaaad03d71b49ae5e42aa4aec7458d9. A 3-of-5 Safe controls protocol operations through one-day and seven-day timelocks. Deposits were permissionless, the configured supply cap was 75 million USDC, and the reviewed implementation exposed no independent unbacked mint function. Economic-posture fields reviewed 2026-08-15: the local cap-raise path is enforced by the one-day configuration timelock, mint-logic replacement by the seven-day upgrade timelock, and live on-chain vault accounting covers all USD3 shares without independent attestation or prudential supervision.",
+      "reviewer": "OpenAI Codex mint-authority review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

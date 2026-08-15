@@ -146,10 +146,13 @@
         "evidence": "At Kava height 21631632, committee id 2 (Kava Safety Committee) is a MemberCommittee with a single member (kava1e0agyg6eug9r62fly9sls77ycjgw8ax6xk73es), vote_threshold 0.5, TALLY_OPTION_FIRST_PAST_THE_POST, proposal_duration 604800s, and SoftwareUpgradePermission as its sole permission. One member vote therefore carries a chain software-upgrade proposal that could rewrite x/cdp mint logic; enactment still requires validators to adopt the new binary."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "All facts read from the Kava LCD https://api.data.kava.io at height 21631632 (chain_id kava_2222-10) on 2026-07-14: x/cdp params (debt denom usdx, global debt limit 8723000000000 uusdx, 10 collateral debt limits); module accounts (cdp = kava1wq9ts6l7... with minter/burner, gov = kava10d07y265...); committees (id 1 Stability, 3-of-5, holds cdp GlobalDebtLimit/CollateralParams/DebtParam param rights; id 2 Safety, 1-of-1, holds SoftwareUpgradePermission); x/upgrade authority = gov module account; gov tally quorum 0.2 / threshold 0.5 / veto 0.334 / 7-day voting. /kava/evmutil/v1beta1/params lists no usdx conversion pair, so USDX has no ERC-20 representation and no EIP-1967 proxy surface to review.",
-      "reviewer": "Codex CTRL batch",
-      "reviewedAt": "2026-07-14",
+      "evidence": "All facts read from the Kava LCD https://api.data.kava.io at height 21631632 (chain_id kava_2222-10) on 2026-07-14: x/cdp params (debt denom usdx, global debt limit 8723000000000 uusdx, 10 collateral debt limits); module accounts (cdp = kava1wq9ts6l7... with minter/burner, gov = kava10d07y265...); committees (id 1 Stability, 3-of-5, holds cdp GlobalDebtLimit/CollateralParams/DebtParam param rights; id 2 Safety, 1-of-1, holds SoftwareUpgradePermission); x/upgrade authority = gov module account; gov tally quorum 0.2 / threshold 0.5 / veto 0.334 / 7-day voting. /kava/evmutil/v1beta1/params lists no usdx conversion pair, so USDX has no ERC-20 representation and no EIP-1967 proxy surface to review. Economic-posture fields reviewed 2026-08-15: CDP debt caps can rise only through the chain-enforced seven-day committee or broad stake-governance process, while issuance is fully on-chain collateral-gated with no off-chain attestor or prudential supervisor.",
+      "reviewer": "Codex CTRL batch; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Kava x/cdp params API",

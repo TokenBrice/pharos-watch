@@ -66,8 +66,9 @@
         "evidence": "Inherited from reviewed usdd-tron-dao-reserve mintAuthority. 2026-07-20 (Kimi P2 dc-2): eth_getCode at 0x4f8e5de400de08b164e7421b3ee387f461becd1a returns live bytecode (name 'Usdd Stablecoin', symbol USDD) — the inherited control surface is the upstream USDD token contract itself, so authorityType resolves to contract."
       }
     ],
-    "supervision": "none",
+    "economicCapSemantics": "bounded",
     "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -91,9 +92,9 @@
           "url": "https://docs.usdd.io/system-architecture/susdd-mechanism.md"
         }
       ],
-      "evidence": "Wrapper surface verified at Ethereum block 25295198 and BSC block 103632491: SavingsUsdd is an immutable DAI-Foundation-fork DSR contract with no owner, no proxy, no upgrade path. asset() confirmed USDD 0x4f8e5de... on both chains. Base USDD mint authority tracked under usdd-tron-dao-reserve. Reconciliation review (2026-08-08): USDD 2.0 is a MakerDAO-style on-chain CDP system (Vat, Dog, Clip, Spot, Jug, OSM, PSM, collateral auctions) whose documentation states all collateral backing USDD is held in publicly verifiable smart contracts, and sUSDD is an immutable ERC-4626 wrapper fully redeemable for USDD. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. No prudential regulator and no third-party reserve attestation exist; the documentation's audits section covers smart-contract code only.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-      "reviewedAt": "2026-08-08"
+      "evidence": "Wrapper surface verified at Ethereum block 25295198 and BSC block 103632491: SavingsUsdd is an immutable DAI-Foundation-fork DSR contract with no owner, no proxy, no upgrade path. asset() confirmed USDD 0x4f8e5de... on both chains. Base USDD mint authority tracked under usdd-tron-dao-reserve. Reconciliation review (2026-08-08): USDD 2.0 is a MakerDAO-style on-chain CDP system (Vat, Dog, Clip, Spot, Jug, OSM, PSM, collateral auctions) whose documentation states all collateral backing USDD is held in publicly verifiable smart contracts, and sUSDD is an immutable ERC-4626 wrapper fully redeemable for USDD. The mint path creates no off-chain reserve claim, so reconciliation is not-applicable. No prudential regulator and no third-party reserve attestation exist; the documentation's audits section covers smart-contract code only. Economic-posture fields reviewed 2026-08-15: local sUSDD shares are immutably deposit-gated by USDD, with on-chain collateral and no local regulator or independent attestor.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

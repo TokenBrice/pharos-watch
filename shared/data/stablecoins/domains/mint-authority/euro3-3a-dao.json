@@ -64,10 +64,13 @@
         "observedAt": "2026-07-20"
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Polygon block 88325316 / Linea block 30997860: EURO3 MintableToken (Polygon 0xa0e4c84..., Linea 0x3f817b28...) is a non-proxied OZ Ownable contract whose owner is a MintableTokenOwner contract. MintableTokenOwner source (verified on Blockscout) has mint()/addMinter()/revokeMinter() functions. Authorized minters: VaultFactory (0x4760847023fa0833221ae76e01db1e483a5d20e0, minters()=true) and 0x027a597ad044bddb7a6b7ef9ed2b641122801220 (minters()=true). MintableTokenOwner.owner()=OwnerProxy (0xdfeeed605b30...) whose slot0=EOA 0x84d28251143df55df1768870fc26983f50364557 (eth_getCode=empty). Same EOA controls both Polygon and Linea deployments. No multisig in minting chain; posture upgraded to concentrated-admin.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Polygon block 88325316 / Linea block 30997860: EURO3 MintableToken (Polygon 0xa0e4c84..., Linea 0x3f817b28...) is a non-proxied OZ Ownable contract whose owner is a MintableTokenOwner contract. MintableTokenOwner source (verified on Blockscout) has mint()/addMinter()/revokeMinter() functions. Authorized minters: VaultFactory (0x4760847023fa0833221ae76e01db1e483a5d20e0, minters()=true) and 0x027a597ad044bddb7a6b7ef9ed2b641122801220 (minters()=true). MintableTokenOwner.owner()=OwnerProxy (0xdfeeed605b30...) whose slot0=EOA 0x84d28251143df55df1768870fc26983f50364557 (eth_getCode=empty). Same EOA controls both Polygon and Linea deployments. No multisig in minting chain; posture upgraded to concentrated-admin. Economic-posture fields reviewed 2026-08-15: the operator EOA can add or replace minters on both chains without a timelock, while issuance is on-chain collateralized and no regulator or attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "3A docs: EURO3 coin",

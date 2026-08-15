@@ -82,10 +82,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Avalanche block 90243848, NXUSD was a direct 5007-byte deployment with zero EIP-1967 implementation, admin, and beacon slots. Its onlyOwner mint path remained controlled by Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, still 2-of-3 with no modules or guard. The Safe can operate minting and CDP parameters but cannot replace the deployed NXUSD bytecode.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At Avalanche block 90243848, NXUSD was a direct 5007-byte deployment with zero EIP-1967 implementation, admin, and beacon slots. Its onlyOwner mint path remained controlled by Safe 0xdd3de3b819edd3a014fda93868d7dfc873341467, still 2-of-3 with no modules or guard. The Safe can operate minting and CDP parameters but cannot replace the deployed NXUSD bytecode. Economic-posture fields reviewed 2026-08-15: the owner Safe can mint repeatedly under a rolling 15%-of-supply daily limit, while no whole-supply collateral reconciliation, independent attestation, or named prudential supervisor is evidenced. Wave 2 external verification 2026-08-15: Nereus dashboards, deployment records, DefiLlama, and the Ambisafe code audit did not provide assets-and-liabilities reconciliation across Avalanche and Polygon.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "NXUSD source on Sourcify",

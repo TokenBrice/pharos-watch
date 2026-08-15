@@ -116,6 +116,9 @@
         "evidence": "At Ethereum block 25579998, owner() on ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256 returns 0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33; eth_getCode for that address returns 0x, confirming an externally-owned account with no multisig or timelock wrapper."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -161,9 +164,9 @@
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false, EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); proposer is Gnosis Safe 3/5. Fluent chain has no known M0 SwapFacility deployment; Ethereum controls cover base M issuance. Same governance as verified musd-metamask. Upgrade-authority follow-up (2026-07-21): the USDnr token's own EIP-1967 proxy (0xd48e565561416de59da1050ed70b8d75e8ef28f9) resolves to ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256, whose owner() is a single externally-owned account (0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33, empty bytecode) with no timelock or multisig — unlike the SwapFacility's 3-day TimelockController, the USDnr wrapper's own implementation can be replaced immediately by one key.",
-      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
-      "reviewedAt": "2026-07-21"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable (IsProxy=false, EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); proposer is Gnosis Safe 3/5. Fluent chain has no known M0 SwapFacility deployment; Ethereum controls cover base M issuance. Same governance as verified musd-metamask. Upgrade-authority follow-up (2026-07-21): the USDnr token's own EIP-1967 proxy (0xd48e565561416de59da1050ed70b8d75e8ef28f9) resolves to ProxyAdmin 0x9ffe615c92635e5b36de004dd78a94c51aa04256, whose owner() is a single externally-owned account (0xc07F0b4556E0cc1bFd8A076a98d43E79ACD3Cd33, empty bytecode) with no timelock or multisig — unlike the SwapFacility's 3-day TimelockController, the USDnr wrapper's own implementation can be replaced immediately by one key. Economic-posture fields reviewed 2026-08-15: the USDnr ProxyAdmin owner can replace wrapper mint logic immediately, while M0's live underlying feed and independent validator attestations continuously reconcile the current M-backed route without product-specific prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

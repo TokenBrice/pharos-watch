@@ -390,7 +390,7 @@
         "evidence": "The Soroban token instance Owner entry and the PermissionManager CBGHLRSX5D5YMBPNK4ZGMUTJUHFIT7YGXGJURM5LFNZ7B6WNSXLGS26M Admin entry both resolve to this account at ledger 63567141, and stellar.expert records it as the creator of both contracts. Horizon returns a single ed25519 signer of weight 1 with low, medium and high thresholds all 0 at ledger 63394470, so this is a single-key account with no quorum, unlike the 3-of-6 Safe on the EVM chains and the 3-of-5 Argent multisig on Starknet."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
@@ -423,14 +423,18 @@
           "label": "Spiko Soroban PermissionManager source",
           "url": "https://github.com/spiko-tech/stellar-contracts/blob/main/contracts/permission-manager/src/contract.rs"
         },
-        {
-          "label": "Stellar Horizon account",
-          "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
-        }
-      ],
-      "evidence": "The three questions the previous review left open are now closed from primary chain reads. Arbitrum: at block 485896559 the PermissionManager mint requirement is mask 0x05, the upgrade requirement for both the token and the PermissionManager is mask 0x01, getGroupAdmins(0) is 0x01, and group-0 membership resolves to the single 3-of-6 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; the six current operator-group members were each confirmed with getGroups(). The same re-read on Ethereum at block 25575138 shows the ADMIN group member is the 3-of-6 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea and that the deploying EOA holds no group, correcting the earlier record that attributed mint and upgrade authority to an issuer EOA. Starknet: at block 12085430 the token owner is Argent multisig 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d with five signers and threshold 3, and that account holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE and WHITELISTER_ROLE on PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3 while the deployer holds none. Stellar: the issuer's own production address file names the token and permission-manager contracts, Soroban instance storage at ledger 63567141 gives token Owner and PermissionManager Admin as the same account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, and Horizon shows that account has one signer of weight 1 with all thresholds 0. Supervision stays prudential because Spiko's fund is an AMF-authorized UCITS money-market fund with quarterly independent audit, but the Stellar single-key control is recorded as the weakest authority in the set rather than smoothed into the EVM and Starknet quorums.",
-      "reviewer": "V9 Phase 3 curation lane cur-6",
-      "reviewedAt": "2026-07-20",
+      {
+        "label": "Stellar Horizon account",
+        "url": "https://horizon.stellar.org/accounts/GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H"
+      },
+      {
+        "label": "Spiko official Token.sol source",
+        "url": "https://github.com/spiko-tech/contracts/blob/main/contracts/token/Token.sol"
+      }
+    ],
+    "evidence": "The three questions the previous review left open are now closed from primary chain reads. Arbitrum: at block 485896559 the PermissionManager mint requirement is mask 0x05, the upgrade requirement for both the token and the PermissionManager is mask 0x01, getGroupAdmins(0) is 0x01, and group-0 membership resolves to the single 3-of-6 Safe 0x7843225ba488cf780a4fe2c842b5dc2abcf8a03e; the six current operator-group members were each confirmed with getGroups(). The same re-read on Ethereum at block 25575138 shows the ADMIN group member is the 3-of-6 Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea and that the deploying EOA holds no group, correcting the earlier record that attributed mint and upgrade authority to an issuer EOA. Starknet: at block 12085430 the token owner is Argent multisig 0x07bc8bbd7c7fcc89273726fd34bc1ffc4649ed3f2f1be43e12afe8a406a5ca9d with five signers and threshold 3, and that account holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, PAUSER_ROLE and WHITELISTER_ROLE on PermissionManager 0x7c7a6db2763d01aa889702bf5eb7b88a01a9df11da0e3d45c96a140c1f43ba3 while the deployer holds none. Stellar: the issuer's own production address file names the token and permission-manager contracts, Soroban instance storage at ledger 63567141 gives token Owner and PermissionManager Admin as the same account GBYIQXBKEB655EB3WTRITS6RR5GXEP6SQRBLPREZHNFYKT7WBMTMPR3H, and Horizon shows that account has one signer of weight 1 with all thresholds 0. Supervision stays prudential because Spiko's fund is an AMF-authorized UCITS money-market fund with quarterly independent audit, but the Stellar single-key control is recorded as the weakest authority in the set rather than smoothed into the EVM and Starknet quorums. Economic-posture fields reviewed 2026-08-15: existing unknown cap semantics are preserved; recurring fund reconciliation and AMF prudential supervision remain supported. Wave 2 external verification 2026-08-15: Spiko's official Token.sol exposes permission-gated minting with no amount or total-supply cap, so an issuer-controlled EVM mint path makes global economic capacity unbounded.",
+      "reviewer": "V9 Phase 3 curation lane cur-6; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

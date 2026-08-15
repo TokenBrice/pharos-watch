@@ -104,10 +104,13 @@
         }
       ]
     },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Rootstock block 8935202: XUSD token owner() = masset manager proxy 0x1440d194; masset manager EIP-1967 proxy admin = Gnosis multisig 0x37a706 (2-of-5); masset manager owner() = Gnosis multisig 0xbd687d (3-of-5). Both multisigs enumerated via getOwners()/required() on-chain. Mint path confirmed as user-driven 1:1 aggregator. Full control chain verified. Upgrade-authority follow-up (2026-07-21): re-read at Rootstock block 9075576 confirms the masset manager's EIP-1967 implementation slot resolves to 0x92d7ad53b2d824277d22877d5299c2af479da322 (31,859-byte deployed contract) and the admin slot still resolves to the 2-of-5 Safe 0x37a706259f5201c03f6cb556a960f30f86842d01, whose getOwners() returned the same five signers already on file — this multisig, not any single key, is the sole path that can change XUSD's mint-critical masset-manager logic, and no timelock was found on the proxy admin path.",
-      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
-      "reviewedAt": "2026-07-21",
+      "evidence": "At Rootstock block 8935202: XUSD token owner() = masset manager proxy 0x1440d194; masset manager EIP-1967 proxy admin = Gnosis multisig 0x37a706 (2-of-5); masset manager owner() = Gnosis multisig 0xbd687d (3-of-5). Both multisigs enumerated via getOwners()/required() on-chain. Mint path confirmed as user-driven 1:1 aggregator. Full control chain verified. Upgrade-authority follow-up (2026-07-21): re-read at Rootstock block 9075576 confirms the masset manager's EIP-1967 implementation slot resolves to 0x92d7ad53b2d824277d22877d5299c2af479da322 (31,859-byte deployed contract) and the admin slot still resolves to the 2-of-5 Safe 0x37a706259f5201c03f6cb556a960f30f86842d01, whose getOwners() returned the same five signers already on file — this multisig, not any single key, is the sole path that can change XUSD's mint-critical masset-manager logic, and no timelock was found on the proxy admin path. Economic-posture fields reviewed 2026-08-15: self-controlled multisigs can change the basket or mint logic without a timelock, while live Rootstock balances continuously cover the 1:1 basket and no supervisor or independent attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Sovryn XUSD overview",

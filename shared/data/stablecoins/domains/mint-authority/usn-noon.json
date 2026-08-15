@@ -187,6 +187,9 @@
         "evidence": "At Ethereum block 25531363, the USN proxy implementation slot was 0x6bdc8104...8397 and the canonical EIP-1967 admin slot 0xb5312768...d6103 returned ProxyAdmin 0x55f39512...8239. The OpenZeppelin v5 transparent-proxy runtime independently embeds the same immutable ProxyAdmin address. ProxyAdmin.owner() returned this verified timelock; delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe. Verified source requires the owner to schedule an exact upgrade and wait for the delay before execution."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -222,9 +225,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xe5e412c212b4fbbf550a94e7bd5e83db0b315a7f?fields=sources,abi,metadata"
         }
       ],
-      "evidence": "Mint-path reads at Ethereum block 25530462 identify MinterHandlerV2 as USN's mint admin, the Noon 3-of-6 Safe as handler MINTER_ROLE and DEFAULT_ADMIN_ROLE, and the 4-of-5 collateral Safe as the handler custody destination. The order signer is the whitelisted user, checked through ECDSA or ERC-1271. Upgrade provenance was independently reverified at block 25531363: the canonical EIP-1967 admin slot and the OpenZeppelin v5 proxy runtime both identify ProxyAdmin 0x55f39512...8239, controlled through a verified 48-hour timelock owned by the same admin Safe. In the exact V9 capture used for this review, Ethereum held 99.56% of USN supply and Sophon plus ZKsync Era held 0.44%; Noon documents non-Ethereum USN as burn/mint bridge representations rather than independent issuer mint routes. This review is scoped to issuer-originated Ethereum minting. LayerZero and Hyperlane destination-mint peer, DVN, and ISM controls remain separately unresolved in bridgeRouteRisk and are not asserted reviewed here.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Mint-path reads at Ethereum block 25530462 identify MinterHandlerV2 as USN's mint admin, the Noon 3-of-6 Safe as handler MINTER_ROLE and DEFAULT_ADMIN_ROLE, and the 4-of-5 collateral Safe as the handler custody destination. The order signer is the whitelisted user, checked through ECDSA or ERC-1271. Upgrade provenance was independently reverified at block 25531363: the canonical EIP-1967 admin slot and the OpenZeppelin v5 proxy runtime both identify ProxyAdmin 0x55f39512...8239, controlled through a verified 48-hour timelock owned by the same admin Safe. In the exact V9 capture used for this review, Ethereum held 99.56% of USN supply and Sophon plus ZKsync Era held 0.44%; Noon documents non-Ethereum USN as burn/mint bridge representations rather than independent issuer mint routes. This review is scoped to issuer-originated Ethereum minting. LayerZero and Hyperlane destination-mint peer, DVN, and ISM controls remain separately unresolved in bridgeRouteRisk and are not asserted reviewed here. Economic-posture fields reviewed 2026-08-15: the Noon Safe can raise MinterHandler limits directly outside the upgrade timelock, while Accountable continuously reconciles global USN reserves and supply as an independent attestor and no named prudential regulator is evidenced.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

@@ -98,8 +98,8 @@
         "evidence": "At Ethereum block 25712139, the AMO Minter owner still resolved to this Safe and the configured timelock remained 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. Safe API returned the listed 3-of-5 owners, no enabled modules, zero guard and module guard, and Safe v1.3.0. The Safe can authorize AMOs and raise the 700 million FRAX cap directly through its owner path, bypassing the timelock."
       }
     ],
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "not-applicable",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -112,9 +112,9 @@
           "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0xB1748C79709f4Ba2Dd82834B8c82D4a505003f27/"
         }
       ],
-      "evidence": "At Ethereum block 25712139, FRAX and AMO Minter remained direct non-proxy contracts. The AMO Minter retained a 700 million FRAX aggregate cap, owner Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, and timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The 3-of-5 owner Safe can authorize AMOs and raise the cap through the immediate owner path; Safe API reported no modules and zero guard/module guard. Current issuance is contract-governed and raiseable, with reconciliation not applicable to this on-chain AMO control model and no prudential supervisor. No public mint-authority incident was identified.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712139, FRAX and AMO Minter remained direct non-proxy contracts. The AMO Minter retained a 700 million FRAX aggregate cap, owner Safe 0xb1748c79709f4ba2dd82834b8c82d4a505003f27, and timelock 0x8412ebf45bac1b340bbe8f318b928c466c4e39ca. The 3-of-5 owner Safe can authorize AMOs and raise the cap through the immediate owner path; Safe API reported no modules and zero guard/module guard. Current issuance is contract-governed and raiseable, with reconciliation not applicable to this on-chain AMO control model and no prudential supervisor. No public mint-authority incident was identified. Economic-posture fields reviewed 2026-08-15: the immediate Safe owner path makes the cap economically unbounded, and repo evidence does not prove whole-supply reserve reconciliation across all deployments. Reconciliation determination 2026-08-15: the first-party Frax balance sheet (api.frax.finance/v2/frax/balance-sheet/latest) reconciles whole-supply liabilities (liability:remaining_frax_supply, borrowed-FRAX debt, FXB adjustments) against assets at pinned observation blocks on all 14 deployment chains including Polygon zkEVM and Fraxtal, refreshed continuously (asOfTimestamp 2026-08-15T19:23:47Z at review). AMO mints and satellite supply enter the liability side by construction, so no mint path escapes: reconciliation=continuous. Supervision stays none (self-published, no independent attestor).",
+      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

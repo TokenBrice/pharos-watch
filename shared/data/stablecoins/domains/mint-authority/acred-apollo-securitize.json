@@ -310,6 +310,7 @@
         "evidence": "This umbrella registry record preserves three independent immediate upgrade domains solely because the current upgradeability schema accepts one controlRef. It does not represent one shared signer or quorum: the four EVM deployments share EOA 0x59c1...76Ee, Solana's four mint-critical programs share EOA 8d36...qzbB6, and the Aptos package is controlled by account 0xc35d...aec7."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
@@ -344,9 +345,9 @@
           "url": "https://www.bvifsc.vg/regulated-entities/securitize-tokenized-apollo-diversified-credit-fund-ltd"
         }
       ],
-      "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, Avalanche block 90233120, Polygon block 90179923, Ink block 50476469, Solana slot 432714278, and Aptos ledger version 6262999136. All four EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the EOA issuer and PDA mint path; its second issuer is the Securitize on-ramp PDA with a separate EOA admin, while all four mint-critical programs share one immediate upgrade key. Aptos Roles resolved two issuer EOAs plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments. Evidence challenge completed 2026-07-15: ACRED publishes daily Securitize-administered NAV through RedStone, but the oracle relays a trusted single-source value and no dated independent feeder-fund supply-to-assets reconciliation was found. The BVI FSC registry matches Securitize Tokenized Apollo Diversified Credit Fund, Ltd.; supervision is established, reconciliation is not.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-15"
+      "evidence": "The fixed exact cutoff was anchored at Ethereum block 25526129, Avalanche block 90233120, Polygon block 90179923, Ink block 50476469, Solana slot 432714278, and Aptos ledger version 6262999136. All four EVM token/trust-service pairs were uncapped and shared one zero-code EOA owner/MASTER that could mint, administer issuers, and upgrade immediately. Solana's live pre-cutoff issue transaction resolved the EOA issuer and PDA mint path; its second issuer is the Securitize on-ramp PDA with a separate EOA admin, while all four mint-critical programs share one immediate upgrade key. Aptos Roles resolved two issuer EOAs plus a master/package owner with immediate compatible-upgrade authority. These root controls are complete; chain-local delegated EVM issuer lists are not asserted to be identical across deployments. Evidence challenge completed 2026-07-15: ACRED publishes daily Securitize-administered NAV through RedStone, but the oracle relays a trusted single-source value and no dated independent feeder-fund supply-to-assets reconciliation was found. The BVI FSC registry matches Securitize Tokenized Apollo Diversified Credit Fund, Ltd.; supervision is established, reconciliation is not. Economic-posture fields reviewed 2026-08-15: uncapped issuer and immediate-upgrade authorities remain unbounded, daily NAV does not reconcile feeder-token supply to assets, and BVI FSC supervision is named. Wave 2 external review 2026-08-15: Securitize, Chainlink, SEC, BVI FSC, RWA.xyz, and Apollo fund reports still do not publish recurring ACRED feeder-share liabilities reconciled across all six deployments, so reconciliation remains unknown.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

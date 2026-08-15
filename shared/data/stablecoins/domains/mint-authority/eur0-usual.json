@@ -214,7 +214,7 @@
       ]
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -229,11 +229,19 @@
         {
           "label": "EUR0 RegistryAccess",
           "url": "https://etherscan.io/address/0x65771978ff9238162a41c77384c9f55c1ec9e9ab"
+        },
+        {
+          "label": "Usual EUR0 token contract documentation — collateralization enforcement on mint",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0"
+        },
+        {
+          "label": "Usual EUR0 Revenue Distribution Module documentation — EUR0_MINT holder",
+          "url": "https://tech.usual.money/smart-contracts/protocol-contracts/eur0/eur0-revenue-distribution-module"
         }
       ],
-      "evidence": "At Ethereum block 25573280, EUR0 was a transparent proxy with implementation 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d and ProxyAdmin 0xd0faE00123a2E778c078c2691C6cB81a9DB08577. RegistryAccess.owner() resolved to one 8-of-15 Usual Safe, and ProxyAdmin.owner() resolved to a second 8-of-15 Usual Safe with the same 15 owners; both Safes had no enabled modules and a zero guard. The full RoleGranted history identifies RevenueDistributionModule and DaoCollateral as EUR0_MINT holders, and both hasRole checks remained true at the observation block. These authority paths can add minters or replace mint logic without an independently enforced quantitative cap, so the economic cap is unbounded. Reviewed sources do not establish a supply-versus-reserve reconciliation cadence or a named prudential supervisor for EUR0.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25573280, EUR0 was a transparent proxy with implementation 0xc3b20caff0bd32c8835659f0c48e0ed341d2016d and ProxyAdmin 0xd0faE00123a2E778c078c2691C6cB81a9DB08577. RegistryAccess.owner() resolved to one 8-of-15 Usual Safe, and ProxyAdmin.owner() resolved to a second 8-of-15 Usual Safe with the same 15 owners; both Safes had no enabled modules and a zero guard. The full RoleGranted history identifies RevenueDistributionModule and DaoCollateral as EUR0_MINT holders, and both hasRole checks remained true at the observation block. These authority paths can add minters or replace mint logic without an independently enforced quantitative cap, so the economic cap is unbounded. Reviewed sources do not establish a supply-versus-reserve reconciliation cadence or a named prudential supervisor for EUR0. Economic-posture fields reviewed 2026-08-15: the issuer-controlled minter and upgrade paths are unbounded, and the collateral view does not prove that every mint path, including RevenueDistributionModule, is reconciled. Wave 2 external review 2026-08-15: official token documentation confirms every EUR0 mint checks post-mint total supply against live treasury collateral value, while the Revenue Distribution Module documentation confirms that module mints only through the same EUR0 token entrypoint; the single-chain whole supply is therefore continuously reconciled on-chain.",
+      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

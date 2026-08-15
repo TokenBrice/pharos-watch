@@ -175,6 +175,9 @@
         "evidence": "At Gnosis block 47196992, Home Bridge proxyOwner() and validator-management owner() both returned 0x7a48Dac683DA91e4faa5aB13D91AB5fd170875bd. Safe API reported threshold 8, 15 owners, no modules, zero guard, and Safe v1.3.0+L2."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -190,9 +193,9 @@
           "url": "https://chainlog.sky.money/api/mainnet/active.json"
         }
       ],
-      "evidence": "At Ethereum block 25530288 and Gnosis block 47196992, the bridge validator contracts each reported a 4-of-7 quorum. The Foreign and Home Bridge proxies and their validator contracts were owned by chain-local 8-of-15 Safes with no enabled modules and zero guards. USDS remained the Foreign Bridge daiToken(), and the Home Bridge pointed to the native-balance block reward contract.",
-      "reviewer": "Codex bridge route review",
-      "reviewedAt": "2026-07-14"
+      "evidence": "At Ethereum block 25530288 and Gnosis block 47196992, the bridge validator contracts each reported a 4-of-7 quorum. The Foreign and Home Bridge proxies and their validator contracts were owned by chain-local 8-of-15 Safes with no enabled modules and zero guards. USDS remained the Foreign Bridge daiToken(), and the Home Bridge pointed to the native-balance block reward contract. Economic-posture fields reviewed 2026-08-15: chain-local 8/15 governance Safes can raise bridge limits, replace validators, and upgrade mint logic without a timelock, while the cross-chain adapter continuously reconciles escrow to mint-minus-burn liabilities and no supervisor or independent attestor applies.",
+      "reviewer": "Codex bridge route review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

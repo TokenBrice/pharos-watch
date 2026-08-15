@@ -80,6 +80,9 @@
         "evidence": "On-chain getOwners()/getThreshold() at block 25,294,715: Gnosis Safe v1.3.0, 3-of-5, nonce 136, no modules, no guard. Controls executor 0x17e66… which owns token, proxy admin, and minter. No enforced time delay."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -95,9 +98,9 @@
           "url": "https://etherscan.io/address/0x145c79A1F0e1Ad5ad7fC8d99548a02A07B24F8FD"
         }
       ],
-      "evidence": "At Ethereum block 25,294,715: full governance chain confirmed — token/proxy admin/minter all owned by executor 0x17e66… → owned by 3-of-5 Gnosis Safe 0x145c79… (no modules, nonce 136). Executor has no timestamp/ETA enforcement; actions execute immediately upon 3-of-5 approval.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25,294,715: full governance chain confirmed — token/proxy admin/minter all owned by executor 0x17e66… → owned by 3-of-5 Gnosis Safe 0x145c79… (no modules, nonce 136). Executor has no timestamp/ETA enforcement; actions execute immediately upon 3-of-5 approval. Economic-posture fields reviewed 2026-08-15: the issuer-controlled Safe can replace or expand minters immediately, whole-supply collateral reconciliation is not established, and no supervisor or independent attestor is documented.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

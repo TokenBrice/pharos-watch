@@ -84,6 +84,9 @@
         "evidence": "Solana SPL mint HViRSvsTpwubWHevjSPxNB22Fg3kdzXtedfQXmMoHtoZ: mintAuthority = aNk7d9zZhAgVw8EuGzV15vgMKmjnbHCxtnozeJb51ij (system-program owned, non-executable wallet); freezeAuthority = AtgugpVoTQcjxjtWgECnSfyThJxBVggSS8WfzVCXNDmV (system-program owned, non-executable wallet). Both are issuer-operated keypair accounts; supply = 0 at time of check."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -95,9 +98,9 @@
           "url": "https://docs.stablr.com/docs/what-is-eurr"
         }
       ],
-      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Ethereum (2026-05-25): owner 0x05Aa2D11B1 as 2/2 multisig, proxy admin 0xA0609c2F as 1/1 multisig. Solana SPL mint (2026-06-11): mintAuthority and freezeAuthority are non-executable system-program-owned wallet accounts (issuer-backend). All addressable mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: issuer-controlled Ethereum and Solana mint paths are unbounded, Grant Thornton quarterly proof of reserve provides periodic reconciliation, and MFSA EMI authorization is prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

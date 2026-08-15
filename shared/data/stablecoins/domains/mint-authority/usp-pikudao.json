@@ -165,6 +165,9 @@
         "evidence": "At Ethereum block 25534495, the Funding Manager, Authorizer, Payment Processor, and Oracle Module proxy bytecode each resolves through a distinct module beacon whose owner() is 0x0B7c73e778d04533286752BEb7d4BA42AEa2f57D. That owner proxy delegates through root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, whose owner() is this Safe and whose verified implementation exposes upgradeTo. The Safe has one signer and threshold one; replacing the root implementation can change the owner behavior that governs the mint and oracle workflow beacons."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -188,9 +191,9 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25534495: USP.owner() remains EOA 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a, Funding Manager 0x7e0305B212dF3FB56366251C054c07748Bf9a797 remains an allowed minter, and cap() remains max uint256. The token proxy is controlled through ProxyAdmin Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43 (2/3). The mint and manual-price workflow module beacons are governed through an owner proxy that resolves via root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, owned by Safe 0x945349AE62630bFDa197a4601883F4F7CBB07Fb5 (1/1). All currently observed mint-critical upgrade paths are recorded.",
-      "reviewer": "TERRA-ULTRA control review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25534495: USP.owner() remains EOA 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a, Funding Manager 0x7e0305B212dF3FB56366251C054c07748Bf9a797 remains an allowed minter, and cap() remains max uint256. The token proxy is controlled through ProxyAdmin Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43 (2/3). The mint and manual-price workflow module beacons are governed through an owner proxy that resolves via root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, owned by Safe 0x945349AE62630bFDa197a4601883F4F7CBB07Fb5 (1/1). All currently observed mint-critical upgrade paths are recorded. Economic-posture fields reviewed 2026-08-15: an owner EOA can authorize minters against a max-uint cap, while no dated whole-supply reconciliation or named prudential supervisor is documented.",
+      "reviewer": "TERRA-ULTRA control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

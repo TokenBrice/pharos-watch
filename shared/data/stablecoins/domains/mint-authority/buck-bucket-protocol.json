@@ -67,6 +67,9 @@
         "evidence": "At Sui checkpoint 298999088, 0x938884... had no object code and owned BUCK UpgradeCap 0x332cc625c24f8d95a2a8455248aa33fa669bdeeb2e83d7ade6e31a8814d0ec85 for current package 0x346684e428a8b24c43cb2af269176fdbc41760ea2aed3e2a9d5c09a3347198bb. Its policy is 0 and version is 27, which permits unrestricted package upgrades and therefore mint-logic changes."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -78,9 +81,9 @@
           "url": "https://fullnode.mainnet.sui.io:443"
         }
       ],
-      "evidence": "At Sui checkpoint 298999088, shared BucketProtocol object 0x9e3dab... held the BUCK TreasuryCap. A distinct EOA 0x169451... owned the bucket AdminCap required by update_max_mint_amount, while EOA 0x938884... owned the policy-0, version-27 UpgradeCap for the current package. The TreasuryCap itself remains inaccessible outside the shared protocol object; the separate AdminCap and unrestricted UpgradeCap resolve the cap and code-change paths.",
-      "reviewer": "Codex deployment-controls review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Sui checkpoint 298999088, shared BucketProtocol object 0x9e3dab... held the BUCK TreasuryCap. A distinct EOA 0x169451... owned the bucket AdminCap required by update_max_mint_amount, while EOA 0x938884... owned the policy-0, version-27 UpgradeCap for the current package. The TreasuryCap itself remains inaccessible outside the shared protocol object; the separate AdminCap and unrestricted UpgradeCap resolve the cap and code-change paths. Economic-posture fields reviewed 2026-08-15: team EOAs can raise the maximum mint amount or replace package logic without a timelock, while issuance is on-chain collateral-gated and has no evidenced supervisor or attestor.",
+      "reviewer": "Codex deployment-controls review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     },
     "upgradeability": {

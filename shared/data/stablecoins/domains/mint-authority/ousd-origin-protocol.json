@@ -139,10 +139,12 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25530882, token admin() and governor() and Vault admin() and governor() all returned the 48-hour Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. implementation() returned 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 for the token and 0x82948060c4b72684bededec342350ab344975145 for the Vault. Timelock getMinDelay() returned 172800 seconds. The same Timelock controls the Vault mint/AMO administration path, so mint-critical logic can change after the recorded delay. User issuance deposits reserve assets into the Vault, while any expansion through AMO or changed mint logic remains behind that independently enforced 48-hour delay; economic cap semantics are raiseable rather than the direct-call encoding's unbounded value.",
-      "reviewer": "Codex CTRL batch 16; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25530882, token admin() and governor() and Vault admin() and governor() all returned the 48-hour Timelock 0x35918cde7233f2dd33fa41ae3cb6ae0e42e0e69f. implementation() returned 0xa7b7c59a1705e4a624ea8a4ad8a06f9de22dcc33 for the token and 0x82948060c4b72684bededec342350ab344975145 for the Vault. Timelock getMinDelay() returned 172800 seconds. The same Timelock controls the Vault mint/AMO administration path, so mint-critical logic can change after the recorded delay. User issuance deposits reserve assets into the Vault, while any expansion through AMO or changed mint logic remains behind that independently enforced 48-hour delay; economic cap semantics are raiseable rather than the direct-call encoding's unbounded value. Economic-posture fields reviewed 2026-08-15: mint-critical changes traverse the 48-hour timelock, live on-chain vault balances cover the full USDC reserve basket, and no regulator or independent attestor is evidenced.",
+      "reviewer": "Codex CTRL batch 16; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "OUSD Vault (Blockscout)",

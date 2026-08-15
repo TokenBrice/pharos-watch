@@ -252,6 +252,9 @@
         "evidence": "At Ethereum block 25546949, frxUSD token owner(), every listed custodian owner(), and the upgrade timelock admin() returned this Safe. On-chain Safe reads returned version 1.3.0, threshold 4, the seven listed owners, no enabled modules, zero guard, and zero moduleGuard."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -283,9 +286,9 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-16"
+      "evidence": "At Ethereum block 25546949, the frxUSD token and all five custodian proxies published by Frax resolved distinct EIP-1967 implementations and ProxyAdmins. Every ProxyAdmin had identical verified runtime and owner() = 0xb898Ad2976b4d8f2E21521C9db16b7497825E503. That verified timelock had admin 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, pendingAdmin zero, and a 86400-second delay. The same 4-of-7 Safe directly owned the token and every custodian, could raise their mint caps, and had no enabled modules, guard, or module guard. This establishes the complete published Ethereum token/custodian upgrade and mint-control chain; replacing mint-critical logic requires the Safe-controlled 24-hour timelock. Economic-posture fields reviewed 2026-08-15: the Safe can raise custodian caps directly outside the upgrade timelock, while the live full-composition Frax/Chaos reserve feed provides continuous third-party reconciliation without named prudential supervision.",
+      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

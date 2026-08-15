@@ -87,12 +87,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Ethereum block 25576670: SAFO token authority = PM 0x344278aff. The PM ADMIN group 0 resolves to 0x4eaa52b6, a 6-signer legacy multisig with threshold 3. The PM requires that ADMIN group for upgradeToAndCall on both the token and PermissionManager; both are UUPS proxies with zero EIP-1967 admin slots. Group 2 (previously EOA 0x60a9, now removed via remGroup tx history) remains a separate mint group. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Ethereum block 25576670: SAFO token authority = PM 0x344278aff. The PM ADMIN group 0 resolves to 0x4eaa52b6, a 6-signer legacy multisig with threshold 3. The PM requires that ADMIN group for upgradeToAndCall on both the token and PermissionManager; both are UUPS proxies with zero EIP-1967 admin slots. Group 2 (previously EOA 0x60a9, now removed via remGroup tx history) remains a separate mint group. Per-chain PM state differs; this verification covers the Ethereum deployment. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing USD share class FR0014015LE1. Economic-posture fields reviewed 2026-08-15: unbounded Permission Manager mint and upgrade authority; existing periodic fund reconciliation and AMF product supervision remain supported.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

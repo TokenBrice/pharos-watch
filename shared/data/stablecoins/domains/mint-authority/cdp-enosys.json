@@ -102,10 +102,13 @@
         "evidence": "At Flare block 65060608, the CDP token's EIP-1967 admin slot resolves to 0xd6363e03cf93d35103592f11ae7160179e0be3ff; eth_getCode returns 1057 bytes and UPGRADE_INTERFACE_VERSION() returns \"5.0.0\", identifying an OpenZeppelin v5 ProxyAdmin whose upgradeAndCall is onlyOwner. owner() on that ProxyAdmin returns 0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, and eth_getCode on that address returns 0x (no bytecode, an EOA). This single key can replace the BoldToken implementation and therefore rewrite mint logic and remove every cap."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "On-chain reads at Flare block 62712638: CDP token (0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f) is an EIP-1967 upgradeable proxy whose owner is a Gnosis Safe 1.3.0 multisig (0xdedda08961216adb9ca09b88986d110127b24270, 2-of-6 threshold, 6 EOA signers, no modules, no guard). The proxy admin (0xd6363e03cf93d35103592f11ae7160179e0be3ff) is separately owned by an EOA (0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, confirmed by eth_getCode returning empty bytecode). The 2-of-6 Safe is the effective admin for risk parameter changes on the Enosys Loans protocol.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "On-chain reads at Flare block 62712638: CDP token (0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f) is an EIP-1967 upgradeable proxy whose owner is a Gnosis Safe 1.3.0 multisig (0xdedda08961216adb9ca09b88986d110127b24270, 2-of-6 threshold, 6 EOA signers, no modules, no guard). The proxy admin (0xd6363e03cf93d35103592f11ae7160179e0be3ff) is separately owned by an EOA (0xfc75f3c7dba8decd0f5c923fe577bf2ff111bce4, confirmed by eth_getCode returning empty bytecode). The 2-of-6 Safe is the effective admin for risk parameter changes on the Enosys Loans protocol. Economic-posture fields reviewed 2026-08-15: a single ProxyAdmin-owner EOA can rewrite mint logic without delay, while ordinary issuance is on-chain collateralized and no regulator or attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Enosys Loans docs",

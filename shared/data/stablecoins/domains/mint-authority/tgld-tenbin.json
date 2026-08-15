@@ -48,6 +48,9 @@
         "evidence": "Holds cap_adjuster_role (can raise the supply cap) and signer_manager_role (controls which off-chain signers may authorize mints) per deployments.json. Multisig threshold and signer set not independently verified."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -59,9 +62,9 @@
           "url": "https://etherscan.io/address/0x6a547b25534234bb79ce6961a23db13de154b6f4"
         }
       ],
-      "evidence": "Tenbin's public deployments.json (verified contracts repo) enumerates minter_role (backend-signer EOA 0xCa2D7CfAa96290171c98e112c73fC87c2AE2fe9B plus the protocol multicall), DEFAULT_ADMIN_ROLE (owner multisig), and cap_adjuster_role / signer_manager_role (dev multisig). Minting is gated by the Controller's off-chain signed-order flow. The multisigs' threshold and signer composition were not independently verified on-chain, so confidence is manual-review.",
-      "reviewer": "Pharos pre-launch addition",
-      "reviewedAt": "2026-05-27",
+      "evidence": "Tenbin's public deployments.json (verified contracts repo) enumerates minter_role (backend-signer EOA 0xCa2D7CfAa96290171c98e112c73fC87c2AE2fe9B plus the protocol multicall), DEFAULT_ADMIN_ROLE (owner multisig), and cap_adjuster_role / signer_manager_role (dev multisig). Minting is gated by the Controller's off-chain signed-order flow. The multisigs' threshold and signer composition were not independently verified on-chain, so confidence is manual-review. Economic-posture fields reviewed 2026-08-15: issuer multisigs can raise the cap or replace signers without an evidenced independent timelock, and no whole-supply reconciliation or prudential supervisor is documented.",
+      "reviewer": "Pharos pre-launch addition; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "unresolvedQuestions": [
         "Whether the admin, owner, and dev multisigs are Gnosis Safes and their exact threshold and signer composition.",
         "Whether the off-chain minter signing keys are HSM-bound and subject to on-chain rate limits or mint caps."

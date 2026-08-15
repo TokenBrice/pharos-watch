@@ -89,10 +89,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Hydration press and coverage describe HOLLAR as an Aave-v3/GHO-derived overcollateralized stablecoin with the native HSM for peg support, governed by Hydration with parameter-level control over collateral and caps. Economic-posture fields reviewed 2026-08-15: collateral-gated issuance is capped but Hydration OpenGov can raise caps and upgrade runtime logic; no off-chain reserve claim or prudential supervisor applies.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Hydration HOLLAR launch (Polkadot newsroom)",

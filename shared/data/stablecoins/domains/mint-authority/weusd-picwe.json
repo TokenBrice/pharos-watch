@@ -115,10 +115,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "BSC/Base/Arbitrum/Plume role checks confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; the new PicWe contract directory independently lists the same token and mint/redeem addresses on Arbitrum. EIP-1967 implementation slots are zero on the reviewed EVM contracts. Movement REST reports cross_mint_role_contract 0x86e5136... and a publisher-controlled package with compatible upgrade policy 1. All tracked chains and the distinct Movement upgrade path are resolved; no multisig or timelock was found.",
-      "reviewer": "SOL-7 blocker challenge batch 01",
-      "reviewedAt": "2026-07-14",
+      "evidence": "BSC/Base/Arbitrum/Plume role checks confirmed EOA 0xc122... as DEFAULT_ADMIN+MINTER_ROLE holder and mint/redeem contract 0x5D54... as MINTER_ROLE holder; the new PicWe contract directory independently lists the same token and mint/redeem addresses on Arbitrum. EIP-1967 implementation slots are zero on the reviewed EVM contracts. Movement REST reports cross_mint_role_contract 0x86e5136... and a publisher-controlled package with compatible upgrade policy 1. All tracked chains and the distinct Movement upgrade path are resolved; no multisig or timelock was found. Economic-posture fields reviewed 2026-08-15: issuer EOAs and an undelayed Movement upgrade path permit unbounded minting, while conflicting multi-chain reserve data has no whole-supply attestation and no prudential supervisor. Wave 2 external verification 2026-08-15: PicWe's current documentation still makes only a generic on-chain and real-time auditability claim and publishes no inventory or report reconciling all native EVM and Movement mint paths; reconciliation remains unknown.",
+      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "PicWe WEUSD contract directory",

@@ -68,12 +68,13 @@
         "evidence": "At Ethereum block 25584916 (2026-07-22T01:14:23Z), USDT getOwner() resolves to this 3-of-6 multisig-style owner. Tether's verified implementation exposes owner-only issue(uint256), which adds the requested amount to total supply without checking a fixed numeric cap; syrupUSDT shares inherit that base-asset authority."
       }
     ],
+    "economicCapSemantics": "bounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending-vault receipt whose shares track deposited USDT and cannot create base USDT. The immutable wrapper result remains supported by zero EIP-1967 implementation/admin slots and non-proxy bytecode. At Ethereum block 25584916, the inherited USDT authority resolves to Tether's 3-of-6 owner; the verified owner-only issue(uint256) path can increase supply without a numeric contract ceiling, resolving the previously unknown canRaiseCap field. Maple's recurring Network Firm reserve reports address the wrapper's economic backing but do not alter the inherited Tether mint path.",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
-      "reviewedAt": "2026-07-22",
+      "evidence": "syrupUSDT (variantOf usdt-tether, variantKind strategy-vault) is a Maple lending-vault receipt whose shares track deposited USDT and cannot create base USDT. The immutable wrapper result remains supported by zero EIP-1967 implementation/admin slots and non-proxy bytecode. At Ethereum block 25584916, the inherited USDT authority resolves to Tether's 3-of-6 owner; the verified owner-only issue(uint256) path can increase supply without a numeric contract ceiling, resolving the previously unknown canRaiseCap field. Maple's recurring Network Firm reserve reports address the wrapper's economic backing but do not alter the inherited Tether mint path. Economic-posture fields reviewed 2026-08-15: local syrupUSDT shares are immutably deposit-gated by USDT; Maple's recurring third-party reporting supports periodic attestation-only posture.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

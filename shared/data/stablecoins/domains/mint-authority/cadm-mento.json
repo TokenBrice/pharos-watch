@@ -134,6 +134,8 @@
       }
     ],
     "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -149,9 +151,9 @@
           "url": "https://github.com/mento-protocol/mento-core/blob/07ecf3df5650a33ea6957f1ad2966e02c5082253/contracts/swap/Broker.sol"
         }
       ],
-      "evidence": "At finalized Celo block 72780426, CADm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface.",
-      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review",
-      "reviewedAt": "2026-07-22",
+      "evidence": "At finalized Celo block 72780426, CADm broker(), owner(), validators(), and exchange() returned the Mento Broker, two-day Mento Timelock, Celo ValidatorsProxy, and zero address respectively. Proxy introspection resolved the current token and Broker implementations and administrators. The Broker is the live swap mint/burn path; the current Validators implementation can only mint Registry USDm, while its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. Economic-posture fields reviewed 2026-08-15: the Mento Timelock and broad Celo governance bound the live and latent raise paths, the CADm-scoped live adapter covers the full shared reserve continuously, and no named prudential regulator or independent attestor applies.",
+      "reviewer": "OpenAI Codex SOL-UPGRADE evidence review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

@@ -190,6 +190,7 @@
         "evidence": "At Ethereum block 25531363, Arbitrum block 483787883, Base block 48624272, and Plasma block 27097539, every sUSDai proxy admin slot returned 0x0b3296...d9f. Each ProxyAdmin owner returned the chain-local 0x0eea...639b timelock, each timelock returned a 172,800-second delay, and each proposer Safe at 0x783b...a07b returned the same three owners with threshold 3."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -228,9 +229,9 @@
           "url": "https://www.cima.ky/search-entities-cima"
         }
       ],
-      "evidence": "Deployment-complete review at Ethereum block 25531363, Arbitrum block 483787883, Base block 48624272, and Plasma block 27097539. The same-address sUSDai proxy resolved to OToken implementation 0x3019...e5ad on Ethereum and Base, ERC-4626 implementation 0x2378...374c on Arbitrum, and OToken implementation 0xe306...f4cc on Plasma. asset() returned USDai only on Arbitrum and reverted on the three OTokens; exact source shows their uncapped mint and burn functions require BRIDGE_ADMIN_ROLE. Current role histories and hasRole reads identify sUSDai OAdapter 0xffb2...7f24 as the satellite role holder, while chain-local 3-of-3 Safe 0x5F0B...841F holds DEFAULT_ADMIN_ROLE and can grant itself bridge mint authority immediately. The shared ProxyAdmin, 48-hour DVNTimelock, and 3-of-3 proposer-Safe upgrade graph remains active on all four deployments. The Arbitrum vault also retains inherited exposure to USDai's reviewed underlying mint authority. No credible recurring third-party reconciliation was established. USD.AI's proof-of-reserves documentation and live API are issuer-operated disclosures; they do not identify an independent attestor that recurrently reconciles sUSDai/USDai supply to the reported collateral. The terms identify a Cayman Islands foundation company and disclaim governmental backing, but no exact registry-backed prudential supervisor for the token issuer or product was identified. Reviewed 2026-07-15.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Deployment-complete review at Ethereum block 25531363, Arbitrum block 483787883, Base block 48624272, and Plasma block 27097539. The same-address sUSDai proxy resolved to OToken implementation 0x3019...e5ad on Ethereum and Base, ERC-4626 implementation 0x2378...374c on Arbitrum, and OToken implementation 0xe306...f4cc on Plasma. asset() returned USDai only on Arbitrum and reverted on the three OTokens; exact source shows their uncapped mint and burn functions require BRIDGE_ADMIN_ROLE. Current role histories and hasRole reads identify sUSDai OAdapter 0xffb2...7f24 as the satellite role holder, while chain-local 3-of-3 Safe 0x5F0B...841F holds DEFAULT_ADMIN_ROLE and can grant itself bridge mint authority immediately. The shared ProxyAdmin, 48-hour DVNTimelock, and 3-of-3 proposer-Safe upgrade graph remains active on all four deployments. The Arbitrum vault also retains inherited exposure to USDai's reviewed underlying mint authority. No credible recurring third-party reconciliation was established. USD.AI's proof-of-reserves documentation and live API are issuer-operated disclosures; they do not identify an independent attestor that recurrently reconciles sUSDai/USDai supply to the reported collateral. The terms identify a Cayman Islands foundation company and disclaim governmental backing, but no exact registry-backed prudential supervisor for the token issuer or product was identified. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: satellite Safes can authorize uncapped minting immediately; those paths escape the issuer-operated reserve index, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

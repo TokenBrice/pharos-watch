@@ -90,6 +90,9 @@
         "evidence": "At finalized Celo block 72082708, CHFm owner() and its custom EIP-1967 owner/admin slot both returned this Safe. SystemParams ProxyAdmin 0x68932b8fDd82dA5B0fCe2AcA20A82ea0e11D894A also returned this Safe as owner. The Safe can immediately set token minters and replace token or SystemParams logic. Current state was 4-of-6 with no enabled modules or guard."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "upgradeability": {
       "model": "custom",
       "proxyAddresses": [
@@ -128,8 +131,6 @@
         }
       ]
     },
-    "supervision": "none",
-    "reconciliation": "not-applicable",
     "review": {
       "sources": [
         {
@@ -149,9 +150,9 @@
           "url": "https://docs.mento.org/mento-v3/dive-deeper/cdp"
         }
       ],
-      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock. Reconciliation review (2026-08-08): CHFm is issued only as CDP debt - borrowers lock USDm in per-currency TroveManager/StabilityPool contracts and mint the FX stable - so the mint path creates no off-chain reserve claim to reconcile, and reconciliation is not-applicable rather than unresolved. No named financial regulator and no third-party attestor appears in the Mento reserve documentation.",
-      "reviewer": "Codex Safety Score V9 review",
-      "reviewedAt": "2026-08-08"
+      "evidence": "At finalized Celo block 72082708, isMinter was true for immutable BorrowerOperations 0x7Fe90CF5A41473179fCE89Df55bc9afcd1c5c0be and immutable ActivePool 0x9947CEe121586fC31b0b0a162A40D6516979E7cB, and false for legacy Broker 0x777A8255cA72412f0d706dc03C9D1987306B4CaD. The April 27 migration transaction independently records that revocation and both grants. Token ownership, token upgrades, minter changes, and the upgradeable SystemParams dependency all resolve to the same immediate 4/6 Safe with no modules, guard, or timelock. Reconciliation review (2026-08-08): CHFm is issued only as CDP debt - borrowers lock USDm in per-currency TroveManager/StabilityPool contracts and mint the FX stable - so the mint path creates no off-chain reserve claim to reconcile, and reconciliation is not-applicable rather than unresolved. No named financial regulator and no third-party attestor appears in the Mento reserve documentation. Economic-posture fields reviewed 2026-08-15: although current immutable minters are collateral-gated, the immediate 4-of-6 Mento Safe can authorize new minters and replace token or SystemParams logic; issuance has no off-chain reserve claim and no regulator or attestor applies.",
+      "reviewer": "Codex Safety Score V9 review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

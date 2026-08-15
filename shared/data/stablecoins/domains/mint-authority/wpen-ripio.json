@@ -96,6 +96,9 @@
         "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WPEN token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -111,9 +114,9 @@
           "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
         }
       ],
-      "evidence": "All mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-07-14 all six deployments had the same 163-byte ERC-1967 proxy runtime, implementation 0x9d6266a9...7969, and zero transparent-proxy admin slot. The verified LatamStable implementation gates upgradeToAndCall with UPGRADER_ROLE, and hasRole(UPGRADER_ROLE, 0x466c02e2...247b) returned true on all six chains.",
-      "reviewer": "Codex CTRL root batch 05",
-      "reviewedAt": "2026-07-14"
+      "evidence": "All mint-capable role holders were verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain. On 2026-07-14 all six deployments had the same 163-byte ERC-1967 proxy runtime, implementation 0x9d6266a9...7969, and zero transparent-proxy admin slot. The verified LatamStable implementation gates upgradeToAndCall with UPGRADER_ROLE, and hasRole(UPGRADER_ROLE, 0x466c02e2...247b) returned true on all six chains. Economic-posture fields reviewed 2026-08-15: the issuer EOA can mint and upgrade without an independent delay, while no wPEN-specific recurring whole-supply attestation or prudential authorization is evidenced. Wave 2 external review 2026-08-15 retained reconciliation as unknown after Ripio's wFIAT, local-stablecoin, security/PoR, and whitepaper materials yielded no wPEN-specific assets-and-liabilities report covering all six deployments.",
+      "reviewer": "Codex CTRL root batch 05; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

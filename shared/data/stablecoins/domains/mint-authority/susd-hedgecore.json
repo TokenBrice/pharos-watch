@@ -75,10 +75,12 @@
       ]
     },
     "economicCapSemantics": "bounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow. The token and wrapper are non-upgradeable, the 1 billion sUSD ceiling is a Solidity constant, and no authority can raise it; the direct mint call is therefore economically bounded.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x34eea40fb…) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0x30829883…) = true; wrapper() = 0x34eea40fb… (confirmed cross-match). 0x30829883… is EOA (empty bytecode). MAX_SUPPLY() = 1B (immutable constant, no setter function). HedgeCore docs confirm soul-bound soul mechanism and operator redemption flow. The token and wrapper are non-upgradeable, the 1 billion sUSD ceiling is a Solidity constant, and no authority can raise it; the direct mint call is therefore economically bounded. Economic-posture fields reviewed 2026-08-15: the immutable 1 billion-token cap remains bounded, live on-chain reserve inputs cover the sole BSC collateral path, and no supervisor or independent attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "HedgeCore hUSDC wrapper docs",

@@ -144,6 +144,9 @@
         "evidence": "Tronscan identifies TXdN5...mmrs as an unverified, non-proxy PhtOFT and exposes owner-only setPeer and setDelegate selectors. At Tron block 84456628, owner() returned hex 0xfb99a0af49941ec1ca2fc726be1e287f4c70f5ee, the base58 EOA recorded here. Current peer, endpoint, and mint/burn route semantics were not independently resolved, so the owner's exact durable-supply authority remains unknown."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -187,13 +190,10 @@
           "url": "https://api.trongrid.io/wallet/getnowblock"
         }
       ],
-      "evidence": "Ethereum block 25531532 totalSupply was 225,011,899.761301444119160709 PHT through the reviewed Maker-style DaiJoin/Vat deployment. Polygon block 90223288 totalSupply was 11,984,287.03 PHT; that deployment is an owner-controlled UUPS LayerZero OFT. Tron block 84456628 totalSupply was 44,489,605.678905 PHT; Tronscan identifies it as an unverified, non-proxy PhtOFT with an EOA owner able to set peers and the endpoint delegate. Across the summed deployment supplies of 281,485,792.470206444119160709 PHT, Tron represented 15.80527574%, not the stale 19.8% in the curation report. This is an observed deployment-supply materiality basis, not a canonical-circulating reconciliation. The Ethereum Vat ward set and the Tron peer/endpoint/mint route remain unresolved. Probes of known deployment-related addresses did not identify a Vat ward, but the non-enumerable wards mapping prevents proving the global and ilk ceilings immutable. The DaiJoin ward on the PHT token is 0x4bd328FD071b03e157d0a89dE199d9E005D71057 (wards=1). The Tron OFT owner is verified as TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4, and the Polygon/Tron PHT deployments are issuer-operated LayerZero OFTs using burn-mint (Polygon endpoint verified as LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c). Re-reviewed 2026-07-27 (Kimi data review): APACX has published no new admin-control inventory since the 2026-07-20 fixed-block reads, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review. Two structural unknowns remain recorded rather than resolved: (1) the current Tron PhtOFT peer, endpoint, receive/mint semantics, and owner-controlled configuration path on the unverified Tron deployment (15.80527574% of the observed summed deployment supply in the reviewed snapshot); (2) the Ethereum Vat ward set, which is a non-enumerable mapping, so the observed global and ilk debt ceilings cannot be proven immutable — economicCapSemantics is therefore recorded as raiseable, the conservative reading between the reviewed numeric ceilings and the unprovable ward history.",
-      "reviewer": "Kimi data review",
-      "reviewedAt": "2026-07-27",
+      "evidence": "Ethereum block 25531532 totalSupply was 225,011,899.761301444119160709 PHT through the reviewed Maker-style DaiJoin/Vat deployment. Polygon block 90223288 totalSupply was 11,984,287.03 PHT; that deployment is an owner-controlled UUPS LayerZero OFT. Tron block 84456628 totalSupply was 44,489,605.678905 PHT; Tronscan identifies it as an unverified, non-proxy PhtOFT with an EOA owner able to set peers and the endpoint delegate. Across the summed deployment supplies of 281,485,792.470206444119160709 PHT, Tron represented 15.80527574%, not the stale 19.8% in the curation report. This is an observed deployment-supply materiality basis, not a canonical-circulating reconciliation. The Ethereum Vat ward set and the Tron peer/endpoint/mint route remain unresolved. Probes of known deployment-related addresses did not identify a Vat ward, but the non-enumerable wards mapping prevents proving the global and ilk ceilings immutable. The DaiJoin ward on the PHT token is 0x4bd328FD071b03e157d0a89dE199d9E005D71057 (wards=1). The Tron OFT owner is verified as TYuYeSqxFF5CjtpFjv46nWWeiAWjVe2iY4, and the Polygon/Tron PHT deployments are issuer-operated LayerZero OFTs using burn-mint (Polygon endpoint verified as LayerZero EndpointV2 0x1a44076050125825900e736c501f859c50fe728c). Re-reviewed 2026-07-27 (Kimi data review): APACX has published no new admin-control inventory since the 2026-07-20 fixed-block reads, so the review is complete to the extent public sources allow and is marked scoreable with confidence capped at manual-review. Two structural unknowns remain recorded rather than resolved: (1) the current Tron PhtOFT peer, endpoint, receive/mint semantics, and owner-controlled configuration path on the unverified Tron deployment (15.80527574% of the observed summed deployment supply in the reviewed snapshot); (2) the Ethereum Vat ward set, which is a non-enumerable mapping, so the observed global and ilk debt ceilings cannot be proven immutable — economicCapSemantics is therefore recorded as raiseable, the conservative reading between the reviewed numeric ceilings and the unprovable ward history. Economic-posture fields reviewed 2026-08-15: the Polygon EOA can upgrade the OFT without a delay, while the Tron route and whole-supply collateral reconciliation remain unresolved and no supervisor or attestor is evidenced.",
+      "reviewer": "Kimi data review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
-    },
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "unknown",
-    "supervision": "none"
+    }
   }
 }

@@ -122,6 +122,7 @@
         "evidence": "At Ethereum block 25530893, hasRole(MINTER_ROLE) returned true for 0x46167cb0, also true on Base 48621435, BSC 109939751, Polygon 90218149, Gnosis 47198418 and Worldchain 32348290. The token exposes no supply cap (cap(), maxSupply(), mintCap(), maxTotalSupply() all revert at Ethereum block 25530890), so mint through this router is unbounded."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -147,9 +148,9 @@
           "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331_wARS_Certification.pdf"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Ripio's public archive contains two successive independent-public-accountant certifications for wARS; the 22 April 2026 report reconciles 31 March 2026 multichain token liabilities to Argentine-peso bank reserves. Ripio's registrations are VASP, MSB, and payment-service regimes rather than prudential reserve supervision.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Ripio's public archive contains two successive independent-public-accountant certifications for wARS; the 22 April 2026 report reconciles 31 March 2026 multichain token liabilities to Argentine-peso bank reserves. Ripio's registrations are VASP, MSB, and payment-service regimes rather than prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: an issuer EOA and authorized routers can mint uncapped supply and the admin Safe can add minters without delay; existing periodic reconciliation and attestation-only supervision remain supported.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

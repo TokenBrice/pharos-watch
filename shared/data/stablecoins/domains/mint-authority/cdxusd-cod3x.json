@@ -111,6 +111,9 @@
         "evidence": "guardian() returned this address; Base Safe API returned threshold 1, 8 owners, no modules, zero guard. hasRole(EXECUTOR_ROLE) confirmed true on Timelock."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -126,9 +129,9 @@
           "url": "https://base.blockscout.com/address/0xc0D3700924301AC384E5Eae3272E08220752DE3D"
         }
       ],
-      "evidence": "Base block 47201791: facilitator bucket confirmed (3/9 Safe, finite cap); owner contract confirmed as OZ TimelockController with 24h delay; 3/9 Safe is PROPOSER, 1/8 guardian is EXECUTOR; no admin bypass. LayerZero OFT code present but 0 SetPeer events ever emitted and 0 total token Transfer events (token has supply of 6.15M from prior facilitator mints, minimal activity on-chain).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Base block 47201791: facilitator bucket confirmed (3/9 Safe, finite cap); owner contract confirmed as OZ TimelockController with 24h delay; 3/9 Safe is PROPOSER, 1/8 guardian is EXECUTOR; no admin bypass. LayerZero OFT code present but 0 SetPeer events ever emitted and 0 total token Transfer events (token has supply of 6.15M from prior facilitator mints, minimal activity on-chain). Economic-posture fields reviewed 2026-08-15: the finite facilitator bucket is raiseable only through the enforced 24-hour timelock, but no repo evidence reconciles facilitator collateral to the whole supply and no supervisor or attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

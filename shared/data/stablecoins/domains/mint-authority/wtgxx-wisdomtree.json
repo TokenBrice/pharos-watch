@@ -45,6 +45,9 @@
         "evidence": "At Ethereum block 25295081, eth_getCode confirms EOA (no bytecode). hasRole(DEFAULT_ADMIN_ROLE=0x0000..., 0x6257759e...) = true on Ethereum (RoleGranted logs), Arbitrum (RoleGranted logs), Base (hasRole call), and Optimism (hasRole call) — same EOA holds DEFAULT_ADMIN on all verified EVM chains."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -66,11 +69,19 @@
         {
           "label": "Stellar Horizon WTGXX issuer account",
           "url": "https://horizon.stellar.org/accounts/GDMBNMFJ3TRFLASJ6UGETFME3PJPNKPU24C7KFDBEBPQFG2CI6UC3JG6"
+        },
+        {
+          "label": "SEC-filed WTGXX audited annual report",
+          "url": "https://www.sec.gov/Archives/edgar/data/1859001/000121465924004208/wtd124240ncsrs.htm"
+        },
+        {
+          "label": "SEC-filed WisdomTree tokenized-share recordkeeping disclosure",
+          "url": "https://www.sec.gov/Archives/edgar/data/1859001/000121465926005986/wtd51126485apos.htm"
         }
       ],
-      "evidence": "REGISTRAR_ROLE = keccak256('REGISTRAR_ROLE') = 0xedcc084d... confirmed as the mint role from AccessControl.sol source. At block 25295081 (ETH) / 47200982 (Base): EOA 0x726d3b3e... holds REGISTRAR_ROLE on Ethereum, Arbitrum, Avalanche, Base, Optimism, Plume (hasRole calls all return true). EOA 0x6257759e... holds DEFAULT_ADMIN_ROLE on all EVM chains. Both EOAs confirmed no-bytecode. Stellar account GDMBNMFJ... has 2 signers (weights 255+50), thresholds 25/50/150, auth_required+auth_revocable+clawback — consistent with centralized issuer model. All addressable mint-capable surfaces verified across all deployments.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "REGISTRAR_ROLE = keccak256('REGISTRAR_ROLE') = 0xedcc084d... confirmed as the mint role from AccessControl.sol source. At block 25295081 (ETH) / 47200982 (Base): EOA 0x726d3b3e... holds REGISTRAR_ROLE on Ethereum, Arbitrum, Avalanche, Base, Optimism, Plume (hasRole calls all return true). EOA 0x6257759e... holds DEFAULT_ADMIN_ROLE on all EVM chains. Both EOAs confirmed no-bytecode. Stellar account GDMBNMFJ... has 2 signers (weights 255+50), thresholds 25/50/150, auth_required+auth_revocable+clawback — consistent with centralized issuer model. All addressable mint-capable surfaces verified across all deployments. Economic-posture fields reviewed 2026-08-15: issuer EOAs control mint and role administration, the SEC supervises the registered money-market fund, and the repo evidence does not establish whole-supply reserve reconciliation. Wave 2 external review 2026-08-15 resolved reconciliation as periodic: WisdomTree Transfers maintains the official whole-share register through its blockchain-integrated system, and the SEC-filed fund financial statements are independently audited annually by Ernst & Young.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

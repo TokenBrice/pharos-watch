@@ -45,6 +45,9 @@
         "evidence": "At Solana finalized slot 425792161, getAccountInfo on 7671j7qpSf9X5KbQDraXReGK8Dxg5xGjr9n913BWhqru returned owner=11111111111111111111111111111111 (System Program), executable=false, data=empty — confirming a plain keypair (EOA-equivalent), not a multisig or program. This keypair is the BPFUpgradeable upgrade authority for the Solayer sUSD program s1aysqpEyZyijPybUV89oBGeooXrR22wMNLjnG2SWJA."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -56,9 +59,9 @@
           "url": "https://api.mainnet-beta.solana.com"
         }
       ],
-      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved. Economic-posture fields reviewed 2026-08-15: a plain-keypair upgrade authority can replace mint logic without an independent timelock, while cUSDO composition disclosures do not reconcile all sUSD supply and no regulator or independent sUSD attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
       "model": "custom",

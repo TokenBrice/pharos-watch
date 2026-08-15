@@ -88,6 +88,7 @@
         "evidence": "At Ethereum block 25295081, eth_getCode for 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee returned empty bytecode (confirmed EOA). On-chain model is issuer-operated EOA; off-chain MPC/HSM custody is indistinguishable and does not block verified."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
@@ -118,9 +119,9 @@
           "url": "https://www.bvifsc.vg/regulated-entities/hatstone-fund-services-limited?page=741"
         }
       ],
-      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25295081: owner() confirmed returning EOA 0x59c1eA...76Ee; eth_getCode confirms EOA (no bytecode). DSToken source confirms mint is gated by owner. All addressable mint-capable surfaces verified. Evidence challenge completed 2026-07-15: VBILL publishes Securitize-administered daily NAV through RedStone and identifies State Street as custodian, but no dated independent fund supply-to-assets attestation was found. The BVI FSC registry matches VanEck Treasury Fund, Ltd. as a professional fund, so supervision is established while reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: the issuer owner can mint and upgrade without a delay or firm cap, daily NAV does not reconcile whole multi-chain token supply to fund assets, and the BVI FSC registry names the supervised professional fund product.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

@@ -46,10 +46,13 @@
         "evidence": "COTI controls the ADA/USD oracle price NFT used by the Djed Plutus script. The oracle can only update the price feed — it cannot bypass the immutable reserve-ratio enforcement in the Plutus V1 script. The upgrade path is absent (Plutus V1 scripts cannot be upgraded on Cardano)."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Koios API re-verified 2026-07-20: the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) remains a plutusV1 script created at tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead — immutable, with the 400%-800% reserve-ratio band encoded in the script itself. Minting is therefore economically bounded by actual ADA reserves entering the bank contract (economicCapSemantics: bounded); no issuer or governance path can mint beyond the band. COTI's administrative surface stays limited to the off-chain oracle price feed, which cannot bypass the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Koios API re-verified 2026-07-20: the DJED minting policy (8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61) remains a plutusV1 script created at tx 46c1db4ab4cae757880056fc4f48abb313bccec71b3f8fff9f10c6749b819ead — immutable, with the 400%-800% reserve-ratio band encoded in the script itself. Minting is therefore economically bounded by actual ADA reserves entering the bank contract (economicCapSemantics: bounded); no issuer or governance path can mint beyond the band. COTI's administrative surface stays limited to the off-chain oracle price feed, which cannot bypass the Plutus V1 mint rules. No upgrade path exists for Cardano Plutus V1 minting policies. Economic-posture fields reviewed 2026-08-15: immutable Cardano rules collateral-gate issuance within the reserve band, making reconciliation not applicable and leaving no attestor or prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {
@@ -61,7 +64,6 @@
           "url": "https://api.koios.rest/api/v1/script_info"
         }
       ]
-    },
-    "economicCapSemantics": "bounded"
+    }
   }
 }

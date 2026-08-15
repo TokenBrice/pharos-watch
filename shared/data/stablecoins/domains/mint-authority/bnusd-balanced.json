@@ -99,13 +99,13 @@
         "evidence": "At block 116683553, the active Governance SCORE owner was this hx account and the bnUSD SCORE owner was the Governance SCORE. The exact v1.0.3 deployed archive gates execute() and deployTo() to that SCORE owner, allowing it to change bnUSD's debt ceiling or mint-critical SCORE code."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
-      "evidence": "Fresh ICON RPC reads at block 116683553 confirm the canonical bnUSD SCORE remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, is owned by Balanced Governance, and still reports an 8,000,000 bnUSD debt ceiling against approximately 908,680 bnUSD supply. The Loans and Peg Stability SCOREs remain active and owned by Governance; the Governance SCORE is still owned by the single hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368 EOA. The exact deployed archives limit direct mintTo to Loans/PSM while the Governance owner can raise the ceiling or deploy replacement SCORE code, so the economic cap is raiseable. This is a collateralized protocol mint rather than issuer reserve issuance, making reconciliation not applicable and prudential supervision none.",
-      "reviewer": "OpenAI Codex C09 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "Fresh ICON RPC reads at block 116683553 confirm the canonical bnUSD SCORE remains active at code hash 0xf4d53569a3e4ba10dd69178004a070b24723cd697b899f5683722d6ea3110d41, is owned by Balanced Governance, and still reports an 8,000,000 bnUSD debt ceiling against approximately 908,680 bnUSD supply. The Loans and Peg Stability SCOREs remain active and owned by Governance; the Governance SCORE is still owned by the single hx80e312d8e68ee2db8fb95e6e7daae2e770d0e368 EOA. The exact deployed archives limit direct mintTo to Loans/PSM while the Governance owner can raise the ceiling or deploy replacement SCORE code, so the economic cap is raiseable. This is a collateralized protocol mint rather than issuer reserve issuance, making reconciliation not applicable and prudential supervision none. Economic-posture fields reviewed 2026-08-15: the single Governance-owner EOA can raise the debt ceiling or replace mint-critical code without an independent timelock, making the cap unbounded; protocol collateral remains on-chain and no prudential supervisor or independent attestor applies.",
+      "reviewer": "OpenAI Codex C09 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "sources": [

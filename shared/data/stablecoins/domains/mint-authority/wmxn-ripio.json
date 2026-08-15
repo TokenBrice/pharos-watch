@@ -102,6 +102,8 @@
         "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WMXN token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
       "sources": [
@@ -124,11 +126,15 @@
         {
           "label": "wFIAT whitepaper v1.0: attestations may be published periodically; wFIAT do not represent e-money and carry no redemption right",
           "url": "https://cdn.prod.website-files.com/5f17344acf2c6d3c3a1d6238/691c742cb3658e24e24f7a3f_wFIAT%20-%20Whitepaper.pdf"
+        },
+        {
+          "label": "Ripio Celo launch adds a seventh WMXN deployment",
+          "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-08-08"
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Supervision review (2026-08-08): wMXN has its own independent certification - Pablo Eduardo Soto, CPA (CPCECABA Vol. 275 Folio 153) reconciled 518,689 wMXN outstanding across six chains against MXN 937,364.13 in a Mexican bank account as of 2026-03-31 - so reserve evidence is attestation-backed. Reconciliation stays unknown because Ripio labels it the first attestation of wMXN collateral, the whitepaper's cadence language is permissive, and later-period certifications return 404. No prudential regime applies to the unnamed Ripio group affiliate that issues wFIAT. Economic-posture fields reviewed 2026-08-15: issuer-controlled mint roles have no firm cap, and the sole whole-supply certification is ad hoc rather than recurring. Wave 2 external verification 2026-08-15: no later WMXN certification was found, and Ripio's July Celo launch added a seventh deployment outside the March six-chain snapshot; reconciliation remains unknown.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

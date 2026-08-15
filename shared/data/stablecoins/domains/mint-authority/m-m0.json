@@ -168,7 +168,7 @@
         "evidence": "At finalized Solana slot 438047853, the Portal program still resolved to programData GBcoKgAkTQ5ZYJM2PzsjhRnDfkwBcgx7hapcAJjrcu5n, whose upgradeable-loader state named this EOA as upgrade authority. It can replace the portal logic and thereby change or bypass current Solana route constraints, so canRaiseCap is true."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -202,9 +202,9 @@
           "url": "https://research.m0.org/research/expanding-available-collateral-structures-for-minters"
         }
       ],
-      "evidence": "At Ethereum block 25712124, MToken.minterGateway() still resolved to the immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. Existing pinned reads establish mint ratio 9950, mint delay 300 seconds, validator threshold 1, and a 108000-second collateral update interval; expired collateral counts as zero. M0's primary specifications assign replaceable issuance parameters and approved minter/validator sets to TTG governance, so the gateway is cap-limited while aggregate cap semantics remain raiseable. At finalized Solana slots 438047792 and 438047853, the mint authority remained a 1-of-2 portal-derived multisig with null freeze authority, and the portal ProgramData retained EOA upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Validator attestations support periodic reconciliation; no unified prudential supervisor or public mint-authority incident was identified in the reviewed primary sources.",
-      "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06)",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712124, MToken.minterGateway() still resolved to the immutable MinterGateway and ttgRegistrar() returned 0x119fbeedd4f4f4298fb59b720d5654442b81ae2c. Existing pinned reads establish mint ratio 9950, mint delay 300 seconds, validator threshold 1, and a 108000-second collateral update interval; expired collateral counts as zero. M0's primary specifications assign replaceable issuance parameters and approved minter/validator sets to TTG governance, so the gateway is cap-limited while aggregate cap semantics remain raiseable. At finalized Solana slots 438047792 and 438047853, the mint authority remained a 1-of-2 portal-derived multisig with null freeze authority, and the portal ProgramData retained EOA upgrade authority 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. Validator attestations support periodic reconciliation; no unified prudential supervisor or public mint-authority incident was identified in the reviewed primary sources. Economic-posture fields reviewed 2026-08-15: the self-controlled Solana EOA upgrade path can bypass route constraints without an independent delay, while validator attestations remain periodic and no unified prudential supervisor is evidenced.",
+      "reviewer": "Kimi V9 FIAT-CTRL evidence (shard-06); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }
