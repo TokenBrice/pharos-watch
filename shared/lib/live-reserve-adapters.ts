@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { type LiveReserveAdapterKey } from "../types/live-reserves";
 import {
-  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
   LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
 } from "./live-reserve-adapter-descriptors";
@@ -20,20 +19,20 @@ export type LiveReserveRedemptionFeeTelemetry = "current-bps" | "none";
 export {
   LiveReservesConfigSchema,
   LIVE_RESERVE_ADAPTER_DESCRIPTORS,
-  LIVE_RESERVE_ADAPTER_DEFINITIONS,
   LIVE_RESERVE_ADAPTER_SOURCE_ORIGIN_CLASSES,
   LIVE_RESERVE_ADAPTER_PRIMARY_INPUT_KINDS,
   LIVE_RESERVE_ADAPTER_PROVENANCE,
   LIVE_RESERVE_ADAPTER_STATUS_VALUES,
 };
+export { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "./live-reserve-adapter-descriptors";
 
 export type { LiveReserveAdapterParamsByKey, LiveReserveAdapterParams };
 export type { LiveReserveAdapterDescriptorMap } from "./live-reserve-adapter-descriptors";
 
 export function getLiveReserveAdapterDefinition(
   adapterKey: string,
-): (typeof LIVE_RESERVE_ADAPTER_DEFINITIONS)[LiveReserveAdapterKey] | null {
-  return LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey as LiveReserveAdapterKey] ?? null;
+): (typeof LIVE_RESERVE_ADAPTER_DESCRIPTORS)[LiveReserveAdapterKey] | null {
+  return LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey as LiveReserveAdapterKey] ?? null;
 }
 
 export function parseLiveReserveAdapterParams<K extends LiveReserveAdapterKey>(

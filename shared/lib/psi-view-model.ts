@@ -1,4 +1,4 @@
-import { DAY_SECONDS } from "./time-constants";
+import { bucketUnixSecondsToUtcDay } from "./time-buckets";
 
 export interface PsiComponentsLike {
   severity: number;
@@ -44,7 +44,7 @@ export function getDisplayedPsiBasis(current: PsiCurrentLike): "rolling 24h avg"
 }
 
 function getPsiTodayMidnight(computedAt: number): number {
-  return computedAt - (computedAt % DAY_SECONDS);
+  return bucketUnixSecondsToUtcDay(computedAt);
 }
 
 function getCompletedPsiHistory<T extends PsiHistoryPointLike>(

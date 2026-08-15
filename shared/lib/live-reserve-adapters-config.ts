@@ -3,7 +3,7 @@ import {
   type LiveReserveAdapterKey,
   type LiveReservesConfig,
 } from "../types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "./live-reserve-adapters-definitions";
+import { LIVE_RESERVE_ADAPTER_DESCRIPTORS } from "./live-reserve-adapter-descriptors";
 import {
   adapterParamsSchemas,
   baseLiveReserveConfigSchema,
@@ -15,7 +15,7 @@ function validateAdapterConfigPolicy(
   config: Pick<LiveReservesConfig, "semantics" | "version">,
   ctx: z.RefinementCtx,
 ): void {
-  const policy = LIVE_RESERVE_ADAPTER_DEFINITIONS[adapterKey].configValidation;
+  const policy = LIVE_RESERVE_ADAPTER_DESCRIPTORS[adapterKey].configValidation;
   const allowedSemantics = policy.allowedSemantics as readonly LiveReservesConfig["semantics"][];
   const allowedVersions = policy.allowedVersions as readonly number[];
 
@@ -36,7 +36,7 @@ function validateAdapterConfigPolicy(
   }
 }
 
-const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DEFINITIONS) as LiveReserveAdapterKey[];
+const liveReserveConfigAdapterKeys = Object.keys(LIVE_RESERVE_ADAPTER_DESCRIPTORS) as LiveReserveAdapterKey[];
 
 const liveReserveConfigVariants = liveReserveConfigAdapterKeys.map((adapterKey) =>
   baseLiveReserveConfigSchema.extend({

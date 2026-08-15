@@ -209,8 +209,17 @@ export function getChainResilienceTier(chainId: string): ChainResilienceTier {
 
 /** Reverse lookup: DL display name (lowercase) → canonical chain ID. */
 const CHAIN_NAME_TO_ID = new Map<string, string>();
+const CHAIN_ALIAS_TO_ID = new Map<string, string>();
+const EVM_CHAIN_ID_TO_ID = new Map<number, string>();
 for (const [id, meta] of Object.entries(CHAIN_META)) {
+  CHAIN_NAME_TO_ID.set(id.toLowerCase(), id);
   CHAIN_NAME_TO_ID.set(meta.name.toLowerCase(), id);
+  if (meta.evmChainId != null && !EVM_CHAIN_ID_TO_ID.has(meta.evmChainId)) {
+    EVM_CHAIN_ID_TO_ID.set(meta.evmChainId, id);
+  }
+}
+for (const [alias, id] of Object.entries(CHAIN_ALIASES)) {
+  CHAIN_ALIAS_TO_ID.set(alias.toLowerCase(), id);
 }
 
 /**
@@ -219,18 +228,27 @@ for (const [id, meta] of Object.entries(CHAIN_META)) {
  *
  * Handles: exact ID match, alias resolution, and case-insensitive display-name lookup.
  */
-export function resolveChainId(raw: string): string | null {
-  // Try as-is first (exact ID match or alias)
-  const aliased = CHAIN_ALIASES[raw] ?? raw;
-  if (CHAIN_META[aliased]) return aliased;
-
-  // Try case-insensitive name lookup (DL uses "BSC", "Ethereum", etc.)
-  const byName = CHAIN_NAME_TO_ID.get(raw.toLowerCase());
-  if (byName) {
-    return byName;
+export function resolveChainId(raw: string | number): string | null {
+  if (typeof raw === "number") {
+    return Number.isInteger(raw) ? (EVM_CHAIN_ID_TO_ID.get(raw) ?? null) : null;
   }
 
-  return null;
+  const normalized = raw.trim().toLowerCase();
+  if (!normalized) return null;
+  return CHAIN_ALIAS_TO_ID.get(normalized) ?? CHAIN_NAME_TO_ID.get(normalized) ?? null;
+}
+
+/**
+ * Resolve a chain to its registry ID, retaining unknown labels as trimmed lowercase keys.
+ * Nullish/blank inputs remain null; unknown numeric IDs become their decimal string.
+ */
+export function normalizeChainId(raw: string | number | null | undefined): string | null {
+  if (raw == null) return null;
+  const resolved = resolveChainId(raw);
+  if (resolved) return resolved;
+  if (typeof raw === "number") return Number.isFinite(raw) ? String(raw) : null;
+  const normalized = raw.trim().toLowerCase();
+  return normalized || null;
 }
 
 /** Chain IDs that have a CHAIN_META entry (all defined chains are potentially active). */

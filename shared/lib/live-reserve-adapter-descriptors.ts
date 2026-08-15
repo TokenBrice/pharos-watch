@@ -20,7 +20,9 @@ const ACTIVE_PROVENANCE = {
   rationale: "Bound by at least one active stablecoin liveReservesConfig.",
 } as const satisfies LiveReserveAdapterProvenance;
 
-function inferDisplayBadgeKind(evidenceClass: LiveReserveEvidenceClass): ReserveDisplayBadgeKind {
+export function inferReserveDisplayBadgeKindFromEvidenceClass(
+  evidenceClass: LiveReserveEvidenceClass,
+): ReserveDisplayBadgeKind {
   switch (evidenceClass) {
     case "independent":
       return "live";
@@ -28,6 +30,8 @@ function inferDisplayBadgeKind(evidenceClass: LiveReserveEvidenceClass): Reserve
       return "curated-validated";
     case "weak-live-probe":
       return "proof";
+    default:
+      throw new Error(`Unsupported live-reserve evidence class: ${String(evidenceClass)}`);
   }
 }
 
@@ -51,7 +55,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTORS = Object.fromEntries(
     const displayBadgeKind =
       "displayBadgeKind" in declaration
         ? declaration.displayBadgeKind
-        : inferDisplayBadgeKind(declaration.evidenceClass);
+        : inferReserveDisplayBadgeKindFromEvidenceClass(declaration.evidenceClass);
     return [
       key,
       {

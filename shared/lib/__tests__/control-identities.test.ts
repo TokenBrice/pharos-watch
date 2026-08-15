@@ -12,6 +12,11 @@ describe("critical control identities", () => {
     expect(criticalControllerKey("solana", "AbC123")).toBe("address:solana:AbC123");
   });
 
+  it("uses canonical chain whitespace, alias, and unknown-label handling", () => {
+    expect(criticalControllerKey(" OP Mainnet ", "0xAbC123")).toBe("address:optimism:0xabc123");
+    expect(criticalControllerKey(" New Chain ", "AbC123")).toBe("address:new chain:AbC123");
+  });
+
   it("detects an address reused by mint and upgrade paths plus reviewed common modes", () => {
     const meta = {
       id: "fixture",

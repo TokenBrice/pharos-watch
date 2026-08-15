@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Sha256Schema } from "./safety-schema-primitives";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
 
@@ -8,7 +9,6 @@ export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS = 32;
 const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
 const SafeIdentifierSchema = z
   .string()

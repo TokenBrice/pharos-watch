@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { mean, median, pct, percentileLinear, percentileNearestRank } from "../stats";
+import {
+  mean,
+  median,
+  pct,
+  percentileLinear,
+  percentileNearestRank,
+  ratio,
+  ratioToPercentage,
+  relativeChangeRatio,
+} from "../stats";
 
 describe("mean", () => {
   it("averages finite samples", () => {
@@ -66,5 +75,25 @@ describe("pct", () => {
     expect(pct(1, 0)).toBeNull();
     expect(pct(NaN, 1)).toBeNull();
     expect(pct(1, Infinity)).toBeNull();
+  });
+});
+
+describe("unit-explicit ratios", () => {
+  it("uses 1 as 100% and converts only at the boundary", () => {
+    const value = ratio(1, 4);
+    expect(value).toBe(0.25);
+    expect(value == null ? null : ratioToPercentage(value)).toBe(25);
+  });
+
+  it("computes relative changes on the ratio scale", () => {
+    expect(relativeChangeRatio(110, 100)).toBe(0.1);
+    expect(relativeChangeRatio(90, 100)).toBe(-0.1);
+    expect(relativeChangeRatio(300, 100)).toBe(2);
+  });
+
+  it("rejects invalid ratios consistently", () => {
+    expect(ratio(1, 0)).toBeNull();
+    expect(relativeChangeRatio(NaN, 1)).toBeNull();
+    expect(relativeChangeRatio(1, Infinity)).toBeNull();
   });
 });

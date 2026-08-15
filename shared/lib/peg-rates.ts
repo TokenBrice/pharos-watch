@@ -1,7 +1,8 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
+import { PEG_TAXONOMY } from "./peg-taxonomy";
 import { medianOf } from "./peg-utils";
-import { sumPegBuckets } from "./supply";
+import { getCirculatingRaw } from "./supply";
 
 /**
  * Coins excluded from the commodity peer-median reference.
@@ -33,10 +34,19 @@ function normalizeFallbackRates(fallbackRates: Record<string, number> | undefine
 }
 
 function addPegRateAliases(result: PegRatesResult): void {
-  if (result.rates.peggedREAL == null || result.rates.peggedBRL != null) return;
-  result.rates.peggedBRL = result.rates.peggedREAL;
-  if (result.sources.peggedREAL != null) result.sources.peggedBRL = result.sources.peggedREAL;
-  if (result.counts.peggedREAL != null) result.counts.peggedBRL = result.counts.peggedREAL;
+  for (const entry of Object.values(PEG_TAXONOMY)) {
+    const canonical = entry.canonicalPegType;
+    if (!canonical || result.rates[canonical] == null) continue;
+    for (const alias of entry.pegTypeAliases ?? []) {
+      if (result.rates[alias] == null) result.rates[alias] = result.rates[canonical];
+      if (result.sources[canonical] != null && result.sources[alias] == null) {
+        result.sources[alias] = result.sources[canonical];
+      }
+      if (result.counts[canonical] != null && result.counts[alias] == null) {
+        result.counts[alias] = result.counts[canonical];
+      }
+    }
+  }
 }
 
 
@@ -68,7 +78,7 @@ export function derivePegRates(
     if (!peg || price == null || typeof price !== "number" || isNaN(price) || price <= 0) continue;
 
     // Only use coins with meaningful supply to avoid garbage data
-    const supply = sumPegBuckets(a.circulating);
+    const supply = getCirculatingRaw(a);
     if (supply < 1_000_000) continue;
 
     // For gold/silver tokens, normalize price to "per troy ounce"

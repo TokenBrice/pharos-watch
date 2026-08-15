@@ -2,6 +2,27 @@ function finiteSorted(values: readonly number[]): number[] {
   return values.filter(Number.isFinite).sort((left, right) => left - right);
 }
 
+declare const ratioUnit: unique symbol;
+
+/** A unit-explicit ratio where 1 represents 100%. Ratios may exceed the 0-1 fraction range. */
+export type Ratio = number & { readonly [ratioUnit]: "ratio" };
+
+/** Numerator divided by denominator on the ratio scale (1 = 100%). */
+export function ratio(numerator: number, denominator: number): Ratio | null {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
+  return (numerator / denominator) as Ratio;
+}
+
+/** Relative change on the ratio scale: `(current - previous) / previous`. */
+export function relativeChangeRatio(current: number, previous: number): Ratio | null {
+  return ratio(current - previous, previous);
+}
+
+/** Convert a ratio to a 0-100 percentage at a presentation or serialization boundary. */
+export function ratioToPercentage(value: Ratio): number {
+  return value * 100;
+}
+
 /**
  * Arithmetic mean of finite samples. Returns null when there are no finite samples.
  */
@@ -62,6 +83,6 @@ export function percentileLinear(values: readonly number[], percentile: number):
  * Returns null when either input is non-finite or the denominator is zero.
  */
 export function pct(numerator: number, denominator: number): number | null {
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
-  return (numerator / denominator) * 100;
+  const value = ratio(numerator, denominator);
+  return value == null ? null : ratioToPercentage(value);
 }

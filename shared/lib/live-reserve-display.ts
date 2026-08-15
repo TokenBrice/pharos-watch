@@ -1,6 +1,10 @@
 import type { LiveReserveEvidenceClass, ReserveDisplayBadgeKind } from "../types/live-reserve-core";
 import type { ReserveDisplayBadgeView } from "../types/live-reserves";
-import { LIVE_RESERVE_ADAPTER_DESCRIPTORS, type LiveReserveAdapterKey } from "./live-reserve-adapter-descriptors";
+import {
+  LIVE_RESERVE_ADAPTER_DESCRIPTORS,
+  inferReserveDisplayBadgeKindFromEvidenceClass as inferBadgeKindFromEvidenceClass,
+  type LiveReserveAdapterKey,
+} from "./live-reserve-adapter-descriptors";
 
 const RESERVE_DISPLAY_BADGE_LABELS: Record<ReserveDisplayBadgeKind, string> = {
   live: "Live",
@@ -26,16 +30,7 @@ export function buildReserveDisplayBadge(kind: ReserveDisplayBadgeKind): Reserve
 export function inferReserveDisplayBadgeKindFromEvidenceClass(
   evidenceClass: LiveReserveEvidenceClass,
 ): ReserveDisplayBadgeKind {
-  switch (evidenceClass) {
-    case "independent":
-      return "live";
-    case "static-validated":
-      return "curated-validated";
-    case "weak-live-probe":
-      return "proof";
-    default:
-      return "live";
-  }
+  return inferBadgeKindFromEvidenceClass(evidenceClass);
 }
 
 export function hasReserveDisplayBadgeForAdapter(adapterKey: string): adapterKey is LiveReserveAdapterKey {

@@ -1,4 +1,4 @@
-import { mean, median } from "../stats";
+import { mean, median, ratio } from "../stats";
 import { DDR_HORIZON_VALUES } from "../../types/depeg-resolver";
 import { DDR_PREDICTION_POLICY_VERSION } from "../methodology-versions/depeg-resolver";
 import {
@@ -32,10 +32,6 @@ type DdrrDurationScoredPredictionRow = DdrrV2PredictionReviewRow & {
   absoluteDurationErrorSec: number;
 };
 
-function pct(numerator: number, denominator: number): number | null {
-  return denominator === 0 ? null : numerator / denominator;
-}
-
 function countUniqueIncidents(rows: readonly DdrrRow[]): number {
   return new Set(rows.map((row) => row.incidentKey)).size;
 }
@@ -56,7 +52,7 @@ function summarizeHorizons(rows: readonly DdrrRow[]): DdrrHorizonHitRate[] {
       scored,
       hits,
       misses,
-      hitRate: pct(hits, scored),
+      hitRate: ratio(hits, scored),
     };
   });
 }
@@ -247,31 +243,31 @@ export function summarizeDdrrMetrics(rows: readonly DdrrRow[]): DdrrV2SummaryMet
     invalidatedPredictionCount,
     currentEligibleOpportunityCount,
     finalizedOpportunityCount,
-    predictionRatePct: pct(lockedPredictionCount, finalizedOpportunityCount),
-    invalidationAdjustedPredictionRatePct: pct(
+    predictionRatePct: ratio(lockedPredictionCount, finalizedOpportunityCount),
+    invalidationAdjustedPredictionRatePct: ratio(
       lockedPredictionCount + invalidatedPredictionCount,
       finalizedOpportunityCount,
     ),
-    decisionProgressPct: pct(
+    decisionProgressPct: ratio(
       lockedPredictionCount + noCallCount + invalidatedPredictionCount,
       currentEligibleOpportunityCount,
     ),
-    operationalMissRatePct: pct(operationalMissOpportunityCount, currentEligibleOpportunityCount),
-    noCallRatePct: pct(noCallCount, finalizedOpportunityCount),
-    preLockRecoveredPct: pct(resolvedBeforePredictionCount, policyUniverseIncidentCount),
-    preLockTerminalPct: pct(terminalBeforePredictionCount, policyUniverseIncidentCount),
-    missedLockPct: pct(missedNoPredictionCount, policyUniverseIncidentCount),
-    stateAssignedPct: pct(stateAssignedCount, policyUniverseIncidentCount),
-    finalizedCoveragePct: pct(finalizedCoverageCount, policyUniverseIncidentCount),
+    operationalMissRatePct: ratio(operationalMissOpportunityCount, currentEligibleOpportunityCount),
+    noCallRatePct: ratio(noCallCount, finalizedOpportunityCount),
+    preLockRecoveredPct: ratio(resolvedBeforePredictionCount, policyUniverseIncidentCount),
+    preLockTerminalPct: ratio(terminalBeforePredictionCount, policyUniverseIncidentCount),
+    missedLockPct: ratio(missedNoPredictionCount, policyUniverseIncidentCount),
+    stateAssignedPct: ratio(stateAssignedCount, policyUniverseIncidentCount),
+    finalizedCoveragePct: ratio(finalizedCoverageCount, policyUniverseIncidentCount),
     recoveryLikelihoodCorrectCount,
     recoveryLikelihoodScoredCount,
-    recoveryLikelihoodAccuracyPct: pct(recoveryLikelihoodCorrectCount, recoveryLikelihoodScoredCount),
+    recoveryLikelihoodAccuracyPct: ratio(recoveryLikelihoodCorrectCount, recoveryLikelihoodScoredCount),
     durationScoredCount: durationRows.length,
     meanSignedDurationErrorSec: mean(signedErrors),
     medianSignedDurationErrorSec: median(signedErrors),
     meanAbsoluteDurationErrorSec: mean(absoluteErrors),
     medianAbsoluteDurationErrorSec: median(absoluteErrors),
-    invalidatedPct: pct(invalidatedPredictionCount, policyUniverseIncidentCount),
+    invalidatedPct: ratio(invalidatedPredictionCount, policyUniverseIncidentCount),
     invalidatedByReason,
     accuracyDenominatorLabel: "first-published frozen prediction outcomes with observed recovery or terminal evidence",
     horizonHitRates: summarizeHorizons(rows),

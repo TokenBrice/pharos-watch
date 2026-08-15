@@ -2,7 +2,8 @@ import { CHAIN_META, getChainResilienceTier } from "./index";
 import { canonicalizeChainCirculating } from "./circulating";
 import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
-import { sumPegBuckets } from "../supply";
+import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRawOrNull } from "../supply";
+import { relativeChangeRatio } from "../stats";
 import {
   ACTIVE_BACKING_DIVERSITY_TYPES,
   computeConcentrationScore,
@@ -71,10 +72,10 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
   for (const asset of peggedAssets) {
     if (asset.circulating) {
       hasAggregateSupply = true;
-      aggregateTotalUsd += sumPegBuckets(asset.circulating);
-      aggregatePrevDayUsd += sumPegBuckets(asset.circulatingPrevDay);
-      aggregatePrevWeekUsd += sumPegBuckets(asset.circulatingPrevWeek);
-      aggregatePrevMonthUsd += sumPegBuckets(asset.circulatingPrevMonth);
+      aggregateTotalUsd += getCirculatingRaw(asset);
+      aggregatePrevDayUsd += getPrevDayRaw(asset);
+      aggregatePrevWeekUsd += getPrevWeekRaw(asset);
+      aggregatePrevMonthUsd += getPrevMonthRawOrNull(asset) ?? 0;
     }
 
     const canonicalChainCirculating = canonicalizeChainCirculating(asset.chainCirculating);
@@ -199,11 +200,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       type: meta.type,
       totalUsd: acc.totalUsd,
       change24h,
-      change24hPct: acc.prevDay > 0 ? change24h / acc.prevDay : 0,
+      change24hPct: acc.prevDay > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevDay) ?? 0) : 0,
       change7d,
-      change7dPct: acc.prevWeek > 0 ? change7d / acc.prevWeek : 0,
+      change7dPct: acc.prevWeek > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevWeek) ?? 0) : 0,
       change30d,
-      change30dPct: acc.prevMonth > 0 ? change30d / acc.prevMonth : 0,
+      change30dPct: acc.prevMonth > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevMonth) ?? 0) : 0,
       stablecoinCount: acc.coins.length,
       dominantStablecoin: {
         id: dominant.id,
@@ -226,9 +227,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     globalTotalUsd,
     chainAttributedTotalUsd,
     unattributedTotalUsd,
-    globalChange24hPct: globalPrevDayUsd > 0 ? (globalTotalUsd - globalPrevDayUsd) / globalPrevDayUsd : 0,
-    globalChange7dPct: globalPrevWeekUsd > 0 ? (globalTotalUsd - globalPrevWeekUsd) / globalPrevWeekUsd : 0,
-    globalChange30dPct: globalPrevMonthUsd > 0 ? (globalTotalUsd - globalPrevMonthUsd) / globalPrevMonthUsd : 0,
+    globalChange24hPct: globalPrevDayUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevDayUsd) ?? 0) : 0,
+    globalChange7dPct: globalPrevWeekUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevWeekUsd) ?? 0) : 0,
+    globalChange30dPct: globalPrevMonthUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevMonthUsd) ?? 0) : 0,
     updatedAt: Math.floor(Date.now() / 1000),
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };

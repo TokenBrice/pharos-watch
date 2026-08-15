@@ -1,4 +1,5 @@
 import { EXIT_ROUTE_SCORING_TABLES } from "./exit-route-scoring";
+import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
 import type {
   DexAmmExecutionModel,
   DexAmmExecutionToken,
@@ -663,14 +664,6 @@ export function isDexExitRouteCoverageWithinRouteBudget(
   );
 }
 
-function roundUsd(value: number): number {
-  return Math.round(Math.max(0, value) * 100) / 100;
-}
-
-function roundRatio(value: number): number {
-  return Math.round(Math.min(1, Math.max(0, value)) * 1_000_000) / 1_000_000;
-}
-
 function normalizedKey(value: string): string {
   return value
     .trim()
@@ -807,13 +800,10 @@ function buildCapacityPoint(
   maxCostBps: number,
   capacityUsd: number,
 ): ExitRouteCapacityPoint {
-  const executableUsd = roundUsd(Math.min(requestedNotionalUsd, Math.max(0, capacityUsd)));
-  return {
-    requestedNotionalUsd,
-    maxCostBps,
-    executableUsd,
-    completionRatio: roundRatio(executableUsd / requestedNotionalUsd),
-  };
+  return buildExitRouteCapacityPoint(
+    { requestedNotionalUsd, maxCostBps, capacityUsd },
+    { clampNegativeCapacity: true, usdDecimals: 2, ratioDecimals: 6 },
+  );
 }
 
 function buildCapacityCurve(
