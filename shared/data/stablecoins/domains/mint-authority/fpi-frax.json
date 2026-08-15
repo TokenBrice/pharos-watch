@@ -198,7 +198,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "not-applicable",
     "supervision": "none",
     "review": {
       "sources": [
@@ -223,7 +223,7 @@
           "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
         }
       ],
-      "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The live adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit calls uncapped FPI minter_mint. Its EIP-1967 admin was ProxyAdmin 0x223a681f..., whose owner was the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, administered by the 4/7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937. Separately, FPI owner 3/5 Safe 0x6A7efa96... can immediately add or remove uncapped minters. The previous abbreviated timelock address did not identify the live owner contract and has been replaced with the exact RPC-returned address. Economic-posture fields reviewed 2026-08-15: the 3-of-5 Comptroller Safe can immediately replace uncapped minters, while the issuer collateral index does not prove whole-supply reconciliation across Ethereum and satellite mint routes and no independent attestor or prudential supervisor is evidenced.",
+      "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The live adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit calls uncapped FPI minter_mint. Its EIP-1967 admin was ProxyAdmin 0x223a681f..., whose owner was the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, administered by the 4/7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937. Separately, FPI owner 3/5 Safe 0x6A7efa96... can immediately add or remove uncapped minters. The previous abbreviated timelock address did not identify the live owner contract and has been replaced with the exact RPC-returned address. Economic-posture fields reviewed 2026-08-15: the 3-of-5 Comptroller Safe can immediately replace uncapped minters, while the issuer collateral index does not prove whole-supply reconciliation across Ethereum and satellite mint routes and no independent attestor or prudential supervisor is evidenced. Reconciliation determination 2026-08-15: canonical FPI issuance is on-chain protocol-collateral minting through the code-hash-pinned FPIControllerPool against the FRAX collateral index, with no off-chain reserve claim -> reconciliation=not-applicable (same class as lisUSD/fxUSD/DAI). The frax-fpi-collateral feed is composition-only (ferry/liability entries excluded), not a supply reconciliation, so it cannot ground continuous/periodic; the uncapped OFT mintable adapter and the Comptroller Safe minter-replacement path remain the economicCapSemantics=unbounded facts.",
       "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
