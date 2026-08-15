@@ -158,8 +158,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -193,9 +193,13 @@
         {
           "label": "LayerZero V2 EndpointV2 on Avalanche (delegates(YUSD) read on-chain)",
           "url": "https://snowtrace.io/address/0x1a44076050125825900e736c501f859c50fE728c"
+        },
+        {
+          "label": "Accountable live YUSD proof of reserves and liabilities",
+          "url": "https://aegis.accountable.capital/"
         }
       ],
-      "evidence": "Prior review left the BSC and Avalanche authority chains unenumerated. Resolved 2026-07-20 by direct reads. Ethereum (block 25575161): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, totalSupply 34,129,715.738490831724848552. BSC (block 111124154): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF whose owner() and defaultAdmin() are the same Safe and whose AegisConfig 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da has owner() = the Safe and trustedSigner() = 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e, identical to Ethereum. Avalanche (block 90804258): the token is a native LayerZero V2 OFT with owner() = the Safe and EndpointV2.delegates() = the Safe. All four contracts read zero at the EIP-1967 implementation slot, so none is a standard proxy; the verified Ethereum YUSD source shows setMinter(address) is onlyOwner and mint(address,uint256) is onlyMinter, so the Safe can substitute mint logic without an upgrade and without a delay. Every mint surface therefore reduces to one 3-of-5 Safe plus one trusted signer. Reconciliation cadence and prudential supervision remain unevidenced and are deliberately left \"unknown\" rather than inferred from the Accountable real-time dashboard; that is recorded in the profile fields, not as a blocking question. Economic-posture fields reviewed 2026-08-15: the common Safe can replace mint logic without delay, while Accountable reserve telemetry does not reconcile every chain liability and no regulator or independent attestor is evidenced.",
+      "evidence": "Prior review left the BSC and Avalanche authority chains unenumerated. Resolved 2026-07-20 by direct reads. Ethereum (block 25575161): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0xC4Df68e592245cA5202fE8b7C438d2b799820fc2, totalSupply 34,129,715.738490831724848552. BSC (block 111124154): YUSD.owner() = 0x4Fe78eF65BD8EDDED480efaB030BA680646503c8, YUSD.minter() = AegisMinting 0x02bf8f0e046F471709E578b1E633077096ce65CF whose owner() and defaultAdmin() are the same Safe and whose AegisConfig 0xB9f1E8417ABaedF6Fd838212267cA8260c4ca9da has owner() = the Safe and trustedSigner() = 0xb28c97E348C3078fC1F6Fcc61b79c8a0DA35008e, identical to Ethereum. Avalanche (block 90804258): the token is a native LayerZero V2 OFT with owner() = the Safe and EndpointV2.delegates() = the Safe. All four contracts read zero at the EIP-1967 implementation slot, so none is a standard proxy; the verified Ethereum YUSD source shows setMinter(address) is onlyOwner and mint(address,uint256) is onlyMinter, so the Safe can substitute mint logic without an upgrade and without a delay. Every mint surface therefore reduces to one 3-of-5 Safe plus one trusted signer. Reconciliation cadence and prudential supervision remain unevidenced and are deliberately left \"unknown\" rather than inferred from the Accountable real-time dashboard; that is recorded in the profile fields, not as a blocking question. Economic-posture fields reviewed 2026-08-15: the common Safe can replace mint logic without delay, while Accountable reserve telemetry does not reconcile every chain liability and no regulator or independent attestor is evidenced. Wave 2 external review 2026-08-15 resolved reconciliation as continuous and supervision as attestation-only: Accountable's live independent dashboard aggregates total on-chain YUSD supply across the supported chain distribution and verifies it against directly sourced protocol reserves with cryptographic proofs.",
       "reviewer": "Pharos V9 Phase 3 curation lane cur-12 (on-chain reads); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

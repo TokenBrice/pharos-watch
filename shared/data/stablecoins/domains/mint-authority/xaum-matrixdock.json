@@ -85,8 +85,8 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -100,9 +100,13 @@
         {
           "label": "XAUm Ethereum token",
           "url": "https://etherscan.io/address/0x2103e845c5e135493bb6c2a4f0b8651956ea8682"
+        },
+        {
+          "label": "Matrixdock July 2026 XAUm and XAGm reserve reconciliation",
+          "url": "https://www.prnewswire.com/apac/news-releases/reserve-transparency-built-through-continuous-operation-matrixdock-marks-two-years-of-independent-verification-302829449.html"
         }
       ],
-      "evidence": "At Ethereum block 25295020: proxy impl 0x3194e478... confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... eth_getCode on owner = 0x (EOA). Sui State 0x9429033f... confirmed same owner/operator/mint_budget=0 via Sui fullnode. Economic-posture fields reviewed 2026-08-15: the owner EOA can raise mint budget, replace the operator, or upgrade mint logic without delay; the Bureau Veritas audit and Chainlink NAV feed are assets-only and do not reconcile liabilities across all deployments or establish supervision.",
+      "evidence": "At Ethereum block 25295020: proxy impl 0x3194e478... confirmed, owner() = EOA 0xb573c94..., operator() = 0x89Bb23E4... eth_getCode on owner = 0x (EOA). Sui State 0x9429033f... confirmed same owner/operator/mint_budget=0 via Sui fullnode. Economic-posture fields reviewed 2026-08-15: the owner EOA can raise mint budget, replace the operator, or upgrade mint logic without delay; the Bureau Veritas audit and Chainlink NAV feed are assets-only and do not reconcile liabilities across all deployments or establish supervision. Wave 2 external review 2026-08-15 resolved reconciliation as periodic and supervision as attestation-only: Matrixdock's fourth consecutive semi-annual Bureau Veritas cycle enumerated XAUm supply across EVM, Sui, Solana, and Stellar and stated that audited reserves matched circulating supply.",
       "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

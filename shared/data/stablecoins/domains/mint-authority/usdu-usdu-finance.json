@@ -56,11 +56,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA. Blockscout's verified direct Stablecoin source exposes the module-gated mint path and curator/guardian transitions, but no proxy or upgrader path; fixed-block EIP-1967 implementation, admin, and beacon slots were zero at Ethereum block 25573280.. Economic-posture fields reviewed 2026-08-15: the curator can approve replacement mint adapters without an evidenced independent timelock, while the issuer backing API does not establish whole-supply reconciliation and no prudential supervisor or independent attestor is evidenced.",
-      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA. Blockscout's verified direct Stablecoin source exposes the module-gated mint path and curator/guardian transitions, but no proxy or upgrader path; fixed-block EIP-1967 implementation, admin, and beacon slots were zero at Ethereum block 25573280.. Economic-posture fields reviewed 2026-08-15: the curator can approve replacement mint adapters without an evidenced independent timelock, while the issuer backing API does not establish whole-supply reconciliation and no prudential supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: USDU's public backing-snapshot API continuously exposes total backing, complete USDU supply, and Curve, TermMax, and Morpho adapter balances for its sole Ethereum deployment; this establishes issuer-operated whole-supply reconciliation, while no independent reserve attestor or prudential supervisor is documented.",
+      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -74,6 +74,10 @@
         {
           "label": "USDU transparency",
           "url": "https://usdu.finance/transparency/"
+        },
+        {
+          "label": "USDU live backing snapshot API",
+          "url": "https://usdu.finance/wp-json/usdu-transparency/v1/backing-snapshot"
         }
       ],
       "disposition": "scoreable"

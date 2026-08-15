@@ -25,7 +25,7 @@
           "url": "https://www.binance.com/en/support/faq/detail/d62d25f330b94f5ba613c53e3c1ee8d0"
         }
       ],
-      "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract. Economic-posture fields reviewed 2026-08-15: Binance controls uncapped ledger issuance, no named supervisor or independent attestor is evidenced, and the opaque collateral pool is not reconciled to whole supply.",
+      "evidence": "Binance BFUSD terms describe an exchange account product redeemable 1:1 inside Binance against USD stablecoins, with Binance-controlled supply, fees, limits, and suspension; it is not a withdrawable on-chain token and exposes no public mint contract. Economic-posture fields reviewed 2026-08-15: Binance controls uncapped ledger issuance, no named supervisor or independent attestor is evidenced, and the opaque collateral pool is not reconciled to whole supply. Wave 2 external review 2026-08-15: Binance's BFUSD FAQ, product terms, academy page, and exchange proof-of-reserves materials do not publish BFUSD ledger liabilities or reconcile them to the collateral pool, hedge portfolio, and reserve fund, so reconciliation remains unknown.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sourceFreeRationale": "Classified as an off-chain exchange-ledger product per Binance terms; there is no public on-chain mint contract or token owner to resolve.",

@@ -113,7 +113,7 @@
       }
     ],
     "economicCapSemantics": "raiseable",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -132,10 +132,18 @@
         {
           "label": "USDM proxy on HyperEVM explorer",
           "url": "https://hyperevmscan.io/address/0xe2d2959f89b6389deb624bf076fe7d9e5401f377"
+        },
+        {
+          "label": "Monetrix live collateral API",
+          "url": "https://api.monetrix.xyz/data/api/collateral"
+        },
+        {
+          "label": "Monetrix live protocol overview API",
+          "url": "https://api.monetrix.xyz/data/api/protocol/overview"
         }
       ],
-      "evidence": "Primary docs identify the user deposit path and deployed contracts. HyperEVM reads at block 40308120 confirm the USDM UUPS implementation, vault address, central ACL, the 24-hour GOVERNOR timelock, and the 48-hour UPGRADER timelock. Economic-posture fields reviewed 2026-08-15: enforced timelocks govern cap and mint-logic changes, while the self-reported dashboard does not establish whole-supply reserve reconciliation and no prudential supervisor or independent attestor is documented.",
-      "reviewer": "Pharos P7 control review; Sol economic-posture batch 2026-08-15",
+      "evidence": "Primary docs identify the user deposit path and deployed contracts. HyperEVM reads at block 40308120 confirm the USDM UUPS implementation, vault address, central ACL, the 24-hour GOVERNOR timelock, and the 48-hour UPGRADER timelock. Economic-posture fields reviewed 2026-08-15: enforced timelocks govern cap and mint-logic changes, while the self-reported dashboard does not establish whole-supply reserve reconciliation and no prudential supervisor or independent attestor is documented. Wave 2 external research reviewed 2026-08-15: Monetrix's public live collateral and protocol-overview APIs compare total backing with the complete on-chain USDM supply on its sole deployment and expose component balances and freshness, establishing continuous issuer-operated whole-supply reconciliation; no independent reserve attestor or prudential supervisor is identified.",
+      "reviewer": "Pharos P7 control review; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }

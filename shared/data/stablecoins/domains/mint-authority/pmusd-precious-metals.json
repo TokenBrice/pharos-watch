@@ -105,8 +105,8 @@
       ]
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -137,10 +137,18 @@
         {
           "label": "SEC filing for RAAC commercial counterparty",
           "url": "https://www.sec.gov/Archives/edgar/data/1580490/000149315226016842/R1.htm"
+        },
+        {
+          "label": "RAAC pmUSD real-time collateral reconciliation",
+          "url": "https://pmusd.raac.io/collateral"
+        },
+        {
+          "label": "Chainlink ION proof of reserve feed",
+          "url": "https://data.chain.link/feeds/ethereum/mainnet/ion-por"
         }
       ],
-      "evidence": "At Ethereum block 25294813: pmUSD.treasury()=0x51c4348a…; treasury.fToken()=pmUSD token address; treasury.owner()=RAAC Safe 0xCa3144AAD…; pmUSD proxy admin owner=same Safe; Market (0x4e8ef157…) proxy admin owner=same Safe. Safe API confirmed 2/3, no modules, no guard. No credible recurring reconciliation was established. The RAAC whitepaper and the SEC-filed commercial agreement describe pmUSD/ION.au mechanics and business arrangements, but neither provides a dated, recurring third-party reconciliation of pmUSD supply to backing assets; a market-price oracle is not reserve reconciliation. The reviewed SEC corporate filing is not prudential supervision of the token issuer or product, and no exact registry-backed prudential supervisor was identified. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: the RAAC Safe can replace mint logic without delay, while the ION proof-of-reserve feed covers upstream I-ON reserves rather than reconciling pmUSD supply to its pledged tranche and no regulator or independent pmUSD attestor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Ethereum block 25294813: pmUSD.treasury()=0x51c4348a…; treasury.fToken()=pmUSD token address; treasury.owner()=RAAC Safe 0xCa3144AAD…; pmUSD proxy admin owner=same Safe; Market (0x4e8ef157…) proxy admin owner=same Safe. Safe API confirmed 2/3, no modules, no guard. No credible recurring reconciliation was established. The RAAC whitepaper and the SEC-filed commercial agreement describe pmUSD/ION.au mechanics and business arrangements, but neither provides a dated, recurring third-party reconciliation of pmUSD supply to backing assets; a market-price oracle is not reserve reconciliation. The reviewed SEC corporate filing is not prudential supervision of the token issuer or product, and no exact registry-backed prudential supervisor was identified. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: the RAAC Safe can replace mint logic without delay, while the ION proof-of-reserve feed covers upstream I-ON reserves rather than reconciling pmUSD supply to its pledged tranche and no regulator or independent pmUSD attestor is evidenced. Economic-posture fields reviewed 2026-08-15: Wave 2 external research found RAAC's live collateral page directly compares the sole-chain pmUSD total supply with the designated TokenBlender ION.au balance, while Chainlink and Instruxi independently report the upstream ION reserve.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
   }

@@ -302,7 +302,7 @@
         "evidence": "At Arbitrum block 485896631, PermissionManager group 0 resolves to this sole Safe; getOwners() returned six owners, getThreshold() returned 3, and getModulesPaginated returned no modules. The mint requirement is mask 0x05 and both token and PermissionManager upgrades require mask 0x01."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "upgradeability": {
@@ -338,6 +338,10 @@
           "url": "https://docs.spiko.io/"
         },
         {
+          "label": "Spiko rate-limited minting design",
+          "url": "https://tech.spiko.io/posts/minter/"
+        },
+        {
           "label": "Sourcify Spiko Token source",
           "url": "https://sourcify.dev/server/repository/contracts/full_match/1/0x15ea0ec460a0e6847ec0aa8d50a84b3a51b95f74/sources/contracts/token/Token.sol"
         },
@@ -362,7 +366,7 @@
           "url": "https://mainnet.sorobanrpc.com"
         }
       ],
-      "evidence": "The EUTBL authority surface is resolved across the tracked deployments. Ethereum and Base use PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Polygon and Etherlink use the same chain-local address; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Fixed-block getGroups/getRequirements reads identify the sole ADMIN members as chain-local Safes: Polygon 0xa4196f06... (3-of-6, block 90611309), Base 0x4eaa52b6... (3-of-6, block 48916313), Etherlink 0x09991fbf... (3-of-6, block 48811809), and Arbitrum 0x7843225b... (3-of-6, block 485896631); no enabled Safe modules were found. The mint requirement is mask 0x05 and the token and PermissionManager upgrade requirement is mask 0x01. Starknet block 12085300 resolves token and PermissionManager authority to a 3-of-5 Argent multisig, while Stellar ledger 63567047 resolves token and PermissionManager ownership to one single-key account. The reviewed AMF-regulated UCITS fund and quarterly PwC audit support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-15: retained explicit unknown cap semantics and curated periodic reconciliation plus AMF prudential supervision.",
+      "evidence": "The EUTBL authority surface is resolved across the tracked deployments. Ethereum and Base use PermissionManager 0x344278aff344d6fb960705dc18a4912221608472; Polygon and Etherlink use the same chain-local address; Arbitrum uses 0xa925c217e4c1c82ee721ebd496d3863d5c2d829a. Fixed-block getGroups/getRequirements reads identify the sole ADMIN members as chain-local Safes: Polygon 0xa4196f06... (3-of-6, block 90611309), Base 0x4eaa52b6... (3-of-6, block 48916313), Etherlink 0x09991fbf... (3-of-6, block 48811809), and Arbitrum 0x7843225b... (3-of-6, block 485896631); no enabled Safe modules were found. The mint requirement is mask 0x05 and the token and PermissionManager upgrade requirement is mask 0x01. Starknet block 12085300 resolves token and PermissionManager authority to a 3-of-5 Argent multisig, while Stellar ledger 63567047 resolves token and PermissionManager ownership to one single-key account. The reviewed AMF-regulated UCITS fund and quarterly PwC audit support periodic reconciliation and prudential supervision. Economic-posture fields reviewed 2026-08-15: retained explicit unknown cap semantics and curated periodic reconciliation plus AMF prudential supervision. Wave 2 external research 2026-08-15: Spiko documents that admins can change each token's daily limit and mint approvers can execute blocked above-limit mints, so the no-timelock administrator paths make issuance economically unbounded.",
       "reviewer": "P2 mint-free cohort; cur-8 Starknet/Stellar enumeration; OpenAI Codex V9 EVM completion; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable"

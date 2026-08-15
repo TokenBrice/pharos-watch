@@ -91,7 +91,7 @@
           "url": "https://arbiscan.io/address/0x1dd6b5f9281c6b4f043c02a83a46c2772024636c"
         }
       ],
-      "evidence": "At Arbitrum block 472419740: owner() on the LUAUSD UtilityToken returned 0xb422502156118aa49eff0d4da26fdedccb186049 (ERC1967Proxy). owner() on that proxy returned 0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498. getOwners() on that address returned 5 signers; threshold() = 3; masterCopy slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Gnosis Safe L2 v1.3.0). No modules, no guard, no fallback handler detected. Economic-posture fields reviewed 2026-08-15: the issuer Safe controls uncapped minting, while the curated collateral view does not reconcile the whole supply and no prudential supervisor is named.",
+      "evidence": "At Arbitrum block 472419740: owner() on the LUAUSD UtilityToken returned 0xb422502156118aa49eff0d4da26fdedccb186049 (ERC1967Proxy). owner() on that proxy returned 0x7e502e2cf358d9191eb5ae437b7e6d1e674e7498. getOwners() on that address returned 5 signers; threshold() = 3; masterCopy slot 0 = 0x3e5c63644e683549055b9be8653de26e0b4cd36e (Gnosis Safe L2 v1.3.0). No modules, no guard, no fallback handler detected. Economic-posture fields reviewed 2026-08-15: the issuer Safe controls uncapped minting, while the curated collateral view does not reconcile the whole supply and no prudential supervisor is named. Wave 2 external review 2026-08-15: Lumi's current and legacy documentation explains reserve-backed LUA mechanics and LUAUSD redemption but publishes no dated independent report or live liability-to-collateral reconciliation for total LUAUSD supply.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

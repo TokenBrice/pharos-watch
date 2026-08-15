@@ -44,9 +44,13 @@
         {
           "label": "CoinGecko WEMIX$ platforms",
           "url": "https://api.coingecko.com/api/v3/coins/wemix-dollar"
+        },
+        {
+          "label": "WEMIX$ July 2026 security-incident findings",
+          "url": "https://wemix.com/news/wemix-security-incident-findings-and-response-update-9855719d5b3e"
         }
       ],
-      "evidence": "At WEMIX block 114958903: contract 0x8e81fcc2 confirmed name=WEMIX$; owner()=0x7a907b9d (EOA, no bytecode); not a proxy. CoinGecko confirmed wemix-network contract address 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1. Mint is controlled solely by the owner EOA (WEMIX foundation custody). Economic-posture fields reviewed 2026-08-15: the owner EOA can mint without a documented firm bound, and no whole-supply reconciliation, attestation, or prudential authorization is evidenced.",
+      "evidence": "At WEMIX block 114958903: contract 0x8e81fcc2 confirmed name=WEMIX$; owner()=0x7a907b9d (EOA, no bytecode); not a proxy. CoinGecko confirmed wemix-network contract address 0x8e81fcc2d4a3baa0ee9044e0d7e36f59c9bba9c1. Mint is controlled solely by the owner EOA (WEMIX foundation custody). Economic-posture fields reviewed 2026-08-15: the owner EOA can mint without a documented firm bound, and no whole-supply reconciliation, attestation, or prudential authorization is evidenced. Wave 2 external verification 2026-08-15: WEMIX disclosed that dormant DIOS and AMA ownership was seized on 2026-07-26, enabling 5,225,524.9997 unauthorized WEMIX$ minting and removal of 723,244.4936 USDC.e; no post-incident whole-supply reserve reconciliation was found, so reconciliation remains unknown.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

@@ -120,9 +120,13 @@
         {
           "label": "Ripio Safe multisig",
           "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
+        },
+        {
+          "label": "Ripio Celo launch and generic wFIAT attestation claim",
+          "url": "https://action.ripio.com/es/blog/las-stablecoins-wfiat-ya-estan-disponibles-en-celo"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, with no WCLP-specific whole-supply attestation or named prudential supervisor.",
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, with no WCLP-specific whole-supply attestation or named prudential supervisor. Wave 2 external verification 2026-08-15: Ripio now generically claims local-auditor attestations for every wFIAT token and added Celo, but still publishes no WCLP-specific dated report, named attestor, or seven-chain liability reconciliation; reconciliation remains unknown and supervision remains none.",
       "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15"
     }

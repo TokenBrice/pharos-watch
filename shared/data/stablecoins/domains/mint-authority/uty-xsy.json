@@ -180,10 +180,10 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
-    "supervision": "none",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "The prior record described legacy Avalanche token 0xdbc5192a..., which is not the address tracked in the deployment registry. Live RPC review of the tracked 0xba515304... address found three distinct UUPS implementations with the same EOA owner on Base, Avalanche, and Katana. Verified Base source established the collateralized mint path, mutable cap, enumerable manager set, and owner-only upgrade path; project docs establish Base as the vault hub and Avalanche/Katana as OFT spokes. Economic-posture fields reviewed 2026-08-15: the common owner EOA can replace mint logic and manager EOAs can raise the Base cap without delay; Accountable telemetry does not prove liability reconciliation across both OFT spokes and is not independent supervision.",
+    "evidence": "The prior record described legacy Avalanche token 0xdbc5192a..., which is not the address tracked in the deployment registry. Live RPC review of the tracked 0xba515304... address found three distinct UUPS implementations with the same EOA owner on Base, Avalanche, and Katana. Verified Base source established the collateralized mint path, mutable cap, enumerable manager set, and owner-only upgrade path; project docs establish Base as the vault hub and Avalanche/Katana as OFT spokes. Economic-posture fields reviewed 2026-08-15: the common owner EOA can replace mint logic and manager EOAs can raise the Base cap without delay; Accountable telemetry does not prove liability reconciliation across both OFT spokes and is not independent supervision. Wave 2 external verification 2026-08-15: Accountable's live dashboard data explicitly splits total UTY supply across Base, Avalanche, and Katana, continuously compares the aggregate against verified reserves, and publishes signed reserve/liability snapshots with enclave and zero-knowledge attestations; this establishes whole-supply continuous reconciliation and attestation-only supervision.",
       "reviewer": "Codex CTRL curation batch 03; Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
@@ -204,11 +204,19 @@
           "label": "Avalanche UTY contract",
           "url": "https://snowtrace.io/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
         },
-        {
-          "label": "Katana UTY contract",
-          "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
-        }
-      ]
+      {
+        "label": "Katana UTY contract",
+        "url": "https://katanascan.com/address/0xba515304d8153c4b162dc79f867e152df9c127eb"
+      },
+      {
+        "label": "Accountable YieldPoint live proof-of-solvency dashboard",
+        "url": "https://accountable.xsy.fi/"
+      },
+      {
+        "label": "Accountable YieldPoint live dashboard data",
+        "url": "https://accountable.xsy.fi:10443/dashboard"
+      }
+    ]
     }
   }
 }

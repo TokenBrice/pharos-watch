@@ -88,10 +88,10 @@
       ]
     },
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer. Economic-posture fields reviewed 2026-08-15: issuer Safe can mint without a firm cap, independent AUP evidence exists but recurring whole-supply reconciliation and prudential supervision are not established.",
+      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer. Economic-posture fields reviewed 2026-08-15: issuer Safe can mint without a firm cap, independent AUP evidence exists but recurring whole-supply reconciliation and prudential supervision are not established. Wave 2 external research reviewed 2026-08-15: the issuer's live attestation index publishes monthly AUP reports through June 2026, and the reports reconcile collateral bank balances to Ethereum IDRT, legacy IDRTB, BSC IDRT, and Polygon IDRT circulation, establishing periodic whole-supply reconciliation for the active deployments.",
       "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
@@ -110,6 +110,14 @@
         {
           "label": "Bappebti legality checker",
           "url": "https://ceklegalitas.bappebti.go.id/"
+        },
+        {
+          "label": "Rupiah Token live monthly-attestation index",
+          "url": "https://rupiahtoken-strapi.herokuapp.com/api/bank-attestations?sort=date:DESC&pagination%5BpageSize%5D=50"
+        },
+        {
+          "label": "Johannes Juara IDRT June 2026 AUP report",
+          "url": "https://s3.ap-southeast-1.amazonaws.com/content.rupiahtoken.com/Final_AUP_PT_RUPIAH_TOKEN_INDONESIA_June_30_2026_d7a628d3c5.pdf?updated_at=2026-07-23T10%3A41%3A07.179Z"
         }
       ]
     }

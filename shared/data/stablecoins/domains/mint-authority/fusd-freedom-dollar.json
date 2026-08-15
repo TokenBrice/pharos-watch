@@ -58,7 +58,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "disposition": "scoreable",
@@ -66,7 +66,7 @@
       "reviewedAt": "2026-08-15",
       "sourceFreeRationale": "Resolved directly from Zano consensus state; the prior 'unverifiable privacy chain' disposition was wrong — Zano hides transaction amounts and addresses, but asset descriptors (owner key, supply, cap) are public and readable over the standard daemon RPC.",
       "unresolvedQuestions": [],
-      "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info on node.zano.org (corroborated by daemon 37.27.100.59:10500) returned for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f: owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, owner_eth_pub_key \"\", total_max_supply 10000000000000000000, current_supply 114000000000, decimal_point 4. Zano docs confirm EMIT and UPDATE are validated against the owner key alone and that total_max_supply is immutable post-deployment. The Freedom Dollar white paper describes issuance as 'On-demand via collateralized ZANO' with market-making bots and a publicly auditable ZANO reserve wallet, but claims no key renunciation and identifies no on-chain contract enforcing collateralization — consistent with a single owner key emitting under off-chain policy. Sole residual unknown: the off-chain custody of the owner private key (single operator vs shared/MPC control) is not observable on-chain, which is true of any key-based authority and does not affect the on-chain authority model. Mint-tier review (2026-07-15): No independent attestor, recurring cadence, or dated reserve-to-liability report was located; the Freedom Dollar whitepaper describes issuer-controlled collateral and a reserve wallet but supplies no independent reconciliation. The materials do not identify a regulated legal issuer, and no exact prudential issuer match was established in FinCEN's MSB registry. Economic-posture fields reviewed 2026-08-15: the sole owner key can emit to a commercially nonbinding maximum, and stale self-reported reserves do not establish whole-supply reconciliation or prudential supervision.",
+      "evidence": "At Zano height 3770932 (2026-07-14), get_asset_info on node.zano.org (corroborated by daemon 37.27.100.59:10500) returned for asset 86143388bd056a8f0bab669f78f14873fac8e2dd8d57898cdb725a2d5e2e4f8f: owner 497d6b7acd06401c59b2d52a3967968e8ca507a25f80e44d2bb4b5f8a348c7c1, owner_eth_pub_key \"\", total_max_supply 10000000000000000000, current_supply 114000000000, decimal_point 4. Zano docs confirm EMIT and UPDATE are validated against the owner key alone and that total_max_supply is immutable post-deployment. The Freedom Dollar white paper describes issuance as 'On-demand via collateralized ZANO' with market-making bots and a publicly auditable ZANO reserve wallet, but claims no key renunciation and identifies no on-chain contract enforcing collateralization — consistent with a single owner key emitting under off-chain policy. Sole residual unknown: the off-chain custody of the owner private key (single operator vs shared/MPC control) is not observable on-chain, which is true of any key-based authority and does not affect the on-chain authority model. Mint-tier review (2026-07-15): No independent attestor, recurring cadence, or dated reserve-to-liability report was located; the Freedom Dollar whitepaper describes issuer-controlled collateral and a reserve wallet but supplies no independent reconciliation. The materials do not identify a regulated legal issuer, and no exact prudential issuer match was established in FinCEN's MSB registry. Economic-posture fields reviewed 2026-08-15: the sole owner key can emit to a commercially nonbinding maximum, and stale self-reported reserves do not establish whole-supply reconciliation or prudential supervision. Wave 2 external research 2026-08-15: the live metrics publish total issued FUSD, public ZANO reserves, coverage ratio, and hourly/daily history, with reserve wallets independently verifiable against the single Zano asset supply, establishing continuous whole-supply reconciliation.",
       "sources": [
         {
           "label": "Zano public daemon RPC (get_asset_info)",
@@ -87,6 +87,14 @@
         {
           "label": "Freedom Dollar white paper",
           "url": "https://www.freedomdollar.com/pdf/%5BEnglish%5DWhite-paper.pdf"
+        },
+        {
+          "label": "Freedom Dollar live system metrics",
+          "url": "https://www.freedomdollar.com/de/how-it-works"
+        },
+        {
+          "label": "Freedom Dollar reserve verification",
+          "url": "https://www.freedomdollar.com/de/verify-reserves"
         },
         {
           "label": "FinCEN MSB registry search",
