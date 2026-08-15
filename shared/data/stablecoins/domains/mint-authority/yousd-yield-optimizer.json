@@ -9,15 +9,15 @@
     "controls": [
       {
         "label": "yoUSD admin Safe",
-        "role": "minter-admin",
+        "role": "governor",
         "authorityType": "safe",
-        "directMintAbility": "can-authorize",
+        "directMintAbility": "upgrade-only",
         "chain": "base",
         "address": "0x67b6F699F1c8040414032a3C2C88a54db144FCd2",
         "threshold": 4,
         "signerCount": 6,
         "modulesOrGuardsStatus": "none-detected",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "safe": {
           "owners": [
             "0x7585051EE497FE9072266779BCCDCA182fc353D7",
@@ -68,7 +68,7 @@
         "directMintAbility": "none",
         "chain": "base",
         "address": "0x0000000f2eB9f69274678c76222B35eEc7588a65",
-        "canRaiseCap": "unknown",
+        "canRaiseCap": false,
         "evidence": "At Base block 48888171 the verified implementation behind this proxy (YoVaultRename 0x64efce64a41274e2fe87793cc77caa62911b3b13) exposes deposit(uint256,address) and mint(uint256,address) as unauthenticated `whenNotPaused` ERC-4626 entrypoints; share creation is deposit-driven at NAV and no privileged mint path exists on the vault.",
         "observedAt": "2026-07-20",
         "observedBlock": 48888171
@@ -119,7 +119,7 @@
       ]
     },
     "review": {
-      "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D was enumerated at Base block 48888171: it is a Solmate RolesAuthority owned by the 4-of-6 Safe, and getRolesWithCapability/isCapabilityPublic return zero for deposit(), mint(), redeem(), withdraw() and every fee or authority setter, while non-zero capability bitmaps exist only for manage(), fulfillRedeem(), pause() and unpause(). The verified implementation source confirms deposit() and mint() carry no requiresAuth modifier. yoUSD share creation is therefore entirely deposit-driven with no privileged mint call; the residual privileged surfaces are strategy execution via manage(), redemption fulfilment, pausing, and implementation replacement through the 2-day TimelockController. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated and any mint-logic replacement must traverse the enforced two-day TimelockController; the on-chain vault claim needs no off-chain reconciliation and has no local supervision.",
+      "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D was enumerated at Base block 48888171: it is a Solmate RolesAuthority owned by the 4-of-6 Safe, and getRolesWithCapability/isCapabilityPublic return zero for deposit(), mint(), redeem(), withdraw() and every fee or authority setter, while non-zero capability bitmaps exist only for manage(), fulfillRedeem(), pause() and unpause(). The verified implementation source confirms deposit() and mint() carry no requiresAuth modifier. yoUSD share creation is therefore entirely deposit-driven with no privileged mint call; the residual privileged surfaces are strategy execution via manage(), redemption fulfilment, pausing, and implementation replacement through the 2-day TimelockController. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated and any mint-logic replacement must traverse the enforced two-day TimelockController; the on-chain vault claim needs no off-chain reconciliation and has no local supervision. Control-encoding correction 2026-08-15: the admin Safe row is re-encoded governor/upgrade-only (its reviewed evidence shows only PROPOSER_ROLE on the 2-day TimelockController and a RolesAuthority with no share-mint capability), so no control carries a direct or authorizing mint ability; share creation is deposit-gated only.",
       "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20); Sol economic-posture batch 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
