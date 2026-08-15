@@ -2,7 +2,7 @@
   "id": "pathusd-bridge",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "bounded-admin",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "probable",
     "summary": "At Tempo block 32028752, pathUSD issuance proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 remains a UUPS proxy (implementation 0x271c4d8616ed81c2cc006446c61f25219b182f8a; EIP-1967 admin slot zero). Its sole DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e authorizes upgradeToAndCall, so mint logic is changeable. The same proxy holds ISSUER_ROLE on the pathUSD TIP-20 token and mints within the 100 million supply cap.",
     "upgradeability": {
@@ -102,11 +102,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "2026-07-27/28 upgrade-authority re-read resolves the prior canChangeMintLogic=unknown gap. At Tempo block 32028752, independent RPCs rpc.tempo.xyz and tempo.drpc.org both show issuer proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 as UUPS (EIP-1967 impl 0x271c4d8616ed81c2cc006446c61f25219b182f8a, admin slot zero, UPGRADE_INTERFACE_VERSION 5.0.0, implementation proxiableUUID = EIP-1967 impl slot). AccessControlEnumerable role introspection on the proxy returns a single DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. Live upgradeToAndCall simulation proves that role is the authorize path: non-members revert with AccessControlUnauthorizedAccount needing role 0x0; the admin member succeeds. No timelock delay is present on that path. The admin account carries EIP-7702 delegated code to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b without Safe getOwners/getThreshold, so threshold/signer composition is not claimed. Prior issuance facts retained: at block 30043787 the proxy held ISSUER_ROLE (not DEFAULT_ADMIN on the token mint path as minter), supply cap 100,000,000 pathUSD, canRaiseCap=false for the direct minter, economicCapSemantics bounded. Verified Solidity source for the issuer implementation remains unpublished (Sourcify no-match); authorization is established from on-chain role + UUPS call behavior rather than source. Economic-posture fields reviewed 2026-08-15: the zero-delay self-controlled UUPS path makes the cap economically unbounded, no pathUSD reserve report reconciles supply, and the OCC conditionally authorized Bridge's national trust bank issuer path. Wave 2 external verification 2026-08-15: Bridge publishes only forward-looking quarterly-audit language and no pathUSD report; OCC Corporate Decision 1365 is preliminary, expressly withholds authority to commence business until final approval, and therefore does not establish current prudential supervision of pathUSD.",
-      "reviewer": "Grok wave-8 GROK-RESEARCH controls pathusd-bridge; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15",
+      "evidence": "2026-07-27/28 upgrade-authority re-read resolves the prior canChangeMintLogic=unknown gap. At Tempo block 32028752, independent RPCs rpc.tempo.xyz and tempo.drpc.org both show issuer proxy 0x8354d80eea9978faa04c3b36771c1e8b9c3e9058 as UUPS (EIP-1967 impl 0x271c4d8616ed81c2cc006446c61f25219b182f8a, admin slot zero, UPGRADE_INTERFACE_VERSION 5.0.0, implementation proxiableUUID = EIP-1967 impl slot). AccessControlEnumerable role introspection on the proxy returns a single DEFAULT_ADMIN_ROLE member 0x79c6631fa15cda38777fb9dd7a6348baee794a4e. Live upgradeToAndCall simulation proves that role is the authorize path: non-members revert with AccessControlUnauthorizedAccount needing role 0x0; the admin member succeeds. No timelock delay is present on that path. The admin account carries EIP-7702 delegated code to 0x0000fb7702036ff9f76044a501ac1aa74cbab16b without Safe getOwners/getThreshold, so threshold/signer composition is not claimed. Prior issuance facts retained: at block 30043787 the proxy held ISSUER_ROLE (not DEFAULT_ADMIN on the token mint path as minter), supply cap 100,000,000 pathUSD, canRaiseCap=false for the direct minter, economicCapSemantics bounded. Verified Solidity source for the issuer implementation remains unpublished (Sourcify no-match); authorization is established from on-chain role + UUPS call behavior rather than source. Economic-posture fields reviewed 2026-08-15: the zero-delay self-controlled UUPS path makes the cap economically unbounded, no pathUSD reserve report reconciles supply, and the OCC conditionally authorized Bridge's national trust bank issuer path. Wave 2 external verification 2026-08-15: Bridge publishes only forward-looking quarterly-audit language and no pathUSD report; OCC Corporate Decision 1365 is preliminary, expressly withholds authority to commence business until final approval, and therefore does not establish current prudential supervision of pathUSD. Wave 1 reconciliation research 2026-08-15: Tempo's public pathUSD Reserves live report, published by Tempo with Bridge as the reserve-data provider, continuously reconciles Bridge-reported pathUSD supply and Tempo RPC totalSupply against Bridge cash and managed-money-market reserve accounts; at report time it showed 33,275,411.139981 pathUSD supply matching on-chain totalSupply and 33,275,411.18 in reserves. This live report supersedes the earlier absence-of-report note for the reconciliation field. Posture annotation corrected 2026-08-15: the curated value was `bounded-admin`, which asserted a bound that this asset's own `economicCapSemantics: unbounded` and V9's derived `unbounded-or-compromised` both contradict; it is corrected to `unbounded-reconciled` on the reconciliation finding above. This is a deliberate classification change, not a neutral relabel: `bounded-admin` is outside `FRAGILE_MINT_POSTURES` while `unbounded-reconciled` is inside it, so the depeg resolver now strata-classifies pathUSD as fragile. That is the conservative direction and removes an annotation that understated supply-weaponization risk.",
+      "reviewer": "Grok wave-8 GROK-RESEARCH controls pathusd-bridge; Sol economic-posture batch 2026-08-15; Codex Wave 2 external verification 2026-08-15; Codex reconciliation wave 1 2026-08-15; Pharos posture-correction audit 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -133,6 +133,14 @@
         {
           "label": "Tempo TIP-20 implementation",
           "url": "https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+        },
+        {
+          "label": "Tempo pathUSD Reserves live reconciliation API",
+          "url": "https://pathusd-reserves.vercel.app/api/reserves"
+        },
+        {
+          "label": "Tempo pathUSD Reserves report source",
+          "url": "https://github.com/tempoxyz/pathusd-reserves/blob/main/api/reserves.js"
         }
       ],
       "unresolvedQuestions": []

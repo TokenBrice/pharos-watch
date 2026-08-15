@@ -258,8 +258,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 484220930, DUSD resolves from the EIP-1967 proxy to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. The token names OffchainTreasuryOracle 0xb18727bee9e66a3d780589c7648fd7185a44f220 as its only mint caller and bounds supply plus pending redeems by that oracle's balance. Token AccessControlEnumerable reports three current DEFAULT_ADMIN_ROLE members: EOAs 0x96166e8cc4c3519c6cf4af79aae82f8094518f3 and 0x7ef842673909c1bbc877ae746250f033434ee58d, plus 2-of-7 Safe 0x1c31c09010d8aea22276e526c62fbe7ccbe493ba. Full oracle role-event history queried from block 4444960 found the current administrator/updater EOA 0xa2438524d704232d610af0aeb27a790ce59f86ea and second updater 0xee26af8b256649c1f3b8e03cf6483e9bcf188108, with no RoleRevoked event; current role calls confirm the first also has DEFAULT_ADMIN_ROLE and ORACLE_ADMIN_ROLE. The current oracle signer is 0x829fbb7071c6518c7964e80a2662744f19ddfef6. The transparent-proxy admin is EOA 0xdeab81c9ff7528de932890058579c0c2341f7223. Economic-posture fields reviewed 2026-08-15: issuer EOAs can raise the oracle ceiling, replace roles, or upgrade logic without delay, and no current whole-supply reserve reconciliation, regulator, or attestor is evidenced.",
-      "reviewer": "Codex Safety Score V9 mint-control review; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Arbitrum block 484220930, DUSD resolves from the EIP-1967 proxy to verified RealWorldAssetTether implementation 0xe825f4f14b93a329fbae230ef6b222f26cca4028. The token names OffchainTreasuryOracle 0xb18727bee9e66a3d780589c7648fd7185a44f220 as its only mint caller and bounds supply plus pending redeems by that oracle's balance. Token AccessControlEnumerable reports three current DEFAULT_ADMIN_ROLE members: EOAs 0x96166e8cc4c3519c6cf4af79aae82f8094518f3 and 0x7ef842673909c1bbc877ae746250f033434ee58d, plus 2-of-7 Safe 0x1c31c09010d8aea22276e526c62fbe7ccbe493ba. Full oracle role-event history queried from block 4444960 found the current administrator/updater EOA 0xa2438524d704232d610af0aeb27a790ce59f86ea and second updater 0xee26af8b256649c1f3b8e03cf6483e9bcf188108, with no RoleRevoked event; current role calls confirm the first also has DEFAULT_ADMIN_ROLE and ORACLE_ADMIN_ROLE. The current oracle signer is 0x829fbb7071c6518c7964e80a2662744f19ddfef6. The transparent-proxy admin is EOA 0xdeab81c9ff7528de932890058579c0c2341f7223. Economic-posture fields reviewed 2026-08-15: issuer EOAs can raise the oracle ceiling, replace roles, or upgrade logic without delay, and no current whole-supply reserve reconciliation, regulator, or attestor is evidenced. Reconciliation review (2026-08-15): Fluid's 2021 FAQ describes an oracle/API intended to reconcile DUSD supply against treasury-account USD 24/7, but Blockscout shows the last successful OffchainTreasuryOracle update on 2024-04-21 and no current reserve report, so a live continuous reconciliation is unverified and remains unknown.",
+      "reviewer": "Codex Safety Score V9 mint-control review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -274,6 +274,14 @@
         {
           "label": "Arbitrum PublicNode RPC",
           "url": "https://arbitrum-one.publicnode.com"
+        },
+        {
+          "label": "Fluid Finance DUSD FAQ (historical oracle reconciliation design)",
+          "url": "https://medium.com/fluidfi/faq-fluidfis-frequently-asked-questions-22bacb12e3f8"
+        },
+        {
+          "label": "OffchainTreasuryOracle transaction history (last update 2024-04-21)",
+          "url": "https://arbitrum.blockscout.com/address/0xb18727bee9e66a3d780589c7648fd7185a44f220?tab=txs"
         }
       ]
     }

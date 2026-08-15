@@ -213,8 +213,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Complete RoleGranted/RoleRevoked history enumerated from each deployment block to 2026-07-20 (Ethereum blocks 21390703-25570747, Polygon 65415669-90538159, Viction 91361750-111276885): zero revocations on Ethereum and Viction admin migration 0x702b4b92 -> 0x731efdc9 as the only Viction revocation. The same DEFAULT_ADMIN EOA 0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 and minter EOA 0x1a41b5922e926cca1eaa8afac55bddce40fdbe61 appear on all three chains from deployment; chain-local 23907-byte operator contracts (0x80c0a17d Ethereum, 0xff5fd9d0 Polygon, 0x2f5a9cb3 Viction) plus 897-byte proxy 0x171ac757 (Ethereum) hold MINTER_ROLE/BURNER_ROLE. All minters re-confirmed hasRole=true at the cited blocks. getRoleAdmin(MINTER_ROLE)=getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE. UPGRADER_ROLE has no member on Ethereum/Polygon and is held by deployer EOA 0x4a48240E on Viction (hasRole=true at block 111276885). endpoint() and masterMinter() revert: not an OFT or Circle-style token. Economic-posture fields reviewed 2026-08-15: issuer EOAs can mint or appoint minters without a cap, and policy disclosures provide neither a published whole-supply attestation nor prudential authorization. Wave 2 external review 2026-08-15 retained reconciliation as unknown: WSPN's transparency page and whitepaper promise real-time independent reporting, but the linked audit is a smart-contract assessment and no live report reconciles Ethereum, Polygon, and Viction supply to reserves.",
-      "reviewer": "Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15",
+      "evidence": "Complete RoleGranted/RoleRevoked history enumerated from each deployment block to 2026-07-20 (Ethereum blocks 21390703-25570747, Polygon 65415669-90538159, Viction 91361750-111276885): zero revocations on Ethereum and Viction admin migration 0x702b4b92 -> 0x731efdc9 as the only Viction revocation. The same DEFAULT_ADMIN EOA 0x731efdc933464ed81bf3ea961e9fdadc62e83bd1 and minter EOA 0x1a41b5922e926cca1eaa8afac55bddce40fdbe61 appear on all three chains from deployment; chain-local 23907-byte operator contracts (0x80c0a17d Ethereum, 0xff5fd9d0 Polygon, 0x2f5a9cb3 Viction) plus 897-byte proxy 0x171ac757 (Ethereum) hold MINTER_ROLE/BURNER_ROLE. All minters re-confirmed hasRole=true at the cited blocks. getRoleAdmin(MINTER_ROLE)=getRoleAdmin(UPGRADER_ROLE)=DEFAULT_ADMIN_ROLE. UPGRADER_ROLE has no member on Ethereum/Polygon and is held by deployer EOA 0x4a48240E on Viction (hasRole=true at block 111276885). endpoint() and masterMinter() revert: not an OFT or Circle-style token. Economic-posture fields reviewed 2026-08-15: issuer EOAs can mint or appoint minters without a cap, and policy disclosures provide neither a published whole-supply attestation nor prudential authorization. Wave 2 external review 2026-08-15 retained reconciliation as unknown: WSPN's transparency page and whitepaper promise real-time independent reporting, but the linked audit is a smart-contract assessment and no live report reconciles Ethereum, Polygon, and Viction supply to reserves. Wave 1 reconciliation review 2026-08-15: searched WSPN's transparency page and current whitepaper for a dated reserve-liability artefact; both state an intended or committed third-party real-time/regular attestation but neither publishes an actual report, named examiner, or dated reconciliation of WUSD supply across Ethereum, Polygon, and Viction to reserves. WSPN's page identifies an Aplauz NL B.V. DNB EMI licence for a group entity, not a named prudential authorization covering WUSD issuance, so reconciliation remains unknown and supervision remains none.",
+      "reviewer": "Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -233,6 +233,14 @@
         {
           "label": "WUSD on Viction (Vicscan)",
           "url": "https://vicscan.xyz/address/0xba73e59f11597c1c13b0d9114688efb6a6d430f6"
+        },
+        {
+          "label": "WSPN transparency page",
+          "url": "https://wspn.io/transparency/"
+        },
+        {
+          "label": "WSPN current whitepaper",
+          "url": "https://assets.wspn.io/docs/Whitepaper_Worldwide_Stablecoin_Payment_Network.pdf"
         }
       ]
     }

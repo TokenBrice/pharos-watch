@@ -2,7 +2,7 @@
   "id": "nbasis-nest",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "nBASIS Teller and Manager are both owned by the same 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982 (Safe v1.3.0, no modules, no guard). The nBASIS BoringVault token is directly deployed and non-upgradeable on Ethereum, Plume, and Plasma.",
     "upgradeability": {
@@ -98,11 +98,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nBASIS liabilities across deployments.",
-      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation; Sol economic-posture batch 2026-08-15",
+      "evidence": "Both nBASIS Teller (0xAD60d4...) and Manager (0x17767f...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. No modules, no guard. Upgrade follow-up on 2026-07-21: the nBASIS token at 0x11113ff3a60c2450f4b22515cb760417259ee94b is a directly deployed BoringVault contract, not a proxy. The EIP-1967 implementation, admin, and beacon slots were all zero on Ethereum block 25580348, Plume block 82434036, and Plasma block 27687550. The Ethereum bytecode-derived verified source/ABI has no upgradeTo or upgradeToAndCall entry point; administrative ownership and authority can change permissions and vault parameters but cannot replace the deployed mint-critical bytecode. Nest publishes issuer-operated hourly NAV and live vault composition, but no recurring independent reconciliation of nBASIS supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision. Wave 2 external review 2026-08-15: Nest's live positions, price, NAV, vault, flow-of-funds, and terms pages remain issuer-operated, and no reserve-attestor report was found that independently reconciles total nBASIS liabilities across deployments. Wave 1 reconciliation review 2026-08-15: Nest's official live positions endpoint publishes nBASIS portfolio holdings and supplyByChain for the shared vault address, while the accountant price-update endpoint publishes the current hub/spoke share price; Nest's issuer-operated feed therefore continuously reconciles total nBASIS share liabilities (supplyByChain × current share price) to the vault portfolio, although no independent attestor or prudential supervisor is identified.",
+      "reviewer": "Claude Phase 0c continuation; OpenAI Codex upgrade-authority curation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -125,6 +125,14 @@
         {
           "label": "Nest terms identifying Nest DAO LLC",
           "url": "https://docs.nest.credit/security-and-compliance/terms-and-conditions/"
+        },
+        {
+          "label": "Nest nBASIS live positions and supply API",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/positions"
+        },
+        {
+          "label": "Nest nBASIS accountant price-update API",
+          "url": "https://api.nest.credit/v1/vaults/nest-basis-vault/last-price-update"
         }
       ]
     }

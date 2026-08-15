@@ -73,8 +73,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Finalized chain state keeps the SPL mint and freeze authorities self-referential, but the address is an off-curve PDA and finalized 2026-07-14 transactions prove program EmiytJ3z...oiA1KC actively signs for it to mint and burn MOVEUSD. The program is upgradeable: ProgramData DybKXmyc...1zMMY names 6fTsNdop...Q9Rw1 as upgrade authority at slot 432839398. CFX's public product materials describe issuer-managed minting and redemption, while Wormhole describes MOVEUSD as a CFX-controlled multichain burn-and-mint token. The prior directMintAbility none and fixed-supply conclusion were contradicted by current on-chain execution. Economic-posture fields reviewed 2026-08-15: the upgradeable issuer mint program has no independent bound, and no recurring reserve-to-supply reconciliation or named prudential supervisor is evidenced. Wave 2 external review 2026-08-15: CFX states that beneficiary-account deposits at an FDIC-member bank collateralize MOVEUSD, but its site, developer hub, and Wormhole launch material publish no dated independent reserve-to-liability report covering the whole supply.",
-      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
+      "evidence": "Finalized chain state keeps the SPL mint and freeze authorities self-referential, but the address is an off-curve PDA and finalized 2026-07-14 transactions prove program EmiytJ3z...oiA1KC actively signs for it to mint and burn MOVEUSD. The program is upgradeable: ProgramData DybKXmyc...1zMMY names 6fTsNdop...Q9Rw1 as upgrade authority at slot 432839398. CFX's public product materials describe issuer-managed minting and redemption, while Wormhole describes MOVEUSD as a CFX-controlled multichain burn-and-mint token. The prior directMintAbility none and fixed-supply conclusion were contradicted by current on-chain execution. Economic-posture fields reviewed 2026-08-15: the upgradeable issuer mint program has no independent bound, and no recurring reserve-to-supply reconciliation or named prudential supervisor is evidenced. Wave 2 external review 2026-08-15: CFX states that beneficiary-account deposits at an FDIC-member bank collateralize MOVEUSD, but its site, developer hub, and Wormhole launch material publish no dated independent reserve-to-liability report covering the whole supply. Wave 1 reconciliation review 2026-08-15: CFX's official site says USD deposits in beneficiary accounts at an FDIC member bank back MoveUSD and permit 1:1 redemption, but no dated examiner report, recurring reserve-to-liability reconciliation, or live feed tied to the full MOVEUSD supply was found; reconciliation remains unknown.",
+      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
@@ -93,6 +93,10 @@
         {
           "label": "Solana RPC mint, program, and ProgramData state",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "CFX digital dollar infrastructure",
+          "url": "https://cfx.to/"
         }
       ]
     }

@@ -221,10 +221,22 @@
         {
           "label": "FPI OFT adapter one-day timelock",
           "url": "https://eth.blockscout.com/address/0xb898Ad2976b4d8f2E21521C9db16b7497825E503?tab=contract"
+        },
+        {
+          "label": "Frax FPI overview and mechanics",
+          "url": "https://docs.frax.finance/frax-price-index/overview-cpi-peg-and-mechanics"
+        },
+        {
+          "label": "FPI Controller Pool",
+          "url": "https://docs.frax.finance/frax-price-index/fpi-controller-pool"
+        },
+        {
+          "label": "Frax FPI collateral API",
+          "url": "https://api.frax.finance/v2/fpifpis/fpi-collateral"
         }
       ],
-      "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The live adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit calls uncapped FPI minter_mint. Its EIP-1967 admin was ProxyAdmin 0x223a681f..., whose owner was the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, administered by the 4/7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937. Separately, FPI owner 3/5 Safe 0x6A7efa96... can immediately add or remove uncapped minters. The previous abbreviated timelock address did not identify the live owner contract and has been replaced with the exact RPC-returned address. Economic-posture fields reviewed 2026-08-15: the 3-of-5 Comptroller Safe can immediately replace uncapped minters, while the issuer collateral index does not prove whole-supply reconciliation across Ethereum and satellite mint routes and no independent attestor or prudential supervisor is evidenced. Reconciliation determination 2026-08-15 (revised): unknown retained with the uncovered route named. The ControllerPool path is on-chain collateral-gated, but the verified OFT mintable adapter mints canonical FPI uncapped via _credit/minter_mint on message receipt without collateral, so issuance is not fully collateral-gated and not-applicable does not fit. The frax-fpi-collateral feed is composition-only (ferry/liability entries excluded) and joins no supply-side liabilities, so it cannot evidence continuous/periodic coverage of that adapter route. A whole-supply liability reconciliation covering the mintable-adapter route, or a verified OFT burn/mint conservation proof, would resolve this.",
-      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Ethereum block 25531776, FPI minters(0x9033bAd7...) returned true. The live adapter proxy resolved to FraxOFTMintableAdapterUpgradeable 0x2063961F..., whose verified _credit calls uncapped FPI minter_mint. Its EIP-1967 admin was ProxyAdmin 0x223a681f..., whose owner was the 86400-second Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503, administered by the 4/7 Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937. Separately, FPI owner 3/5 Safe 0x6A7efa96... can immediately add or remove uncapped minters. The previous abbreviated timelock address did not identify the live owner contract and has been replaced with the exact RPC-returned address. Economic-posture fields reviewed 2026-08-15: the 3-of-5 Comptroller Safe can immediately replace uncapped minters, while the issuer collateral index does not prove whole-supply reconciliation across Ethereum and satellite mint routes and no independent attestor or prudential supervisor is evidenced. Reconciliation determination 2026-08-15 (revised): unknown retained with the uncovered route named. The ControllerPool path is on-chain collateral-gated, but the verified OFT mintable adapter mints canonical FPI uncapped via _credit/minter_mint on message receipt without collateral, so issuance is not fully collateral-gated and not-applicable does not fit. The frax-fpi-collateral feed is composition-only (ferry/liability entries excluded) and joins no supply-side liabilities, so it cannot evidence continuous/periodic coverage of that adapter route. A whole-supply liability reconciliation covering the mintable-adapter route, or a verified OFT burn/mint conservation proof, would resolve this. Wave 1 reconciliation re-check: Frax's FPI overview and Controller Pool docs describe 100% collateral-ratio AMO minting and redemption, but the collateral feed is a composition snapshot that excludes ferry/liability entries and does not reconcile all token liabilities; the uncapped OFT adapter route remains uncovered, so reconciliation remains unknown.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
   }
