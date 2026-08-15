@@ -2,7 +2,7 @@
   "id": "susd-solayer",
   "mintAuthority": {
     "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "Solayer sUSD is minted through the Solayer sUSD Program after USDC/RWA workflow checks. The Token-2022 mint, freeze, interest-rate, and metadata update authorities resolve to a Solayer program-owned authority PDA. The Solayer program remains upgradeable by a plain keypair (EOA-equivalent) upgrade authority.",
     "controls": [
@@ -46,7 +46,7 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -57,10 +57,18 @@
         {
           "label": "Solana RPC getAccountInfo",
           "url": "https://api.mainnet-beta.solana.com"
+        },
+        {
+          "label": "Solayer RFQ stakeholders and cUSDO backing",
+          "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders"
+        },
+        {
+          "label": "Solayer sUSD transparency and security",
+          "url": "https://docs.solayer.org/susd/protocol-info/transparency%26security"
         }
       ],
-      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved. Economic-posture fields reviewed 2026-08-15: a plain-keypair upgrade authority can replace mint logic without an independent timelock, while cUSDO composition disclosures do not reconcile all sUSD supply and no regulator or independent sUSD attestor is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Solana finalized slot 425792161: Token-2022 mint authority FhVcYNEe confirmed via getAccountInfo jsonParsed on mint susdabGDNbhrnCa6ncrYo81u4s9GM8ecK2UwMyZiq4X; upgrade authority 7671j7qp confirmed as plain keypair (System Program owned, no data). All mint-capable surfaces resolved. Economic-posture fields reviewed 2026-08-15: a plain-keypair upgrade authority can replace mint logic without an independent timelock, while cUSDO composition disclosures do not reconcile all sUSD supply and no regulator or independent sUSD attestor is evidenced. Solayer's sUSD FAQ documents a continuous transaction-level mint gate: the Solayer sUSD Program issues the sUSD liability only after a qualified liquidity provider supplies a wrapped-T-Bill proof against the user's locked USDC; the Solayer program performs this supply-to-collateral reconciliation on each mint, rather than a named independent examiner.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     },
     "upgradeability": {

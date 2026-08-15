@@ -2,7 +2,7 @@
   "id": "gldy-streamex",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "GLDY's sole Base deployment is a UUPS proxy with two active TREASURY_ROLE mint paths: legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951. DEFAULT_ADMIN_ROLE is independently held by legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130. Either admin can immediately grant minters, alter reserve-oracle configuration, or upgrade mint logic; no role revocations or timelock were found.",
     "upgradeability": {
@@ -174,11 +174,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Base block 48592766, GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 used UUPS implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5 with zero admin and beacon slots. Role history contained six grants and no revocations. Legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951 both held TREASURY_ROLE. Legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 independently held DEFAULT_ADMIN_ROLE and could immediately grant minters, change reserve configuration, or upgrade mint logic. The source-verified mint path retained its reserve check. EisnerAmper's first independent AICPA examination reconciled GLDY supply to allocated gold reserves at 31 March 2026, but the 1 July 2026 announcement only promises monthly reports going forward. No second report or established recurring series was available at review, and no prudential reserve supervisor was established, so reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: active issuer-controlled admin paths are unbounded, one EisnerAmper examination supports attestation-only supervision, and no recurring independent reconciliation series is established. Wave 2 external research reviewed 2026-08-15: Streamex's issuer and investor-relations pages still identify the March 2026 examination as the first and only published GLDY attestation, so recurring reconciliation remains unknown.",
-      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Base block 48592766, GLDY proxy 0x632db1aaace73401a5dc8cde6e9062b8ec0fd819 used UUPS implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5 with zero admin and beacon slots. Role history contained six grants and no revocations. Legacy EOA 0x889133442bf36e4291c0b2e23b35b260309cb0fe and 2-of-3 Safe 0x655f31f9136d54bc319c00dd43009104646b0951 both held TREASURY_ROLE. Legacy EOA 0x9625c15f7b305680c1690cd41103870e2050028d and 3-of-5 Safe 0x05ed6826524ebe9f3df837b06803ff797f4e2130 independently held DEFAULT_ADMIN_ROLE and could immediately grant minters, change reserve configuration, or upgrade mint logic. The source-verified mint path retained its reserve check. EisnerAmper's first independent AICPA examination reconciled GLDY supply to allocated gold reserves at 31 March 2026, but the 1 July 2026 announcement only promises monthly reports going forward. No second report or established recurring independent attestation series was available at review, and no prudential reserve supervisor was established; one EisnerAmper examination therefore supports attestation-only supervision but does not establish a recurring independent attestation cadence. Sol reconciliation adjudication 2026-08-15: at Base block 50021056 the proxy still pointed to source-verified implementation 0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5, Chainlink mode was enabled with the GLDY Reserves Proof of Reserve feed at 0xf488FA1B4Ac8210bf0b2d212176ca28c48F86708, and getReserveStatus returned usingChainlink=true with reported reserves equal to GLDY supply and feed data 31,988 seconds old. Chainlink identifies this Base feed as an off-chain Proof of Reserve feed reported by Streamex. Both mint and batchMint call _getTotalReservesWithSource before _mint; in enabled Chainlink mode that path queries the feed, validates a positive completed round no older than 12 hours, normalizes the answer, and requires reported gold reserves to cover the proposed new total supply at a 100% minimum backing ratio. Oracle fallback was enabled at the observed block, so a failed Chainlink call can substitute a manual reserve figure only when that figure is no older than 12 hours; every successful mint remains mechanically bounded by the same whole-supply coverage comparison. This contract-enforced per-mint comparison is a continuous reconciliation mechanism. That conclusion concerns the always-on mint gate and is separate from the publication cadence of independent attestations, for which only the March 2026 examination was established.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -192,6 +192,22 @@
         {
           "label": "Streamex first independent GLDY reserve attestation",
           "url": "https://ir.streamex.com/press-releases/detail/428/streamex-corp-announces-first-independent-reserve"
+        },
+        {
+          "label": "Chainlink GLDY Reserves Proof of Reserve feed",
+          "url": "https://data.chain.link/feeds/base/base/gldy-reserves"
+        },
+        {
+          "label": "GLDY source-verified implementation (Sourcify)",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xd3a66bf0ecbf910afcc91bd2af3e724656448cb5?fields=compilation,sources,abi"
+        },
+        {
+          "label": "Base RPC current GLDY reserve-status read",
+          "url": "https://mainnet.base.org"
+        },
+        {
+          "label": "Streamex Q2 2026 results",
+          "url": "https://www.globenewswire.com/news-release/2026/08/14/3345651/0/en/streamex-corp-reports-second-quarter-2026-financial-results.html"
         }
       ]
     }

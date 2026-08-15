@@ -2,7 +2,7 @@
   "id": "aznd-mu-digital",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "AZND primary issuance is KYC-gated by Mu Digital, while the Monad token's mint function is available to three current TOKEN_MINTER_ROLE holders: the PrimaryMarket contract, one EOA, and one EIP-7702 delegated EOA. The Monad AccessManager default admin can change that role set. Ethereum AZND is a UUPS LayerZero OFT spoke whose owner can change trusted peers and whose AccessManager default admin can upgrade mint-critical logic; both controls currently resolve to the same Mu Digital EOA.",
     "upgradeability": {
@@ -148,11 +148,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function. Economic-posture fields reviewed 2026-08-15: uncapped Monad role holders and the issuer EOA role/OFT/upgrade controls make minting economically unbounded; no whole-supply recurring reconciliation or named prudential supervisor is evidenced. Wave 2 external review 2026-08-15: Accountable's independent proof-of-solvency dashboard aggregates AZND supply liabilities and Asset Pool reserves with a daily verification interval and history; because the public feed is not currently live, this supports periodic reconciliation and attestation-only supervision rather than continuous reconciliation.",
-      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15",
+      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function. Economic-posture fields reviewed 2026-08-15: uncapped Monad role holders and the issuer EOA role/OFT/upgrade controls make minting economically unbounded; no whole-supply recurring reconciliation or named prudential supervisor is evidenced. Wave 2 external review 2026-08-15: Accountable's independent proof-of-solvency dashboard aggregates AZND supply liabilities and Asset Pool reserves with a daily verification interval and history; because the public feed is not currently live, this supports periodic reconciliation and attestation-only supervision rather than continuous reconciliation. Reconciliation determination 2026-08-15: Accountable's MuDigital Proof of Solvency dashboard independently aggregates AZND Supply liabilities against Protocol Reserves, shows a Reserves vs Supply Timeline, and publishes a daily verification interval; this is a dated recurring reconciliation by Accountable, so reconciliation is periodic rather than continuous. Supervision remains attestation-only because no named prudential regulator or regime supervising AZND issuance was found.",
+      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {

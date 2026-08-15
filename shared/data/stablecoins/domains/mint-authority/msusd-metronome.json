@@ -91,8 +91,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: the undelayed Metronome Safe can change mint logic or collateral parameters, and the disclosed unbacked synth-swap float prevents whole-supply reconciliation; no prudential supervisor or independent attestor is identified. Wave 2 external review 2026-08-15: Metronome's current pool, cap, liquidation, marketplace, and underbacking disclosures do not publish an independent recurring reconciliation of total msUSD supply to msUSD-attributed debt and collateral.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: the undelayed Metronome Safe can change mint logic or collateral parameters, and the disclosed unbacked synth-swap float prevents whole-supply reconciliation; no prudential supervisor or independent attestor is identified. Wave 2 external review 2026-08-15: Metronome's current pool, cap, liquidation, marketplace, and underbacking disclosures do not publish an independent recurring reconciliation of total msUSD supply to msUSD-attributed debt and collateral. Sol reconciliation adjudication 2026-08-15: the undelayed mint-logic authority and disclosed unbacked synth-swap float place supply outside the ordinary collateral/debt math; without a recurring whole-supply reconciliation, the applicable reconciliation verdict remains unknown. No prudential supervisor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -106,6 +106,14 @@
         {
           "label": "Metronome DAO multisig on Etherscan",
           "url": "https://etherscan.io/address/0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33"
+        },
+        {
+          "label": "Metronome Synth liquidation and collateral factors",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/liquidations-and-collateral-factors"
+        },
+        {
+          "label": "Metronome Synth marketplace",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/synth-marketplace"
         }
       ]
     }

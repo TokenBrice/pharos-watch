@@ -206,8 +206,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Re-verified on-chain at pinned blocks (Ethereum 25530913, Base 48621557/48621722, Polygon 90218312/90218531, Fraxtal 38610876/38611041). All four deployments are TransparentUpgradeableProxies. Ethereum: owner() = 3/5 Safe 0x56398b89 (owners and threshold re-read, no modules, guard zero); implementation KRWQ exposes uncapped minterMint() onlyMinters plus addMinter/removeMinter onlyOwner; mintersArray = 2 active KRWTCustodianWithOracle contracts, both owned by that Safe; ProxyAdmin 0xff85d94f owned by that Safe. Base/Polygon/Fraxtal are NOT lock/unlock adapters: each implementation is KRWQOFT is OFTUpgradeable with token() == self and approvalRequired() == false (native mint/burn OFT), so each owner Safe can setPeer a new trusted remote and cause unbounded credit-side minting on its chain; canRaiseCap is therefore true for all three. ProxyAdmin ownership is split: Ethereum and Base ProxyAdmins are owned by their chain Safe, but the Polygon (0x4583b85c) and Fraxtal (0x3faff366) ProxyAdmins are owned by a single EOA, 0x9feab70f (eth_getCode = 0x on both chains), which can unilaterally replace the implementation. Codex and Morph remain note-only (no public RPC). Economic-posture fields reviewed 2026-08-15: issuer-controlled Safes and EOAs can add minters, trust new OFT peers, or replace mint logic without a timelock; the assets-only Chainlink feed does not reconcile global liabilities and no supervisor or independent attestor is evidenced. Wave 2 external review 2026-08-15: the live issuer page displays aggregate minted KRWQ and reserve assets, but the whitepaper still describes independent attestations as planned and neither source proves liability coverage for every native OFT and unresolved deployment.",
-      "reviewer": "Claude V9 CTRL clearing pass; Sol economic-posture batch 2026-08-15",
+      "evidence": "Re-verified on-chain at pinned blocks (Ethereum 25530913, Base 48621557/48621722, Polygon 90218312/90218531, Fraxtal 38610876/38611041). All four deployments are TransparentUpgradeableProxies. Ethereum: owner() = 3/5 Safe 0x56398b89 (owners and threshold re-read, no modules, guard zero); implementation KRWQ exposes uncapped minterMint() onlyMinters plus addMinter/removeMinter onlyOwner; mintersArray = 2 active KRWTCustodianWithOracle contracts, both owned by that Safe; ProxyAdmin 0xff85d94f owned by that Safe. Base/Polygon/Fraxtal are NOT lock/unlock adapters: each implementation is KRWQOFT is OFTUpgradeable with token() == self and approvalRequired() == false (native mint/burn OFT), so each owner Safe can setPeer a new trusted remote and cause unbounded credit-side minting on its chain; canRaiseCap is therefore true for all three. ProxyAdmin ownership is split: Ethereum and Base ProxyAdmins are owned by their chain Safe, but the Polygon (0x4583b85c) and Fraxtal (0x3faff366) ProxyAdmins are owned by a single EOA, 0x9feab70f (eth_getCode = 0x on both chains), which can unilaterally replace the implementation. Codex and Morph remain note-only (no public RPC). Economic-posture fields reviewed 2026-08-15: issuer-controlled Safes and EOAs can add minters, trust new OFT peers, or replace mint logic without a timelock; the assets-only Chainlink feed does not reconcile global liabilities and no supervisor or independent attestor is evidenced. Wave 2 external review 2026-08-15: the live issuer page displays aggregate minted KRWQ and reserve assets, but the whitepaper still describes independent attestations as planned and neither source proves liability coverage for every native OFT and unresolved deployment. Reconciliation research 2026-08-15: the issuer's custodian-assets API and Chainlink Proof of Reserve expose reserve assets only, not token liabilities across Ethereum, Base, Polygon, Fraxtal, or the note-only deployments; the whitepaper's independent monthly attestations are planned, and no dated report reconciling the full multi-chain supply was found.",
+      "reviewer": "Claude V9 CTRL clearing pass; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -233,6 +233,18 @@
         {
           "label": "KRWQ Fraxtal OFT adapter",
           "url": "https://fraxscan.com/address/0xbe5b2eb217bb04a7ddd1a451e6a1567dc15e2fd6"
+        },
+        {
+          "label": "KRWQ custodian-assets API",
+          "url": "https://www.krwq.cash/api/custodian-assets"
+        },
+        {
+          "label": "KRWQ whitepaper",
+          "url": "https://krwq.cash/whitepaper.pdf"
+        },
+        {
+          "label": "KRWQ Chainlink Proof of Reserve announcement",
+          "url": "https://blog.iqai.com/krwq-the-worlds-largest-korean-won-stablecoin-from-iq-adopts-chainlink-for-automated-reserve-verifications-2/"
         }
       ],
       "disposition": "scoreable"

@@ -2,7 +2,7 @@
   "id": "isc-international-stable-currency",
   "mintAuthority": {
     "mintPath": "issuer-direct-mint",
-    "authorityPosture": "unbounded-or-compromised",
+    "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
     "summary": "ISC is a standard Solana SPL token whose mint and freeze authority is immutable 2-of-3 SPL Token multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ. Its three signers are on-curve externally signable public keys. The mint and multisig are governed only by the immutable Token Program; no custom upgradeable program sits in the issuance path.",
     "upgradeability": {
@@ -63,11 +63,11 @@
       }
     ],
     "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "At Solana slot 432714278, ISC mint and freeze authority both remained SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ with threshold 2 and three on-curve signer public keys. The mint and multisig were both owned by standard Token Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA. Its ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 had no upgrade authority, and no custom program appeared in the mint-authority path. Economic-posture fields reviewed 2026-08-15: the 2-of-3 issuer multisig can mint without a cap, while the unaudited reserve dashboard does not establish recurring whole-supply reconciliation or prudential supervision.",
-      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Solana slot 432714278, ISC mint and freeze authority both remained SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ with threshold 2 and three on-curve signer public keys. The mint and multisig were both owned by standard Token Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA. Its ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 had no upgrade authority, and no custom program appeared in the mint-authority path. Economic-posture fields reviewed 2026-08-15: the 2-of-3 issuer multisig can mint without a cap, while the unaudited reserve dashboard does not establish recurring whole-supply reconciliation or prudential supervision. Reconciliation review 2026-08-16: ISC's official dashboard and APIs publish Reserve A/B holdings, an ISC Liability field, and live supply/price feeds; at fetch time, 1,116,457.094543 ISC multiplied by the $2.2013661548 price was approximately $2.458M, matching aggregate displayed liability of $2,457,825.31 within a small timing/rounding delta, against $2.799M of displayed non-ISC reserve assets. ISC operates this real-time whole-supply-to-reserve feed continuously; it is unaudited and not independent, but supports continuous reconciliation while supervision remains none.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -77,6 +77,22 @@
         {
           "label": "ISC website",
           "url": "https://www.isc.money/"
+        },
+        {
+          "label": "ISC official reserve dashboard",
+          "url": "https://isc.money/dashboard"
+        },
+        {
+          "label": "ISC reserve balances API",
+          "url": "https://isc.money/api/reserve-balances"
+        },
+        {
+          "label": "ISC total supply feed",
+          "url": "https://data.isc.money/total_supply/"
+        },
+        {
+          "label": "ISC price feed",
+          "url": "https://data.isc.money/isc_price/"
         },
         {
           "label": "ISC mint notification",

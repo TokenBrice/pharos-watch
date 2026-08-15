@@ -107,8 +107,8 @@
     "reconciliation": "unknown",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route. Economic-posture fields reviewed 2026-08-15: the undelayed owner Safe can replace authorized enter callers, while the live reserve configuration covers Ethereum only and the repo names no prudential supervisor or independent attestor. Economic-posture fields reviewed 2026-08-15: Wave 2 external research verified EO's independent on-chain proof-of-reserves service for pUSD, but no public feed scope reconciles both tracked pUSD deployments, so reconciliation remains unknown.",
-      "reviewer": "Codex CTRL curation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15",
+      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route. Economic-posture fields reviewed 2026-08-15: the undelayed owner Safe can replace authorized enter callers, while the live reserve configuration covers Ethereum only and the repo names no prudential supervisor or independent attestor. Economic-posture fields reviewed 2026-08-15: Wave 2 external research verified EO's independent on-chain proof-of-reserves service for pUSD, but no public feed scope reconciles both tracked pUSD deployments, so reconciliation remains unknown. Wave 1 reconciliation research 2026-08-15: EO's public Plume directory lists a pUSD/USD price feed with a 24-hour heartbeat, while EO's Plume announcement says pUSD benefits from proof-of-reserves/on-chain NAV without publishing a reserve-to-liability scope covering both Ethereum and Plume pUSD supplies; no dated recurring whole-supply reconciliation was found.",
+      "reviewer": "Codex CTRL curation; Sol economic-posture batch 2026-08-15; Codex Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -126,6 +126,10 @@
         {
           "label": "EO proof-of-reserves deployment for Plume native assets",
           "url": "https://blog.eo.app/eo-deploys-on-plume-mainnet-powering-top-dapps-in-the-rwa-ecosystem/"
+        },
+        {
+          "label": "EO Plume pUSD price feed directory",
+          "url": "https://docs.eo.app/docs/eprice/feeds-addresses/price-feed-addresses/plume"
         }
       ]
     }

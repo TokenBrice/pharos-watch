@@ -113,10 +113,18 @@
         {
           "label": "MegaETH docs",
           "url": "https://docs.megaeth.com"
+        },
+        {
+          "label": "MegaUSD official reserve disclosure",
+          "url": "https://megausd.money/"
+        },
+        {
+          "label": "MegaETH USDm launch announcement",
+          "url": "https://www.megaeth.com/blog-news/megaeth-introduces-usdm"
         }
       ],
-      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately. Economic-posture fields reviewed 2026-08-15: the 4/9 owner Safe can install direct minters or replace mint logic immediately, no repo evidence reconciles both local deployments and all minters, and no local supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: MegaUSD and MegaETH materials plus Ethena and Anchorage USDtb disclosures identify upstream reserve components, but no recurring report or live feed reconciles both USDM deployments and every owner-managed mint path to the complete local wrapper supply.",
-      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
+      "evidence": "Both USDM deployments are ERC1967Proxy contracts with verified xUSDOFTUpgradeable implementations. Direct RPC checks confirmed the implementation slots and common owner Safe. Contrary to the earlier zero-admin-slot interpretation, verified source shows a UUPS authorization path controlled by onlyOwner plus owner-managed addMinter/removeMinter functions and a direct mint entry point restricted to those minters. The common owner is Gnosis Safe 0x141C03... with 9 owners, threshold 4, no modules, and no timelock observed. Parent coin usdtb-ethena is tracked separately. Economic-posture fields reviewed 2026-08-15: the 4/9 owner Safe can install direct minters or replace mint logic immediately, no repo evidence reconciles both local deployments and all minters, and no local supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: MegaUSD and MegaETH materials plus Ethena and Anchorage USDtb disclosures identify upstream reserve components, but no recurring report or live feed reconciles both USDM deployments and every owner-managed mint path to the complete local wrapper supply. Codex reconciliation wave 1 research: MegaUSD's official reserve page and MegaETH's dated launch disclosure identify a USDC/USDtb basket and describe USDtb/BUIDL settlement, but publish no dated recurring attestation or live feed reconciling liabilities for both local deployments against reserves; reconciliation remains unknown.",
+      "reviewer": "OpenAI Codex adversarial verification; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
   }

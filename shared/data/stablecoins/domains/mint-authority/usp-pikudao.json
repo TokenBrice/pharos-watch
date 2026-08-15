@@ -189,10 +189,14 @@
         {
           "label": "Ethereum PublicNode JSON-RPC",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "PikuDAO PIKUP Vol. 14 newsletter",
+          "url": "https://piku.co/blog/pikup-vol14"
         }
       ],
-      "evidence": "At Ethereum block 25534495: USP.owner() remains EOA 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a, Funding Manager 0x7e0305B212dF3FB56366251C054c07748Bf9a797 remains an allowed minter, and cap() remains max uint256. The token proxy is controlled through ProxyAdmin Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43 (2/3). The mint and manual-price workflow module beacons are governed through an owner proxy that resolves via root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, owned by Safe 0x945349AE62630bFDa197a4601883F4F7CBB07Fb5 (1/1). All currently observed mint-critical upgrade paths are recorded. Economic-posture fields reviewed 2026-08-15: an owner EOA can authorize minters against a max-uint cap, while no dated whole-supply reconciliation or named prudential supervisor is documented.",
-      "reviewer": "TERRA-ULTRA control review; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Ethereum block 25534495: USP.owner() remains EOA 0x3D7DBEC2f6bEe780f6c5Dad61a7a905239e9E61a, Funding Manager 0x7e0305B212dF3FB56366251C054c07748Bf9a797 remains an allowed minter, and cap() remains max uint256. The token proxy is controlled through ProxyAdmin Safe 0xc9996a03d7979003B65aE76c1154792bc24bcE43 (2/3). The mint and manual-price workflow module beacons are governed through an owner proxy that resolves via root InverterBeacon 0xcbe9560f6584f859330275d49014624fe5341bfd, owned by Safe 0x945349AE62630bFDa197a4601883F4F7CBB07Fb5 (1/1). All currently observed mint-critical upgrade paths are recorded. Economic-posture fields reviewed 2026-08-15: an owner EOA can authorize minters against a max-uint cap, while no dated whole-supply reconciliation or named prudential supervisor is documented. Re-opened Piku's documentation, mint/redeem and workflow materials, and its dated governance newsletter: these describe changing strategy allocations and governance proposals but provide no dated issuer or named third-party report reconciling USP liabilities against off-chain and on-chain backing assets, so reconciliation remains unknown.",
+      "reviewer": "TERRA-ULTRA control review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
   }

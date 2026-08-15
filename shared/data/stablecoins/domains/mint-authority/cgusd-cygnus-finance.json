@@ -68,8 +68,8 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Base block 47199109: cgUSD vault owner() = TimelockController 0xfECAB866; accounting oracle owner() = same; TimelockController minDelay = 10s; PROPOSER_ROLE = 2/11 Safe (0x188f3264, getOwners returns 11, getThreshold = 2); EXECUTOR_ROLE held by 4 contracts; DEFAULT_ADMIN_ROLE self-held; no modules on the Safe proposer or the timelock. All mint-capable controls confirmed from chain state. Economic-posture fields reviewed 2026-08-15: the 2/11 Safe controls mint and NAV authority through an effectively immediate 10-second timelock, while no independent whole-supply reconciliation or prudential authorization is evidenced.",
-      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "evidence": "At Base block 47199109: cgUSD vault owner() = TimelockController 0xfECAB866; accounting oracle owner() = same; TimelockController minDelay = 10s; PROPOSER_ROLE = 2/11 Safe (0x188f3264, getOwners returns 11, getThreshold = 2); EXECUTOR_ROLE held by 4 contracts; DEFAULT_ADMIN_ROLE self-held; no modules on the Safe proposer or the timelock. All mint-capable controls confirmed from chain state. Economic-posture fields reviewed 2026-08-15: the 2/11 Safe controls mint and NAV authority through an effectively immediate 10-second timelock, while no dated, itemized whole-supply reconciliation artefact or prudential authorization is evidenced. Sol reconciliation adjudication (2026-08-15): Cygnus's wiki describes synchronizing total cgUSD issuance with the NAV of on-chain stablecoins, U.S. Treasury bills, and accrued interest every New York banking day, but it is an undated procedure description rather than an actually published recurring report. Searches of the issuer's cgUSD documentation and website found no dated NAV statement, issuance-to-reserve reconciliation, reserve report, or itemized composition dashboard, so periodic reconciliation remains unevidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15; Sol reconciliation adjudication 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -79,6 +79,10 @@
         {
           "label": "cgUSD TimelockController RoleGranted logs (Blockscout)",
           "url": "https://base.blockscout.com/address/0xfECAB866b450b97dB38500898e9272c1D18918b7/logs"
+        },
+        {
+          "label": "Cygnus cgUSD daily NAV synchronization procedure (undated)",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
         }
       ]
     }

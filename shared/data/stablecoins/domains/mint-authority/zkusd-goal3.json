@@ -54,8 +54,8 @@
       ]
     },
     "review": {
-      "evidence": "At zkSync Era block 71160345, zkUSD proxy implementation was 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and Goal3 portal proxy implementation was 0xd3227d2b5c616dcf566ace0fec42507afef8e28d; both admin and beacon slots were zero. Both implementations returned the EIP-1822 implementation-slot UUID and verified source restricts _authorizeUpgrade() to onlyOwner. Both proxy owners were the same EOA, and the portal retained token MINTER_ROLE. Economic-posture fields reviewed 2026-08-15: the owner EOA directly controls minting and upgrades without delay, and no current reserve reconciliation, attestation, or prudential authorization exists. Wave 2 external review 2026-08-15 retained reconciliation as unknown after the Goal3 site and documentation remained unavailable and the explorer/RPC evidence exposed no current reserve inventory, assurance report, or liabilities-to-assets reconciliation.",
-      "reviewer": "Codex Safety Score V9 review; Sol economic-posture batch 2026-08-15",
+      "evidence": "At zkSync Era block 71160345, zkUSD proxy implementation was 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and Goal3 portal proxy implementation was 0xd3227d2b5c616dcf566ace0fec42507afef8e28d; both admin and beacon slots were zero. Both implementations returned the EIP-1822 implementation-slot UUID and verified source restricts _authorizeUpgrade() to onlyOwner. Both proxy owners were the same EOA, and the portal retained token MINTER_ROLE. Economic-posture fields reviewed 2026-08-15: the owner EOA directly controls minting and upgrades without delay, and no current reserve reconciliation, attestation, or prudential authorization exists. Wave 2 external review 2026-08-15 retained reconciliation as unknown after the Goal3 site and documentation remained unavailable and the explorer/RPC evidence exposed no current reserve inventory, assurance report, or liabilities-to-assets reconciliation. Wave 1 reconciliation review 2026-08-15: searched the Goal3 documentation and website (both unavailable at review), plus verified zkUSD token/lockdrop portal code and zkSync RPC reads; no current reserve inventory, named attestation/audit report, or liabilities-to-assets reconciliation for the owner-controlled mint path was found. No named prudential supervisor or authorization was established, so reconciliation remains unknown and supervision remains none.",
+      "reviewer": "Codex Safety Score V9 review; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15",
       "sources": [
         {
@@ -65,6 +65,14 @@
         {
           "label": "zkSync Era explorer — zkUSD token",
           "url": "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757"
+        },
+        {
+          "label": "Verified Goal3 Lockdrop portal implementation",
+          "url": "https://explorer.zksync.io/address/0xd3227d2b5c616dcf566ace0fec42507afef8e28d#contract"
+        },
+        {
+          "label": "zkSync Era RPC",
+          "url": "https://mainnet.era.zksync.io"
         }
       ]
     }

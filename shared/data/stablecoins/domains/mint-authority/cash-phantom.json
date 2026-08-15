@@ -387,10 +387,14 @@
         {
           "label": "HyperEVM inner CASH source",
           "url": "https://hyperevmscan.io/address/0x061Af032cCf1CE35A39b556e0F442bF2DBe1Ed06#code"
+        },
+        {
+          "label": "Official CASH reserve policy",
+          "url": "https://www.cashstable.com/"
         }
       ],
-      "evidence": "At the fixed cutoff, Solana slot 432714278 and HyperEVM block 40381118 resolved the complete CASH supply graph. The Bridge program had exactly two active minter routes and one immediate governance EOA, but its ProgramData retained a separate single-key upgrader, correcting the prior false immutable conclusion. The Solana OApp and shared Token-2022 and LayerZero Endpoint runtimes were independently upgradeable. The sole HyperEVM token administrator could create source CASH and upgrade both inner proxies; the direct OFT owner and Solana OApp admin could change route parameters but could not manufacture supply alone. Economic-posture fields reviewed 2026-08-15: issuer EOAs can reset allowances, raise the HyperEVM maximum, or replace mint logic immediately; no whole-supply reserve reconciliation is evidenced and money-transmitter licensing is not prudential product supervision.",
-      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15",
+      "evidence": "At the fixed cutoff, Solana slot 432714278 and HyperEVM block 40381118 resolved the complete CASH supply graph. The Bridge program had exactly two active minter routes and one immediate governance EOA, but its ProgramData retained a separate single-key upgrader, correcting the prior false immutable conclusion. The Solana OApp and shared Token-2022 and LayerZero Endpoint runtimes were independently upgradeable. The sole HyperEVM token administrator could create source CASH and upgrade both inner proxies; the direct OFT owner and Solana OApp admin could change route parameters but could not manufacture supply alone. Economic-posture fields reviewed 2026-08-15: issuer EOAs can reset allowances, raise the HyperEVM maximum, or replace mint logic immediately; no whole-supply reserve reconciliation is evidenced and money-transmitter licensing is not prudential product supervision. Reconciliation finding 2026-08-15: the official CASH page states that Bridge Building Inc maintains reserves at least equal to outstanding Bridge Stablecoins at 5pm New York on each Federal Reserve business day, but no dated CASH-specific reserve-to-liability report or named examiner was located, so reconciliation remains unknown.",
+      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
       "reviewedAt": "2026-08-15"
     }
   }
