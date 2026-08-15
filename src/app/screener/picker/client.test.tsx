@@ -418,6 +418,16 @@ describe("SelectorClient — state machine", () => {
             recommendedSource: null,
             perInputStaleness: null,
           },
+          {
+            ...baseRecommendation,
+            id: "freeze-symbol-fallback",
+            symbol: "freeze",
+            name: "Freeze Symbol Fallback",
+            rank: 4,
+            profile: "treasury",
+            recommendedSource: null,
+            perInputStaleness: null,
+          },
         ],
       }),
     );
@@ -426,7 +436,9 @@ describe("SelectorClient — state machine", () => {
     render(<SelectorClient />);
 
     expect(
-      await screen.findByText("/subscribe dews, depeg, safety safe-fallback, reserved-symbol-fallback"),
+      await screen.findByText(
+        "/subscribe dews, depeg, safety safe-fallback, reserved-symbol-fallback, freeze-symbol-fallback",
+      ),
     ).toBeTruthy();
     expect(screen.queryByText(/all depeg-step 100 usd-top25/)).toBeNull();
   });

@@ -5,7 +5,7 @@ import type {
   StatusHealthValue,
   StatusResponse,
 } from "@shared/types";
-import { getPollingWindow } from "@/hooks/use-api-query";
+import { getPollingWindow } from "@/lib/api-query-polling";
 import { buildCommsWorkbenchModel, type CommsWorkbenchModel } from "@/lib/comms-workbench-model";
 import { CRON_1MIN } from "@/lib/cron-intervals";
 import { deriveStatusActionRecommendations } from "@/lib/status/action-recommendations";

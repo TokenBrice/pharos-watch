@@ -1,5 +1,6 @@
 import { formatChartDate } from "@shared/lib/format";
-import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+
+export type TimeRangeOption = "7d" | "30d" | "90d" | "1y" | "all";
 
 /** Short windows need day-level labels; longer windows stay month-oriented. */
 export function formatRangeTickDate(timestamp: number, range: TimeRangeOption): string {

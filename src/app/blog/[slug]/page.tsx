@@ -65,6 +65,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   return buildPageMetadata({
     title: `${post.title} | Pharos Blog`,
+    titleAbsolute: true,
     description: post.description,
     canonical: `/blog/${slug}/`,
     ogImage: post.coverImage ?? OG_BLOG,

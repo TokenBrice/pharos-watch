@@ -49,10 +49,10 @@ type StaticPageSpec = readonly [
 export const METHODOLOGY_CHANGELOG_SITEMAP_PATHS = SHARED_METHODOLOGY_CHANGELOG_SITEMAP_PATHS;
 
 
-/** Safely resolve a last-edited date, falling back to build time for unmapped routes. */
-function lastEdited(path: string): Date {
-  const iso = LAST_EDITED[path];
-  return iso ? new Date(iso) : new Date();
+/** Resolve a Git-derived edit date without turning an unmapped route into a deploy-time change. */
+function lastEdited(path: string, fallbackPath = "/"): Date {
+  const iso = LAST_EDITED[path] ?? LAST_EDITED[fallbackPath];
+  return new Date(iso);
 }
 
 function fundingLastModified(): Date {
@@ -111,8 +111,6 @@ function buildStaticSitemapEntries(
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-
   // Live-data routes bake fresh data at deploy time, but stamping build-time
   // `now` on every deploy claims constant content change. Use the freshest
   // data-snapshot timestamp the build actually baked in (latest digest
@@ -126,7 +124,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const liveDataLastModified = (path: string): Date => {
     const editedMs = LAST_EDITED[path] ? new Date(LAST_EDITED[path]).getTime() : 0;
     const ms = Math.max(editedMs, latestDataSnapshotMs);
-    return ms > 0 ? new Date(ms) : now;
+    return ms > 0 ? new Date(ms) : lastEdited(path);
   };
 
   const staticPageSpecs = [
@@ -199,7 +197,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...getActiveChainIds().map((chainId) => ({
       url: `${SITE_URL}/chains/${chainId}/`,
-      lastModified: liveDataLastModified(`/chains/${chainId}/`),
+      lastModified: new Date(
+        Math.max(
+          lastEdited(`/chains/${chainId}/`, "/chains/").getTime(),
+          latestDataSnapshotMs,
+        ),
+      ),
       changeFrequency: "daily" as const,
       priority: 0.5,
     })),
@@ -207,7 +210,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const pegPages: MetadataRoute.Sitemap = ACTIVE_PEGS.map((peg) => ({
     url: `${SITE_URL}/stablecoins/${PEG_SLUGS[peg]}/`,
-    lastModified: liveDataLastModified(`/stablecoins/${PEG_SLUGS[peg]}/`),
+    lastModified: lastEdited(`/stablecoins/${PEG_SLUGS[peg]}/`, "/stablecoins/"),
     changeFrequency: "daily" as const,
     priority: 0.7,
   }));
@@ -247,7 +250,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     ...MECHANISM_ARCHETYPE_VALUES.map((archetype) => ({
       url: `${SITE_URL}/learn/mechanisms/${archetype}/`,
-      lastModified: lastEdited(`/learn/mechanisms/${archetype}/`),
+      lastModified: lastEdited(`/learn/mechanisms/${archetype}/`, "/learn/mechanisms/"),
       changeFrequency: "monthly" as const,
       priority: 0.7,
     })),
@@ -270,7 +273,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // /blog/ hub lives in referencePageSpecs above; these are the post detail
   // pages. Per-post lastmod comes from the git-derived sitemap-dates entry
-  // (see addBlogDates in generate-sitemap-dates.ts), floored to build time.
+  // (see addBlogDates in generate-sitemap-dates.ts).
   const blogPages: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}/`,
     lastModified: lastEdited(`/blog/${post.slug}/`),
@@ -298,7 +301,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const meta = (docsMetadata as Record<string, { dateModified: string }>)[doc.slug];
     return {
       url: `${SITE_URL}/docs/${doc.slug}/`,
-      lastModified: meta ? new Date(meta.dateModified) : now,
+      lastModified: meta ? new Date(meta.dateModified) : lastEdited("/docs/"),
       changeFrequency: "monthly" as const,
       priority: 0.5,
     };

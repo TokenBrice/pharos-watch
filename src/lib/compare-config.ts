@@ -4,7 +4,7 @@ import {
 } from "@shared/lib/stablecoins/client-registry";
 import type { CoinOption, ComparePreset } from "@/lib/compare-types";
 import { decodeStablecoinUrlToken } from "@/lib/stablecoin-url-codec";
-import { readWatchlistSnapshot } from "@/hooks/use-watchlist";
+import { readWatchlistSnapshot } from "@/lib/watchlist-storage";
 
 export const MAX_COMPARE_COINS = 5;
 export const COMPARE_COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6"] as const;

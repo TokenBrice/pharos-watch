@@ -1,4 +1,9 @@
-import type { SortState } from "@/hooks/use-sort";
+export type SortDirection = "asc" | "desc";
+
+export interface SortState<K extends string> {
+  key: K;
+  direction: SortDirection;
+}
 
 interface ComparatorOptions {
   /** Where to place null/undefined values. Default: "last". */

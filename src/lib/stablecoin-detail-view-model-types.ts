@@ -1,4 +1,4 @@
-import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import type { SupplyHistoryPoint } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
 import type {
   MintAuthorityDetailViewModel,

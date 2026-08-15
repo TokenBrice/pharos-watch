@@ -37,6 +37,7 @@ import {
 } from "./handoff";
 import type { UseSelectorResult } from "./use-selector";
 import { PHAROSWATCHBOT_BOT_URL } from "@/app/pharoswatchbot/telegram-route-constants";
+import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
 
 export interface ResultPaneProps {
   selectorResult: UseSelectorResult;
@@ -422,33 +423,6 @@ function TelegramSubscribeCommand({ command }: { command: string }) {
 }
 
 const TELEGRAM_TARGET_TOKEN_PATTERN = /^[A-Za-z0-9_-]+$/;
-const TELEGRAM_RESERVED_COMMAND_TOKENS = new Set([
-  "all",
-  "dews",
-  "depeg",
-  "depeg-step",
-  "launch",
-  "reserve",
-  "safety",
-  "usd-top10",
-  "usd-top-10",
-  "usd-top25",
-  "usd-top-25",
-  "usd-top50",
-  "usd-top-50",
-  "non-usd-top10",
-  "non-usd-top-10",
-  "non-usd-top25",
-  "non-usd-top-25",
-  "non-usd-top50",
-  "non-usd-top-50",
-  "eur-top10",
-  "eur-top-10",
-  "gold-top5",
-  "gold-top-5",
-  "mcap-ge-1b",
-  "mcap-ge-100m",
-]);
 
 function buildTelegramSubscribeCommand(recommendations: readonly SelectorRecommendation[]): string {
   const targets = Array.from(new Set(recommendations.map((rec) => telegramTargetToken(rec)).filter(Boolean)));
@@ -462,7 +436,7 @@ function telegramTargetToken(rec: SelectorRecommendation): string | null {
 function safeTelegramTargetToken(value: string): string | null {
   const token = value.trim();
   if (!TELEGRAM_TARGET_TOKEN_PATTERN.test(token)) return null;
-  if (TELEGRAM_RESERVED_COMMAND_TOKENS.has(token.toLowerCase())) return null;
+  if (isTelegramReservedTargetToken(token)) return null;
   return token;
 }
 

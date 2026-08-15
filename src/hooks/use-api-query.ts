@@ -10,6 +10,9 @@ import {
 import { mergeAbortSignals } from "@shared/lib/abort-signals";
 import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "@/lib/api";
 import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
+import { getPollingWindow } from "@/lib/api-query-polling";
+
+export { getPollingWindow, type PollingWindow } from "@/lib/api-query-polling";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 const NO_CLEANUP = (): void => {};
@@ -36,11 +39,6 @@ export interface ApiQueryOptions<T> extends PollingQueryControlOptions {
   fetchInit?: RequestInit;
   metaMaxAgeSec?: number;
   contractMode?: ApiContractMode;
-}
-
-export interface PollingWindow {
-  staleTime: number;
-  refetchInterval: number;
 }
 
 /**
@@ -110,13 +108,6 @@ function createPollingQueryOptions<T>(
     retryDelay: opts?.retryDelay ?? DEFAULT_RETRY_DELAY,
     enabled: opts?.enabled,
     placeholderData: opts?.keepPreviousData ? keepPreviousData : undefined,
-  };
-}
-
-export function getPollingWindow(cronInterval: number): PollingWindow {
-  return {
-    staleTime: cronInterval,
-    refetchInterval: 2 * cronInterval,
   };
 }
 

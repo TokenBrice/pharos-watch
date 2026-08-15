@@ -14,19 +14,12 @@ import {
   RISK_COLORS,
 } from "@/lib/chart-colors";
 import type { ReserveDisplayBadgeView, ReserveSlice, ReserveRisk } from "@shared/types";
+import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 
 interface ReserveTreemapProps {
   reserves: ReserveSlice[];
   badge?: ReserveDisplayBadgeView;
 }
-
-const RISK_LABELS: Record<ReserveRisk, string> = {
-  "very-low": "Very Low Risk",
-  low: "Low Risk",
-  medium: "Medium Risk",
-  high: "High Risk",
-  "very-high": "Very High Risk",
-};
 
 const RESERVE_BADGE_CLASSNAMES: Record<ReserveDisplayBadgeView["kind"], string> = {
   live: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-inset ring-emerald-500/20",
@@ -157,7 +150,7 @@ function ReserveTooltip({
   return (
     <PharosChartTooltip active={active}>
       <TooltipLabel>{name}</TooltipLabel>
-      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RISK_LABELS[risk]} value={`${pct}%`} />
+      <TooltipRow color={RISK_ACCENT_COLORS[risk]} label={RESERVE_RISK_PRESENTATION[risk].longLabel} value={`${pct}%`} />
     </PharosChartTooltip>
   );
 }
@@ -171,7 +164,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
   // no key at all, and a fixed five-tier row would describe colors that appear
   // nowhere on the chart.
   const presentRisks = useMemo(
-    () => (Object.keys(RISK_LABELS) as ReserveRisk[]).filter((risk) => data.some((r) => r.risk === risk)),
+    () => (Object.keys(RESERVE_RISK_PRESENTATION) as ReserveRisk[]).filter((risk) => data.some((r) => r.risk === risk)),
     [data],
   );
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
@@ -230,7 +223,7 @@ export function ReserveTreemap({ reserves, badge }: ReserveTreemapProps) {
             <div key={risk} className="flex min-w-0 items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-[2px]" style={{ backgroundColor: RISK_ACCENT_COLORS[risk] }} />
               <span className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                {RISK_LABELS[risk]}
+                {RESERVE_RISK_PRESENTATION[risk].longLabel}
               </span>
             </div>
           ))}

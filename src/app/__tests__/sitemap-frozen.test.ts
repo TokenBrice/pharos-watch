@@ -142,10 +142,31 @@ describe("sitemap", () => {
   });
 
   it("includes every mechanism explainer route", () => {
-    const urls = new Set(sitemap().map((entry) => entry.url));
+    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const mechanismDate = new Date((sitemapDates as Record<string, string>)["/learn/mechanisms/"]);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-      expect(urls.has(`${SITE_ORIGIN}/learn/mechanisms/${archetype}/`)).toBe(true);
+      const entry = entries.get(`${SITE_ORIGIN}/learn/mechanisms/${archetype}/`);
+      expect(entry).toBeDefined();
+      expect(entry?.lastModified).toEqual(mechanismDate);
     }
+  });
+
+  it("uses generated content dates instead of deploy time for unmapped dynamic routes", () => {
+    const entries = new Map(sitemap().map((entry) => [entry.url, entry]));
+    const generatedDates = sitemapDates as Record<string, string>;
+
+    expect(entries.get(`${SITE_ORIGIN}/chains/ethereum/`)?.lastModified).toEqual(
+      new Date(
+        Math.max(
+          new Date(generatedDates["/chains/"]).getTime(),
+          ...digests.map((digest) => digest.generatedAt * 1000),
+          ...DEPEG_EVENT_ENTRIES.map((event) => (event.endedAt ?? event.startedAt) * 1000),
+        ),
+      ),
+    );
+    expect(entries.get(`${SITE_ORIGIN}/stablecoins/usd/`)?.lastModified).toEqual(
+      new Date(generatedDates["/stablecoins/"]),
+    );
   });
 
   it("uses an explicit sitemap allowlist for methodology changelog pages", () => {

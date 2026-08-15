@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { TimeRangeOption } from "@/lib/chart-time-range";
 
-export type TimeRangeOption = "7d" | "30d" | "90d" | "1y" | "all";
+export type { TimeRangeOption } from "@/lib/chart-time-range";
 
 const DEFAULT_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 const DEFAULT_RANGE: TimeRangeOption = "all";
