@@ -220,6 +220,7 @@
         "evidence": "At Sui checkpoint 298761036, UpgradeCap 0x1a8d...43ee was AddressOwner-held by this non-object address and named current MToken package 0x951c...bf02 with policy = 0 and version = 2. The package upgrade transaction FNtNoUk...pAnZ used package::authorize_upgrade, Upgrade, and package::commit_upgrade directly with that capability; the State's 14,400-second delay is not part of the native UpgradeCap path."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -266,9 +267,9 @@
           "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/licenses-and-certificates"
         }
       ],
-      "evidence": "At Ethereum block 25535946, the XAGm proxy resolved to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, owner() was 0xb573c94260582f0715FC477928B04A2708dd36D7, operator() was 0x89Bb23E4a82E04a253d9f11767feDf321C127799, mintBudget() was 0, and delay() was 14,400 seconds. Verified source shows operator-only manual local-budget increases, delayed mint execution, and owner-authorized delayed UUPS replacement. At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed owner 0x567d...6fb8, operator 0xdb07...aee2, mint_budget 0, delay 14,400, and UpgradeCap 0x1a8d...43ee. That policy-0 UpgradeCap was address-owned by the State owner and controls current MToken package 0x951c...bf02. On-chain data does not disclose the controllers' signer arrangements or off-chain key custody. No completed recurring reconciliation was established as of review. Matrixdock says Bureau Veritas will perform semiannual physical-silver audits, but XAGm launched on 2026-03-17 and the reviewed XAGm underlying-assets page did not expose a dated Bureau Veritas reserve report; the linked smart-contract audit does not reconcile token supply to silver. Matrixdock's dealer certificate is an AML/dealer registration, not exact prudential supervision of the XAGm issuer or product. Reviewed 2026-07-15.",
-      "reviewer": "OpenAI Codex deployment-controls review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25535946, the XAGm proxy resolved to implementation 0x5e072c6689610c66e49a3067a4b488b4e27bc744, owner() was 0xb573c94260582f0715FC477928B04A2708dd36D7, operator() was 0x89Bb23E4a82E04a253d9f11767feDf321C127799, mintBudget() was 0, and delay() was 14,400 seconds. Verified source shows operator-only manual local-budget increases, delayed mint execution, and owner-authorized delayed UUPS replacement. At Sui checkpoint 298761036, shared State 0xc2aa...2b4c listed owner 0x567d...6fb8, operator 0xdb07...aee2, mint_budget 0, delay 14,400, and UpgradeCap 0x1a8d...43ee. That policy-0 UpgradeCap was address-owned by the State owner and controls current MToken package 0x951c...bf02. On-chain data does not disclose the controllers' signer arrangements or off-chain key custody. No completed recurring reconciliation was established as of review. Matrixdock says Bureau Veritas will perform semiannual physical-silver audits, but XAGm launched on 2026-03-17 and the reviewed XAGm underlying-assets page did not expose a dated Bureau Veritas reserve report; the linked smart-contract audit does not reconcile token supply to silver. Matrixdock's dealer certificate is an AML/dealer registration, not exact prudential supervision of the XAGm issuer or product. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: manual mint-budget paths and the undelayed Sui UpgradeCap leave issuance economically unbounded; the asset-only silver audit does not reconcile token liabilities and no prudential supervisor is evidenced.",
+      "reviewer": "OpenAI Codex deployment-controls review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

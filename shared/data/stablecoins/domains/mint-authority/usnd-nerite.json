@@ -16,10 +16,13 @@
         "evidence": "At Arbitrum block 471900751: owner() via UUPS proxy (0x4ecf61a6c2fab8a047ceb3b3b263b401763e9d49) returned 0x000...000 (zero address, renounced). collateralRegistryAddress() returned 0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68 (set). setBranchAddresses called from a non-zero sender reverts 'Ownable: caller is not the owner'. EIP-1967 proxy admin slot is zero. UUPS upgrade path goes through Superfluid Protocol governance (not an individual owner). mint() restricted to registered BO/AP addresses."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 471900751: owner() via proxy = 0x000...000 (renounced); collateralRegistryAddress = 0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68 (non-zero, set); setBranchAddresses reverts 'Ownable: caller is not the owner' from any non-zero sender; EIP-1967 proxy admin slot zero; UUPS upgrade authority is Superfluid Protocol governance contract (0xcf8Acb4eF033efF16E8080aed4c7D5B9285D2192). Source confirmed as BoldToken (Superfluid custom super token). No individual admin can mint or alter branch addresses.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Arbitrum block 471900751: owner() via proxy = 0x000...000 (renounced); collateralRegistryAddress = 0x7f7fbc2711c0d6e8ef757dbb82038032dd168e68 (non-zero, set); setBranchAddresses reverts 'Ownable: caller is not the owner' from any non-zero sender; EIP-1967 proxy admin slot zero; UUPS upgrade authority is Superfluid Protocol governance contract (0xcf8Acb4eF033efF16E8080aed4c7D5B9285D2192). Source confirmed as BoldToken (Superfluid custom super token). No individual admin can mint or alter branch addresses. Economic-posture fields reviewed 2026-08-15: renounced branch configuration leaves collateral-gated issuance bounded, off-chain reconciliation is not applicable, and no supervisor or attestor applies.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Nerite USND token on Arbitrum (Blockscout)",

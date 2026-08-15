@@ -62,10 +62,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Solana slot 432714278, ISC mint and freeze authority both remained SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ with threshold 2 and three on-curve signer public keys. The mint and multisig were both owned by standard Token Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA. Its ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 had no upgrade authority, and no custom program appeared in the mint-authority path.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At Solana slot 432714278, ISC mint and freeze authority both remained SPL multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ with threshold 2 and three on-curve signer public keys. The mint and multisig were both owned by standard Token Program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA. Its ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 had no upgrade authority, and no custom program appeared in the mint-authority path. Economic-posture fields reviewed 2026-08-15: the 2-of-3 issuer multisig can mint without a cap, while the unaudited reserve dashboard does not establish recurring whole-supply reconciliation or prudential supervision.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "ISC SPL mint on Solana Explorer",

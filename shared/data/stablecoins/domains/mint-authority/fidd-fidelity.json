@@ -99,6 +99,7 @@
         "evidence": "At Ethereum block 25526837, getRoleMemberCount(UPGRADER_ROLE) returned 1 and getRoleMember(...,0) returned this address; eth_getCode returned empty bytecode. Verified MintableToken source restricts _authorizeUpgrade() to UPGRADER_ROLE, so this single EOA can replace mint logic immediately."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
@@ -125,9 +126,9 @@
           "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
         }
       ],
-      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. Economic-control evidence reviewed 2026-07-15: PwC examines FIDD reserves monthly; the latest available report covers 2026-05-29 and reconciles reserve assets to token liabilities. The OCC active national trust-bank list matches Fidelity Digital Assets, N.A. (charter 25398), the exact issuer.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25526837, FIDD remained a UUPS proxy with implementation 0x8ae9cb3d..., zero proxy-admin and beacon slots, three default-admin EOAs, five minter EOAs, and one distinct upgrader EOA. Verified source gates _authorizeUpgrade() with UPGRADER_ROLE rather than DEFAULT_ADMIN_ROLE. Economic-control evidence reviewed 2026-07-15: PwC examines FIDD reserves monthly; the latest available report covers 2026-05-29 and reconciles reserve assets to token liabilities. The OCC active national trust-bank list matches Fidelity Digital Assets, N.A. (charter 25398), the exact issuer. Economic-posture fields reviewed 2026-08-15: issuer EOAs directly mint and upgrade without a timelock, while monthly PwC reconciliation and the OCC-chartered issuer remain verified.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

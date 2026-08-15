@@ -96,6 +96,9 @@
         ]
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -115,9 +118,9 @@
           "url": "https://eth.blockscout.com/address/0xB6807116b3B1B321a390594e31ECD6e0076f6278"
         }
       ],
-      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. Same governance structure as verified musd-metamask. All controls fully characterized.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "At Ethereum block 25295161: MinterGateway confirmed immutable non-proxy (IsProxy=false, both EIP-1967 slots zero). SwapFacility confirmed TransparentUpgradeableProxy; ProxyAdmin=0x0f38d8a5... → TimelockController 0x23ca665c... (3-day minDelay); timelock proposer is Gnosis Safe 3/5. Same governance structure as verified musd-metamask. All controls fully characterized. Economic-posture fields reviewed 2026-08-15: M0 TTG governance controls base-M capacity while SwapFacility and USDat logic changes pass through enforced three- and five-day timelocks; real-time M0 validator/reserve reconciliation exists without named prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

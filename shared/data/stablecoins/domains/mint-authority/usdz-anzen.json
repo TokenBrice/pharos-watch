@@ -363,10 +363,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "The five USDz deployments retain immutable runtime bytecode, but the complete authority graph is multichain. Ethereum uses its 2/6 DEFAULT_ADMIN Safe and SPCT-gated deposit path. At pinned Base 48626678, Arbitrum 483807177, Blast 37616444, and Manta 8981874 blocks, owner() resolved respectively to 2/7, 2/6, 2/7, and 2/6 chain-local Safes with no enabled modules or guard. Base's owner controls LayerZero peers. Arbitrum, Blast, and Manta owners can grant or revoke mint roles immediately; their sole current minters were 0xdd216101D84d513A12CB7bFB109F7abCF330D58e, 0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129, and 0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938, and each token returned maxSupply() = 0. No tracked child-chain control is omitted.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14",
+      "evidence": "The five USDz deployments retain immutable runtime bytecode, but the complete authority graph is multichain. Ethereum uses its 2/6 DEFAULT_ADMIN Safe and SPCT-gated deposit path. At pinned Base 48626678, Arbitrum 483807177, Blast 37616444, and Manta 8981874 blocks, owner() resolved respectively to 2/7, 2/6, 2/7, and 2/6 chain-local Safes with no enabled modules or guard. Base's owner controls LayerZero peers. Arbitrum, Blast, and Manta owners can grant or revoke mint roles immediately; their sole current minters were 0xdd216101D84d513A12CB7bFB109F7abCF330D58e, 0x5A1b8C0e9fE27b9DB4913df6B361deA5e96EA129, and 0x04D5ddf5f3a8939889F11E97f8c4BB48317F1938, and each token returned maxSupply() = 0. No tracked child-chain control is omitted. Economic-posture fields reviewed 2026-08-15: chain-local issuer Safes can install uncapped minters immediately, the real-time SPCT disclosure is checked against aggregate multichain supply, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "USDz token (Blockscout)",

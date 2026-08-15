@@ -104,6 +104,9 @@
         "evidence": "At block 25295015, hasRole(MINTER_ROLE) returned true on WCLP token on Ethereum, Base, BSC, Polygon, and Gnosis. Contract is an AccessControl contract with DEFAULT_ADMIN_ROLE holders confirmed as 0x466c02e2 (EOA) and 0x2b839174 (Safe)."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -119,9 +122,9 @@
           "url": "https://etherscan.io/address/0x2b839174fe62466067c22e2a4c8054071f9d8d68"
         }
       ],
-      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "All mint-capable role holders verified via hasRole() across Ethereum, Base, BSC, Polygon, Gnosis, and Worldchain at block 25295015. EOA 0x466c02e2 confirmed via eth_getCode. Safe 0x2b839174 confirmed as 4/7 Safe v1.4.1 with no modules or guard. Minter-router contracts 0xd168cfbb and 0x46167cb0 confirmed as AccessControl contracts whose admins are the same EOA and Safe. Economic-posture fields reviewed 2026-08-15: issuer-controlled minters are uncapped across six chains, with no WCLP-specific whole-supply attestation or named prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

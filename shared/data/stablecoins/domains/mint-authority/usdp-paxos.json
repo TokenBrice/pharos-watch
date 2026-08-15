@@ -314,6 +314,7 @@
         "evidence": "At the cutoff, Token-2022 ProgramData DoU57AYuPFu2QU514RktNPG22QhApEjnKxnBcu4BHDTY named this authority. It is authority index 1 of Squads V3 multisig BnD53519LK7QM4ERBGvLedZDe1VoTPgtiBkGPWAACiMZ, whose account reports threshold 4 and six members. Squads V3 is immutable and enforces no execution delay."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
@@ -347,9 +348,9 @@
           "url": "https://www.occ.gov/topics/charters-and-licensing/financial-institution-lists/trust-by-name.pdf"
         }
       ],
-      "evidence": "At the fixed cutoff, exact historical state resolved every tracked USDP mint and upgrade surface: Ethereum block 25526129, BSC block 109812367, and Solana slot 432714278. Ethereum had two live SupplyControl controller EOAs plus independent default-admin and token-proxy-admin EOAs. Solana's mint authority was a threshold-one SPL multisig with a directly signable Paxos admin member, while both controller PDAs were governed by an immutable Paxos program. BSC used a generic independently mintable Binance-Peg proxy with separate owner and proxy-admin EOAs. Token-2022 retained a shared zero-delay 4-of-6 upgrade authority. KPMG performs monthly independent examinations; the latest reviewed report covers May 29, 2026 and fully reconciles USDP liabilities to redemption assets. The OCC active trust-bank list dated April 30, 2026 matches Paxos Trust Company, National Association under charter 25379, establishing prudential supervision of the issuer.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At the fixed cutoff, exact historical state resolved every tracked USDP mint and upgrade surface: Ethereum block 25526129, BSC block 109812367, and Solana slot 432714278. Ethereum had two live SupplyControl controller EOAs plus independent default-admin and token-proxy-admin EOAs. Solana's mint authority was a threshold-one SPL multisig with a directly signable Paxos admin member, while both controller PDAs were governed by an immutable Paxos program. BSC used a generic independently mintable Binance-Peg proxy with separate owner and proxy-admin EOAs. Token-2022 retained a shared zero-delay 4-of-6 upgrade authority. KPMG performs monthly independent examinations; the latest reviewed report covers May 29, 2026 and fully reconciles USDP liabilities to redemption assets. The OCC active trust-bank list dated April 30, 2026 matches Paxos Trust Company, National Association under charter 25379, establishing prudential supervision of the issuer. Economic-posture fields reviewed 2026-08-15: issuer and Binance-controlled authorities can mint, change limits, or replace mint logic immediately; existing monthly reconciliation and OCC prudential supervision remain supported.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

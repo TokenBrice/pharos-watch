@@ -158,7 +158,8 @@
         "evidence": "At Sonic block 77315268, token owner(), masterMinter(), and minter owner() all returned this Safe. The Sonic Safe API separately returned the same five owners, threshold 3, zero guard, no enabled modules, and the same fallback handler as Ethereum. No timelock was established."
       }
     ],
-    "reconciliation": "unknown",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
@@ -175,9 +176,9 @@
           "url": "https://docs.flyingtulip.com/contract-addresses/"
         }
       ],
-      "evidence": "At Ethereum block 25720088 and Sonic block 77315268, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and minter owner() returned the same Safe. Both minter proxies resolved to EIP-1967 implementation 0x986841b77f3aa934d315d48121842e3c622e5440 with a zero admin slot. The same 3-of-5 Safe therefore controls the entire mint and upgrade surface on both chains with no reviewed timelock or independent cap. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer.",
-      "reviewer": "Codex ftUSD correction review",
-      "reviewedAt": "2026-08-09"
+      "evidence": "At Ethereum block 25720088 and Sonic block 77315268, token owner() and masterMinter() returned 0x1118e1c0, token minter() returned 0x56c5892b, and minter owner() returned the same Safe. Both minter proxies resolved to EIP-1967 implementation 0x986841b77f3aa934d315d48121842e3c622e5440 with a zero admin slot. The same 3-of-5 Safe therefore controls the entire mint and upgrade surface on both chains with no reviewed timelock or independent cap. Ethereum's enabled Allowance Module had one signer-delegate and a 2 ETH weekly allowance but zero reviewed ftUSD/stablecoin allowances and no established minter call path; Sonic had no enabled module. Backing remains issuer-reported without independent attestation, reconciliation is unknown, and no financial regulator was identified for the issuer. Economic-posture fields reviewed 2026-08-15: the Safe can replace or expand minting without an independent delay, while the real-time dashboard covers the complete Ethereum and Sonic collateral set and both reviewed mint deployments.",
+      "reviewer": "Codex ftUSD correction review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

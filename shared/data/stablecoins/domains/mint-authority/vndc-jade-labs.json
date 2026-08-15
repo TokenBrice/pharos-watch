@@ -41,10 +41,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "BSC block 103627465 and Polygon block 88323540: owner() on both deployments returns the same EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354; eth_getCode returned 0x on both chains confirming EOA. Polygon blocker resolved — same address as BSC. All mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "BSC block 103627465 and Polygon block 88323540: owner() on both deployments returns the same EOA 0x557D55E71204CE7DfDc5C839446Dd34F1b299354; eth_getCode returned 0x on both chains confirming EOA. Polygon blocker resolved — same address as BSC. All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: the shared issuer EOA controls supply operations without a firm cap, while no whole-supply reconciliation or independent supervision is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "BscScan VNDC token",

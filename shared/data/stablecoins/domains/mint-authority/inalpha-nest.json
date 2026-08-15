@@ -90,12 +90,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The authorized teller at 0x6104fe10...0cb6 has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, and the same Safe owner. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nALPHA supply to its multi-asset portfolio was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
-      "reviewer": "Codex CTRL root batch 06; Kimi P2 control cohort dc-2 (lead usdc-circle)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Ethereum and Plume reads on 2026-07-14 confirmed the inALPHA vault at 0x64ab176c...b855 has direct runtime code, zero EIP-1967 implementation/admin slots, no UUPS interface, Safe owner 0xa08a0dc4...a982, and RolesAuthority 0x5e500500...82ef on both chains. The authorized teller at 0x6104fe10...0cb6 has identical runtime bytecode on both chains, zero EIP-1967 slots, no UUPS interface, and the same Safe owner. The mint-critical vault and teller implementations are therefore immutable on both tracked deployments; the Safe can still change authorization through the separately reviewed RolesAuthority control path. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nALPHA supply to its multi-asset portfolio was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe can change authorization without an independent timelock, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision.",
+      "reviewer": "Codex CTRL root batch 06; Kimi P2 control cohort dc-2 (lead usdc-circle); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

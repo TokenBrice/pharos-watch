@@ -94,10 +94,13 @@
         "evidence": "At finalized Solana slot 432742753, Hubble ProgramData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ named this SPL Governance account as upgrade authority. The account governs HubbLeXBb7qyLHt3x7gvYaRrxQmmgExb7fCJgDqFuB6T in the Hubble DAO realm. Its council configuration had a 40% yes-vote threshold, minimum one council token to create a proposal, 259200-second base voting time, early vote tipping, and zero instruction hold-up. Seven active council token-owner records each held one deposited vote, so three affirmative votes can meet the threshold and no guaranteed post-approval execution delay applies."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At finalized Solana slot 432742753, USDH mint authority AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq remained the Hubble program PDA and the mint had no freeze authority. Contrary to the prior immutability claim, ProgramData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ encoded live upgrade authority vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v. That address decoded as the Hubble DAO SPL Governance account for the program. Seven active council records held one vote each; the 40% threshold requires three votes, while early tipping and zero instruction hold-up provide no guaranteed execution delay after approval.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At finalized Solana slot 432742753, USDH mint authority AkzcmXAWWmGnVmyEfW5eeaHdUUrE9yxGaS2GmtV5UEMq remained the Hubble program PDA and the mint had no freeze authority. Contrary to the prior immutability claim, ProgramData DDkP2VqXhiAnWVJWBR29tfCkztttQaFccv4iYTS6sfQJ encoded live upgrade authority vX3gFkePCptwTmJAcMypCq9trzrtarVf9PmT3AEke1v. That address decoded as the Hubble DAO SPL Governance account for the program. Seven active council records held one vote each; the 40% threshold requires three votes, while early tipping and zero instruction hold-up provide no guaranteed execution delay after approval. Economic-posture fields reviewed 2026-08-15: three of seven council votes can replace collateral-gated mint logic with zero execution hold-up, while USDH has no off-chain reserve claim or prudential supervisor.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Hubble docs",

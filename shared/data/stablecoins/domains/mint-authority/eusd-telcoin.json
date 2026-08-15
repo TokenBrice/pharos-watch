@@ -128,12 +128,13 @@
         }
       ]
     },
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295081. eUSD on Ethereum/Base is a BeaconProxy (Stablecoin contract impl); beacon 0xe7a6d045 owned by Safe 1.4.1 (7/2, no modules/guard). MINTER_ROLE + DEFAULT_ADMIN held by Safe 1.4.1 (6/3, no modules/guard); previous EOA minter revoked block 25197170. Solana mintAuthority DyJseFw… is a System Program account (non-multisig EOA-equivalent). EVM controls fully confirmed on-chain; Solana remains issuer-backend with non-multisig authority. Telcoin Digital Asset Bank holds Nebraska Digital Asset Depository Institution Charter No. 001 granted by the Nebraska Department of Banking and Finance on 2025-11-12 (a granted state bank charter, not a pending application), so the issuer is prudentially supervised. But no dated independent third-party reserve attestation for eUSD was found: Telcoin states monthly reports will be published, and the eUSD bank page names no auditor and notes deposits are not FDIC-insured, so reconciliation is unknown, which caps eUSD at critical despite the charter.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "evidence": "Verified at Ethereum block 25295081. eUSD on Ethereum/Base is a BeaconProxy (Stablecoin contract impl); beacon 0xe7a6d045 owned by Safe 1.4.1 (7/2, no modules/guard). MINTER_ROLE + DEFAULT_ADMIN held by Safe 1.4.1 (6/3, no modules/guard); previous EOA minter revoked block 25197170. Solana mintAuthority DyJseFw… is a System Program account (non-multisig EOA-equivalent). EVM controls fully confirmed on-chain; Solana remains issuer-backend with non-multisig authority. Telcoin Digital Asset Bank holds Nebraska Digital Asset Depository Institution Charter No. 001 granted by the Nebraska Department of Banking and Finance on 2025-11-12 (a granted state bank charter, not a pending application), so the issuer is prudentially supervised. But no dated independent third-party reserve attestation for eUSD was found: Telcoin states monthly reports will be published, and the eUSD bank page names no auditor and notes deposits are not FDIC-insured, so reconciliation is unknown, which caps eUSD at critical despite the charter. Economic-posture fields reviewed 2026-08-15: issuer Safes and the Solana authority can mint without a firm cap, Nebraska DBF supervises the chartered bank, and promised monthly attestations have not produced a qualifying whole-supply report.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Telcoin Digital Asset Bank",

@@ -93,12 +93,13 @@
         "evidence": "At Ethereum block 25295023, getOwners() returned 6 addresses; getThreshold() = 3. modules() returned sentinel only (no modules). guard slot (0x4a204f...) = 0x00. masterCopy slot = 0xfb1bffc9d739b8d520daf37df666da4c687191ea (Safe v1.3.0 L1 mainnet). Shared with nBASIS vault."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Both nOPAL Teller (0xA5F8e5...) and Manager (0xea452B...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. This is the same Safe that owns the nBASIS vault contracts. No modules, no guard. All reads on-chain via publicnode ETH RPC. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Both nOPAL Teller (0xA5F8e5...) and Manager (0xea452B...) return owner() = 0xa08a0dc... at Ethereum block 25295023. That address is a 3-of-6 Gnosis Safe v1.3.0 confirmed via getOwners(), getThreshold(), modules(), guard storage slot, and masterCopy slot. This is the same Safe that owns the nBASIS vault contracts. No modules, no guard. All reads on-chain via publicnode ETH RPC. Evidence challenge completed 2026-07-15: Nest publishes issuer-operated hourly NAV and live vault composition, with the latest public vault-data snapshot dated 2026-07-08, but no recurring independent reconciliation of nOPAL supply to portfolio assets was found. Nest DAO LLC is a Marshall Islands DAO LLC, not a prudentially supervised fund issuer. Economic-posture fields reviewed 2026-08-15: the owner Safe controls issuance authorization without an independent cap, and issuer-operated NAV data is not independent whole-supply reconciliation or prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

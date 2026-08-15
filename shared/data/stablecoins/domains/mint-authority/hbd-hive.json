@@ -53,10 +53,13 @@
         "observedBlock": 108364554
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Hive API state at irreversible block 108364554 and the pinned consensus implementation establish the live debt controls. Total HBD was 32,394,046.860, but consensus subtracts 23,179,590.895 treasury HBD before calculating debt; counted HBD was therefore 9,214,455.965. With 568,196,982.317 HIVE and a 0.048 HBD/HIVE median feed, debt was 25.25345%. New printing was stopped, but the feed exceeded the 0.0378396893 hard-cap minimum and the current nominal HBD-to-HIVE conversion payout remained 1.0. There is no token proxy or contract administrator: HBD mint logic is base-layer consensus code changed through Hive's witness-approved hard-fork path.",
-      "reviewer": "GPT SOL-NR-A wave6",
-      "reviewedAt": "2026-07-22",
+      "evidence": "Hive API state at irreversible block 108364554 and the pinned consensus implementation establish the live debt controls. Total HBD was 32,394,046.860, but consensus subtracts 23,179,590.895 treasury HBD before calculating debt; counted HBD was therefore 9,214,455.965. With 568,196,982.317 HIVE and a 0.048 HBD/HIVE median feed, debt was 25.25345%. New printing was stopped, but the feed exceeded the 0.0378396893 hard-cap minimum and the current nominal HBD-to-HIVE conversion payout remained 1.0. There is no token proxy or contract administrator: HBD mint logic is base-layer consensus code changed through Hive's witness-approved hard-fork path. Economic-posture fields reviewed 2026-08-15: consensus code enforces the 20% print stop and 30% haircut band and changes require a witness-approved hard fork, with no off-chain reserve claim or prudential supervisor.",
+      "reviewer": "GPT SOL-NR-A wave6; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Hive Dollar (HBD) overview",

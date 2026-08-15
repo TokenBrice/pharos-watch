@@ -106,6 +106,9 @@
         "evidence": "The reviewed bridgeRouteRisk on-chain check (2026-07-20) established that GBPm on Monad is a transparent proxy (implementation 0x6a8ff60a89f3f359fa16f45076d6dd1712b5e62e) fronted by ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, whose owner() is the same 4-of-6 Mento Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 already resolved for Celo — an issuer-operated deployment, not a third-party bridge admin."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -117,9 +120,9 @@
           "url": "https://api.safe.global/tx-service/celo/api/v1/safes/0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458/"
         }
       ],
-      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved. Follow-up 2026-07-21: the upgrade posture is formalized as a transparent-proxy `upgradeability` record — Celo's EIP-1967 admin slot is the Mento Safe directly, while Monad fronts the same token behind ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, itself owned by the identical Safe (per the reviewed bridgeRouteRisk on-chain check). Both deployments' code-upgrade authority resolve to the one 4-of-6 Mento Safe.",
-      "reviewer": "Claude Phase 0c continuation; Claude V9 evidence-gap curation",
-      "reviewedAt": "2026-07-21"
+      "evidence": "At Celo block 69287341: owner() = Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 (confirmed); EIP-1967 proxy admin slot = same Safe; Safe API: threshold 4, 6 owners (corrected from stale 7), no modules, zero guard. Mint authorization: deprecated_broker_storage_slot__() = 0x777A... (Mento Broker); Celo Registry keccak('Broker') lookup = 0x777A... confirming live Broker is the authorized minter. All mint-capable surfaces resolved. Follow-up 2026-07-21: the upgrade posture is formalized as a transparent-proxy `upgradeability` record — Celo's EIP-1967 admin slot is the Mento Safe directly, while Monad fronts the same token behind ProxyAdmin 0x7f017a0a94e4fe5afe688064afd76b25d4dac8ea, itself owned by the identical Safe (per the reviewed bridgeRouteRisk on-chain check). Both deployments' code-upgrade authority resolve to the one 4-of-6 Mento Safe. Economic-posture fields reviewed 2026-08-15: the common no-timelock Safe can replace mint logic on both deployments, and the repo does not establish that the Celo CDP inventory reconciles the Monad supply path.",
+      "reviewer": "Claude Phase 0c continuation; Claude V9 evidence-gap curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

@@ -152,10 +152,13 @@
         "evidence": "At Ethereum block 25579969, CurrencyOS 0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f is a UUPS proxy (EIP-1967 admin slot = 0x0, implementation = 0x811cE73639A05f436a56ea71480cd921a4039542) whose public governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec — the same 2-of-4 Safe already resolved as the Yamato pledge contract's governance. The pinned UUPSBase source confirms _authorizeUpgrade and the onlyGovernance modifier gate both upgrades and CurrencyOS's addYamato/setDeps functions, with a 2-phase setGovernance/acceptGovernance transfer and a revokeGovernance option available to that Safe."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295201: Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) is an ERC1967Proxy (UUPS) pointing to YamatoV4 impl (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838); proxy admin EIP-1967 slot = 0x0 (UUPS). governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy, 4 owners, threshold 2, no modules). CJPY token (0x1cfa5641c01406ab8ac350ded7d735ec41298372): EIP-1967 proxy admin slot = 0x0, owner() reverts — immutable non-upgradeable token. Follow-up 2026-07-20: the Yamato pledge contract 0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257 exposes MCR()=130 and feePool() but no aggregate supply cap or debt ceiling getter; CJPY minting is bounded only by per-vault ETH collateral at the MCR, so the economic cap semantics are unbounded. Follow-up 2026-07-21: the CJPY token's own private governance/CurrencyOS route (previously unbound to the Safe) is now resolved by direct storage read — governance slot 7 is all-zero (permanently renounced via revokeGovernance(), no replacement setter exists), so the token's currencyOS pointer (0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f) is fixed. CurrencyOS is a separate UUPS proxy whose public governance() resolves to the same 2-of-4 Yamato Safe (0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec), which is also the sole authority for addYamato/setDeps and CurrencyOS upgrades.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude V9 evidence-gap curation",
-      "reviewedAt": "2026-07-21",
+      "evidence": "At Ethereum block 25295201: Yamato proxy (0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257) is an ERC1967Proxy (UUPS) pointing to YamatoV4 impl (0x0bfa59f9fbe9565c240cd64311c86e90e59a4838); proxy admin EIP-1967 slot = 0x0 (UUPS). governance() returns 0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec (GnosisSafeProxy, 4 owners, threshold 2, no modules). CJPY token (0x1cfa5641c01406ab8ac350ded7d735ec41298372): EIP-1967 proxy admin slot = 0x0, owner() reverts — immutable non-upgradeable token. Follow-up 2026-07-20: the Yamato pledge contract 0x02Fe72b2E9fF717EbF3049333B184E9Cd984f257 exposes MCR()=130 and feePool() but no aggregate supply cap or debt ceiling getter; CJPY minting is bounded only by per-vault ETH collateral at the MCR, so the economic cap semantics are unbounded. Follow-up 2026-07-21: the CJPY token's own private governance/CurrencyOS route (previously unbound to the Safe) is now resolved by direct storage read — governance slot 7 is all-zero (permanently renounced via revokeGovernance(), no replacement setter exists), so the token's currencyOS pointer (0xe69C6Bf0A6eA2F12aBE054988A3e2091a8a3784f) is fixed. CurrencyOS is a separate UUPS proxy whose public governance() resolves to the same 2-of-4 Yamato Safe (0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec), which is also the sole authority for addYamato/setDeps and CurrencyOS upgrades. Economic-posture fields reviewed 2026-08-15: the governance Safe can add mint sources or upgrade mint logic without an independent timelock; current issuance is fully on-chain ETH-collateralized with no off-chain reserve claim, and no prudential supervisor is named.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Claude V9 evidence-gap curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Yamato docs",
@@ -170,7 +173,6 @@
           "url": "https://etherscan.io/address/0x0b0a167a0b6800207c89544d2ebdc98dcdd33bec"
         }
       ]
-    },
-    "economicCapSemantics": "unbounded"
+    }
   }
 }

@@ -252,12 +252,13 @@
         "evidence": "The Base and Celo proxies each use chain-local VNXProxyAdmin 0xa5d680c17abcd0df3b9b4d5a7c7d1cae0051dcb4, owned by 0xd630...051f. Role 1 can upgrade, and role 0 administers role 1; role-0 bearers are 0xd630...051f and 0xacc5...311a on both chains. Each listed bearer is an EOA and one bearer can reach an upgrade path with no delay. Solana Tokenkeg ProgramData 3gvYRKWyXRR9xKWe1ZjPhLY5ZJRN7KDB4rFZFGoJfFk2 has null upgrade authority."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Exact-cutoff state was reconstructed at 2026-07-13T20:34:40Z from Base block 48592766, Celo block 72074122, and finalized Solana slot 432714278. Base role changes at blocks 48323261, 48323271, 48323282, 48323293, and allowance update 48323563 occurred before the cutoff and explain why the previous manager/admin inventory was stale. Storage, role membership, token allowances, EIP-1967 implementation/admin/beacon slots, account ownership, and post-slot Solana mint transactions were checked. All three independent mint paths and all immediate authorization or upgrade bypasses are represented above; EVM and Solana issuer keys are single-account controls on-chain, while off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): No credible recurring current reconciliation was established for VGBP: AREVA General Auditing and Trust Company Limited issued a token-specific report only for 2024-12-31, published 2025-02-05, and VNX's current transparency page has no 2025 VGBP report. Liechtenstein FMA's exact VNX Commodities AG match is only a TT Service Provider registration, not prudential EMT-issuer supervision.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Exact-cutoff state was reconstructed at 2026-07-13T20:34:40Z from Base block 48592766, Celo block 72074122, and finalized Solana slot 432714278. Base role changes at blocks 48323261, 48323271, 48323282, 48323293, and allowance update 48323563 occurred before the cutoff and explain why the previous manager/admin inventory was stale. Storage, role membership, token allowances, EIP-1967 implementation/admin/beacon slots, account ownership, and post-slot Solana mint transactions were checked. All three independent mint paths and all immediate authorization or upgrade bypasses are represented above; EVM and Solana issuer keys are single-account controls on-chain, while off-chain MPC/HSM custody remains unknown. Mint-tier review (2026-07-15): No credible recurring current reconciliation was established for VGBP: AREVA General Auditing and Trust Company Limited issued a token-specific report only for 2024-12-31, published 2025-02-05, and VNX's current transparency page has no 2025 VGBP report. Liechtenstein FMA's exact VNX Commodities AG match is only a TT Service Provider registration, not prudential EMT-issuer supervision. Economic-posture fields reviewed 2026-08-15: immediate issuer-controlled mint and upgrade paths are unbounded; reconciliation remains unknown and supervision remains none.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Base VGBP proxy",

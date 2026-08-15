@@ -288,11 +288,12 @@
       }
     ],
     "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
     "supervision": "prudential",
     "review": {
-      "evidence": "Pinned reads cover every current EUROP deployment. Ethereum, Polygon, Avalanche, and Plasma use UUPS token proxies with chain-local owner/admin and MASTER_MINTER_ROLE Safes; XRPL uses Schuman's issuer account. At finalized Solana slot 434569236, the Token-2022 mint authority is an initialized 1-of-3 multisig. All reviewed issuance surfaces are economically unbounded issuer controls. The ESMA interim MiCA register lists SALVUS (trading as Schuman Financial) with ACPR as competent authority, and Schuman identifies the issuer as an ACPR-licensed electronic money institution.",
-      "reviewer": "GPT SOL-BIND wave6",
-      "reviewedAt": "2026-07-22",
+      "evidence": "Pinned reads cover every current EUROP deployment. Ethereum, Polygon, Avalanche, and Plasma use UUPS token proxies with chain-local owner/admin and MASTER_MINTER_ROLE Safes; XRPL uses Schuman's issuer account. At finalized Solana slot 434569236, the Token-2022 mint authority is an initialized 1-of-3 multisig. All reviewed issuance surfaces are economically unbounded issuer controls. The ESMA interim MiCA register lists SALVUS (trading as Schuman Financial) with ACPR as competent authority, and Schuman identifies the issuer as an ACPR-licensed electronic money institution. Economic-posture fields reviewed 2026-08-15: issuer-controlled uncapped mint paths are unbounded, ACPR supervises SALVUS, and the quarterly KPMG report excludes the tracked XRPL and Solana supply paths.",
+      "reviewer": "GPT SOL-BIND wave6; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "unresolvedQuestions": [],
       "sources": [

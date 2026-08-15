@@ -118,10 +118,12 @@
       }
     ],
     "economicCapSemantics": "bounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25527046, NUSD LPToken 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4 and SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 were 45-byte EIP-1167 runtimes embedding fixed implementations 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3 and 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. All EIP-1967 implementation, admin, and beacon slots were zero on both clones and implementations. Pool ownership remained with the 2-of-3 Safe; its enabled Allowance Module can transfer Safe-held allowances but cannot change either clone target. NUSD is the fixed pool's LP receipt: new shares require liquidity deposited into the immutable SwapFlashLoan clone, and neither the pool owner nor its Safe can replace the LPToken or pool implementation. The direct-mint encoding is therefore economically bounded by deposited pool assets.",
-      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25527046, NUSD LPToken 0x1b84765de8b7566e4ceaf4d0fd3c5af52d3dde4 and SwapFlashLoan pool 0x1116898dda4015ed8ddefb84b6e8bc24528af2d8 were 45-byte EIP-1167 runtimes embedding fixed implementations 0x6c8c6e68604e78b549c96907bfe9ebdaac04e3b3 and 0x5a5fff6f753d7c11a56a52fe47a177a87e431655. All EIP-1967 implementation, admin, and beacon slots were zero on both clones and implementations. Pool ownership remained with the 2-of-3 Safe; its enabled Allowance Module can transfer Safe-held allowances but cannot change either clone target. NUSD is the fixed pool's LP receipt: new shares require liquidity deposited into the immutable SwapFlashLoan clone, and neither the pool owner nor its Safe can replace the LPToken or pool implementation. The direct-mint encoding is therefore economically bounded by deposited pool assets. Economic-posture fields reviewed 2026-08-15: the immutable Ethereum pool remains bounded, but the reviewed reserve reconciliation does not establish coverage for all satellite deployments and no prudential supervisor applies.",
+      "reviewer": "Codex Safety Score V9 registry pass; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "NUSD LPToken (Blockscout)",

@@ -105,10 +105,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Berachain block 23484618, HONEY and HoneyFactory were UUPS proxies with implementations 0x96b1a552... and 0x6331f0a4..., zero proxy-admin and beacon slots, and implementations returning the standard proxiable UUID. Verified HONEY source permits mint/burn only from factory() 0xa4afef88... and authorizes upgrades through DEFAULT_ADMIN_ROLE. The same unchanged 3/5 Safe held that role on both proxies with no enabled modules or guard.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At Berachain block 23484618, HONEY and HoneyFactory were UUPS proxies with implementations 0x96b1a552... and 0x6331f0a4..., zero proxy-admin and beacon slots, and implementations returning the standard proxiable UUID. Verified HONEY source permits mint/burn only from factory() 0xa4afef88... and authorizes upgrades through DEFAULT_ADMIN_ROLE. The same unchanged 3/5 Safe held that role on both proxies with no enabled modules or guard. Economic-posture fields reviewed 2026-08-15: the undelayed admin Safe can replace mint logic, and the single-chain factory vault feed continuously covers the collateral-gated mint path without named prudential supervision.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Berachain HONEY docs",

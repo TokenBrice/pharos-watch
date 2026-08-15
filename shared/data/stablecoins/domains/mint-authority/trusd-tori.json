@@ -193,7 +193,7 @@
         "evidence": "At Ethereum block 25712112, this verified ToriTimelock held token TIMELOCK_ADMIN_ROLE and getMinDelay() returned 86400 seconds. Verified TrUSD source gates both setMinter and UUPS _authorizeUpgrade through TIMELOCK_ADMIN_ROLE, so the timelock can replace the current ToriMinting contract or the entire mint implementation after the delay. The Tori administration Safe held the timelock's proposer and executor roles."
       }
     ],
-    "economicCapSemantics": "raiseable",
+    "economicCapSemantics": "unbounded",
     "reconciliation": "continuous",
     "supervision": "attestation-only",
     "review": {
@@ -227,9 +227,9 @@
           "url": "https://eth.blockscout.com/block/25712112"
         }
       ],
-      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision.",
-      "reviewer": "OpenAI Codex C03 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712112, the trUSD UUPS proxy used implementation 0xb1d133fe29255eb4ac9b05d647d49cd7f05ff631 and minter 0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e. Complete role-event replay plus direct hasRole reads found three live ToriMinting operator EOAs. Verified source bounds their calls by signed orders, participant and custody allowlists, active USDC/USDT collateral, actual collateral transfer, and 5,000,000-trUSD global and per-asset per-block caps. The 3-of-5 Safe can grant operators and raise the contract caps; the one-day timelock can replace either the token minter or implementation, so economic cap semantics are raiseable. Accountable publishes a continuously refreshed proof-of-solvency view but is not a prudential supervisor, supporting continuous reconciliation and attestation-only supervision. Economic-posture fields reviewed 2026-08-15: the self-controlled Safe can raise live mint caps without the timelock, while Accountable continuously reconciles whole supply and provides independent attestation without prudential supervision.",
+      "reviewer": "OpenAI Codex C03 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

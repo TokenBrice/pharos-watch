@@ -79,10 +79,13 @@
         }
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced — Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Berachain block 22088792: NECT token has no Ownable/AccessControl in bytecode; owner() reverts; mint() reverts with 'Debt: Caller not BO/DM' (whitelisted contract minting). Registry at 0x27393e8a6f8f2e32b870903279999c820e984dc7 owned by 0xce7d3fd5 (4/7 Gnosis Safe L2, confirmed via RPC getOwners/getThreshold), timelock delay 3 days. Control is NOT renounced — Safe retains authority to add branch minters via Registry. Reclassification to immutable-user-collateralized is NOT appropriate. Berachain RPC reads at block 22089745 resolved the Registry owner Safe: getModulesPaginated returned no modules and the guard slot is zero, clearing the final modules/guards blocker. Economic-posture fields reviewed 2026-08-15: registered collateral branches mint NECT and the 4-of-7 Safe can add branches or raise capacity only through the enforced three-day registry timelock; no supervisor or attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Beraborrow docs",

@@ -61,6 +61,9 @@
         "evidence": "At Ethereum block 25539955, BOLD and the WETH, wstETH, and rETH branch registries in the pinned manifest had owner() = 0x0000000000000000000000000000000000000000; the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified source restricts mint to the registered BorrowerOperations or ActivePool addresses."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -84,9 +87,9 @@
           "url": "https://ethereum-rpc.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25539955, BOLD and all three mainnet branch registries had zero owners, while the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified contract and pinned Liquity source restrict minting to registered BorrowerOperations or ActivePool contracts, and setCollateralRegistry permanently renounces the token owner. No privileged durable issuer mint path is present.",
-      "reviewer": "TERRA-III Safety Score V9 control review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25539955, BOLD and all three mainnet branch registries had zero owners, while the token, registries, BorrowerOperations, and ActivePools had direct code with zero EIP-1967 implementation, admin, and beacon slots. The verified contract and pinned Liquity source restrict minting to registered BorrowerOperations or ActivePool contracts, and setCollateralRegistry permanently renounces the token owner. No privileged durable issuer mint path is present. Economic-posture fields reviewed 2026-08-15: immutable registered BorrowerOperations and ActivePool contracts enforce collateral-gated issuance, ownership is renounced, and no off-chain reserve claim, regulator, or attestor applies.",
+      "reviewer": "TERRA-III Safety Score V9 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

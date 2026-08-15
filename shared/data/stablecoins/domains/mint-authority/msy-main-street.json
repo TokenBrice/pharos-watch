@@ -86,6 +86,9 @@
         "evidence": "Parent MSUSD metadata already records a reviewed 2026-05-24 mintAuthority profile; msY inherits durable base issuance from that parent."
       }
     ],
+    "economicCapSemantics": "unknown",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -101,9 +104,9 @@
           "url": "https://safe-transaction-mainnet.safe.global/api/v1/safes/0x0eAe4ACb10f3e5696cF6B0de33693eF8EC571858/"
         }
       ],
-      "evidence": "Local variant metadata, parent MSUSD mintAuthority, and Ethereum RPC/source reads show msY as a wrapper over MSUSD rather than a separate base stablecoin mint path. At block 25295174: Safe API confirmed guard=0x0 (no guard), enabledModules=[], threshold=3 of 4 owners. The owner Safe has parameter-only influence (deposit toggles and cooldown settings); share issuance follows only MSUSD deposits into the vault.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "Local variant metadata, parent MSUSD mintAuthority, and Ethereum RPC/source reads show msY as a wrapper over MSUSD rather than a separate base stablecoin mint path. At block 25295174: Safe API confirmed guard=0x0 (no guard), enabledModules=[], threshold=3 of 4 owners. The owner Safe has parameter-only influence (deposit toggles and cooldown settings); share issuance follows only MSUSD deposits into the vault. Economic-posture fields reviewed 2026-08-15: local msY shares are minted only against deposited MSUSD, but repo evidence does not resolve upgradeability or every possible mint bypass; reconciliation is not applicable and no local attestor or prudential supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

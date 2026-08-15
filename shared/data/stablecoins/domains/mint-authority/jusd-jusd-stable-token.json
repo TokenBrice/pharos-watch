@@ -23,10 +23,13 @@
         "evidence": "At BSC block 103800563: JUSD BSC proxy at 0xbf3950db is a TransparentUpgradeableProxy with impl 0x877d233c (BridgeMintableToken — confirmed via revert message 'BridgeMintableToken: Function can be called only by a classified authority.'). ProxyAdmin = 0xe317bf1c; ProxyAdmin.owner() = 0xb6b4c7ac240b1f176c5589d064733066a83884a1 (contract named 'ChainportCongress'). The Chainport bridge authority holding the mint role on BSC is not enumerable without the Chainport contract ABI."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103800563 and Polygon block 88341894: JUSD Polygon owner confirmed as EOA 0x7be44b5d (bytecode=0x). JUSD BSC is a BridgeMintableToken with minting gated by 'classified authority' — the ProxyAdmin is controlled by ChainportCongress (contract 0xb6b4c7ac). JUSD's architecture links it to the Chainport bridge protocol; the specific bridge minter role address is not publicly enumerable on-chain without the Chainport contract interface. Reserve backing remains unverified.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At BSC block 103800563 and Polygon block 88341894: JUSD Polygon owner confirmed as EOA 0x7be44b5d (bytecode=0x). JUSD BSC is a BridgeMintableToken with minting gated by 'classified authority' — the ProxyAdmin is controlled by ChainportCongress (contract 0xb6b4c7ac). JUSD's architecture links it to the Chainport bridge protocol; the specific bridge minter role address is not publicly enumerable on-chain without the Chainport contract interface. Reserve backing remains unverified. Economic-posture fields reviewed 2026-08-15: the Polygon owner and BSC authority path are not independently capped, current whole-supply reserves are undisclosed, and no prudential supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "JUSD BSC proxy on BscScan",

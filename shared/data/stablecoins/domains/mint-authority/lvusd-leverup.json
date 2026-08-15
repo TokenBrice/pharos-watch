@@ -75,10 +75,13 @@
         "evidence": "Monad block 80607552: lvUSD owner() = 0x135951... (EIP-1967 proxy), impl = 0x1d4bcd..., whose owner chain leads to 0xf9bd99... — a GnosisSafe proxy (masterCopy slot 0 = 0x29fcb43b46531bca003ddc8fcb67ffe91900c762, Solidity 0.7.6 singleton). getOwners() returned 5 addresses; getThreshold = 3; getModulesPaginated returned 0 modules."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Monad block 80607552: lvUSD mint reverts with 'only issuer'; issuer() = owner() = 0x135951... (proxy chain terminating at a 3/5 GnosisSafe 0xf9bd99...). Safe has 3-of-5 threshold, 5 owners, 0 modules. Token not upgradeable (EIP-1967 admin slot = 0). Confirmed: concentrated EOA/Safe-controlled issuer with no modules or bypass.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Monad block 80607552: lvUSD mint reverts with 'only issuer'; issuer() = owner() = 0x135951... (proxy chain terminating at a 3/5 GnosisSafe 0xf9bd99...). Safe has 3-of-5 threshold, 5 owners, 0 modules. Token not upgradeable (EIP-1967 admin slot = 0). Confirmed: concentrated EOA/Safe-controlled issuer with no modules or bypass. Economic-posture fields reviewed 2026-08-15: the undelayed protocol Safe can replace or upgrade the issuer path, while issuance is on-chain USDC-collateral-gated and no supervisor or attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "LeverUp lvUSD docs",

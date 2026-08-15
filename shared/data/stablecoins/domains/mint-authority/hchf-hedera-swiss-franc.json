@@ -66,10 +66,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At the fixed cutoff, historical Mirror Node state and contract calls resolved the full HCHF mint path. The token's sole supply key is fixed wrapper contract 0.0.6070122, not an external signer; exact source restricts wrapper mint to fixed BorrowerOperations 0.0.6070094. All five checked mint, collateral, liquidation, and oracle contracts had renounced owners and no external update history. A real mint trace at block 97172682 follows user Trove adjustment through BorrowerOperations into the HTS mint precompile.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At the fixed cutoff, historical Mirror Node state and contract calls resolved the full HCHF mint path. The token's sole supply key is fixed wrapper contract 0.0.6070122, not an external signer; exact source restricts wrapper mint to fixed BorrowerOperations 0.0.6070094. All five checked mint, collateral, liquidation, and oracle contracts had renounced owners and no external update history. A real mint trace at block 97172682 follows user Trove adjustment through BorrowerOperations into the HTS mint precompile. Economic-posture fields reviewed 2026-08-15: immutable collateral-gated BorrowerOperations is the sole mint path, so reconciliation is not applicable and no off-chain supervisor applies.",
+      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Hedera Mirror Node HCHF token state",

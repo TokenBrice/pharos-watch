@@ -165,7 +165,9 @@
         "evidence": "At Ethereum block 25294994: GBPe owner() returned 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f. Safe API confirmed threshold 3, 6 owners (same as EURE Safe), no modules, zero guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (v1.3.0). EIP-1967 proxy admin slot = zero."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -189,9 +191,9 @@
           "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
         }
       ],
-      "evidence": "Current RPC reads cover all six tracked GBPe deployments. Ethereum is direct code; Gnosis, Linea, Arbitrum, Base, and Polygon are UUPS proxies. Their three owner Safe addresses all require 3 of the same 6 signers, and no deployment has a separate EIP-1967 ProxyAdmin. The licensed issuer-backend path remains corroborated by Monerium docs. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated GBPe reserve-to-liability report is public; Monerium's financial-information disclosures do not reconcile token supply. The Central Bank of Iceland register matches Monerium ehf as a supervised electronic-money institution and GBPe EMT issuer. The supervision field is intentionally omitted because the current adapter preserves periodic proof-of-reserves inference when reviewed reconciliation is unknown; authoring prudential would falsely graduate the mint tier.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Current RPC reads cover all six tracked GBPe deployments. Ethereum is direct code; Gnosis, Linea, Arbitrum, Base, and Polygon are UUPS proxies. Their three owner Safe addresses all require 3 of the same 6 signers, and no deployment has a separate EIP-1967 ProxyAdmin. The licensed issuer-backend path remains corroborated by Monerium docs. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated GBPe reserve-to-liability report is public; Monerium's financial-information disclosures do not reconcile token supply. The Central Bank of Iceland register matches Monerium ehf as a supervised electronic-money institution and GBPe EMT issuer. The supervision field is intentionally omitted because the current adapter preserves periodic proof-of-reserves inference when reviewed reconciliation is unknown; authoring prudential would falsely graduate the mint tier. Economic-posture fields reviewed 2026-08-15: Monerium controls direct minting and upgradeable deployments without a firm cap, the Central Bank of Iceland supervises the GBPe issuer, and entity-wide financial statements do not reconcile GBPe's whole supply.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

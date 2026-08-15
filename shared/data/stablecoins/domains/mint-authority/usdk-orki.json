@@ -18,10 +18,13 @@
         "evidence": "At Swellchain block 24247324: owner() via proxy reverts (no Ownable function); collateralRegistryAddress() returned 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912 (set, non-zero); mint(0x1111...,10) reverts 'BoldToken: Caller is not BO or AP'. EIP-1967 proxy admin slot zero; implementation at 0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e has no owner. AccessManager at 0x55db4a872d38eda312123e23f1c8135ee0e745ca governs non-mint access control only."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Swellchain block 24247324: owner() reverts (no Ownable in pure BoldToken); collateralRegistryAddress = 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912; mint() from non-branch address reverts 'BoldToken: Caller is not BO or AP'; EIP-1967 proxy admin slot = zero; implementation (0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e) is non-upgradeable. Branch minters are permanently fixed; no individual or admin can grant new mint rights.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Swellchain block 24247324: owner() reverts (no Ownable in pure BoldToken); collateralRegistryAddress = 0xce9f80a0dcd51fb3dd4f0d6bec3afdcaea10c912; mint() from non-branch address reverts 'BoldToken: Caller is not BO or AP'; EIP-1967 proxy admin slot = zero; implementation (0xfa2f2c2cbf98ac2a1b24f29f3fa720ac6da1932e) is non-upgradeable. Branch minters are permanently fixed; no individual or admin can grant new mint rights. Economic-posture fields reviewed 2026-08-15: immutable collateral-gated branch issuance is bounded, off-chain reconciliation is not applicable, and no supervisor or attestor applies.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Orki USDK token on Swellchain (Swell explorer)",

@@ -36,10 +36,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295054. UUPS proxy at 0x820802fa8a99901f52e39acd21177b0be6ee2974; impl 0x85c427aa5605c242ff693c1e45b8641a9cb8279d (EUROe contract, verified). MINTER_ROLE active holder: EOA 0x74424510 (hasRole confirmed, no revoke). DEFAULT_ADMIN_ROLE: EOA 0xd5731b8c (hasRole confirmed). No multisig migration ever occurred despite earlier plans; both key roles remain EOA-held. Token is in redemption-only wind-down; total supply 20510 EUROe as of block 25295054, no minting events in last 50k blocks.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Verified at Ethereum block 25295054. UUPS proxy at 0x820802fa8a99901f52e39acd21177b0be6ee2974; impl 0x85c427aa5605c242ff693c1e45b8641a9cb8279d (EUROe contract, verified). MINTER_ROLE active holder: EOA 0x74424510 (hasRole confirmed, no revoke). DEFAULT_ADMIN_ROLE: EOA 0xd5731b8c (hasRole confirmed). No multisig migration ever occurred despite earlier plans; both key roles remain EOA-held. Token is in redemption-only wind-down; total supply 20510 EUROe as of block 25295054, no minting events in last 50k blocks. Economic-posture fields reviewed 2026-08-15: EOA mint and UUPS-admin paths are unbounded, FIN-FSA EMI authorization is prudential supervision, and the redemption notice provides no recurring whole-supply reconciliation.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "EUROe Access & Admin Controls (developer portal)",

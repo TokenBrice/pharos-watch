@@ -150,10 +150,13 @@
         "evidence": "At Blast block 37610961, the USDB EIP-1967 admin slot and proxy admin() both returned 0x4200000000000000000000000000000000000018. L2 ProxyAdmin getProxyImplementation(USDB) returned 0x4ef0d788470e2feb6559b93075ec5be51dba737d and owner() returned 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937. The owner is a Gnosis Safe v1.3.0 with five owners, threshold 3, no enabled modules, and no guard; its masterCopy is 0x27b673b874cebefc9ba9f2b8b6005c6b86210da0."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25294780 (Ethereum) / Blast block 37610961: USDYieldManager owner = Blast operator Safe 0x4f72ee94b8 (5 owners, threshold 3, GnosisSafe v1.3.0, no modules). USDB on Blast is a transparent OP-stack proxy (implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d) with ProxyAdmin at predeploy 0x4200000000000000000000000000000000000018; that ProxyAdmin is owned by a separate 3-of-5 Gnosis Safe at 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937 with no enabled modules or guard. All bridge-admin and proxy-admin controls confirmed on-chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25294780 (Ethereum) / Blast block 37610961: USDYieldManager owner = Blast operator Safe 0x4f72ee94b8 (5 owners, threshold 3, GnosisSafe v1.3.0, no modules). USDB on Blast is a transparent OP-stack proxy (implementation 0x4ef0d788470e2feb6559b93075ec5be51dba737d) with ProxyAdmin at predeploy 0x4200000000000000000000000000000000000018; that ProxyAdmin is owned by a separate 3-of-5 Gnosis Safe at 0xb9ca260493a0a6f9cfc1c2931faca48ac4af0937 with no enabled modules or guard. All bridge-admin and proxy-admin controls confirmed on-chain.. Economic-posture fields reviewed 2026-08-15: the operator and proxy-owner Safes can replace mint logic without a timelock, while the live yield-manager path reconciles the sole DAI reserve against Blast supply and no prudential supervisor or independent attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Metalayer contracts",

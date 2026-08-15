@@ -64,10 +64,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Base block 47199109: cgUSD vault owner() = TimelockController 0xfECAB866; accounting oracle owner() = same; TimelockController minDelay = 10s; PROPOSER_ROLE = 2/11 Safe (0x188f3264, getOwners returns 11, getThreshold = 2); EXECUTOR_ROLE held by 4 contracts; DEFAULT_ADMIN_ROLE self-held; no modules on the Safe proposer or the timelock. All mint-capable controls confirmed from chain state.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Base block 47199109: cgUSD vault owner() = TimelockController 0xfECAB866; accounting oracle owner() = same; TimelockController minDelay = 10s; PROPOSER_ROLE = 2/11 Safe (0x188f3264, getOwners returns 11, getThreshold = 2); EXECUTOR_ROLE held by 4 contracts; DEFAULT_ADMIN_ROLE self-held; no modules on the Safe proposer or the timelock. All mint-capable controls confirmed from chain state. Economic-posture fields reviewed 2026-08-15: the 2/11 Safe controls mint and NAV authority through an effectively immediate 10-second timelock, while no independent whole-supply reconciliation or prudential authorization is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Cygnus cgUSD v1 docs",

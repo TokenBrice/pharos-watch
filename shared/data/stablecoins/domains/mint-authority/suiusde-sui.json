@@ -68,10 +68,13 @@
         "evidence": "At Sui checkpoint 285785957: suix_queryEvents for RoleAuthorized<AdminRole> returns a single event (tx 97LB9KNbTjNFwq2QXdA6HzSe4RjSXa63Y2WFP6fBaBfx) granting AdminRole to 0xe3dbc438…. Additional events confirm this address also holds EpochPeriodManagerRole, GlobalDisablerRole, CollateralManagerRole, CollateralDisablerRole, BenefactorManagerRole, BenefactorDisablerRole, PegManagerRole, OracleManagerRole, and DenylistManagerRole. suix_getOwnedObjects confirms UpgradeCap 0x764653924d7bc3b8… (policy=0 COMPATIBLE, version=2, current package 0x341079b4…) is also owned by this address; re-read at checkpoint 298482440. sui_getObject for the address returns notExists confirming it is an EOA (Sui address, not a smart contract)."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Sui checkpoint 285785957: TreasuryCap<SUI_USDE> (id 0xae5039…) is wrapped inside Treasury shared object 0xe6c3c84c… as a dynamic object field. AdminRole and all operational roles are held by EOA 0xe3dbc438…, which also owns the package UpgradeCap (policy=0). The deployer 0xcebe2945… initially held roles but they were rotated to 0xe3dbc438… before the current state. DenyCap is stored inside the Treasury (not externally owned). All mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Sui checkpoint 285785957: TreasuryCap<SUI_USDE> (id 0xae5039…) is wrapped inside Treasury shared object 0xe6c3c84c… as a dynamic object field. AdminRole and all operational roles are held by EOA 0xe3dbc438…, which also owns the package UpgradeCap (policy=0). The deployer 0xcebe2945… initially held roles but they were rotated to 0xe3dbc438… before the current state. DenyCap is stored inside the Treasury (not externally owned). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: one EOA controls minting and upgrades without an independent timelock, the live Ethena Whitelabel feed reconciles total backing across the sole Sui supply, and no prudential supervisor or independent attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Sui fullnode RPC",

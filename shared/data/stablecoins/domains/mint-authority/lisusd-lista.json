@@ -96,6 +96,9 @@
         "evidence": "At BSC block 103622030: EIP-1967 admin slot on LISUSD proxy = 0x1fa3e4718168077975ff4039304cc2e19ae58c4c. eth_getCode = CONTRACT (len=3764). owner() = 0x07D274a68393E8b8a2CCf19A2ce4Ba3518735253 (timelock). Can upgrade LISUSD implementation."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -103,9 +106,9 @@
           "url": "https://sourcify.dev/server/repository/contracts/full_match/56/0xF5bd9b192092517D60E90c9AF17b69b134c4d7f8/sources/contracts/LisUSD.sol"
         }
       ],
-      "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The wards ward set was resolved by direct wards() probes: the LisUSD source defines NO Rely/Deny events (the prior 'event scan' blocker is impossible by construction) and wards can only be changed by the hardcoded DEFAULT_ADMIN (the 24h timelock) via rely/deny. Confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter; impl Sourcify-verified, proxy admin = same timelock-owned ProxyAdmin), manager Safe 0x8d3881… = 2 (3/6, setSupplyCap only, guard present). All other Lista ecosystem contracts probed (Interaction, PSMs, VaultManager, VenusAdapter, EarnPool, vault joins, AuctionProxy) returned wards = 0. A 500K-block recent mint scan showed mints flowing only through the CDP Interaction → HayJoin path. Mint reverts 'LisUSD/not-authorized-minter' for non-wards; timelock getMinDelay() = 86400s (24h).",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At BSC block 103638487 (2026-06-11): LISUSD (0x0782b6d8...) is an EIP-1967 proxy; impl = 0xf5bd9b19… (Sourcify-verified LisUSD); proxy admin = 0x1fa3e471… (owned by 24h timelock). The wards ward set was resolved by direct wards() probes: the LisUSD source defines NO Rely/Deny events (the prior 'event scan' blocker is impossible by construction) and wards can only be changed by the hardcoded DEFAULT_ADMIN (the 24h timelock) via rely/deny. Confirmed wards: timelock 0x07D274… = 1 (minter), HayJoin 0x4c798f81… = 1 (minter, the CDP exit adapter; impl Sourcify-verified, proxy admin = same timelock-owned ProxyAdmin), manager Safe 0x8d3881… = 2 (3/6, setSupplyCap only, guard present). All other Lista ecosystem contracts probed (Interaction, PSMs, VaultManager, VenusAdapter, EarnPool, vault joins, AuctionProxy) returned wards = 0. A 500K-block recent mint scan showed mints flowing only through the CDP Interaction → HayJoin path. Mint reverts 'LisUSD/not-authorized-minter' for non-wards; timelock getMinDelay() = 86400s (24h). Economic-posture fields reviewed 2026-08-15: the undelayed manager Safe can raise the global supply cap, issuance is collateral-gated on-chain, and no prudential supervisor or attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

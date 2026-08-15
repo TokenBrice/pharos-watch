@@ -63,10 +63,13 @@
         }
       ]
     },
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC; base USDC mint authority is inherited from Circle because stUSD is tracked as a USDC strategy wrapper. 2026-07-20 dc-1 pass: the wrapper's stUSD issuance is deposit-issued (issueFromWrapper) with canRaiseCap=false and no separate cap-raise authority, so the reviewed economic mint cap is bounded. Upgrade-authority follow-up (2026-07-21): both the mint-critical stUSD token (0x806dd21af6de051fb811760a5768d04a99160eb9) and its MINTER_ROLE-holding wrapper (0xb4d3c1bb59be7b419af4e10e9b240f425782b22a) return zero at the EIP-1967 implementation and admin storage slots at BSC block 111254044, i.e. neither is a proxy — both are directly-deployed, non-upgradeable contracts, so stUSD's own mint logic cannot be swapped via a proxy upgrade. (The separately referenced sUSDC deposit-asset proxy, 0xad66385c6db496258771b5fd8ac376e3dd0d1536, is a transparent proxy with implementation 0xe1bf9310f23db3fd05931aa89879d5247bb2a678 and admin 0x6158905db12bc51f01542048546f4ca14a7caa80 — this governs the underlying collateral token, not stUSD's own mint path.)",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21)",
-      "reviewedAt": "2026-07-21",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0xb4d3c1bb…) = true; hasRole(DEFAULT_ADMIN_ROLE, 0x9ab82f8e…) = true. wrapper() returns 0xb4d3c1bb… confirming the on-chain wrapper address. 0x9ab82f8e… is a 23-byte EIP-7702 EOA (delegation designator, not a Safe). MAX_SUPPLY() = 1B tokens (immutable constant). StoneYield docs confirm deposit mint path and admin rewardMint/pause/adminUnlock/sweepUSDC; base USDC mint authority is inherited from Circle because stUSD is tracked as a USDC strategy wrapper. 2026-07-20 dc-1 pass: the wrapper's stUSD issuance is deposit-issued (issueFromWrapper) with canRaiseCap=false and no separate cap-raise authority, so the reviewed economic mint cap is bounded. Upgrade-authority follow-up (2026-07-21): both the mint-critical stUSD token (0x806dd21af6de051fb811760a5768d04a99160eb9) and its MINTER_ROLE-holding wrapper (0xb4d3c1bb59be7b419af4e10e9b240f425782b22a) return zero at the EIP-1967 implementation and admin storage slots at BSC block 111254044, i.e. neither is a proxy — both are directly-deployed, non-upgradeable contracts, so stUSD's own mint logic cannot be swapped via a proxy upgrade. (The separately referenced sUSDC deposit-asset proxy, 0xad66385c6db496258771b5fd8ac376e3dd0d1536, is a transparent proxy with implementation 0xe1bf9310f23db3fd05931aa89879d5247bb2a678 and admin 0x6158905db12bc51f01542048546f4ca14a7caa80 — this governs the underlying collateral token, not stUSD's own mint path.) Economic-posture fields reviewed 2026-08-15: immutable wrapper minting is capped by the fixed 1B maximum, local reconciliation is not applicable, and no local attestor or prudential supervisor is evidenced.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Claude Safety Score V9 curation lane (upgrade-authority resolution, 2026-07-21); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "StoneYield contract design docs",
@@ -79,7 +82,6 @@
       ],
       "disposition": "scoreable",
       "unresolvedQuestions": []
-    },
-    "economicCapSemantics": "bounded"
+    }
   }
 }

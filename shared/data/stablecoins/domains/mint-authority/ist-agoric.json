@@ -29,10 +29,13 @@
         "evidence": "Inter Protocol governance docs describe two-tier governance: BLD stakers for major changes and collateral onboarding, and an elected Economic Committee with parameter-level control, mint-limit setting, and emergency contract pausing."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Inter Protocol documentation describes IST as a decentralized stablecoin minted via overcollateralized vaults plus a PSM, governed by BLD stakers and an elected Economic Committee that sets parameters, mint limits, and emergency pauses. Agoric is a Cosmos-SDK chain; its governance state is not accessible without a live node or public REST API, and no keyless public endpoint confirmed the current Economic Committee membership or governance contract addresses at the time of review. Economic-posture fields reviewed 2026-08-15: on-chain vault/PSM issuance is governed by BLD stakers and the Economic Committee, which can raise mint limits; no off-chain reserve claim or prudential supervisor applies.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Inter Protocol governance docs",

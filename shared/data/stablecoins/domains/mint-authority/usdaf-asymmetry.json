@@ -55,10 +55,13 @@
         "evidence": "At Ethereum block 25526129, BoldToken owner() was zero. Exact verified source and live branch getters enumerated six BorrowerOperations and six ActivePools as the only contracts able to reach mint(); StabilityPools do not call BoldToken.mint. BoldToken plus all twelve minters had zero EIP-1967 implementation, admin, and beacon slots."
       }
     ],
+    "economicCapSemantics": "bounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25526129, exact verified source and live branch reads confirmed six fixed BorrowerOperations and six fixed ActivePools as the complete mint surface. StabilityPools are not direct minters. BoldToken ownership was renounced, and the token plus all twelve minting contracts were direct deployments with zero EIP-1967 implementation, admin, and beacon slots.",
-      "reviewer": "Codex Safety Score V9 evidence audit",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At Ethereum block 25526129, exact verified source and live branch reads confirmed six fixed BorrowerOperations and six fixed ActivePools as the complete mint surface. StabilityPools are not direct minters. BoldToken ownership was renounced, and the token plus all twelve minting contracts were direct deployments with zero EIP-1967 implementation, admin, and beacon slots. Economic-posture fields reviewed 2026-08-15: bounded immutable collateral-gated branches admit no privileged minter; reconciliation is not applicable and neither attestation nor prudential supervision exists.",
+      "reviewer": "Codex Safety Score V9 evidence audit; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "What is USDaf?",

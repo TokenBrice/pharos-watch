@@ -102,6 +102,9 @@
         "evidence": "At Polygon block 90179923, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can mint or replace the supply manager immediately. eth_getCode returned 0x."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -109,9 +112,9 @@
           "url": "https://www.token.com.tr/rezerv-tokenlar/gram-gold-gramg/"
         }
       ],
-      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both GRAMG deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0xffab59d79ea7dc35c20554c87d8fbc7e0b0ec34a81001f9f412dc5ba18d8b8f8. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-13"
+      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both GRAMG deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0xffab59d79ea7dc35c20554c87d8fbc7e0b0ec34a81001f9f412dc5ba18d8b8f8. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay. Economic-posture fields reviewed 2026-08-15: both deployments permit uncapped EOA minting, while conflicting ad-hoc reserve disclosures do not reconcile whole supply and identify neither a supervisor nor independent attestor.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

@@ -43,6 +43,9 @@
         "evidence": "At Hemi block 4610504, owner() on 0x71881974e96152643c74a8e0214b877cfb2a0aa1 returned 0x3eDEEF3ae2e9aA5B55e5Ce4D324f9C24165C75Be. eth_getCode at that address returned non-empty bytecode confirming a contract (not an EOA). Safe API (hemi slug) returned threshold=1, owners=[0x29Aa2eD..., 0x8b01d375...], modules=[], guard=0x0, version=1.4.1+L2. getModules() RPC call returned empty array; guard slot=0x0 confirmed no guard."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -59,8 +62,6 @@
         }
       ]
     },
-    "reconciliation": "unknown",
-    "supervision": "none",
     "review": {
       "disposition": "scoreable",
       "sources": [
@@ -77,9 +78,9 @@
           "url": "https://vcred.trade/"
         }
       ],
-      "evidence": "At Hemi block 4610504: owner() = 0x3eDEEF (contract, not EOA); Safe API confirmed 1-of-2 Safe v1.4.1+L2, no modules, no guard. Corrected authorityType from eoa to safe with full Safe snapshot. No credible recurring reconciliation was established. The reviewed official vCRED site presents a forthcoming product but does not publish a dated independent reserve, collateral, or supply-to-assets reconciliation, its cadence, or an attestation provider. It also supplies no exact registry-backed prudential supervisor for the issuer or product. Reviewed 2026-07-15.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Hemi block 4610504: owner() = 0x3eDEEF (contract, not EOA); Safe API confirmed 1-of-2 Safe v1.4.1+L2, no modules, no guard. Corrected authorityType from eoa to safe with full Safe snapshot. No credible recurring reconciliation was established. The reviewed official vCRED site presents a forthcoming product but does not publish a dated independent reserve, collateral, or supply-to-assets reconciliation, its cadence, or an attestation provider. It also supplies no exact registry-backed prudential supervisor for the issuer or product. Reviewed 2026-07-15. Economic-posture fields reviewed 2026-08-15: the owner Safe has unrestricted direct mint authority, with no dated reconciliation or named prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

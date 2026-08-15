@@ -83,10 +83,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295025: GoldfishToken (ERC1967Proxy, UUPS) minterContract slot 2 == GoldfishTokenFactory proxy 0x765c0af86952604f1576ca3b5beb75420d75ff62. Factory MINT_OPERATOR_ROLE and DEFAULT_ADMIN = EOA 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4. Token DEFAULT_ADMIN = 2-of-3 Safe v1.4.1 (no modules). Mint path: EOA calls factory.issueTokens() which calls token.mint(). Safe holds token upgrade and minterContract rotation authority.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25295025: GoldfishToken (ERC1967Proxy, UUPS) minterContract slot 2 == GoldfishTokenFactory proxy 0x765c0af86952604f1576ca3b5beb75420d75ff62. Factory MINT_OPERATOR_ROLE and DEFAULT_ADMIN = EOA 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4. Token DEFAULT_ADMIN = 2-of-3 Safe v1.4.1 (no modules). Mint path: EOA calls factory.issueTokens() which calls token.mint(). Safe holds token upgrade and minterContract rotation authority. Economic-posture fields reviewed 2026-08-15: issuer-controlled roles can mint or replace the minter without an independent delay, while the sole-chain designated collateral wallet is continuously comparable with total GGBR supply.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Goldfish Gold",

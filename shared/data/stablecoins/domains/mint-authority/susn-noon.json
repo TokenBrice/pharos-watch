@@ -145,6 +145,9 @@
         "evidence": "At block 25530817, the sUSN proxy admin slot returned ProxyAdmin 0x190828...bd81; its owner was the verified Noon timelock 0xe5e412...15a7f. delay() returned 172800 seconds and owner() returned the Noon 3-of-6 admin Safe."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -160,9 +163,9 @@
           "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
         }
       ],
-      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25530817, its transparent proxy resolved to implementation 0xd1ffb6...5b34 and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths.",
-      "reviewer": "Codex V9 control curation",
-      "reviewedAt": "2026-07-14"
+      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25530817, its transparent proxy resolved to implementation 0xd1ffb6...5b34 and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Economic-posture fields reviewed 2026-08-15: local sUSN supply is deposit-gated, mint-logic replacement is enforced through the 48-hour timelock, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor.",
+      "reviewer": "Codex V9 control curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

@@ -160,6 +160,9 @@
         "evidence": "At Ethereum block 25531314, Noble Portal owner() returned 0x7176665e336e8692e9b265aB6290934C93F99cCf. The verified implementation delegates portal upgrades to owner authority. Fixed-block calls and the Safe service confirmed a 2-of-2 Safe with the two listed EOA owners, no enabled modules, and zero guard and module guard."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -191,9 +194,9 @@
           "url": "https://ethereum.publicnode.com"
         }
       ],
-      "evidence": "At Ethereum block 25531314, the immutable MinterGateway remained the base-M issuance rail and the Noble Portal remained the bridge control for Noble movement. The portal implementation was 0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4 with no external ProxyAdmin; owner() returned Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf, which separately controls upgrades. The Safe was 2-of-2 with owners 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2, no enabled modules, and zero guard and module guard. Noble remains Cosmos-based, so M management is Ethereum-side.",
-      "reviewer": "owner-triage",
-      "reviewedAt": "2026-07-14"
+      "evidence": "At Ethereum block 25531314, the immutable MinterGateway remained the base-M issuance rail and the Noble Portal remained the bridge control for Noble movement. The portal implementation was 0xa6fab688fe4e5f7a9d310dce7ae8e88792692fb4 with no external ProxyAdmin; owner() returned Safe 0x7176665e336e8692e9b265aB6290934C93F99cCf, which separately controls upgrades. The Safe was 2-of-2 with owners 0xb4518ae2F26ed79648C32734E0fC1F91bBF76459 and 0xDAB03eA17203d786588b9217ccC30664e7294Bd2, no enabled modules, and zero guard and module guard. Noble remains Cosmos-based, so M management is Ethereum-side. Economic-posture fields reviewed 2026-08-15: the 2-of-2 Safe can replace Noble Portal mint-critical logic without a timelock, while current M-backed supply has real-time validator reconciliation and no prudential product authorization.",
+      "reviewer": "owner-triage; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

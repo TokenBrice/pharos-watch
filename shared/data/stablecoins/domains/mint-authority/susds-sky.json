@@ -111,6 +111,9 @@
         "evidence": "Inherited from reviewed usds-sky mintAuthority: the Sky Pause Proxy is the governance executor authorized to raise the USDS_JOIN debt ceiling that bounds the inherited USDS mint path underlying sUSDS shares."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -122,9 +125,9 @@
           "url": "https://developers.skyeco.com/protocol/tokens/susds/"
         }
       ],
-      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "sUSDS is a savings wrapper over reviewed USDS. Vault share minting is separate from base USDS issuance. At Ethereum block 25295174: EIP-1967 admin slot = 0x0 (no external proxy admin), impl slot = 0x4e7991e5 (UUPS), wards(MakerDAO PauseProxy)=1. Upgrade authority is Sky governance via the wards mechanism. Wrapper has no privileged mint surface. Economic-posture fields reviewed 2026-08-15: local shares remain deposit-gated and changing wrapper mint logic requires Sky's enforced two-day Pause, with no separate wrapper reconciliation cadence or named supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-3 (lead usds-sky) (2026-07-20); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

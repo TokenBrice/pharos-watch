@@ -17,6 +17,9 @@
         "evidence": "At zkSync Era block 71160345, owner() on both the zkUSD token and Goal3 portal returned 0x49a67aff9d3807351b8bb450f37ffc98af9def4d; eth_getCode on that address returned empty bytecode. The portal retained MINTER_ROLE on the token. Verified portal source calls returnToken.mint() in the lock path, and verified token source restricts mint() to MINTER_ROLE."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -51,9 +54,9 @@
       ]
     },
     "review": {
-      "evidence": "At zkSync Era block 71160345, zkUSD proxy implementation was 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and Goal3 portal proxy implementation was 0xd3227d2b5c616dcf566ace0fec42507afef8e28d; both admin and beacon slots were zero. Both implementations returned the EIP-1822 implementation-slot UUID and verified source restricts _authorizeUpgrade() to onlyOwner. Both proxy owners were the same EOA, and the portal retained token MINTER_ROLE.",
-      "reviewer": "Codex Safety Score V9 review",
-      "reviewedAt": "2026-07-13",
+      "evidence": "At zkSync Era block 71160345, zkUSD proxy implementation was 0xf0e28e2d31231e367d0dfe85da19a2dbc4ebb14b and Goal3 portal proxy implementation was 0xd3227d2b5c616dcf566ace0fec42507afef8e28d; both admin and beacon slots were zero. Both implementations returned the EIP-1822 implementation-slot UUID and verified source restricts _authorizeUpgrade() to onlyOwner. Both proxy owners were the same EOA, and the portal retained token MINTER_ROLE. Economic-posture fields reviewed 2026-08-15: the owner EOA directly controls minting and upgrades without delay, and no current reserve reconciliation, attestation, or prudential authorization exists.",
+      "reviewer": "Codex Safety Score V9 review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Goal3 zkUSD docs",

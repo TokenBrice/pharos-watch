@@ -74,10 +74,13 @@
         }
       ]
     },
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile).",
-      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Arbitrum block 472419864, owner() on MONEY token returned 0x222d2B30EcD382a058618d9F1ee01F147666E48b. Safe API confirmed Gnosis Safe v1.3.0+L2, 3-of-7 threshold, 7 owners, no modules, no guard. EIP-1967 admin slot zero (not upgradeable proxy). No minter() selector on token. crvUSD-style market controllers are bounded by the Safe's admin authority; no independent privileged mint surface detected on the token. 2026-07-20 dc-1 pass: the crvUSD-style market-controller set has no single contract address; its failure domain is recorded as protocol:defi-money-controllers. The economic mint cap is raiseable — the verified admin Safe 0x222d2B30EcD382a058618d9F1ee01F147666E48b can authorize controllers and raise caps (can-authorize + canRaiseCap=true in this profile). Economic-posture fields reviewed 2026-08-15: the self-controlled 3-of-7 Safe can authorize controllers and raise caps without an independent delay, while current issuance is on-chain CDP collateral and no supervisor or attestor is evidenced.",
+      "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "defi.money docs",
@@ -90,7 +93,6 @@
       ],
       "disposition": "scoreable",
       "unresolvedQuestions": []
-    },
-    "economicCapSemantics": "raiseable"
+    }
   }
 }

@@ -252,10 +252,13 @@
         "evidence": "At Polygon block 88325248: EIP-1967 impl slot = 0x6bbcef9f7ef3b6c592c99e0f206a0de94ad0925f (UUPS proxy). Proxy admin slot = 0x0 (UUPS upgrade controlled by owner). owner() = 0x47ebfac3353314c788b96cdcbf41daadfe03629c (same Timelock, 12h). No separate proxy admin contract — upgrade gated by Timelock. At block 90347258, the Timelock's admin, proposer, executor, and canceller roleHolders() each returned only this Safe; minDelay() returned 43200. The Safe was 3-of-6 with no enabled modules, zero guard, and zero fallback handler. The Timelock can add token minters/wrappers and upgrade the token and all three minter modules."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Polygon block 88325248: PUSD is a UUPS proxy (impl=0x6bbcef9f...) and Onramp is immutable. Both are owned by custom Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. minDelay() = 43200s (12h, confirmed via selector 0xc63c4e9b). Prior blocker 'confirm admin/owner address' is resolved: Timelock is the sole admin of both token and onramp. At block 90347258, the complete RolesUpdated history and rolesOf() reads resolved four current wrapper-role holders (Onramp, Offramp, legacy CTF adapter, legacy NegRisk adapter) and three current minter-role holders (BinaryModule, NegRiskModule, CombinatorialModule). Current verified implementations bind wrapper minting to deposited USDC/USDC.e or legacy settlement and bind module minting to burned position claims. The same 3-of-6 Safe exclusively holds every Timelock role, can change token roles and UUPS implementations after 12 hours, and directly holds the onramp pause-admin role.",
-      "reviewer": "Codex P3 control review",
-      "reviewedAt": "2026-07-16",
+      "evidence": "At Polygon block 88325248: PUSD is a UUPS proxy (impl=0x6bbcef9f...) and Onramp is immutable. Both are owned by custom Timelock 0x47ebfac3353314c788b96cdcbf41daadfe03629c. minDelay() = 43200s (12h, confirmed via selector 0xc63c4e9b). Prior blocker 'confirm admin/owner address' is resolved: Timelock is the sole admin of both token and onramp. At block 90347258, the complete RolesUpdated history and rolesOf() reads resolved four current wrapper-role holders (Onramp, Offramp, legacy CTF adapter, legacy NegRisk adapter) and three current minter-role holders (BinaryModule, NegRiskModule, CombinatorialModule). Current verified implementations bind wrapper minting to deposited USDC/USDC.e or legacy settlement and bind module minting to burned position claims. The same 3-of-6 Safe exclusively holds every Timelock role, can change token roles and UUPS implementations after 12 hours, and directly holds the onramp pause-admin role. Economic-posture fields reviewed 2026-08-15: every local minter-role or mint-logic replacement requires the enforced 12-hour Timelock, while local issuance is on-chain collateral or position-claim accounting with no separate reconciliation or named supervisor.",
+      "reviewer": "Codex P3 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Polymarket pUSD docs",

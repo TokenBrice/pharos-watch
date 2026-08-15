@@ -226,6 +226,9 @@
         "evidence": "Tempo role history transferred DEFAULT_ADMIN_ROLE from the Safe to TimelockController 0x0000000035A7... at block 18705862. At block 29925481 the timelock remained DEFAULT_ADMIN, its delay was 86400 seconds, and the active issuer proxy was owned by it. The same 3/5 Safe controls the timelock."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -249,9 +252,9 @@
           "url": "https://explore.tempo.xyz/address/0x20C0000000000000000000000520792DcCccCccC"
         }
       ],
-      "evidence": "Live RPC and verified implementation review resolved the prior enumeration blocker. Ethereum's vault points to an external AccessControlEnumerableUpgradeable proxy; selector-derived upgrade/addAsset/setDepositCap roles each had exactly the one-day Timelock as holder. Ethereum, MegaETH, and Tempo governance converge on the same 3/5 Safe. Tempo event history and current role calls identified the active issuer proxy and the current timelocked DEFAULT_ADMIN.",
-      "reviewer": "Codex CTRL curation batch 03",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Live RPC and verified implementation review resolved the prior enumeration blocker. Ethereum's vault points to an external AccessControlEnumerableUpgradeable proxy; selector-derived upgrade/addAsset/setDepositCap roles each had exactly the one-day Timelock as holder. Ethereum, MegaETH, and Tempo governance converge on the same 3/5 Safe. Tempo event history and current role calls identified the active issuer proxy and the current timelocked DEFAULT_ADMIN. Economic-posture fields reviewed 2026-08-15: one-day timelocks govern cap, role, and upgrade paths on Ethereum, MegaETH, and Tempo, but the Ethereum reserve feed does not establish whole-supply reconciliation for the satellite OFT and TIP-20 mint paths, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "Codex CTRL curation batch 03; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

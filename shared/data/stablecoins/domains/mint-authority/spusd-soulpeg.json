@@ -70,12 +70,13 @@
         }
       ]
     },
+    "economicCapSemantics": "bounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none.",
-      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up",
-      "reviewedAt": "2026-07-16",
+      "evidence": "At BSC block 103632643: hasRole(MINTER_ROLE, wrapper 0x0e8fb2e…) = true; hasRole(BURNER_ROLE, wrapper) = true; hasRole(DEFAULT_ADMIN_ROLE, EOA 0xf683ab3…) = true; wrapper owner() = 0xf683ab3… (EOA confirmed via eth_getCode). MAX_SUPPLY() = 1,000,000,000 tokens (immutable constant, no setter function). SoulPeg (spUSD) is a BNB Chain protocol with no disclosed registered entity; its own documentation states the contracts have not undergone a formal third-party audit and no reserve attestation or proof-of-reserves is published (reserves are on-chain USDC routed into Venus lending), so reconciliation is unknown. No named financial regulator, charter, or registry entry for any SoulPeg entity was found, so supervision is none. Economic-posture fields reviewed 2026-08-15: immutable token logic enforces the 1 billion maximum supply, but the operator-controlled sUSDC/Venus route has no whole-supply reconciliation and no regulator or independent attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Claude SOL-V mint-tier mop-up; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "SoulPeg docs",

@@ -87,6 +87,9 @@
         "evidence": "At Celo block 69291541, owner() returned 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458. Safe API returned threshold 4, 6 owners (down from 7 recorded previously — signer was rotated out), no modules, zero guard. Follow-up 2026-07-20: as EURm token owner this Safe administers the minter set (it can authorize or replace the Broker and its exchange limits), so the Broker's mint cap is raiseable by this control."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -102,9 +105,9 @@
           "url": "https://celoscan.io/address/0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73"
         }
       ],
-      "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao)",
-      "reviewedAt": "2026-07-20"
+      "evidence": "Celo block 69291541: owner() = 4/6 Safe (threshold 4, 6 owners, no modules); isMinter(Broker 0x777A...) = true. Both mint-capable surfaces confirmed. Safe lost one signer since prior review (7→6); threshold unchanged at 4. Identical pattern to verified gbpm-mento. Economic-posture fields reviewed 2026-08-15: the no-timelock 4-of-6 Safe can replace the Broker, raise exchange limits, or change mint logic; the Celo-only issuer reserve feed does not prove liability reconciliation across all five tracked deployments and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-4 (lead dai-makerdao); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

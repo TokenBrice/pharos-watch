@@ -68,10 +68,13 @@
         "capDescription": "Sovryn GovernorAlpha (behind a 48-hour Timelock) administers the Mynt basket: it can add accepted bAssets and adjust basket parameters, which raises DLLR mint capacity beyond the current deposit-bounded cap."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
-      "evidence": "At Rootstock block 8935202: MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = same Timelock. Timelock delay slot = 0x2a300 (48 h). Timelock admin() = GovernorAlpha 0x6496df39; GovernorAlpha timelock() = 0x967c84b7 (confirmed circular, correct). Full DAO governance chain verified on-chain.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Rootstock block 8935202: MassetManager proxy 0x5f777270 owner() = Timelock 0x967c84b7; EIP-1967 proxy-admin 0x466e023d owner() = same Timelock. Timelock delay slot = 0x2a300 (48 h). Timelock admin() = GovernorAlpha 0x6496df39; GovernorAlpha timelock() = 0x967c84b7 (confirmed circular, correct). Full DAO governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: SOV governance can change basket capacity or mint logic only through the enforced 48-hour Timelock, live Rootstock basket balances continuously cover 1:1 issuance, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-6 (lead usde-ethena); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Sovryn wiki: Sovryn Dollar",

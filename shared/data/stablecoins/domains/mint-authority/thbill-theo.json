@@ -132,12 +132,12 @@
       }
     ],
     "economicCapSemantics": "raiseable",
-    "reconciliation": "not-applicable",
+    "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable.",
-      "reviewer": "OpenAI Codex C03 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712112, direct reads and verified source established that canonical thBILL is a UUPS ERC-4626 multi-asset vault, correcting the prior issuer-backend and immutable-proxy claims. Its public deposit/mint flow transfers supported collateral before internal share minting and exposes no privileged raw-mint entry point. The current implementation is 0x325478a069b0dbbdfbee909fa3741f84259ba519; sole DEFAULT_ADMIN_ROLE holder timelock 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02 has a 172800-second minimum delay, not zero. Safe 0x94877640dd9e6f1e3cb56bf7b5665b7152601295 holds proposer, executor, and canceller roles and was 4-of-6 with no modules or guard. Current share creation is collateral-transfer constrained, while governance can change deposit configuration or implementation after the delay, so the posture is partially bounded and economic cap semantics are raiseable. Economic-posture fields reviewed 2026-08-15: upgrades traverse the two-day timelock, but repo evidence does not reconcile the off-chain fund claim and all spoke supply, and no issuer supervisor or independent attestor is evidenced.",
+      "reviewer": "OpenAI Codex C03 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Blockscout thBILL UUPS proxy",

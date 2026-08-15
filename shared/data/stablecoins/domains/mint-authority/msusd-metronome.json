@@ -87,10 +87,13 @@
         "evidence": "ProxyAdmin owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33. Safe API confirmed Gnosis Safe v1.3.0, 3-of-5, nonce 365, no modules, no guard at block 25,290,617."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25,290,617: msUSD proxy admin = 0x2fa85a496a9b79c6d50cef590304bdd36efa2dcc (OZ ProxyAdmin) → owner = 0xd1DE3F9CD4AE2F23DA941a67cA4C739f8dD9Af33 (Gnosis Safe v1.3.0, 3-of-5, no modules). No timelock. Full governance chain verified on-chain. Economic-posture fields reviewed 2026-08-15: the undelayed Metronome Safe can change mint logic or collateral parameters, and the disclosed unbacked synth-swap float prevents whole-supply reconciliation; no prudential supervisor or independent attestor is identified.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Metronome Synth docs",

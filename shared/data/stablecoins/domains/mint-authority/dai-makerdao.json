@@ -122,9 +122,9 @@
           "url": "https://eth.drpc.org"
         }
       ],
-      "evidence": "At Ethereum block 25711852, DAI.wards(0x9759a6ac90977b93b58547b4a71c78317f391a28)=1, MCD_VAT.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1, and MCD_PAUSE.delay()=172800; both controls had bytecode. DaiJoin can mint only against existing Vat credit, while governance can raise system ceilings or authorize modules only through the two-day Pause path. The economic bound is therefore raiseable rather than unrestricted, and the on-chain Vat accounting path makes reserve reconciliation and prudential issuer supervision not applicable.",
-      "reviewer": "OpenAI Codex C01 control wave",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25711852, DAI.wards(0x9759a6ac90977b93b58547b4a71c78317f391a28)=1, MCD_VAT.wards(0xbe8e3e3618f7474f8cb1d074a26affef007e98fb)=1, and MCD_PAUSE.delay()=172800; both controls had bytecode. DaiJoin can mint only against existing Vat credit, while governance can raise system ceilings or authorize modules only through the two-day Pause path. The economic bound is therefore raiseable rather than unrestricted, and the on-chain Vat accounting path makes reserve reconciliation and prudential issuer supervision not applicable. Economic-posture fields reviewed 2026-08-15: the two-day Pause independently delays ceiling and module changes, Vat issuance is on-chain collateral-accounted, and no prudential supervisor or independent attestor applies.",
+      "reviewer": "OpenAI Codex C01 control wave; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

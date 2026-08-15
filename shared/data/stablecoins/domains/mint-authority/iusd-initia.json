@@ -135,10 +135,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Initia height 19467576, 0xfd6a07... was a sticky Move Object (owner=0x0, non-transferable); vault::VaultAccount.extend_ref was stored at iusd-vault contract 0x2981d795..., so only the vault could sign for 0xfd6a07 and invoke managed_coin mint. Transaction 4dbe5cba... traced LayerZero OFT AUSD0 minting by 0xf407bc... followed by a 1:1 vault MintEvent for iUSD. The iusd-vault package was COMPATIBLE and published by its native 3-of-4 multisig account. The AUSD0 package was also COMPATIBLE; its code object was owned by native 3-of-5 multisig 0x486bc26c..., and its live ManagingRefs plus the object-code deployment ABI proved that owner could derive the code-object signer and submit upgrades. Supply remained bounded by deposited AUSD0, with no independent free-mint path, while both material package upgrade controllers were identified.",
-      "reviewer": "Codex Safety Score V9 registry pass",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Initia height 19467576, 0xfd6a07... was a sticky Move Object (owner=0x0, non-transferable); vault::VaultAccount.extend_ref was stored at iusd-vault contract 0x2981d795..., so only the vault could sign for 0xfd6a07 and invoke managed_coin mint. Transaction 4dbe5cba... traced LayerZero OFT AUSD0 minting by 0xf407bc... followed by a 1:1 vault MintEvent for iUSD. The iusd-vault package was COMPATIBLE and published by its native 3-of-4 multisig account. The AUSD0 package was also COMPATIBLE; its code object was owned by native 3-of-5 multisig 0x486bc26c..., and its live ManagingRefs plus the object-code deployment ABI proved that owner could derive the code-object signer and submit upgrades. Supply remained bounded by deposited AUSD0, with no independent free-mint path, while both material package upgrade controllers were identified. Economic-posture fields reviewed 2026-08-15: the local 3-of-4 and 3-of-5 multisigs can replace vault or OFT mint logic without delay, while live Initia resources reconcile iUSD 1:1 to AUSD0 and Agora's recurring independent reserve report supplies attestation-only coverage.",
+      "reviewer": "Codex Safety Score V9 registry pass; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Initia docs",

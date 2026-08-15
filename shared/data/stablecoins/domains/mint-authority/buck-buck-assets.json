@@ -31,10 +31,13 @@
         "evidence": "At Ethereum block 25294984, owner() on 0xdb13997f4d83ef343845d0baeb27d1173df8c224 returned 0x376269214bb78b3d4f31d17600499b439c1acb4b; eth_getCode on that address returned 2 bytes (EOA confirmed). The BUCK token is a UUPS upgradeable proxy (EIP-1967 implementation slot = 0x223de9a74547edee200772248ee4b703d8a774a6; no EIP-1967 proxy admin slot set). The EOA owner controls upgrade and administrative rights, but mint authority is exercised through the LiquidityWindow backend."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25294984: owner() on BUCK token (0xdb13997f...) = EOA 0x376269214bb78b3d4f31d17600499b439c1acb4b (eth_getCode confirms no bytecode). EIP-1967 implementation slot = 0x223de9a74547edee200772248ee4b703d8a774a6 (contract); EIP-1967 proxy admin slot = 0x0 (UUPS proxy pattern). The LiquidityWindow is a separate contract not independently enumerated here. Project is wound down as of April 2026.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25294984: owner() on BUCK token (0xdb13997f...) = EOA 0x376269214bb78b3d4f31d17600499b439c1acb4b (eth_getCode confirms no bytecode). EIP-1967 implementation slot = 0x223de9a74547edee200772248ee4b703d8a774a6 (contract); EIP-1967 proxy admin slot = 0x0 (UUPS proxy pattern). The LiquidityWindow is a separate contract not independently enumerated here. Project is wound down as of April 2026. Economic-posture fields reviewed 2026-08-15: the issuer backend and owner-controlled UUPS path are unbounded, while The Network Firm's monthly reserve-ratio attestations provide periodic reconciliation without prudential supervision.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "buck-v1 contracts (GitHub)",

@@ -91,6 +91,9 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -106,9 +109,9 @@
           "url": "https://snowtrace.io/address/0xcb43139E90f019624e3B76C56FB05394B162A49c"
         }
       ],
-      "evidence": "Complete Avalanche role and MinterUpdated event replays through block 90283689, followed by direct hasRole() and minters(address) checks, establish one gateway caller and one active token minter. maxMintPerBlock() returned 25,000,000 avUSD, stablesDeltaLimit() returned zero, and the common admin/owner EOA can raise the cap or replace minters. Verified constructors and zero EIP-1967 slots establish immutable token and gateway code.",
-      "reviewer": "Codex Safety Score V9 CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Complete Avalanche role and MinterUpdated event replays through block 90283689, followed by direct hasRole() and minters(address) checks, establish one gateway caller and one active token minter. maxMintPerBlock() returned 25,000,000 avUSD, stablesDeltaLimit() returned zero, and the common admin/owner EOA can raise the cap or replace minters. Verified constructors and zero EIP-1967 slots establish immutable token and gateway code. Economic-posture fields reviewed 2026-08-15: the issuer EOA can raise the cap or replace minters without an independent timelock, while no whole-supply recurring reconciliation or prudential supervisor is evidenced.",
+      "reviewer": "Codex Safety Score V9 CTRL curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

@@ -74,6 +74,7 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
@@ -95,9 +96,9 @@
           "url": "https://sol.unitas.so/transparency"
         }
       ],
-      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface. Accountable independently reconciles USDU backing assets to token liabilities. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-07, with its proof signature validated 2026-07-07; the observed evidence therefore supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision.",
-      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "BSC block 103620388: Safe 3-of-5 (all EOA signers, no modules/guard, v1.4.1) confirmed as token owner with mint() = onlyOwner. Solana: Token-2022 mintAuthority = mint address itself (9ckR7pPP…), a self-referential configuration that cannot be verified as a standard keypair or program authority via on-chain reads. Promotion judgment: BSC mint surface fully confirmed (3-of-5 Safe, no modules); the Solana mintAuthority is self-referential and therefore unusable (moveUSD precedent), leaving no unconfirmed mint-capable surface. Accountable independently reconciles USDU backing assets to token liabilities. The public proof-of-solvency page advertises a 15-minute interval but showed reserve data last updated 2026-06-07, with its proof signature validated 2026-07-07; the observed evidence therefore supports periodic, not continuous, reconciliation. No registry evidence established prudential reserve supervision. Economic-posture fields reviewed 2026-08-15: the BSC 3-of-5 issuer Safe owns an uncapped mint path while Solana minting is inert; existing periodic reconciliation and attestation-only supervision remain supported.",
+      "reviewer": "Claude Phase 0c continuation; SOL-V mint-tier review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

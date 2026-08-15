@@ -87,13 +87,13 @@
         }
       ]
     },
-    "economicCapSemantics": "raiseable",
-    "reconciliation": "unknown",
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
-      "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins (USDC, PYUSD, XPAX, MPD). The previously blocking gap — no readable XPR Network RPC — is resolved: the public Antelope API (proton.eosusa.io, chain_id 384da888112027f0321850a169f737c33e53b388aad48b5adace4bab97f437e0) was read on 2026-07-20 at head block ~393650362. Findings: (1) xmd.token stat table names issuer xmd.treasury, supply 2,552,733.883527 XMD, max_supply 0; (2) xmd.treasury tokens table lists the whitelist (MPD 2%, XPAX 15%, XUSDC 60%, XPYUSD 15% maxTreasuryPercent, mintFee/redemptionFee 0, isPaused 0) and its ABI exposes only settoken/removetoken/setglobals; (3) both xmd.token and xmd.treasury resolve their owner permission to swapscold, threshold 2 over metalcfo, swapsledger2, swapsledger3, swapsledger4 — a 2-of-4 Metallicus operator multisig; (4) no MTL token-holder governor contract exists in the executable permission chain. All mint-critical authorities are now enumerated on-chain; no unilateral Metallicus mint path beyond the 2-of-4 multisig was found.",
-      "reviewer": "P2 mint-free cohort",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Metallicus/XPR Network docs and coverage describe XMD as a reserve-backed stablecoin index treasury: users mint/redeem 1:1 against a basket of fiat-backed stablecoins (USDC, PYUSD, XPAX, MPD). The previously blocking gap — no readable XPR Network RPC — is resolved: the public Antelope API (proton.eosusa.io, chain_id 384da888112027f0321850a169f737c33e53b388aad48b5adace4bab97f437e0) was read on 2026-07-20 at head block ~393650362. Findings: (1) xmd.token stat table names issuer xmd.treasury, supply 2,552,733.883527 XMD, max_supply 0; (2) xmd.treasury tokens table lists the whitelist (MPD 2%, XPAX 15%, XUSDC 60%, XPYUSD 15% maxTreasuryPercent, mintFee/redemptionFee 0, isPaused 0) and its ABI exposes only settoken/removetoken/setglobals; (3) both xmd.token and xmd.treasury resolve their owner permission to swapscold, threshold 2 over metalcfo, swapsledger2, swapsledger3, swapsledger4 — a 2-of-4 Metallicus operator multisig; (4) no MTL token-holder governor contract exists in the executable permission chain. All mint-critical authorities are now enumerated on-chain; no unilateral Metallicus mint path beyond the 2-of-4 multisig was found. Economic-posture fields reviewed 2026-08-15: the self-controlled Metallicus multisig can change basket parameters and mint logic without a timelock, while on-chain treasury balances reconcile continuously to supply and no independent attestor or named supervisor applies.",
+      "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "What is Metal Dollar (XMD)?",

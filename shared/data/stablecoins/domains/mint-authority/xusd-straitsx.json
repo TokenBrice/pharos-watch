@@ -301,6 +301,7 @@
         "evidence": "At finalized Solana slot 425774906, the XUSD mint account 4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z had this address as both mint and freeze authority. The authority account decoded as an initialized SPL Token multisig with m=3 and n=10."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
@@ -330,9 +331,9 @@
           "url": "https://eservices.mas.gov.sg/fid/institution?term=StraitsX"
         }
       ],
-      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig. KK Yap & Associates performs recurring reserve examinations; the latest reviewed report covers May 31, 2026, was published June 23, 2026, and fully reconciles XUSD liabilities to reserve assets on the recorded semi-monthly cadence. The MAS directory matches the issuer, StraitsX USD Issuance Pte. Ltd., as a Major Payment Institution, supporting prudential supervision of the same legal entity.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "Direct reads identify chain-local XUSD owner and MasterMinter controls on Ethereum and BNB Chain. At BNB Chain block 109962664, owner() and masterMinter() resolved separate 3-of-5 Safe v1.4.1 instances; neither had enabled modules, while the MasterMinter Safe carried guard 0x3653d130.... Although standard EIP-1967 slots were zero, legacy ZeppelinOS slots resolved implementation 0xCD6c...A599 and a separate 3-of-5 proxy-admin Safe. Ethereum remains a direct immutable deployment, and the Solana mint/freeze authority remains a 3-of-10 SPL Token multisig. KK Yap & Associates performs recurring reserve examinations; the latest reviewed report covers May 31, 2026, was published June 23, 2026, and fully reconciles XUSD liabilities to reserve assets on the recorded semi-monthly cadence. The MAS directory matches the issuer, StraitsX USD Issuance Pte. Ltd., as a Major Payment Institution, supporting prudential supervision of the same legal entity. Economic-posture fields reviewed 2026-08-15: chain-local owner and MasterMinter controls can authorize uncapped minting and the BNB proxy admin can replace logic without delay; existing periodic reconciliation and MAS prudential supervision remain supported.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

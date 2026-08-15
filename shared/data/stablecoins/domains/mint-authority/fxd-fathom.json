@@ -40,6 +40,9 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
@@ -78,9 +81,9 @@
       ]
     },
     "review": {
-      "evidence": "At XDC block 103659775: FXD token 0x49d3f754 is a transparent proxy with ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b (confirmed contract). ProxyAdmin owner() = EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c (eth_getCode = empty). FXD token impl = 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. MINTER_ROLE (0x9f2df0fe...) hasRole confirmed true for StablecoinAdapter proxy 0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e; RoleGranted log confirmed at block 0x3908e89. No RoleRevoked for MINTER_ROLE. DEFAULT_ADMIN_ROLE getRoleMemberCount = 0 (renounced). ProxyAdmin also controls StablecoinAdapter proxy (EIP-1967 admin = same 0xb82ad475). The EOA upgrade authority over both contracts constitutes concentrated-admin; posture updated from partially-bounded-admin.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At XDC block 103659775: FXD token 0x49d3f754 is a transparent proxy with ProxyAdmin 0xb82ad475fc113671840d510b60cbae5630a07f3b (confirmed contract). ProxyAdmin owner() = EOA 0x594d425a6c9249f66a00c841a7a2a921b63a0a4c (eth_getCode = empty). FXD token impl = 0xe4cd2c8f09e8f03839bc5cdbdb097515d3c11d3a. MINTER_ROLE (0x9f2df0fe...) hasRole confirmed true for StablecoinAdapter proxy 0xe3b248a97e9eb778c9b08f20a74c9165e22ef40e; RoleGranted log confirmed at block 0x3908e89. No RoleRevoked for MINTER_ROLE. DEFAULT_ADMIN_ROLE getRoleMemberCount = 0 (renounced). ProxyAdmin also controls StablecoinAdapter proxy (EIP-1967 admin = same 0xb82ad475). The EOA upgrade authority over both contracts constitutes concentrated-admin; posture updated from partially-bounded-admin. Economic-posture fields reviewed 2026-08-15: the sole ProxyAdmin-owner EOA can replace token and adapter mint logic without delay, while ordinary issuance is on-chain collateralized and no regulator or attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Fathom docs",

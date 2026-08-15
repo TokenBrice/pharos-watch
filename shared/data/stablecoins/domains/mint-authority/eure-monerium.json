@@ -79,7 +79,9 @@
         "evidence": "At Ethereum block 25294789: owner() returned 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f. Safe API (api.safe.global) confirmed threshold 3, 6 owners, no modules, zero guard, fallbackHandler 0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4, masterCopy 0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552 (v1.3.0). EIP-1967 proxy admin slot = zero."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -99,9 +101,9 @@
           "url": "https://sedlabanki.is/frettir-og-utgefid-efni/grein/2019-06-14-fjarmalaeftirlitid-veitir-monerium-emi-ehf-starfsleyfi-sem-rafeyrisfyrirtaeki"
         }
       ],
-      "evidence": "At Ethereum block 25294789: EURE Ethereum owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard). EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs and the Safe being the sole control point. Monerium reports annual audits and semi-annual statements, but the latest published table ends at 2024 and aggregates all Monerium e-money rather than independently reconciling EURe token supply; the same page says regular public safeguarded-fund attestations are still being prepared. No qualifying attestor, cadence, or latest EURe report date was found, so reconciliation is unknown. The Central Bank of Iceland authorization matches Monerium EMI ehf. and the issuer page expressly identifies prudential EMI supervision, supporting prudential supervision despite the reconciliation gap.",
-      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Ethereum block 25294789: EURE Ethereum owner() = 3/6 Safe 0x5591A6495d726C7EFafb9a9DAD32695D137b4d9f (threshold 3, 6 owners, no modules, no guard). EIP-1967 proxy admin slot = zero. Every addressable mint-capable on-chain surface is confirmed. Issuer-backend model corroborated by Monerium docs and the Safe being the sole control point. Monerium reports annual audits and semi-annual statements, but the latest published table ends at 2024 and aggregates all Monerium e-money rather than independently reconciling EURe token supply; the same page says regular public safeguarded-fund attestations are still being prepared. No qualifying attestor, cadence, or latest EURe report date was found, so reconciliation is unknown. The Central Bank of Iceland authorization matches Monerium EMI ehf. and the issuer page expressly identifies prudential EMI supervision, supporting prudential supervision despite the reconciliation gap. Economic-posture fields reviewed 2026-08-15: Monerium's issuer backend and Safe can authorize uncapped minting, published statements do not reconcile EURe supply, and the Central Bank of Iceland supervises the EMI issuer.",
+      "reviewer": "OpenAI Codex SOL-IV regulated-issuer review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

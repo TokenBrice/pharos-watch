@@ -94,7 +94,7 @@
         "evidence": "At Base block 47201583, the vault's EIP-1967 admin was ProxyAdmin 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 and ProxyAdmin.owner() was this TimelockController. getMinDelay() returned 172800 seconds. An implementation change through that owned ProxyAdmin can alter local share-mint logic."
       }
     ],
-    "economicCapSemantics": "unknown",
+    "economicCapSemantics": "raiseable",
     "reconciliation": "not-applicable",
     "supervision": "none",
     "upgradeability": {
@@ -119,9 +119,9 @@
       ]
     },
     "review": {
-      "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D was enumerated at Base block 48888171: it is a Solmate RolesAuthority owned by the 4-of-6 Safe, and getRolesWithCapability/isCapabilityPublic return zero for deposit(), mint(), redeem(), withdraw() and every fee or authority setter, while non-zero capability bitmaps exist only for manage(), fulfillRedeem(), pause() and unpause(). The verified implementation source confirms deposit() and mint() carry no requiresAuth modifier. yoUSD share creation is therefore entirely deposit-driven with no privileged mint call; the residual privileged surfaces are strategy execution via manage(), redemption fulfilment, pausing, and implementation replacement through the 2-day TimelockController.",
-      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Base block 47201583: yoUSD vault (0x0000000f2eB9f69274678c76222B35eEc7588a65) confirmed as TransparentUpgradeableProxy. ProxyAdmin = 0x12e81209d180ff0b3fbfbfe8fa9ffdb5990e1073 (confirmed via EIP-1967 admin slot). ProxyAdmin owner = TimelockController 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 with 2-day minDelay (172800 seconds). Admin Safe (0x67b6...) holds PROPOSER_ROLE on the timelock. Safe confirmed 4-of-6, version 1.4.1+L2, no modules, zero guard via Safe API. Authority contract 0x9524e25079b1b04D904865704783A5aA0202d44D was enumerated at Base block 48888171: it is a Solmate RolesAuthority owned by the 4-of-6 Safe, and getRolesWithCapability/isCapabilityPublic return zero for deposit(), mint(), redeem(), withdraw() and every fee or authority setter, while non-zero capability bitmaps exist only for manage(), fulfillRedeem(), pause() and unpause(). The verified implementation source confirms deposit() and mint() carry no requiresAuth modifier. yoUSD share creation is therefore entirely deposit-driven with no privileged mint call; the residual privileged surfaces are strategy execution via manage(), redemption fulfilment, pausing, and implementation replacement through the 2-day TimelockController. Economic-posture fields reviewed 2026-08-15: local shares are deposit-gated and any mint-logic replacement must traverse the enforced two-day TimelockController; the on-chain vault claim needs no off-chain reconciliation and has no local supervision.",
+      "reviewer": "P2 mint-free cohort; V9 Phase 3 curation lane cur-3 (2026-07-20); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

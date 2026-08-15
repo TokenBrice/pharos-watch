@@ -83,6 +83,9 @@
         "evidence": "USDS.wards(MCD_PAUSE_PROXY) returned 1 at Ethereum block 25294731. MCD_PAUSE (0xbE286431454714F511008713973d3B053A2d38f3) storage slot 4 = 172800 (delay confirmed). eth_getCode confirms contract bytecode on both addresses."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -102,9 +105,9 @@
           "url": "https://etherscan.io/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f#readContract"
         }
       ],
-      "evidence": "At Ethereum block 25294731: USDS.wards(USDS_JOIN=0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB)=1; USDS.wards(MCD_PAUSE_PROXY=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1; MCD_PAUSE.delay()=172800 (storage slot 4). Both controls are contracts with bytecode present. USDS_JOIN mints only against Vat.dai balance (cap-limited by Vat debt ceilings); Pause Proxy can authorize new modules with 2-day delay.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294731: USDS.wards(USDS_JOIN=0x3C0f895007CA717Aa01c8693e59DF1e8C3777FEB)=1; USDS.wards(MCD_PAUSE_PROXY=0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB)=1; MCD_PAUSE.delay()=172800 (storage slot 4). Both controls are contracts with bytecode present. USDS_JOIN mints only against Vat.dai balance (cap-limited by Vat debt ceilings); Pause Proxy can authorize new modules with 2-day delay. Economic-posture fields reviewed 2026-08-15: debt-ceiling raises and replacement mint authorizations execute through Sky's enforced two-day Pause, while Vat-backed CDP accounting needs no separate reserve reconciliation and has no named supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

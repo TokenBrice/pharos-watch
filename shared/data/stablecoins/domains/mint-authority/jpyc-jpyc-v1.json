@@ -44,10 +44,13 @@
         "evidence": "At Gnosis block 25295183: storage slots 6–7 of 0x417602f4fbdd471a431ae29fb5fe0a681964c11b returned 0xf6a78083ca3e2a662d6dd1703c939c8ace2e268d (EternalStorageProxy = Gnosis OmniBridge); mint on Gnosis is bridge-mediated."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295183: storage slot 5 returned EOA 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152 as owner/minter; contract is non-upgradeable. Polygon deployment is UChildERC20Proxy (Polygon PoS bridge). Gnosis deployment is OmniBridge-controlled (EternalStorageProxy 0xf6a780...). Ethereum direct-minter EOA is JPYC Inc.'s issuer key.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295183: storage slot 5 returned EOA 0x94c2d94a786e1aaa07e95d084e88cd3a0680d152 as owner/minter; contract is non-upgradeable. Polygon deployment is UChildERC20Proxy (Polygon PoS bridge). Gnosis deployment is OmniBridge-controlled (EternalStorageProxy 0xf6a780...). Ethereum direct-minter EOA is JPYC Inc.'s issuer key. Economic-posture fields reviewed 2026-08-15: the issuer EOA can mint without an enforced cap, while no recurring whole-supply attestation or compliance-sidecar regulator is established.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Ethereum JPYC v1 contract",

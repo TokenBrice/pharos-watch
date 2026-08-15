@@ -34,10 +34,13 @@
         "evidence": "At Base block 47200682 and Polygon (2026-06-11): owner() on 0x834df4c1d8f51be24322e39e4766697be015512f returned 0xf0a5e0932f2a648dbe6e5089ea37e178dc16600f on both chains; eth_getCode on that address = 2 bytes (EOA confirmed). EIP-1967 proxy admin slot = 0x322922f0e1675a8e7be2a38b0636a7c184082ca8 (ProxyAdmin contract), whose owner() also returns 0xf0a5e0... (same EOA). EIP-1967 implementation slot = 0xd2acc459fd2a8f2ef7a42bff1e61b8d9dc71b678. The same EOA controls both the token role and the upgrade path."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "Solana: CETES mintAuthority confirmed as 1-of-2 SPL Token-2022 multisig (A6nFyQb...) with 2 Etherfuse-operated signers. Base/Polygon: owner = EOA 0xf0a5e0... (also owns the ProxyAdmin at 0x322922...). The EOA controls both ownership and upgrade rights on EVM chains.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "Solana: CETES mintAuthority confirmed as 1-of-2 SPL Token-2022 multisig (A6nFyQb...) with 2 Etherfuse-operated signers. Base/Polygon: owner = EOA 0xf0a5e0... (also owns the ProxyAdmin at 0x322922...). The EOA controls both ownership and upgrade rights on EVM chains. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct and upgrade paths are unbounded, and BHR México's monthly assets-and-liabilities examinations reconcile whole supply without a named prudential supervisor.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Etherfuse Proof of Reserves",

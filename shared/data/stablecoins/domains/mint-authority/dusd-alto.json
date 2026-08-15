@@ -341,10 +341,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25540452, DUSD.owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86). Verified DUSD source shows mint() is limited to allowedMinter[msg.sender] and minterConfig[msg.sender].ceiling, while onlyOwner can change minter status and ceilings. The direct, non-proxy constructor only initializes the pauser and does not seed a minter or ceiling. Full SetMinterStatus and SetMinterCeiling history from block 0 returned 15 and 29 events respectively; state reads over the 13 unique status-event addresses found 11 active minters and 2 inactive addresses. The controls enumerate the complete active set at this block. The owner timelock remains governed by the 3-of-5 Alto Safe after its 1-hour delay.",
-      "reviewer": "SONG Safety Score V9 control review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "At Ethereum block 25540452, DUSD.owner() = AltoTimelockController (0xfae841679dc1a93d225ecc827e4bbf3e8d703f86). Verified DUSD source shows mint() is limited to allowedMinter[msg.sender] and minterConfig[msg.sender].ceiling, while onlyOwner can change minter status and ceilings. The direct, non-proxy constructor only initializes the pauser and does not seed a minter or ceiling. Full SetMinterStatus and SetMinterCeiling history from block 0 returned 15 and 29 events respectively; state reads over the 13 unique status-event addresses found 11 active minters and 2 inactive addresses. The controls enumerate the complete active set at this block. The owner timelock remains governed by the 3-of-5 Alto Safe after its 1-hour delay. Economic-posture fields reviewed 2026-08-15: every cap or minter-set change must pass the enforced one-hour timelock, while current issuance is fully on-chain collateral-gated with no off-chain attestor or prudential supervisor.",
+      "reviewer": "SONG Safety Score V9 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Ethereum DUSD verified direct-deployment source",

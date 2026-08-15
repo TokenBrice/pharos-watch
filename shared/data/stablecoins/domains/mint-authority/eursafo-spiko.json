@@ -107,12 +107,13 @@
         "observedAt": "2026-07-20"
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "prudential",
     "review": {
-      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3.",
-      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "Verified at Ethereum block 25295092. EURSAFO is a UUPS proxy at 0x0990b149 (impl 0x13ae01cb, Token contract); authority() = PermissionManager proxy at 0x344278aff (ERC1967Proxy → PermissionManager impl 0xd3f5f152). PermissionManager deployed at block 19690257; initialization logs confirm: ADMIN group (group 0) → 0x4eaa52b6 (Safe 1.4.1, 8/3, no modules/guard); minter/burner access → two issuer-backend relayer proxies (0xa0769f7a, 0xe4880249). PermissionManager UUPS has no separate proxy admin; the ADMIN group itself gates upgradeToAndCall. Economic-control evidence reviewed 2026-07-15: CACEIS independently calculates daily fund NAV and PwC performs four statutory audits per year; the latest holdings data disclosed by Spiko was updated 2026-03-03. The AMF GECO registry matches the exact Spiko Amundi Overnight Swap Fund containing EUR share class FR0014015LD3. Economic-posture fields reviewed 2026-08-15: issuer relayers mint directly and the Spiko super-admin Safe can immediately change permissions or UUPS logic; periodic fund controls apply and the AMF authorizes the exact UCITS product.",
+      "reviewer": "Claude Phase 0c continuation; Kimi P2 control cohort dc-7 (lead pyusd-paypal); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

@@ -102,6 +102,7 @@
         "evidence": "At Polygon block 90179923, proposedOwner() returned 0xff80b391b286887d446b1124820f87d5b049b4fb. Verified Claimable ownership lets this EOA call claimOwnership without another current-owner action, after which owner() can mint or replace the supply manager immediately. eth_getCode returned 0x."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -119,9 +120,9 @@
           "url": "https://spk.gov.tr/kurumlar/kripto-varlik-hizmet-saglayicilar/tasfiye-surecinde-olanlar-listesi"
         }
       ],
-      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both EUROT deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0x45c952bb677029fdf5df5248fe477025904a47d39ff185773834541e8e520f5c. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated reserve-to-liability report is public; Token Teknoloji's proof-of-reserves page is issuer-reported and ad hoc. Turkey's Capital Markets Board list matches Token Teknoloji A.S. as being in liquidation, not as an actively prudentially supervised stablecoin issuer.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15"
+      "evidence": "At Avalanche block 90233120 and Polygon block 90179923, both EUROT deployments were direct contracts with zero EIP-1967 implementation, admin, and beacon slots. Their runtime hashes matched at 0x45c952bb677029fdf5df5248fe477025904a47d39ff185773834541e8e520f5c. Avalanche owner and supply manager were EOA 0xff80b391b286887d446b1124820f87d5b049b4fb. Polygon owner and supply manager were EOA 0xd61c0129f6c35a675db6e2a067b31e75b2573077, with the Avalanche EOA staged as proposed owner. Verified source permits each current owner or supply manager to mint uncapped supply and permits the proposed owner to claim Polygon ownership without delay. Mint-tier review (2026-07-15): No named independent attestor, recurring cadence, or dated reserve-to-liability report is public; Token Teknoloji's proof-of-reserves page is issuer-reported and ad hoc. Turkey's Capital Markets Board list matches Token Teknoloji A.S. as being in liquidation, not as an actively prudentially supervised stablecoin issuer. Economic-posture fields reviewed 2026-08-15: both chain owners can mint uncapped supply, while issuer-only ad-hoc bank letters do not reconcile the whole cross-chain supply and no prudential authorization is evidenced.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

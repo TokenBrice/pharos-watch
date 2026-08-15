@@ -94,6 +94,9 @@
         "evidence": "At Citrea block 8546189: EIP-1967 proxy admin slot on 0xB6807116b3B1B321a390594e31ECD6e0076f6278 returns 0x0f38d8a5583f9316084e9c40737244870c565924 (ProxyAdmin contract, same address as Ethereum/Linea). ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe multisig, 3-of-5, owners: 0x8c9b09eb2312311bcabc4069ea2329c734e770cd, 0x028aecb628506ceb931792c89a90d45dec690a67, 0xcf4d90c0ce49e0db337b3bd8042916145d5387be, 0xa10f81bcaa44135fd15f15446b4e7531b753e698, 0x578ceb2aa7d6a02469450e4121eb4aec827f31cc). Implementation slot: 0xd87c75a92db19fe334fe7812890f893449ff1bda. Note: Citrea has a Safe directly as ProxyAdmin owner (vs TimelockController on Ethereum/Linea), reflecting Citrea's early-stage deployment."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "continuous",
+    "supervision": "attestation-only",
     "review": {
       "sources": [
         {
@@ -109,9 +112,9 @@
           "url": "https://eth.blockscout.com/address/0xf7f9638cb444D65e5A40bF5ff98ebE4ff319F04E"
         }
       ],
-      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25294742: MinterGateway confirmed immutable non-proxy (Blockscout ContractName=MinterGateway, IsProxy=false). At Citrea block 8546189 (rpc.mainnet.citrea.xyz): SwapFacility EIP-1967 admin slot = 0x0f38d8a5... (ProxyAdmin); ProxyAdmin.owner() = 0x8f4f10855fdbc3455ea1b6868d269b8fbcafd3a4 (Safe 3-of-5 with 5 owners, getOwners() confirmed); implementation = 0xd87c75a9.... Safe has no modules (getModulesPaginated GS105 revert = no modules). All mint-capable surfaces confirmed. Economic-posture fields reviewed 2026-08-15: Citrea's direct 3-of-5 Safe can replace SwapFacility logic without a timelock, while the current M-backed route has real-time M0 validator reconciliation and no product-specific prudential authorization.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     }
   }
 }

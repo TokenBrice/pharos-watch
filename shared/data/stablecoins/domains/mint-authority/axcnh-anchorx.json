@@ -232,10 +232,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "periodic",
+    "supervision": "prudential",
     "review": {
-      "evidence": "AnchorX describes issuer-operated 1:1 AxCNH issuance and redemption against CNH reserves. At Ethereum block 25539995 and Conflux eSpace block 152153398, each FiatTokenV2 deployment had a 3-of-4 masterMinter that could configure minters, an owner that could replace the masterMinter, and a separate 3-of-4 proxy admin that could replace the implementation. Ethereum's MinterConfigured event ledger records operational-minter EOA 0x674241ca030bf7487d46d4fbf595c64a256e2c85 with a 1,000,000 AxCNH allowance, but it was fully consumed and had zero remaining allowance at the observed snapshot. The controlling multisigs are therefore the active mint and upgrade surfaces.",
-      "reviewer": "Codex Safety Score V9 deployment-control review",
-      "reviewedAt": "2026-07-15",
+      "evidence": "AnchorX describes issuer-operated 1:1 AxCNH issuance and redemption against CNH reserves. At Ethereum block 25539995 and Conflux eSpace block 152153398, each FiatTokenV2 deployment had a 3-of-4 masterMinter that could configure minters, an owner that could replace the masterMinter, and a separate 3-of-4 proxy admin that could replace the implementation. Ethereum's MinterConfigured event ledger records operational-minter EOA 0x674241ca030bf7487d46d4fbf595c64a256e2c85 with a 1,000,000 AxCNH allowance, but it was fully consumed and had zero remaining allowance at the observed snapshot. The controlling multisigs are therefore the active mint and upgrade surfaces. Economic-posture fields reviewed 2026-08-15: issuer-controlled owners and multisigs can replace minters or logic, monthly Kreston AUP reports reconcile assets and liabilities, and AFSA authorizes AnchorX.KZ as a fiat-stablecoin issuer.",
+      "reviewer": "Codex Safety Score V9 deployment-control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable",
       "sources": [
         {

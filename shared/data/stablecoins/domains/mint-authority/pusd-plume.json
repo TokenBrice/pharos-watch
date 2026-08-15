@@ -103,10 +103,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route.",
-      "reviewer": "Codex CTRL curation",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Ethereum block 25531116 and Plume block 81049017 (2026-07-14), the pUSD BoringVault at 0xdddd… has zero EIP-1967 implementation, admin, and beacon slots on both tracked deployments, confirming an immutable mint-critical vault. owner() remains the 3-of-6 GnosisSafeL2 at 0xa08a… with no enabled modules; authority() remains RolesAuthority 0x97bc…, owned by the same Safe. The Plume Teller at 0x41bdb4aa remains the deposit gateway and is the only reviewed direct mint route. Economic-posture fields reviewed 2026-08-15: the undelayed owner Safe can replace authorized enter callers, while the live reserve configuration covers Ethereum only and the repo names no prudential supervisor or independent attestor.",
+      "reviewer": "Codex CTRL curation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Plume pUSD docs",

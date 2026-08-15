@@ -224,9 +224,9 @@
           "url": "https://eth.blockscout.com/block/25712112"
         }
       ],
-      "evidence": "At Ethereum block 25712112, direct role reads and a complete MinterConfigured/MinterRemoved replay established no live minter but a live EOA minter administrator able to issue renewable allowances without a global on-chain cap. Minting also requires a separately managed per-minter destination whitelist. The 3-of-4 owner Safe can rotate both operational roles; UUPS authority is separated behind a 172800-second TimelockController whose sole live proposer is another 3-of-4 Safe. Official terms state that issuance has no upper limit, so economic cap semantics are unbounded. The only public reserve snapshot retrieved is dated 2026-06-30 and the terms disclaim an issuance audit, so no reconciliation cadence is asserted. SBI Shinsei Trust Bank appears on the FSA's licensed trust-bank list and issues JPYSC as the trust-bank instrument described in official product materials, supporting prudential supervision.",
-      "reviewer": "OpenAI Codex C03 control review",
-      "reviewedAt": "2026-08-08",
+      "evidence": "At Ethereum block 25712112, direct role reads and a complete MinterConfigured/MinterRemoved replay established no live minter but a live EOA minter administrator able to issue renewable allowances without a global on-chain cap. Minting also requires a separately managed per-minter destination whitelist. The 3-of-4 owner Safe can rotate both operational roles; UUPS authority is separated behind a 172800-second TimelockController whose sole live proposer is another 3-of-4 Safe. Official terms state that issuance has no upper limit, so economic cap semantics are unbounded. The only public reserve snapshot retrieved is dated 2026-06-30 and the terms disclaim an issuance audit, so no reconciliation cadence is asserted. SBI Shinsei Trust Bank appears on the FSA's licensed trust-bank list and issues JPYSC as the trust-bank instrument described in official product materials, supporting prudential supervision. Economic-posture fields reviewed 2026-08-15: renewable allowances have no global cap, Japan FSA supervises the issuing trust bank, and the lone statutory snapshot is stale versus current supply and is not a recurring independent attestation.",
+      "reviewer": "OpenAI Codex C03 control review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

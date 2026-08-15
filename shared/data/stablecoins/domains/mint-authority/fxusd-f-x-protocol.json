@@ -196,10 +196,13 @@
         "evidence": "Safe API confirmed 6-of-9 Gnosis Safe v1.3.0 at block 25,294,712; no modules, no guard. Holds all timelock roles (PROPOSER, EXECUTOR, CANCELLER, TIMELOCK_ADMIN). A bare EOA (0xa1d0027…) also holds TIMELOCK_ADMIN_ROLE but not PROPOSER/EXECUTOR."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Ethereum fxUSD proxy admin 0x9b54... is owned by TimelockController 0x6886... with a 3-day delay and a 6-of-9 proposer/executor Safe. The AladdinDAO deployment registry and Base RPC identify the second tracked deployment as an immutable LayerZero OFT. At Base block 48,621,538, owner() returned a 3-of-4 Safe with no enabled modules; that Safe controls the OFT peer and messaging configuration. Both tracked deployments and their distinct code/configuration authorities are now reviewed.",
-      "reviewer": "SOL-7 blocker challenge batch 01",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Ethereum fxUSD proxy admin 0x9b54... is owned by TimelockController 0x6886... with a 3-day delay and a 6-of-9 proposer/executor Safe. The AladdinDAO deployment registry and Base RPC identify the second tracked deployment as an immutable LayerZero OFT. At Base block 48,621,538, owner() returned a 3-of-4 Safe with no enabled modules; that Safe controls the OFT peer and messaging configuration. Both tracked deployments and their distinct code/configuration authorities are now reviewed. Economic-posture fields reviewed 2026-08-15: the Base Safe can immediately replace the authenticated bridge path, while repo evidence does not reconcile that path to the Ethereum CDP supply and names no supervisor.",
+      "reviewer": "SOL-7 blocker challenge batch 01; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "AladdinDAO deployment registry",

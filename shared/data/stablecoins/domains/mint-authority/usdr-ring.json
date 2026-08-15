@@ -62,10 +62,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "At Ethereum block 25295203: USDR token (AssetToken / CoreRef) verified on Blockscout. Core contract (0xb2799ed) enumerated via getRoleMember: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs). No RoleRevoked events recorded. Token has no proxy (EIP-1967 slots zero). Minting is uncapped for any MINTER_ROLE holder; GOVERN_ROLE can add new minters freely.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11",
+      "evidence": "At Ethereum block 25295203: USDR token (AssetToken / CoreRef) verified on Blockscout. Core contract (0xb2799ed) enumerated via getRoleMember: MINTER_ROLE has 4 holders (3 EOAs + RingLaunchpad contract); GOVERN_ROLE has 3 holders (Core itself + 2 EOAs). No RoleRevoked events recorded. Token has no proxy (EIP-1967 slots zero). Minting is uncapped for any MINTER_ROLE holder; GOVERN_ROLE can add new minters freely.. Economic-posture fields reviewed 2026-08-15: three EOAs mint uncapped and GOVERN_ROLE can add minters freely, while no reproducible whole-supply reserve ledger, prudential supervisor, or independent attestor is evidenced.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "USDR token (Blockscout)",

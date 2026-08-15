@@ -141,6 +141,9 @@
         "evidence": "At Solana slot 425797741, getAccountInfo on mint Crn4x1Y2... returned mintAuthority 7zjQfu3n..., an initialized SPL token multisig with numRequiredSigners=2 of 2 valid signers; freezeAuthority CpMoJUPW... is a non-executable account."
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "prudential",
     "review": {
       "sources": [
         {
@@ -156,9 +159,9 @@
           "url": "https://etherscan.io/address/0xc08512927d12348f6620a698105e1baac6ecd911"
         }
       ],
-      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig.",
-      "reviewer": "Claude Phase 0c continuation",
-      "reviewedAt": "2026-06-11"
+      "evidence": "At Ethereum block 25295183: minter()=0x78AFae...1C (EOA), owner()=0xfb5dAE...6D (EOA), admin()=0x703736...17 (EOA), minterAdmin()=0x1e412a...e3 (EOA), pauser()=0xe73b76...40 (EOA), prohibiter()=0x72fe98...cf (EOA), wiper()=0x42757e...6e (EOA), capper()=0xb95ab5...0a (EOA), proxy admin slot=0xe5e877...73 (EOA). All role holders are EOAs consistent with GMO Trust institutional key custody. Solana and Stellar deployments not verified (separate minting mechanisms). Solana mint authority resolved at slot 425797741: 2-of-2 SPL token multisig. Economic-posture fields reviewed 2026-08-15: issuer-controlled EOAs can raise capacity or mint, NYDFS supervises GMO Trust, and whole-supply reconciliation is unverified across all deployments.",
+      "reviewer": "Claude Phase 0c continuation; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
     },
     "upgradeability": {
       "model": "transparent-proxy",

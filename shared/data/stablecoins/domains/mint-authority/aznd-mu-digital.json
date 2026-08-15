@@ -147,10 +147,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "unknown",
+    "supervision": "none",
     "review": {
-      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function.",
-      "reviewer": "Codex V9 mint-authority review",
-      "reviewedAt": "2026-07-14",
+      "evidence": "Mu Digital documents KYC-gated primary minting through PrimaryMarket. At Monad block 87687688, verified AZND source and RPC reads resolve three TOKEN_MINTER_ROLE holders and the AccessManager default admin; the token is a direct non-proxy deployment with immutable PrimaryMarket but mutable role membership. At Ethereum block 25530490, verified OFT/UUPS source and RPC reads resolve the spoke proxy implementation, owner, AccessManager, and same 0x8b5f...0068 EOA as upgrade admin. Ethereum owner minting is indirect through trusted LayerZero peer configuration and UUPS control, not a public owner-only mint function. Economic-posture fields reviewed 2026-08-15: uncapped Monad role holders and the issuer EOA role/OFT/upgrade controls make minting economically unbounded; no whole-supply recurring reconciliation or named prudential supervisor is evidenced.",
+      "reviewer": "Codex V9 mint-authority review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Mu Digital mint and redeem documentation",

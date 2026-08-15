@@ -87,12 +87,13 @@
         }
       ]
     },
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
-    "supervision": "none",
+    "supervision": "attestation-only",
     "review": {
-      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer.",
-      "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance)",
-      "reviewedAt": "2026-07-20",
+      "evidence": "At Ethereum block 25295025, BSC block 103628780, Polygon block 88323921: IDRT is a non-upgradeable Ownable ERC20 on each chain. Owner is a 4-of-6 Safe (v1.3.0) with identical signer set across Ethereum (0x109046f...), BSC (0x0e8b655...), and Polygon (0xa1f0fc5...) — all 6 EOA signers match. No modules or guard on any Safe. Harmony deployment excluded (chain is inactive). No proxy; no separate minter role. Mint-tier review (2026-07-15): Johannes Juara & Rekan issued a monthly agreed-upon-procedures report for 2026-01-31, signed 2026-02-09, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Bappebti crypto-asset recognition and trading oversight do not constitute prudential supervision of PT Rupiah Token Indonesia as a stablecoin issuer. Economic-posture fields reviewed 2026-08-15: issuer Safe can mint without a firm cap, independent AUP evidence exists but recurring whole-supply reconciliation and prudential supervision are not established.",
+      "reviewer": "Codex SOL-V mint-tier research; Kimi P2 control cohort dc-8 (lead usdy-ondo-finance); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Rupiah Token website",

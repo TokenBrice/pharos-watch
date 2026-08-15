@@ -194,12 +194,13 @@
         ]
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Exact-block reads confirm four UUPS deployment controls: Ethereum (25534481), Polygon (90246996), Conflux eSpace (152097341), and XDC (104935021) resolve through the canonical EIP-1967 implementation slot with a zero proxy-admin slot and UPGRADE_INTERFACE_VERSION 5.0.0. Ethereum, Polygon, and XDC use EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; Conflux uses EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883. Each EOA holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on its deployment. Verified Ethereum and Polygon implementation source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE); same-implementation upgradeToAndCall eth_call succeeded for Ethereum, Conflux, and XDC. No contract-enforced timelock was observed. Mint-tier review (2026-07-15): Aura Partners performs monthly independent limited-assurance reconciliation; the latest report covers 2026-05-31 and was signed 2026-06-09. AUSTRAC records match TAU Pty Ltd, but AUSTRAC enrollment is AML registration rather than prudential stablecoin-issuer supervision.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "evidence": "AUDX issuer materials describe a single-entity issuer-managed mint and redemption path against fully backed AUD reserves. Exact-block reads confirm four UUPS deployment controls: Ethereum (25534481), Polygon (90246996), Conflux eSpace (152097341), and XDC (104935021) resolve through the canonical EIP-1967 implementation slot with a zero proxy-admin slot and UPGRADE_INTERFACE_VERSION 5.0.0. Ethereum, Polygon, and XDC use EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; Conflux uses EOA 0x1274d87337eb9091e22b9686ae34ad54c989c883. Each EOA holds DEFAULT_ADMIN_ROLE, MINTER_ROLE, and UPGRADER_ROLE on its deployment. Verified Ethereum and Polygon implementation source gates _authorizeUpgrade with onlyRole(UPGRADER_ROLE); same-implementation upgradeToAndCall eth_call succeeded for Ethereum, Conflux, and XDC. No contract-enforced timelock was observed. Mint-tier review (2026-07-15): Aura Partners performs monthly independent limited-assurance reconciliation; the latest report covers 2026-05-31 and was signed 2026-06-09. AUSTRAC records match TAU Pty Ltd, but AUSTRAC enrollment is AML registration rather than prudential stablecoin-issuer supervision. Economic-posture fields reviewed 2026-08-15: issuer-controlled EOAs hold direct mint, default-admin, and immediate UUPS upgrade roles across all deployments; monthly independent reserve reconciliation exists without prudential issuer supervision.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "Ethereum Blockscout AUDX contract",

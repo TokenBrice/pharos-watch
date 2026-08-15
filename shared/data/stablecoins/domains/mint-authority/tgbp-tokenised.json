@@ -110,12 +110,13 @@
         "evidence": "A finalized Solana RPC read on 2026-07-14 decoded the tGBP mint as an initialized standard SPL Token mint with this address as both mint and freeze authority. The authority account decoded as an initialized 1-of-2 SPL Token multisig."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "periodic",
     "supervision": "attestation-only",
     "review": {
-      "evidence": "Current RPC reads on 2026-07-14 covered every tracked deployment. Ethereum, Base, BSC, Polygon, and Avalanche use transparent proxies at the common token address. Their implementations resolve to 0x94321d80... on Ethereum, 0xc608f775... on Base/BSC/Avalanche, and 0xe6ef9733... on Polygon. ProxyAdmin 0x666b8f... is owned by the reviewed EOA on four chains and self-owned on Avalanche. The Solana deployment is a standard immutable SPL Token mint controlled by a 1-of-2 multisig. The reviewed EOA therefore retains immediate mint-logic replacement on four EVM deployments, while Avalanche and Solana expose no external code-replacement authority. Mint-tier review (2026-07-15): Andersen LLP performs monthly independent agreed-upon procedures; the latest report covers 2026-06-30 and was published 2026-07-14, reconciling tGBP liabilities to reserve bank balances. FCA records match BCP Technologies Ltd only as a registered cryptoasset business, and the issuer states tGBP is not e-money and lacks FSCS coverage, so no prudential issuer supervision is credited.",
-      "reviewer": "Codex SOL-V mint-tier research",
-      "reviewedAt": "2026-07-15",
+      "evidence": "Current RPC reads on 2026-07-14 covered every tracked deployment. Ethereum, Base, BSC, Polygon, and Avalanche use transparent proxies at the common token address. Their implementations resolve to 0x94321d80... on Ethereum, 0xc608f775... on Base/BSC/Avalanche, and 0xe6ef9733... on Polygon. ProxyAdmin 0x666b8f... is owned by the reviewed EOA on four chains and self-owned on Avalanche. The Solana deployment is a standard immutable SPL Token mint controlled by a 1-of-2 multisig. The reviewed EOA therefore retains immediate mint-logic replacement on four EVM deployments, while Avalanche and Solana expose no external code-replacement authority. Mint-tier review (2026-07-15): Andersen LLP performs monthly independent agreed-upon procedures; the latest report covers 2026-06-30 and was published 2026-07-14, reconciling tGBP liabilities to reserve bank balances. FCA records match BCP Technologies Ltd only as a registered cryptoasset business, and the issuer states tGBP is not e-money and lacks FSCS coverage, so no prudential issuer supervision is credited. Economic-posture fields reviewed 2026-08-15: unbounded EVM owner and Solana multisig mint paths; monthly Andersen full-liability reconciliation exists without prudential product supervision.",
+      "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "sources": [
         {
           "label": "OpenZeppelin tGBP audit",

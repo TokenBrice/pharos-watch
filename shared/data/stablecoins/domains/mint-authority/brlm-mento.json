@@ -133,6 +133,9 @@
         "evidence": "At Celo block 72138428, ValidatorsProxy _getOwner() returned this GovernanceProxy and _getImplementation() returned 0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58. Governance can change the authorized proxy's implementation, creating a latent BRLm mint path, but does not currently have a direct BRLm call."
       }
     ],
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
+    "supervision": "none",
     "review": {
       "sources": [
         {
@@ -148,9 +151,9 @@
           "url": "https://celo.blockscout.com/address/0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58?tab=contract"
         }
       ],
-      "evidence": "At Celo block 72138428, broker() returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() returned 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() was zero. The Broker is the live swap mint/burn path. The current Validators implementation can only mint registry USDm for EpochManager, but its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. The 172800-second Mento Timelock owns and administers the BRLm token and Broker.",
-      "reviewer": "Codex data review",
-      "reviewedAt": "2026-07-14",
+      "evidence": "At Celo block 72138428, broker() returned 0x777A8255cA72412f0d706dc03C9D1987306B4CaD, validators() returned 0xaEb865bCa93DdC8F47b8e29F40C5399cE34d0C58, and exchange() was zero. The Broker is the live swap mint/burn path. The current Validators implementation can only mint registry USDm for EpochManager, but its Celo-Governance-owned proxy remains a latent upgrade-controlled authorization surface. The 172800-second Mento Timelock owns and administers the BRLm token and Broker. Economic-posture fields reviewed 2026-08-15: the two-day Mento Timelock governs broker and token minter replacement while Celo governance controls the latent validator upgrade path, the live Mento Reserve feed covers the shared backing, and no independent attestor or prudential supervisor is evidenced.",
+      "reviewer": "Codex data review; Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15",
       "disposition": "scoreable"
     }
   }

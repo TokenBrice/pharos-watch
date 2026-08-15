@@ -241,6 +241,7 @@
         "evidence": "On 2026-07-14, TronGrid owner() returned this non-contract account and the token's trust service returned role 1 (MASTER) for it. That role satisfies the verified implementation's privileged issuance and UUPS authorization gates."
       }
     ],
+    "economicCapSemantics": "unbounded",
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
@@ -295,10 +296,9 @@
           "url": "https://blog.redstone.finance/2026/07/06/tokenize-the-world-redstones-role-in-the-securitize-ecosystem/"
         }
       ],
-      "evidence": "The full five-deployment registry was re-verified on 2026-07-14. Exact-block EVM reads resolved implementations 0xa2f6...62c9 (Ethereum block 25531417), 0x5e98...2e0b (Polygon block 90222365), 0x05ea...63ae (Optimism block 154219883), and 0x0d12...c344 (Plume block 81057700); each proxy had a zero EIP-1967 admin slot and returned shared code-empty owner EOA 0x59c1...76Ee. Plume's trust service returned MASTER for that owner. Tronscan and TronGrid identified Tron proxy TSwy...TPht1X, implementation TPEA...PrTFT, trust service THCi...zvau, and non-contract owner TGmC...6huia with MASTER role. Verified DSToken implementations gate privileged issuance at ISSUER-or-above and UUPS upgrades at MASTER. Evidence challenge completed 2026-07-15: HLSCOPE uses RedStone TSSO to deliver issuer-provided NAV for pricing and redemptions, but no dated independent supply-to-fund-assets reconciliation was found. Its Rule 506(c) and Investment Company Act Section 3(c)(7) exemptions do not prudentially supervise the fund. Re-verified at Ethereum block 25575167 on 2026-07-20: HLSCOPE 0xda2ffa104356688e74d9340519b8c17f00d7752e still returns owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and its EIP-1967 implementation slot still resolves to 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9. Economic-control adjudication: the shared code-empty owner EOA holds the Securitize trust-service MASTER role, which authorizes both issuance at ISSUER-or-above and UUPS upgrades, with no on-chain cap, no multisig, no timelock, and no independent bound, so the mint cap is economically unbounded (the fund's offering documents constrain the issuer legally, not on-chain).",
-      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20)",
-      "reviewedAt": "2026-07-20"
-    },
-    "economicCapSemantics": "unbounded"
+      "evidence": "The full five-deployment registry was re-verified on 2026-07-14. Exact-block EVM reads resolved implementations 0xa2f6...62c9 (Ethereum block 25531417), 0x5e98...2e0b (Polygon block 90222365), 0x05ea...63ae (Optimism block 154219883), and 0x0d12...c344 (Plume block 81057700); each proxy had a zero EIP-1967 admin slot and returned shared code-empty owner EOA 0x59c1...76Ee. Plume's trust service returned MASTER for that owner. Tronscan and TronGrid identified Tron proxy TSwy...TPht1X, implementation TPEA...PrTFT, trust service THCi...zvau, and non-contract owner TGmC...6huia with MASTER role. Verified DSToken implementations gate privileged issuance at ISSUER-or-above and UUPS upgrades at MASTER. Evidence challenge completed 2026-07-15: HLSCOPE uses RedStone TSSO to deliver issuer-provided NAV for pricing and redemptions, but no dated independent supply-to-fund-assets reconciliation was found. Its Rule 506(c) and Investment Company Act Section 3(c)(7) exemptions do not prudentially supervise the fund. Re-verified at Ethereum block 25575167 on 2026-07-20: HLSCOPE 0xda2ffa104356688e74d9340519b8c17f00d7752e still returns owner() = 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee and its EIP-1967 implementation slot still resolves to 0xa2f6ef3144753f31fcd728910b96a92bbbb462c9. Economic-control adjudication: the shared code-empty owner EOA holds the Securitize trust-service MASTER role, which authorizes both issuance at ISSUER-or-above and UUPS upgrades, with no on-chain cap, no multisig, no timelock, and no independent bound, so the mint cap is economically unbounded (the fund's offering documents constrain the issuer legally, not on-chain). Economic-posture fields reviewed 2026-08-15: issuer EOAs can issue and upgrade across all five deployments, while NAV reporting does not reconcile token supply to fund assets and no prudential product supervisor is evidenced.",
+      "reviewer": "owner-triage; Claude V9 Phase 3 curation lane cur-14 (economic-control fields, 2026-07-20); Sol economic-posture batch 2026-08-15",
+      "reviewedAt": "2026-08-15"
+    }
   }
 }
