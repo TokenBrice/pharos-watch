@@ -42,6 +42,7 @@ interface AccountableParams {
   bucket?: "type" | "reserves_split" | "deployment" | "type_split" | "stablecoin_split" | "exposure_split" | "protocol_split";
   riskMap?: Record<string, ReserveSlice["risk"]>;
   renameMap?: Record<string, string>;
+  sourceKeyMap?: Record<string, string>;
   coinIdMap?: Record<string, string>;
   depTypeMap?: Record<string, ReserveSlice["depType"]>;
   totalReservesExcludeBuckets?: string[];
@@ -359,6 +360,7 @@ export function adaptAccountableDashboard(
 
   const riskMap = params.riskMap ?? {};
   const renameMap = params.renameMap ?? {};
+  const sourceKeyMap = params.sourceKeyMap ?? {};
   const coinIdMap = params.coinIdMap ?? {};
   const depTypeMap = params.depTypeMap ?? {};
   const totalReservesExcludeBuckets = new Set(params.totalReservesExcludeBuckets ?? []);
@@ -419,6 +421,7 @@ export function adaptAccountableDashboard(
   const slices = slicesFromValues(
     [
       ...mapped.map(({ name, value }) => ({
+        ...(sourceKeyMap[name] ? { sourceKey: sourceKeyMap[name] } : {}),
         name: renameMap[name] ?? name,
         value,
         risk: riskMap[name]!,
@@ -432,7 +435,8 @@ export function adaptAccountableDashboard(
             risk: "high" as const,
           }]
         : []),
-    ].map(({ name, value, risk, coinId, depType }) => ({
+    ].map(({ sourceKey, name, value, risk, coinId, depType }) => ({
+      ...(sourceKey ? { sourceKey } : {}),
       name,
       value,
       risk,

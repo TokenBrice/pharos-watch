@@ -26,6 +26,12 @@ export function SafetyScoresOverview() {
         measured weakness or traceable policy-bounded uncertainty.
       </p>
       <p>
+        Live reserve percentages are scoring weights, not identities. A namespace-qualified stable source key joins
+        an adapter-owned reserve category to reviewed classification and dependency metadata across rebalancing or
+        label changes. Explicit keys must match uniquely and otherwise fail closed; historical unkeyed captures retain
+        a unique normalized-name compatibility join.
+      </p>
+      <p>
         Responsibility follows causal provenance instead of the nearest processing stage. An explicit reason-level
         owner is authoritative; inherited reserve gaps, unavailable upstream pillars, and missing parent scores carry
         every originating owner downstream. Every attributed root receives a causal-root-qualified score path even

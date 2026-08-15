@@ -92,6 +92,14 @@
       "renameMap": {
         "Other": "Other / unmapped Accountable buckets"
       },
+      "sourceKeyMap": {
+        "Private Credit (Fasanara FTAC)": "accountable:noon:deployment:private-credit-ftac",
+        "DeFi Lending": "accountable:noon:deployment:defi-lending",
+        "CLOs (JAAA)": "accountable:noon:deployment:clos-jaaa",
+        "US Treasury Bills": "accountable:noon:deployment:us-treasury-bills",
+        "Other": "accountable:noon:deployment:other",
+        "Funding Rate (BTC)": "accountable:noon:deployment:funding-rate-btc"
+      },
       "coinIdMap": {
         "CLOs (JAAA)": "jaaa-janus-henderson-anemoy"
       },

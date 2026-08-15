@@ -39,15 +39,6 @@ export function buildSafetyScoreV9ReserveClassifications(slices: readonly Reserv
     });
 }
 
-// Identity tolerance for joining a live reserve slice to its reviewed
-// classification. Name equality (with the surrounding 1:1 bijection guards)
-// carries slice identity; the weight check only rejects gross mismatches.
-// Live compositions drift daily (2026-07-18: USDC T-bills moved 2.0pp in two
-// days, severing every fiat classification under the prior 0.5), so the
-// bound must tolerate normal rebalancing. Weights used for scoring always
-// come from the live row, never the reviewed one.
-const RESERVE_WEIGHT_MATCH_TOLERANCE_PCT = 5;
-
 function normalizedReserveName(value: string): string {
   return value
     .toLowerCase()
@@ -55,13 +46,10 @@ function normalizedReserveName(value: string): string {
     .replace(/[^a-z0-9]+/g, "");
 }
 
-function reserveSlicesMatch(left: ReserveSlice, right: ReserveSlice): boolean {
-  const normalizedName = normalizedReserveName(left.name);
-  return (
-    normalizedName.length > 0 &&
-    normalizedName === normalizedReserveName(right.name) &&
-    Math.abs(left.pct - right.pct) <= RESERVE_WEIGHT_MATCH_TOLERANCE_PCT
-  );
+function reserveSlicesMatch(live: ReserveSlice, reviewed: ReserveSlice): boolean {
+  if (live.sourceKey) return reviewed.sourceKey === live.sourceKey;
+  const normalizedName = normalizedReserveName(live.name);
+  return normalizedName.length > 0 && normalizedName === normalizedReserveName(reviewed.name);
 }
 
 function overlayReviewedReserveClassification(
@@ -139,8 +127,8 @@ function reviewedReserveMatches(
       .map((reviewed, reviewedIndex) => ({ reviewed, reviewedIndex }))
       .filter(({ reviewed }) => reserveSlicesMatch(live, reviewed)),
   );
-  const liveCandidateCountByReviewed = reviewedReserves.map(
-    (reviewed) => liveReserves.filter((live) => reserveSlicesMatch(live, reviewed)).length,
+  const liveCandidateCountByReviewed = reviewedReserves.map((reviewed) =>
+    liveReserves.filter((live) => reserveSlicesMatch(live, reviewed)).length,
   );
   return reviewedCandidatesByLive.flatMap((candidates, liveIndex) => {
     if (candidates.length !== 1) return [];
@@ -184,9 +172,9 @@ export function dependencyReserveSlices(
 }
 
 /**
- * Bridges reviewed registry classifications onto exact live reserve identities.
- * Matching is deliberately one-to-one and ignores rows whose names or rounded
- * weights no longer describe the same exposure.
+ * Bridges reviewed registry classifications onto live reserve identities.
+ * Explicit source keys match exactly and fail closed; historical unkeyed rows
+ * use a unique normalized-name match. Percentage weights are never identity.
  */
 export function buildReviewedReserveClassifications(
   liveReserves: readonly ReserveSlice[],

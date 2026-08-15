@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "857071afcf666ca3a637dad8f745b2f8ce11f213548bf1a16e1498ac08e07d61"
+      "sha256": "9e507484d7f797a95bcab266b692a82b9691918382a4b7f3cbef8d2b874b49b6"
     },
     {
       "path": "shared/data/safety-score-v9/operational-resilience-overlays-v1.json",
@@ -62,7 +62,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/methodology-versions/current-version.json",
-      "sha256": "30204781313b3952a46a0471f29868b7ce78b1b0a112fa667ae523be0664a360"
+      "sha256": "2e51b7268f0ce54d97f746b937913b61a7ac9f616e4e0dbaece8c0946a745fe3"
     },
     {
       "path": "shared/lib/methodology-versions/liquidity-score.ts",
@@ -354,7 +354,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/reserves.ts",
-      "sha256": "b94e49de476323f58faea7847f7fc9f4fc5a020f166cafc84022f3e9247a0f7b"
+      "sha256": "8b0d660ba618eaaf6d1909937c81af040315fddce203cf9315def713ae1e8ab0"
     },
     {
       "path": "shared/types/safety-score-history.ts",
@@ -446,7 +446,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-reserves.ts",
-      "sha256": "2abcc9bf86c7104bf56c0afe57cd83519977e10f48864fb1b846afd4c5090f7f"
+      "sha256": "2ac83bbaa46851daa3073181511a7a932b09099f774a7cc3cbe00e7e112a0aae"
     },
     {
       "path": "worker/src/lib/safety-score-v9-extension-routes.ts",
@@ -502,7 +502,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-schema.ts",
-      "sha256": "d2c5b9d723ce78b500948b90f54cf3f7aaf0d9257aec88660397ce667af054a0"
+      "sha256": "5259df072a69ec67a49e880b5a2428acfb5855bdd47eec66baa215d014d3f3cd"
     },
     {
       "path": "worker/src/lib/safety-score-v9-fact-set-wrapper.ts",
@@ -533,7 +533,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "8143ea173162a28e0fb4c87ee2609927eb4122e2bc762e70049b13d84b4d8cd0"
     }
   ],
-  "digest": "9eb7113718f604f70ce3deaa1ae711f33e858e9effcdf73e479e709fd55c3c10"
+  "digest": "b8e78b975ec9e448e2afbb6a3608ba266350597a345e1dcccd93d5ff46a172f4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

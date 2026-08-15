@@ -15,18 +15,19 @@ describe("adaptReMetrics", () => {
     const result = adaptReMetrics(SAMPLE_HTML);
 
     expect(result.slices).toEqual([
-      { name: "Off-chain insurance / reinsurance capital", pct: 81.6, risk: "medium" },
+      { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 81.6, risk: "medium" },
       {
+        sourceKey: "re-metrics:token:susde",
         name: "sUSDe (delta-neutral ETH basis)",
         pct: 15,
         risk: "high",
         coinId: "susde-ethena",
         depType: "collateral",
       },
-      { name: "USDC reserves", pct: 2.5, risk: "low", coinId: "usdc-circle" },
-      { name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
-      { name: "USDT reserves", pct: 0.1, risk: "low", coinId: "usdt-tether" },
-      { name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
+      { sourceKey: "re-metrics:token:usdc", name: "USDC reserves", pct: 2.5, risk: "low", coinId: "usdc-circle" },
+      { sourceKey: "re-metrics:token:reusd/susde", name: "reUSD / sUSDe LP position", pct: 0.7, risk: "high" },
+      { sourceKey: "re-metrics:token:usdt", name: "USDT reserves", pct: 0.1, risk: "low", coinId: "usdt-tether" },
+      { sourceKey: "re-metrics:token:usde", name: "USDe (delta-neutral ETH basis)", pct: 0.1, risk: "high", coinId: "usde-ethena" },
     ]);
     expect(result.metadata).toMatchObject({
       chainBreakdownCount: 4,
@@ -53,6 +54,7 @@ describe("adaptReMetrics", () => {
     const result = adaptReMetrics(SAMPLE_HTML_INITIAL_TVL_DATA);
 
     expect(result.slices[0]).toEqual({
+      sourceKey: "re-metrics:offchain-capital",
       name: "Off-chain insurance / reinsurance capital",
       pct: 81.6,
       risk: "medium",
@@ -73,8 +75,8 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     const result = adaptReMetrics(html);
 
     expect(result.slices).toEqual([
-      { name: "liUSD 4w vault", pct: 50, risk: "medium" },
-      { name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
+      { sourceKey: "re-metrics:token:liusd-4w", name: "liUSD 4w vault", pct: 50, risk: "medium" },
+      { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
     ]);
     expect(result.warnings).toBeUndefined();
   });
@@ -88,8 +90,8 @@ self.__next_f.push([1,"...\\"initialChainBreakdowns\\":{\\"ethereum\\":{\\"asOf\
     const result = adaptReMetrics(html);
 
     expect(result.slices).toEqual([
-      { name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
-      { name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
+      { sourceKey: "re-metrics:token:susds", name: "sUSDS (Sky savings USDS)", pct: 50, risk: "low", coinId: "susds-sky", depType: "collateral" },
+      { sourceKey: "re-metrics:offchain-capital", name: "Off-chain insurance / reinsurance capital", pct: 50, risk: "medium" },
     ]);
     expect(result.warnings).toBeUndefined();
   });

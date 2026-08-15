@@ -2,6 +2,7 @@
   "id": "eurc-circle",
   "reserves": [
     {
+      "sourceKey": "circle:eurc:other-bank-deposits",
       "name": "Other Bank Deposits",
       "pct": 98.56135,
       "risk": "very-low",
@@ -15,6 +16,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "circle:eurc:sifi-deposits",
       "name": "Deposits at Systemically Important Institutions",
       "pct": 1.43865,
       "risk": "very-low",

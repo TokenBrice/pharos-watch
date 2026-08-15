@@ -63,10 +63,10 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "usdc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
-      { name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
-      { name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
-      { name: "Deposits at Systemically Important Institutions", pct: 12.5, risk: "very-low" },
-      { name: "Overnight Reverse Treasury Repo", pct: 1.7, risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 71.9, risk: "very-low" },
+      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 13.9, risk: "very-low" },
+      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 12.5, risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 1.7, risk: "very-low" },
     ]);
   });
 
@@ -74,8 +74,8 @@ describe("adaptCircleTransparency", () => {
     const result = adaptCircleTransparency(CIRCLE_HTML, "eurc");
     expect(result.metadata?.valueMode).toBe("absolute");
     expect(result.slices).toEqual([
-      { name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
-      { name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
+      { sourceKey: "circle:eurc:other-bank-deposits", name: "Other Bank Deposits", pct: 98.6, risk: "very-low" },
+      { sourceKey: "circle:eurc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 1.4, risk: "very-low" },
     ]);
   });
 

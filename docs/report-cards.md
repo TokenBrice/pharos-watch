@@ -5,7 +5,7 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.2`
+- **Current methodology version:** `v9.21`
 - Public response schema: report v4 with score trace v3
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
 - Implementation: `shared/lib/safety-score-v9/`
@@ -28,6 +28,8 @@ V9 evaluates three pillars:
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
+
+Live reserve percentages are scoring weights, not slice identities. Since methodology `9.21`, an adapter may attach a namespace-qualified stable `sourceKey` to a reserve category and the reviewed reserve sidecar carries the same key. A keyed live row joins one-to-one and fails closed when its reviewed key is missing or duplicated; the key remains stable across display-label edits and rebalancing. Historical unkeyed captures use a unique normalized-name compatibility join. Neither path compares the reviewed percentage with the live percentage, and both Backing classification and dependency compilation consume the same match set.
 
 Oracle applicability is explicit in Economic Control. A reviewed path with no price-sensitive oracle or internal valuation authority is not applicable and emits no scored component. If no other binding control remains, the neutral empty set resolves to 95 without manufacturing a display row. A genuinely oracleless mechanism scores 95; privileged internal pricing scores 45. The latter can apply to a top-level mint, redemption, NAV, or exchange-rate quote even when borrower liquidation branches do not exist. External oracle tiers retain their existing scores.
 

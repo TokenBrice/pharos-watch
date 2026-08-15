@@ -51,6 +51,15 @@ describe("reserve composition validation", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts namespace-qualified source keys and rejects display labels as keys", () => {
+    expect(FullReserveCompositionSchema.safeParse([
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "Treasuries", pct: 100, risk: "very-low" },
+    ]).success).toBe(true);
+    expect(FullReserveCompositionSchema.safeParse([
+      { sourceKey: "Treasuries", name: "Treasuries", pct: 100, risk: "very-low" },
+    ]).success).toBe(false);
+  });
+
   it("rejects contradictory blacklistability exposure annotations", () => {
     const directNo = FullReserveCompositionSchema.safeParse([
       { name: "USDC", pct: 100, risk: "low", blacklistable: true, blacklistabilityExposure: "no" },
