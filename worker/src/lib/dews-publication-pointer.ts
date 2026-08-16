@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, type CacheWriteResult } from "./db-cache";
 import { sha256Hex } from "@shared/lib/sha256";
 import { throwIfAborted } from "./abort";
@@ -285,7 +286,7 @@ export async function writeDewsPublishedGeneration(
   throwIfAborted(signal);
   const written = Number(pointerResult?.meta?.changes ?? 0) > 0;
   if (!written) {
-    console.log(`[cache] Skipped write for "${DEWS_PUBLICATION_POINTER_CACHE_KEY}" — existing data is newer (started_at > ${updatedAt})`);
+    logWorkerEventArgs("lib", "info", `[cache] Skipped write for "${DEWS_PUBLICATION_POINTER_CACHE_KEY}" — existing data is newer (started_at > ${updatedAt})`);
   }
   return { written, skippedBecauseNewer: !written };
 }

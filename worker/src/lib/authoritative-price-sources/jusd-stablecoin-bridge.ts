@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { keccak256 } from "viem/utils";
 import { z } from "zod";
@@ -133,13 +134,13 @@ async function fetchCitreaRpcBatch(
     },
   );
   if (!result?.response.ok) {
-    console.warn(`[jusd-stablecoin-bridge] Citrea RPC returned ${result?.response.status ?? "no response"}`);
+    logWorkerEventArgs("lib", "warn", `[jusd-stablecoin-bridge] Citrea RPC returned ${result?.response.status ?? "no response"}`);
     return null;
   }
 
   const parsed = z.array(JsonRpcBatchEntrySchema).safeParse(result.body);
   if (!parsed.success || parsed.data.length !== calls.length) {
-    console.warn("[jusd-stablecoin-bridge] Citrea RPC batch response failed schema or cardinality validation");
+    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea RPC batch response failed schema or cardinality validation");
     return null;
   }
 
@@ -147,7 +148,7 @@ async function fetchCitreaRpcBatch(
   const values = new Map<string, unknown>();
   for (const entry of parsed.data) {
     if (!expectedIds.has(entry.id) || values.has(entry.id) || entry.error !== undefined || entry.result === undefined) {
-      console.warn("[jusd-stablecoin-bridge] Citrea RPC batch contained an error or unexpected result id");
+      logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea RPC batch contained an error or unexpected result id");
       return null;
     }
     values.set(entry.id, entry.result);
@@ -233,7 +234,7 @@ async function fetchFreshCitreaHead(signal?: AbortSignal): Promise<CitreaHead | 
     nowSec - blockTimestamp > CITREA_BLOCK_MAX_AGE_SEC ||
     blockTimestamp - nowSec > CITREA_BLOCK_MAX_FUTURE_SKEW_SEC
   ) {
-    console.warn("[jusd-stablecoin-bridge] Citrea head identity or freshness validation failed");
+    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] Citrea head identity or freshness validation failed");
     return null;
   }
   return { blockNumber, blockTimestamp };
@@ -285,7 +286,7 @@ async function fetchValidatedBridgeState(
     keccak256(jusdCode).toLowerCase() !== JUSD_RUNTIME_CODE_HASH ||
     keccak256(bridgeCode).toLowerCase() !== route.expectedBridgeCodeHash
   ) {
-    console.warn("[jusd-stablecoin-bridge] JUSD or bridge runtime bytecode does not match the reviewed deployment");
+    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] JUSD or bridge runtime bytecode does not match the reviewed deployment");
     return null;
   }
 
@@ -325,13 +326,13 @@ async function fetchValidatedBridgeState(
     simulatedGas == null ||
     simulatedGas <= 0n
   ) {
-    console.warn("[jusd-stablecoin-bridge] bridge identity, availability, or static burn validation failed");
+    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] bridge identity, availability, or static burn validation failed");
     return null;
   }
 
   const quoteBalanceInJusdRaw = quoteBalance * 10n ** BigInt(JUSD_DECIMALS - route.quoteDecimals);
   if (quoteBalanceInJusdRaw < minted || minted < MIN_REDEEMABLE_JUSD_RAW) {
-    console.warn("[jusd-stablecoin-bridge] bridge is underfunded or below the minimum redemption capacity");
+    logWorkerEventArgs("lib", "warn", "[jusd-stablecoin-bridge] bridge is underfunded or below the minimum redemption capacity");
     return null;
   }
 

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { buildSyncMetadata } from "./shared";
 import { detectPriceStaleness, fillMissingSupplyHistory } from "./phase-helpers";
 import { recordOutcome } from "../../lib/circuit-breaker";
@@ -104,11 +105,11 @@ export async function fillStablecoinsSupplyHistoryStage(
     if (fillAbort) return fillAbort;
     const fillCount = await fillMissingSupplyHistory(db, assets, signal);
     if (fillCount > 0) {
-      console.log(`[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
+      logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${fillCount} missing supply changes from supply_history`);
     }
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, "fill-supply-history");
-    console.warn("[sync-stablecoins] supply_history fallback failed:", err);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] supply_history fallback failed:", err);
   }
 
   return null;
@@ -184,7 +185,7 @@ export async function checkStablecoinsPriceStaleness(params: {
     if (staleness.summary.stale) {
       stalenessWarning = true;
       const label = params.warningLabel ? ` ${params.warningLabel}` : "";
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[sync-stablecoins] STALENESS WARNING${label}: ${staleness.summary.identical}/${staleness.summary.compared} prices ` +
         `(${(staleness.summary.identical / staleness.summary.compared * 100).toFixed(1)}%) are identical to previous cache`,
       );
@@ -221,7 +222,7 @@ export async function checkStablecoinsPriceStaleness(params: {
       };
     }
     const prefix = params.failureLabel ?? "Staleness check";
-    console.warn(`[sync-stablecoins] ${prefix} failed:`, error);
+    logWorkerEventArgs("handler", "warn", `[sync-stablecoins] ${prefix} failed:`, error);
     return {
       state: "check-failed",
       stalenessWarning,

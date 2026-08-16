@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 /**
  * CoinGecko per-exchange ticker extraction.
  *
@@ -102,7 +103,7 @@ export async function fetchCgTickerPricesDetailed(
       );
 
       if (!result?.response.ok) {
-        console.warn(`[cg-ticker] ${config.geckoId} returned ${result?.response.status ?? "null"}`);
+        logWorkerEventArgs("lib", "warn", `[cg-ticker] ${config.geckoId} returned ${result?.response.status ?? "null"}`);
         continue;
       }
 
@@ -110,7 +111,7 @@ export async function fetchCgTickerPricesDetailed(
       const data = result.body;
       const tickers = data.tickers;
       if (!Array.isArray(tickers) || tickers.length === 0) {
-        console.warn(`[cg-ticker] ${config.geckoId}: no tickers returned`);
+        logWorkerEventArgs("lib", "warn", `[cg-ticker] ${config.geckoId}: no tickers returned`);
         continue;
       }
 
@@ -118,13 +119,13 @@ export async function fetchCgTickerPricesDetailed(
       if (price != null) {
         results.set(config.stablecoinId, price);
       } else {
-        console.warn(
+        logWorkerEventArgs("lib", "warn",
           `[cg-ticker] ${config.geckoId}: no valid ${config.targetCurrency} ticker found (${tickers.length} total)`,
         );
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[cg-ticker] ${config.geckoId} failed:`, err instanceof Error ? err.message : err);
+      logWorkerEventArgs("lib", "warn", `[cg-ticker] ${config.geckoId} failed:`, err instanceof Error ? err.message : err);
     }
   }
 

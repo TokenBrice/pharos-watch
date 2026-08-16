@@ -1019,7 +1019,6 @@ describe("parseWarningSignals", () => {
     expect(parseWarningSignals("{not valid json")).toEqual([]);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[yield-sync] failed to parse warning_signals"),
-      expect.any(String),
     );
     warnSpy.mockRestore();
   });
@@ -1029,7 +1028,6 @@ describe("parseWarningSignals", () => {
     expect(parseWarningSignals('{"key": "value"}')).toEqual([]);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[yield-sync] warning_signals is not an array"),
-      expect.any(String),
     );
     warnSpy.mockRestore();
   });

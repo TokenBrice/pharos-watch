@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { StagedPool } from "../dex-discovery/types";
 import { CHAIN_META } from "@shared/lib/chains";
 import { canonicalExitRouteChain, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
@@ -412,7 +413,7 @@ export async function mergeStagedPools(
       .all<StagedPoolRow>();
     rows = result.results ?? [];
   } catch (err) {
-    console.warn("[dex-liquidity] staging table read failed (pre-migration?):", err);
+    logWorkerEventArgs("handler", "warn", "[dex-liquidity] staging table read failed (pre-migration?):", err);
     return {
       mergedCount: 0,
       skippedCount: 0,
@@ -703,20 +704,20 @@ export async function mergeStagedPools(
   rows.length = 0;
 
   if (uniqueDerivedIdentitySkipped > 0) {
-    console.log(`[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
+    logWorkerEventArgs("handler", "info", `[dex-liquidity] Skipped ${uniqueDerivedIdentitySkipped} staged pools via unique derived identity`);
   }
   if (optionalWildcardIdentitySkipped > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Skipped ${optionalWildcardIdentitySkipped} staged pools via optional wildcard identity`,
     );
   }
   if (authoritativeProtocolSkipped > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Skipped ${authoritativeProtocolSkipped} staged pools missing authoritative protocol confirmation`,
     );
   }
   if (skipDimensions.size > 0) {
-    console.log(`[dex-liquidity] staged skip dimensions ${JSON.stringify([...skipDimensions.values()])}`);
+    logWorkerEventArgs("handler", "info", `[dex-liquidity] staged skip dimensions ${JSON.stringify([...skipDimensions.values()])}`);
   }
 
   let mergedCount = 0;

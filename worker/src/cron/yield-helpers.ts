@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /**
@@ -292,7 +293,7 @@ export function matchAllDlPools(
       found.push({ pool: p.pool, apy: p.apy, apyBase: p.apyBase, apyReward: p.apyReward, tvlUsd: p.tvlUsd });
       seenUuids.add(p.pool);
     } else if (!dlPools.find((pool) => pool.pool === nativeId)) {
-      console.warn(`[yield-sync] Pool UUID ${nativeId} for ${stablecoinId} not found in DL response, falling through`);
+      logWorkerEventArgs("handler", "warn", `[yield-sync] Pool UUID ${nativeId} for ${stablecoinId} not found in DL response, falling through`);
     }
   }
 
@@ -342,7 +343,7 @@ export function matchAllDlPools(
       });
       seenUuids.add(selected.pool);
     } else if (selectedVariantCandidates.length > 1) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[yield-sync] Ambiguous variant DL match for ${stablecoinId} (${variant.variantSymbol}) across ${selectedVariantCandidates.length} pools; skipping variant layer`,
       );
     }
@@ -381,7 +382,7 @@ export function matchAllDlPools(
             tvlUsd: candidate.tvlUsd,
           });
         } else if (symbolCandidates.length > 1) {
-          console.warn(
+          logWorkerEventArgs("handler", "warn",
             `[yield-sync] Ambiguous fallback DL match for ${stablecoinId} (${symbol}) across ${symbolCandidates.length} pools; skipping fallback`,
           );
         }

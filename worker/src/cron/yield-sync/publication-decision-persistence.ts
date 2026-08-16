@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   YieldRankingsResponseSchema,
   type YieldPublicDecisionLedger,
@@ -249,19 +250,19 @@ export async function validateYieldRankingsPayloadForPublish(
   );
 
   if (!validation.ok) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
+    logWorkerEventArgs("handler", "warn", "[sync-yield-data] Skipped yield-rankings cache write due to schema validation failure");
     return { ok: false, validationFailures: 1, reason: "schema-validation-failed" };
   }
 
   const currentRankings = validation.data.rankings.length;
   if (hasDuplicateRankingIds(validation.data.rankings)) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to duplicate ranking IDs");
+    logWorkerEventArgs("handler", "warn", "[sync-yield-data] Skipped yield-rankings cache write due to duplicate ranking IDs");
     return { ok: false, validationFailures: 1, reason: "duplicate-ranking-ids" };
   }
 
   const previousRankingsState = await readPreviousYieldRankingsCount(db);
   if (previousRankingsState.malformed && currentRankings === 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[sync-yield-data] Skipped yield-rankings cache write because malformed previous cache recovery payload is empty",
     );
     return {
@@ -273,7 +274,7 @@ export async function validateYieldRankingsPayloadForPublish(
   const previousRankings = previousRankingsState.count;
   const severeShrink = previousRankings >= 5 && currentRankings < Math.ceil(previousRankings * 0.4);
   if (previousRankings > 0 && (currentRankings === 0 || severeShrink)) {
-    console.warn("[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
+    logWorkerEventArgs("handler", "warn", "[sync-yield-data] Skipped yield-rankings cache write due to publish guard");
     return {
       ok: false,
       validationFailures: 1,

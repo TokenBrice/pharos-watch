@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -466,7 +467,7 @@ export async function generateWeeklyRecap(
   try {
     safetyContext = await loadDigestSafetyContext(db, signal);
   } catch (error) {
-    console.error(JSON.stringify({
+    logWorkerEventArgs("handler", "error", JSON.stringify({
       scope: "weekly-recap",
       message: "Failed to resolve active Safety Score source",
       error: error instanceof Error ? error.message : String(error),

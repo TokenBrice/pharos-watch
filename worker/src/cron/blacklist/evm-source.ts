@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeAbiParameters } from "viem/utils";
 import {
   fetchAlchemyLogs,
@@ -122,14 +123,14 @@ function decodeAddressArrayData(data: string): string[] {
     const [addresses] = decodeAbiParameters([{ type: "address[]" }], data as `0x${string}`);
     const result = [...addresses].map((a) => a.toLowerCase());
     if (result.length > MAX_DECODED_ADDRESS_ARRAY) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[blacklist] address[] event decoded ${result.length} entries; truncating to ${MAX_DECODED_ADDRESS_ARRAY}`,
       );
       return result.slice(0, MAX_DECODED_ADDRESS_ARRAY);
     }
     return result;
   } catch (error) {
-    console.warn("[blacklist] Failed to decode address[] event data:", error);
+    logWorkerEventArgs("handler", "warn", "[blacklist] Failed to decode address[] event data:", error);
     return [];
   }
 }
@@ -271,7 +272,7 @@ function parseEvmLogsWithCoverage(
     if (row) rows.push(row);
   }
   if (droppedForTimestamp > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[blacklist] parseEvmLogs for ${config.configKey}: dropped ${droppedForTimestamp} log(s) due to missing block/timestamp`,
     );
   }

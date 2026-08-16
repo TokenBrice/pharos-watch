@@ -108,7 +108,7 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "Horizon's server-side rate limit is authoritative; this state only spaces requests within one isolate to stay under it.",
   },
   {
-    sourcePath: "worker/src/cron/telegram-quiet-hours.ts",
+    sourcePath: "worker/src/lib/telegram-quiet-hours.ts",
     stateNames: ["quietHoursTzFallbackLastLoggedAt"],
     owner: "Telegram quiet-hours telemetry",
     kind: "cache",

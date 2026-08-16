@@ -80,10 +80,6 @@ export function getCaseStudy(slug: string): CaseStudy | undefined {
 }
 
 /** Reverse lookups so other surfaces can link inward to a coin's / event's study. */
-export const CASE_STUDY_BY_COIN_ID: Record<string, CaseStudy> = Object.fromEntries(
-  CASE_STUDY_LIST.filter((s) => s.primaryCoinId).map((s) => [s.primaryCoinId!, s]),
-);
-
 export const CASE_STUDY_BY_DEPEG_SLUG: Record<string, CaseStudy> = Object.fromEntries(
   CASE_STUDY_LIST.filter((s) => s.depegEventSlug).map((s) => [s.depegEventSlug!, s]),
 );

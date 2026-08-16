@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { BlacklistStablecoin, BlacklistSummaryResponse } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import { BlacklistStats } from "@/components/blacklist-stats";
@@ -91,6 +91,27 @@ describe("BlacklistStats", () => {
     expect(screen.queryByText("Freeze Ledger")).toBeNull();
     expect(screen.queryByText("USDT Blacklisted")).toBeNull();
     expect(screen.queryByText("unique events")).toBeNull();
+  });
+
+  it("renders the unfreezable drill-down as a native button", () => {
+    const onUnfreezableSelect = vi.fn();
+    render(
+      <BlacklistStats
+        summary={makeSummary()}
+        isLoading={false}
+        blacklistStatusBuckets={[
+          { status: "Yes", key: "yes", count: 10, marketCap: 150_000_000_000 },
+          { status: "No", key: "no", count: 2, marketCap: 30_000_000_000 },
+        ]}
+        supportDataLoading={false}
+        onUnfreezableSelect={onUnfreezableSelect}
+      />,
+    );
+
+    const drillDown = screen.getByRole("button", { name: "Show unfreezable stablecoins" });
+    expect(drillDown.tagName).toBe("BUTTON");
+    fireEvent.click(drillDown);
+    expect(onUnfreezableSelect).toHaveBeenCalledOnce();
   });
 
   it("surfaces freeze-ledger data-quality warnings", () => {

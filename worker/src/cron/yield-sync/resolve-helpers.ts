@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
 import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
@@ -310,7 +311,7 @@ function appendResolvedYieldCandidates(
   }
 
   if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0 || sizeGateDrops > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[yield-sync] Dropped optional protocol candidates: blocked=${blockedDrops}, ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}, sizeGate=${sizeGateDrops}`,
     );
   }
@@ -667,7 +668,7 @@ function logNewVariantScan(dlPools: DlPool[]): void {
   );
   const newVariants = scanForNewVariants(dlPools, trackedSymbols, knownVariantSymbols);
   if (newVariants.length > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-yield-data] Variant scanner found ${newVariants.length} new wrapper tokens:`,
       newVariants.map((variant) => `${variant.variantSymbol} (${variant.baseSymbol}, ${variant.chain}, $${(variant.tvlUsd / 1e6).toFixed(1)}M)`).join(", "),
     );
@@ -691,7 +692,7 @@ export function appendPoolFamilyYieldSources(params: {
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const autoDiscoveredIds = new Set<string>();
   if (!params.safetySnapshotAvailable) {
-    console.warn(JSON.stringify({
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "sync-yield-data",
       message: "V9 safety snapshot unavailable; retaining eligible auto-lending candidates as unrated",
     }));
@@ -716,7 +717,7 @@ export function appendPoolFamilyYieldSources(params: {
     reservedPoolIds: reservedExplicitPoolIds,
   });
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[sync-yield-data] Auto-discovery: ${deterministicCount + dynamicCount} lending pools (${deterministicCount} deterministic, ${dynamicCount} dynamic)`,
   );
 

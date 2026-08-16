@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import {
   DDRR_REVIEWER_VERSION,
 } from "@shared/lib/methodology-versions/depeg-resolver";
@@ -68,7 +69,7 @@ export const handleDepegResolverReview = async (db: D1Database): Promise<Respons
       });
     }
 
-    console.warn(`[depeg-resolver-review] snapshot unavailable; serving degraded reason=${cached.reason}`);
+    logWorkerEventArgs("api", "warn", `[depeg-resolver-review] snapshot unavailable; serving degraded reason=${cached.reason}`);
     const nowSec = Math.floor(Date.now() / 1000);
     const payload = degradedResponse(cached.reason);
     return jsonFreshResponse(payload, {

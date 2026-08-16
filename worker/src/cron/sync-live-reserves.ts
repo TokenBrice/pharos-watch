@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -239,7 +240,7 @@ function createReserveAdapterRunner(args: {
           };
         } catch (error) {
           fallbackAttempts.push({ input: fb, error, index: fallbackAttempts.length });
-          console.warn(`[sync-live-reserves] Fallback failed for ${coin.id}:`, error);
+          logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Fallback failed for ${coin.id}:`, error);
         }
       }
       throw buildReserveAdapterAttemptChainError(config, primaryError, fallbackAttempts);
@@ -299,7 +300,7 @@ async function runReserveCoinQueue(args: {
     const globalIndex = args.startIndex + index;
     const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
     if (budgetRemaining < args.budgetConfig.minimumAttemptBudgetMs) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
       if (args.checkpoint) {

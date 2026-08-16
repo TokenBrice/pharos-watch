@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { BluechipGradeSchema } from "@shared/types/core";
@@ -91,7 +92,7 @@ async function parseBluechipResponseJson(
   try {
     return await res.json();
   } catch (error) {
-    console.warn(`[bluechip] Failed to parse JSON for ${slug}:`, error);
+    logWorkerEventArgs("handler", "warn", `[bluechip] Failed to parse JSON for ${slug}:`, error);
     return null;
   }
 }
@@ -100,7 +101,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   const syncStartSec = Math.floor(Date.now() / 1000);
 
   if (await shouldSkipFreshCache(db, CACHE_KEY, STALE_HOURS * 3600)) {
-    console.log("[bluechip] Cache still fresh, skipping");
+    logWorkerEventArgs("handler", "info", "[bluechip] Cache still fresh, skipping");
     return { itemCount: 0, metadata: JSON.stringify({ reason: "cache-fresh" }) };
   }
 
@@ -154,7 +155,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
         if (!validation.ok) {
           invalidPayloads++;
           failedSlugs.push({ slug, reason: "invalid-payload" });
-          console.warn(`[bluechip] Invalid payload for ${slug}: ${validation.issues}`);
+          logWorkerEventArgs("handler", "warn", `[bluechip] Invalid payload for ${slug}: ${validation.issues}`);
           return null;
         }
         if (validation.data.data.length === 0) {
@@ -203,7 +204,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   await recordOutcomeSafe(db, CIRCUIT_SOURCE.BLUECHIP, freshCount > 0);
 
   if (freshCount === 0) {
-    console.warn("[bluechip] No ratings fetched, preserving cache");
+    logWorkerEventArgs("handler", "warn", "[bluechip] No ratings fetched, preserving cache");
     return {
       status: "degraded",
       itemCount: 0,
@@ -212,7 +213,7 @@ export async function syncBluechip(db: D1Database, signal?: AbortSignal): Promis
   }
 
   const cacheResult = await setCacheIfNewer(db, CACHE_KEY, JSON.stringify(ratingsMap), syncStartSec, signal);
-  console.log(
+  logWorkerEventArgs("handler", "info",
     cacheResult.written
       ? `[bluechip] Cache updated with ${Object.keys(ratingsMap).length} ratings (${freshCount} fresh)`
       : `[bluechip] Cache update skipped; newer row exists (${freshCount} fresh fetched)`,

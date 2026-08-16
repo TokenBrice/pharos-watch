@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import type { ResolvedYieldCandidate } from "../types";
 import type { SupplementalSourceFamilyKey } from "../supplemental-source-family-keys";
@@ -85,7 +86,7 @@ function filterValidSupplementalCandidates(
     return `row-${index}`;
   });
   if (rejected.length > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[yield-sync] Dropped ${rejected.length} invalid supplemental yield source rows: ${rejectedExamples.join(", ")}`,
     );
   }
@@ -116,7 +117,7 @@ export function parseYieldSupplementalSourcesCache(
     if (Array.isArray(parsed)) {
       const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
-        console.warn("[yield-sync] Rejected legacy supplemental sources cache with future updatedAt");
+        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected legacy supplemental sources cache with future updatedAt");
         return null;
       }
       const { candidates } = filterValidSupplementalCandidates(parsed, nowSec);
@@ -132,7 +133,7 @@ export function parseYieldSupplementalSourcesCache(
       const { candidates } = filterValidSupplementalCandidates(parsed.data, nowSec);
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
-        console.warn("[yield-sync] Rejected supplemental sources cache with future updatedAt");
+        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected supplemental sources cache with future updatedAt");
         return null;
       }
       return {
@@ -143,7 +144,7 @@ export function parseYieldSupplementalSourcesCache(
       };
     }
   } catch (err) {
-    console.warn(`[yield-sync] Failed to parse supplemental sources cache: ${toErrorMessage(err)}`);
+    logWorkerEventArgs("handler", "warn", `[yield-sync] Failed to parse supplemental sources cache: ${toErrorMessage(err)}`);
     return null;
   }
 

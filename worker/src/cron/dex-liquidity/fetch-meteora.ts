@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
@@ -130,10 +131,10 @@ export async function fetchMeteoraPools(signal?: AbortSignal): Promise<DexApiFet
   });
 
   if (result.rows.length > 0) {
-    console.log(`[fetch-meteora] Fetched ${result.rows.length} pools`);
+    logWorkerEventArgs("handler", "info", `[fetch-meteora] Fetched ${result.rows.length} pools`);
   }
   for (const error of result.errors) {
-    console.warn("[fetch-meteora]", error);
+    logWorkerEventArgs("handler", "warn", "[fetch-meteora]", error);
   }
 
   return makeDexApiFetchResult(result.rows, {

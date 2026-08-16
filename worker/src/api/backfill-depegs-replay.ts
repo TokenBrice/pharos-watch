@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import { buildPriceReasonablenessOptions } from "../lib/price-validation";
 import { fetchAuthoritativeHistoricalPriceSeries } from "../lib/authoritative-price-sources";
@@ -58,7 +59,7 @@ export async function backfillCoin(opts: {
     supplyByDate.length === 0 &&
     (typeof missingSupplyUsd !== "number" || !Number.isFinite(missingSupplyUsd))
   ) {
-    console.warn(
+    logWorkerEventArgs("api", "warn",
       `[backfill-depegs] no historical or current supply floor available for ${meta.symbol}; preserving existing backfill rows`,
     );
     return {
@@ -96,7 +97,7 @@ export async function backfillCoin(opts: {
       series.diagnostics.policyAdjustments.length > 0 ||
       series.diagnostics.quoteMode === "native-peg"
     ) {
-      console.log(
+      logWorkerEventArgs("api", "info",
         `[backfill-depegs] ${meta.id} historical market replay used ${series.diagnostics.sourcesUsed.join("+") || "none"}`
           + ` quote=${series.diagnostics.quoteCurrency}`
           + ` mergeReasons=${series.diagnostics.mergeReasons.join(",") || "none"}`
@@ -129,7 +130,7 @@ export async function backfillCoin(opts: {
   let marketDiagnostics: HistoricalMarketSourceDiagnostics | null = null;
   if (authoritativeHistory.matched) {
     if (!prices || prices.length === 0) {
-      console.warn(
+      logWorkerEventArgs("api", "warn",
         `[backfill-depegs] authoritative historical price source unavailable for ${meta.symbol}` +
           `${authoritativeHistory.source ? ` (${authoritativeHistory.source})` : ""}; preserving existing backfill rows`,
       );

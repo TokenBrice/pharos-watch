@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
@@ -447,7 +448,7 @@ export async function runDirectApiFetchPhase(
         };
       } catch (err) {
         if (err instanceof DirectApiCircuitOpenError) {
-          console.log(`[dex-liquidity] ${name} API circuit open, skipping`);
+          logWorkerEventArgs("handler", "info", `[dex-liquidity] ${name} API circuit open, skipping`);
           failedSources.push(circuitKey);
           fallbackSignals.push(`${circuitKey}-circuit-open`);
           return {
@@ -469,7 +470,7 @@ export async function runDirectApiFetchPhase(
           };
         }
         if (signal?.aborted) throw err;
-        console.warn(`[dex-liquidity] ${name} API failed (non-fatal):`, err);
+        logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${name} API failed (non-fatal):`, err);
         const executionError = err instanceof DirectApiExecutionError ? err : null;
         const event = directApiCircuitEventFromOutcome(circuitKey, executionError?.circuitOutcome ?? null);
         if (event) circuitEvents.push(event);
@@ -595,9 +596,9 @@ export async function integrateDirectApiLiquidityPhase(params: {
   }
 
   const fetchedPoolCount = params.preprocessedPoolCounts?.rawPoolCount ?? directApiPools.length;
-  console.log(`[dex-liquidity] Fetched ${fetchedPoolCount} direct API pools total`);
+  logWorkerEventArgs("handler", "info", `[dex-liquidity] Fetched ${fetchedPoolCount} direct API pools total`);
   if (directApiSkippedUntracked > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Retained ${trackedDirectApiPools.length} direct API pools with tracked tokens ` +
         `(skipped ${directApiSkippedUntracked} untracked pools before identity processing)`,
     );
@@ -701,7 +702,7 @@ export async function integrateDirectApiLiquidityPhase(params: {
     directApiDedupSkippedByDerivedIdentity > 0 ||
     directApiDedupSkippedByOptionalWildcardIdentity > 0
   ) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Skipped ${directApiDedupSkippedByAddress} exact, ` +
         `${directApiDedupSkippedByDerivedIdentity} unique derived, and ` +
         `${directApiDedupSkippedByOptionalWildcardIdentity} optional wildcard direct API duplicates`,

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
@@ -426,7 +427,7 @@ export async function persistDewsResults(params: {
       params.signal,
     );
     if (dailySnapshot.rewritten) {
-      console.log(
+      logWorkerEventArgs("lib", "info",
         `[dews] Reconciled daily snapshot (${dailySnapshot.previousOwnedRowCount} -> ${dailySnapshot.sealedRowCount}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
       );
     }

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   BINANCE_MARKETS,
   CEX_PROVIDER_AUDIT_CONFIG,
@@ -222,7 +223,7 @@ export async function fetchMajorStablecoinOrderbookDepthSummary(
       rows.push(...await fetchDepths(signal));
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[cex-orderbooks] direct depth fetch failed for ${venue}:`, err);
+      logWorkerEventArgs("lib", "warn", `[cex-orderbooks] direct depth fetch failed for ${venue}:`, err);
     }
   }
   return summarizeCexOrderbookDepths(rows);

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import type { PegAssetBase } from "@shared/types/core";
@@ -184,7 +185,7 @@ export async function confirmPendingDepegs(
   if (stmts.length > 0) {
     throwIfAborted(signal);
     await batchExecute(db, stmts, { signal });
-    console.log(`[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
+    logWorkerEventArgs("handler", "info", `[depeg-confirm] Executed ${stmts.length} pending depeg mutations`);
   }
 
   return { providerDiagnostics };

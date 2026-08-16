@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -276,7 +277,7 @@ export async function loadPreviousStablecoinsById(db: D1Database): Promise<Map<s
       prevData.peggedAssets.map((asset) => [String(asset.id), stampPreviousSupplyObservedAt(asset, cacheUpdatedAt)]),
     );
   } catch (err) {
-    console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to parse previous stablecoins cache:", err);
     return new Map();
   }
 }
@@ -285,7 +286,7 @@ export async function loadReplayPriceCacheForTrustedContinuity(db: D1Database): 
   try {
     return await getPriceCache(db);
   } catch (error) {
-    console.warn("[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to load replay price cache for trusted-price continuity:", error);
     return new Map<string, PriceCacheEntry>();
   }
 }
@@ -485,12 +486,12 @@ export async function loadFreshFxRates(
       fxState.mode === "cached-fallback"
         ? `${fxState.usableAgeSec}s usable age`
         : `${Math.max(0, nowSec - fxState.usableSyncAt)}s usable age`;
-    console.warn(`${logPrefix} Ignoring FX references with no fresh source data (${ageDescriptor})`);
+    logWorkerEventArgs("handler", "warn", `${logPrefix} Ignoring FX references with no fresh source data (${ageDescriptor})`);
     return {};
   }
 
   if (hasStalePeg) {
-    console.warn(`${logPrefix} Excluding stale FX source entries while keeping fresh/static references`);
+    logWorkerEventArgs("handler", "warn", `${logPrefix} Excluding stale FX source entries while keeping fresh/static references`);
   }
 
   return {

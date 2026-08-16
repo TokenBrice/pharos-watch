@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 import { runCoingeckoLowVolumePass, runDlContractPasses, runCmcPass, runDexScreenerPass, runJupiterPass } from "./enrich-prices-passes";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -185,7 +186,7 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
       });
     } catch (err) {
       if (context.signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[sync-stablecoins] ${pass.label} enrichment failed:`, err);
+      logWorkerEventArgs("handler", "warn", `[sync-stablecoins] ${pass.label} enrichment failed:`, err);
       if (pass.failureLabel) {
         failedPasses.push(pass.failureLabel);
       }

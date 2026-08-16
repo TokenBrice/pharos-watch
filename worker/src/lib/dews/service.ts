@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 /**
  * Dynamic Early Warning Score (DEWS) — composite risk metric cron job.
  *
@@ -92,7 +93,7 @@ export async function computeAndStoreDEWS(
       reason: String(error),
       bootstrapAllowed,
     });
-    console.warn(`[dews] ${source} unavailable${bootstrapAllowed ? " (bootstrap-allowed)" : ""}:`, error);
+    logWorkerEventArgs("lib", "warn", `[dews] ${source} unavailable${bootstrapAllowed ? " (bootstrap-allowed)" : ""}:`, error);
   };
   const registerMalformedPersistedInput = (options: {
     source: string;
@@ -205,12 +206,12 @@ export async function computeAndStoreDEWS(
 
   const liqHistCoverage = results.length > 0 ? liqHistCoverageCount / results.length : 0;
   if (results.length > 0 && liqHistCoverage < 0.5) {
-    console.warn(`[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`);
+    logWorkerEventArgs("lib", "warn", `[dews] Low 7d liquidity history coverage: ${liqHistCoverageCount}/${results.length} (${(liqHistCoverage * 100).toFixed(1)}%)`);
   }
 
   Object.assign(sourceCoverage, { liquidityHistoryCoveragePct: Number((liqHistCoverage * 100).toFixed(2)), coinsComputed: results.length, coinsSkippedInsufficientData: insufficientDataCount, coinsSkippedNoCurrentSupply: noCurrentSupplyIds.length });
 
-  console.log(`[dews] Computed DEWS for ${results.length} coins`);
+  logWorkerEventArgs("lib", "info", `[dews] Computed DEWS for ${results.length} coins`);
   if (bootstrapPending) {
     throwIfAborted(signal);
     await markDewsBootstrapComplete(db, nowSec);

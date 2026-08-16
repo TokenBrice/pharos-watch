@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -652,7 +653,7 @@ function createYieldRankingsCacheHandler(
         }
         return project(hydrated.payload);
       } catch (err) {
-        console.warn("[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
+        logWorkerEventArgs("api", "warn", "[yield-rankings] Live safety hydration failed:", err instanceof Error ? err.message : err);
         const hydrationSource: LiveSafetyHydrationSource = {
           source: "safety-score-v9-publication",
           safetyScoreIdentity: null,

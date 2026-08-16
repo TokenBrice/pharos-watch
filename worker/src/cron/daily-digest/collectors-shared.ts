@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type {
   DigestInputData,
   DigestSafetyContext,
@@ -70,7 +71,7 @@ export function logCollectorParseFailure(
     .map(([key, value]) => `${key}=${String(value)}`)
     .join(", ");
 
-  console.warn(
+  logWorkerEventArgs("handler", "warn",
     `[daily-digest] Malformed persisted JSON in ${collector}:${field}${contextLabel ? ` (${contextLabel})` : ""}`,
     error,
   );

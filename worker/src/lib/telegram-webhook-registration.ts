@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { API_ORIGIN, SITE_ORIGIN, resolveOrigin } from "@shared/lib/runtime-origins";
 import {
   TELEGRAM_ALLOWED_UPDATES,
@@ -183,7 +184,7 @@ async function recordRateLimit(db: D1Database, endpoint: string, retryAfter: num
     ? Math.ceil(retryAfter)
     : TELEGRAM_RATE_LIMIT_DEFAULT_RETRY_AFTER_SEC;
   await setCache(db, rateLimitCacheKey(endpoint), String(seconds));
-  console.warn(
+  logWorkerEventArgs("lib", "warn",
     `[telegram-reconcile] ${endpoint} rate-limited by Bot API; backing off for ${seconds}s`,
   );
 }

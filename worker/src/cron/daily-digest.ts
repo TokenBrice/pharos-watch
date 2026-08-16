@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
@@ -104,7 +105,7 @@ export async function generateDailyDigest(
     },
   });
   if (!anthropicApiKey) {
-    console.log("[daily-digest] No API key configured, skipping");
+    logWorkerEventArgs("handler", "info", "[daily-digest] No API key configured, skipping");
     await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping daily digest because Anthropic credentials are missing",
@@ -129,7 +130,7 @@ export async function generateDailyDigest(
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
     const isBroken = latest.digest_text.trimStart().startsWith("```");
     if (ageSec < SECONDS.ONE_HOUR && !isBroken && !force) {
-      console.log(
+      logWorkerEventArgs("handler", "info",
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
       await reportCronProgress(reportProgress, {
@@ -146,7 +147,7 @@ export async function generateDailyDigest(
       return { metadata: "skipped: recent digest exists" };
     }
     if (isBroken) {
-      console.log("[daily-digest] Latest digest is malformed (code-block response), regenerating");
+      logWorkerEventArgs("handler", "info", "[daily-digest] Latest digest is malformed (code-block response), regenerating");
     }
   }
 
@@ -387,7 +388,7 @@ export async function generateDailyDigest(
           await deleteCache(db, markerKey);
         } catch (rollbackErr) {
           degradedReasons.push("twitter-send-marker-rollback");
-          console.error("[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
+          logWorkerEventArgs("handler", "error", "[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
         }
         throw err;
       }
@@ -415,7 +416,7 @@ export async function generateDailyDigest(
         telegramAppendices = await prepareTelegramDigestAppendices(db);
       } catch (err) {
         degradedReasons.push("telegram-appendix-state");
-        console.error("[daily-digest] Failed to prepare Telegram digest appendices:", err);
+        logWorkerEventArgs("handler", "error", "[daily-digest] Failed to prepare Telegram digest appendices:", err);
       }
       const enqueueResult = await enqueueTelegramDigestEdition(db, {
         editionKey: telegramEditionKey,
@@ -536,7 +537,7 @@ export async function generateDailyDigest(
       telegramStatus,
     },
   });
-  console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
+  logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
   const lifecycleMetadata = lifecycleFlags.length > 0
     ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`
     : "";

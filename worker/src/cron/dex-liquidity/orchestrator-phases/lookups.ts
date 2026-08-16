@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import {
@@ -42,12 +43,12 @@ export async function loadTrackedStablecoinMaps(
       }
     }
     if (skippedWeakTrackedPrices > 0) {
-      console.log(
+      logWorkerEventArgs("handler", "info",
         `[dex-liquidity] Ignoring ${skippedWeakTrackedPrices} tracked stablecoin price(s) as weak/stale quote legs`,
       );
     }
   } else {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback",
     );
   }

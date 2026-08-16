@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronResult } from "../../lib/cron-logger";
 import { getCache } from "../../lib/db-cache";
 import { readCachedJson } from "../../lib/api-utils";
@@ -157,7 +158,7 @@ export function guardTrackedYieldCoverage(params: {
     return null;
   }
 
-  console.error(
+  logWorkerEventArgs("handler", "error",
     `[sync-yield-data] Yield coverage regression: ${params.resolvedYieldBearingCount}/${params.expectedYieldBearingCount} ` +
     `(${(yieldCoverageRatio * 100).toFixed(1)}%) — skipping persistence`,
   );

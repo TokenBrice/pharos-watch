@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestMeta } from "./prompt";
 import { toErrorMessage } from "../../lib/error-utils";
 
@@ -20,7 +21,7 @@ export function buildRecentDigestMeta(
       try {
         meta = JSON.parse(row.digest_meta) as DigestMeta;
       } catch (err) {
-        console.warn(`[daily-digest] Failed to parse digest_meta: ${toErrorMessage(err)}`);
+        logWorkerEventArgs("handler", "warn", `[daily-digest] Failed to parse digest_meta: ${toErrorMessage(err)}`);
       }
     }
 
@@ -41,7 +42,7 @@ export function logDailyDigestLlmCall(params: {
   recentMeta: readonly unknown[];
   degradedReasons: readonly string[];
 }): void {
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[daily-digest] Calling Claude API ` +
       `(activeDepegs=${params.activeDepegCount}, topDepegs=${params.topDepegs.length}, ` +
       `resolvedDepegs=${params.resolvedDepegs?.length ?? 0}, yieldAnomalies=${params.yieldAnomalies?.length ?? 0}, ` +

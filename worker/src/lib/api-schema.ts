@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { ZodIssue, ZodType } from "zod";
 
 function formatSchemaIssues(issues: readonly ZodIssue[]): string {
@@ -14,6 +15,6 @@ export function validatePayloadWithSchema<T>(
   const parsed = schema.safeParse(payload);
   if (parsed.success) return { ok: true, data: parsed.data };
   const issues = formatSchemaIssues(parsed.error.issues);
-  console.error(`[validate] ${context} schema validation failed: ${issues}`);
+  logWorkerEventArgs("lib", "error", `[validate] ${context} schema validation failed: ${issues}`);
   return { ok: false, issues };
 }

@@ -431,7 +431,7 @@ describe("syncBluechip", () => {
     };
     expect(metadata.invalidPayloads).toBe(1);
     expect(metadata.failedSlugs).toEqual([{ slug: "tether", reason: "json-parse-failed" }]);
-    expect(warnSpy).toHaveBeenCalledWith("[bluechip] Failed to parse JSON for tether:", expect.any(SyntaxError));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[bluechip] Failed to parse JSON for tether:"));
   });
 
   it("returns degraded on invalid response shape", async () => {
@@ -461,7 +461,7 @@ describe("syncBluechip", () => {
       { slug: "tether", reason: "invalid-payload" },
       { slug: "usdc", reason: "empty-data" },
     ]);
-    expect(warnSpy).toHaveBeenCalledWith("[bluechip] No ratings fetched, preserving cache");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[bluechip] No ratings fetched, preserving cache"));
     expect(getCacheInsert(db as MockD1Database)).toBeUndefined();
   });
 });

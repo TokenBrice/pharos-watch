@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "./error-utils";
 import type {  StatusCause,
   StatusSectionError,
@@ -160,7 +161,7 @@ export function reportStatusPersistenceIssue(
     if (LOGGED_STATUS_PERSISTENCE_FAILURES.size < MAX_LOGGED_STATUS_PERSISTENCE_FAILURES) {
       LOGGED_STATUS_PERSISTENCE_FAILURES.add(logKey);
     }
-    console.error(`[status-reliability] ${operation} failed: ${message}`);
+    logWorkerEventArgs("lib", "error", `[status-reliability] ${operation} failed: ${message}`);
   }
   report?.({
     code,

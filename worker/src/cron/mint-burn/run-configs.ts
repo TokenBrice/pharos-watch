@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
@@ -257,7 +258,7 @@ export async function runMintBurnConfigPhase(input: {
     }
     input.budget.count += summary.requestBudgetUsed;
 
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
       `${summary.rowsInserted} inserted, ${summary.rowsIgnored} ignored, ` +
       `scan ${fromBlock}-${summary.scanTo ?? scanTo}, advancedTo=${summary.advancedTo ?? "none"}`,
@@ -275,7 +276,7 @@ export async function runMintBurnConfigPhase(input: {
           "api-errors-and-low-coverage",
         );
       } catch (error) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-mint-burn] Failed to record deferral for ${key}:`,
           error,
         );

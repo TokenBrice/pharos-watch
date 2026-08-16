@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { TelegramAlertTypeChats, TelegramWatcherHistoryPoint } from "@shared/types/status";
 import { TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS } from "@shared/lib/status-thresholds";
 import { formatIsoDate } from "@shared/lib/format";
@@ -176,7 +177,7 @@ async function loadActivePresetFollowerRows(db: D1Database): Promise<PresetFollo
   } catch (err) {
     // Query failure (e.g. D1 schema drift) would otherwise produce a silently
     // zeroed lifecycle snapshot; surface it in Cloudflare logs before degrading.
-    console.warn("[telegram-analytics] loadActivePresetFollowerRows failed:", err);
+    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadActivePresetFollowerRows failed:", err);
     return [];
   }
 }
@@ -223,7 +224,7 @@ async function loadPendingDeliveryCount(
       .first<PendingCountRow>();
     return { count: coerceCount(row?.pending_count), unavailableFields: [] };
   } catch (err) {
-    console.warn("[telegram-analytics] loadPendingDeliveryCount failed:", err);
+    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadPendingDeliveryCount failed:", err);
     return { count: 0, unavailableFields: ["pendingDeliveries"] };
   }
 }
@@ -244,7 +245,7 @@ async function loadPreviousLifecycleSnapshot(
       .bind(day)
       .first<LifecycleSnapshotRow>();
   } catch (err) {
-    console.warn("[telegram-analytics] loadPreviousLifecycleSnapshot failed:", err);
+    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadPreviousLifecycleSnapshot failed:", err);
     return null;
   }
 }
@@ -408,7 +409,7 @@ async function loadCurrentSnapshotAge(db: D1Database, day: string): Promise<numb
       .first<{ snapshot_at: number | string | null }>();
     return coerceNullableTimestamp(row?.snapshot_at);
   } catch (err) {
-    console.warn("[telegram-analytics] loadCurrentSnapshotAge failed:", err);
+    logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadCurrentSnapshotAge failed:", err);
     return null;
   }
 }

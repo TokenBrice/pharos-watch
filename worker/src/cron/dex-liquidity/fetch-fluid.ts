@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toErrorMessage } from "../../lib/error-utils";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
@@ -232,7 +233,7 @@ export async function fetchFluidPools(
           rethrowIfAborted(error, signal);
           const reason = toErrorMessage(error);
           warnings.push(`${chain} pool ${pool.poolAddress} enrichment failed: ${reason}`);
-          console.warn("[fetch-fluid] Pool enrichment failed:", reason);
+          logWorkerEventArgs("handler", "warn", "[fetch-fluid] Pool enrichment failed:", reason);
         }
       }
       results.push(...pools);
@@ -240,7 +241,7 @@ export async function fetchFluidPools(
       rethrowIfAborted(error, signal);
       const reason = toErrorMessage(error);
       errors.push(reason);
-      console.warn("[fetch-fluid] Chain fetch failed:", reason);
+      logWorkerEventArgs("handler", "warn", "[fetch-fluid] Chain fetch failed:", reason);
     }
   }
 

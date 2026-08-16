@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { YieldSourceInputMeta } from "@shared/types/yield";
 import { isRecord } from "@shared/lib/type-guards";
 import type { DlPool } from "../types";
@@ -56,7 +57,7 @@ export function filterValidDlPools(
     return `row-${index}`;
   });
   if (rejected.length > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[yield-sync] Dropped ${rejected.length} invalid DL pool rows from ${context}: ${rejectedExamples.join(", ")}`,
     );
   }
@@ -86,7 +87,7 @@ export function parseDlStablecoinPoolsCache(
     if (Array.isArray(parsed)) {
       const updatedAt = parseCachePayloadUpdatedAt(undefined, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
-        console.warn("[yield-sync] Rejected legacy DL pools cache with future updatedAt");
+        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected legacy DL pools cache with future updatedAt");
         return null;
       }
       const { pools } = filterValidDlPools(parsed, "legacy dl-stablecoin-pools cache");
@@ -106,7 +107,7 @@ export function parseDlStablecoinPoolsCache(
       const { pools } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
-        console.warn("[yield-sync] Rejected DL pools cache with future updatedAt");
+        logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected DL pools cache with future updatedAt");
         return null;
       }
       return {

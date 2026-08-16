@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { jsonResponse, parseOptionalPositiveIntegerParam } from "../lib/api-utils";
 import { runAdminRoute, type AdminRouteContext } from "../lib/route-wrappers";
 import { toErrorMessage } from "../lib/error-utils";
@@ -19,7 +20,7 @@ function parseAuditDetail(row: AuditLogRow): unknown {
   try {
     return JSON.parse(row.detail_json) as unknown;
   } catch (error) {
-    console.warn(
+    logWorkerEventArgs("api", "warn",
       `[api-key-audit-log] Failed to parse detail_json for row ${row.id}:`,
       toErrorMessage(error),
     );

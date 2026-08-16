@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { toYieldBenchmarkRegistry, type ParsedYieldBenchmarkRegistry } from "./benchmarks";
 import { buildHistoryKey, type EvaluatedYieldSource } from "./evaluation";
 import { buildYieldSourceProvenance } from "./provenance";
@@ -167,7 +168,7 @@ export async function publishYieldCoordinatorResults(params: {
       timestamp: params.startSec,
       reason,
     }).catch((finalizeError: unknown) => {
-      console.warn("[sync-yield-data] Failed to mark yield generation failed after publication transaction failure:", finalizeError);
+      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to mark yield generation failed after publication transaction failure:", finalizeError);
     });
     return {
       ok: false,
@@ -216,7 +217,7 @@ export async function publishYieldCoordinatorResults(params: {
     const reason = getD1FailureReason("yield-data-freshness-sentinel-failed", error);
     params.degradationReasons.push(reason);
     await repairPublishedYieldGenerationFromCache(params.db, params.startSec).catch((repairError: unknown) => {
-      console.warn("[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
+      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to repair published yield generation after freshness sentinel failure:", repairError);
     });
   }
 

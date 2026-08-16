@@ -1,4 +1,4 @@
-import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   buildPriceValidationContext,
@@ -17,7 +17,7 @@ export function isPlausibleDexObservationPrice(
   const context = buildPriceValidationContext({
     stablecoinId,
     pegCurrency: meta?.flags.pegCurrency,
-    pegType: normalizePegTypeFromCurrency(meta?.flags.pegCurrency),
+    pegType: pegTypeFromCurrency(meta?.flags.pegCurrency),
     navToken: meta?.flags.navToken,
     commodityOunces: meta?.commodityOunces,
   });

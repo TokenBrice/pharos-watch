@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 interface JsonDecodeLogOptions {
   scope: "api" | "cron" | "lib";
   owner: string;
@@ -28,5 +29,5 @@ export function logMalformedJsonPath(options: JsonDecodeLogOptions, error?: unkn
     }
   }
 
-  console.warn(parts.join(" "), error);
+  logWorkerEventArgs("lib", "warn", parts.join(" "), error);
 }

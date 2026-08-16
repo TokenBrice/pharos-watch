@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
 import type { PriceValidationReferences } from "../../../lib/price-validation";
 import {
@@ -51,7 +52,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     uniV3ExecutionCandidates = uniV3Data.uniV3ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
-    console.warn("[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
+    logWorkerEventArgs("handler", "warn", "[dex-liquidity] UniV3 fetch failed (non-fatal):", err);
     failedSources.push("univ3-subgraph");
   }
 
@@ -66,7 +67,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
       uniswapV4Data.uniswapV4ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
-    console.warn(JSON.stringify({
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
       message: "Uniswap V4 fetch failed (non-fatal)",
       error: err instanceof Error ? err.message : String(err),
@@ -90,7 +91,7 @@ export async function fetchSubgraphEnrichmentPhase(params: {
     aerodromeV2ExecutionCandidates = aeroData.aerodromeV2ExecutionCandidates;
   } catch (err) {
     rethrowIfAborted(err, params.signal);
-    console.warn("[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
+    logWorkerEventArgs("handler", "warn", "[dex-liquidity] Aerodrome fetch failed (non-fatal):", err);
     failedSources.push("aerodrome-subgraph");
   }
 

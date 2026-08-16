@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { CHAIN_META } from "@shared/lib/chains";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
@@ -309,7 +310,7 @@ export async function fetchSupplementalPriceData(
 
   const dlAllowed = db ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.DL_COINS) : true;
   if (!dlAllowed) {
-    console.warn(`[${logPrefix}] DefiLlama coins circuit open; using CoinGecko simple price fallback when available`);
+    logWorkerEventArgs("handler", "warn", `[${logPrefix}] DefiLlama coins circuit open; using CoinGecko simple price fallback when available`);
     return { coins: {} };
   }
 
@@ -323,12 +324,12 @@ export async function fetchSupplementalPriceData(
     );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn(`[${logPrefix}] Price fetch threw; using CoinGecko simple price fallback when available`, err);
+    logWorkerEventArgs("handler", "warn", `[${logPrefix}] Price fetch threw; using CoinGecko simple price fallback when available`, err);
     if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
     return { coins: {} };
   }
   if (!priceResult?.response.ok) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[${logPrefix}] Price fetch failed: ${priceResult?.response.status ?? "no response"}; using CoinGecko simple price fallback when available`,
     );
     if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
@@ -340,7 +341,7 @@ export async function fetchSupplementalPriceData(
     rawPriceData = JSON.parse(priceResult.body);
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn(`[${logPrefix}] Price payload parse failed; using CoinGecko simple price fallback when available`, err);
+    logWorkerEventArgs("handler", "warn", `[${logPrefix}] Price payload parse failed; using CoinGecko simple price fallback when available`, err);
     if (db) await recordOutcomeSafe(db, CIRCUIT_SOURCE.DL_COINS, false);
     return { coins: {} };
   }

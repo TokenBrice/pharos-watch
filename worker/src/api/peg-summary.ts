@@ -1,5 +1,6 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
-import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -52,7 +53,7 @@ function deriveDexDeviationBps(
 
 export const __pegSummaryTestHooks = {
   deriveDexDeviationBps,
-  normalizePegTypeFromCurrency,
+  normalizePegTypeFromCurrency: pegTypeFromCurrency,
 };
 
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
@@ -80,7 +81,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       source_total_tvl: number;
       updated_at: number;
     }>().catch((err) => {
-      console.warn(
+      logWorkerEventArgs("api", "warn",
         "[peg-summary] DEX price query failed, falling back to empty:",
         err instanceof Error ? err.message : err,
       );
@@ -168,7 +169,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegData.pegReferenceUnavailable !== true &&
       dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
     ) {
-      const pegType = pegData.pegType || asset?.pegType || normalizePegTypeFromCurrency(meta.flags.pegCurrency) || null;
+      const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency) || null;
       const dexBps = deriveDexDeviationBps(
         dexRow.dex_price_usd,
         pegType,

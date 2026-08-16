@@ -47,7 +47,7 @@ interface CircuitRecordMemoCache {
   versions: Map<string, number>;
 }
 
-const circuitRecordCacheByDb = new WeakMap<D1Database, CircuitRecordMemoCache>();
+let circuitRecordCacheByDb = new WeakMap<D1Database, CircuitRecordMemoCache>();
 
 function cloneCircuitRecord(record: CircuitRecord): CircuitRecord {
   return { ...record };
@@ -347,6 +347,13 @@ function getConfiguredLiveReserveCircuitSources(): Set<string> {
 // ACTIVE_STABLECOINS is static per isolate — memoize to avoid recomputing on
 // every /health or /public-status-history request.
 let _activeCircuitSources: Set<string> | undefined;
+
+/** @internal Reset per-isolate memoized state so test files can share a process. */
+export function resetCircuitBreakerStateForTests(): void {
+  circuitRecordCacheByDb = new WeakMap<D1Database, CircuitRecordMemoCache>();
+  _activeCircuitSources = undefined;
+}
+
 function getActiveCircuitSources(): Set<string> {
   if (!_activeCircuitSources) {
     _activeCircuitSources = new Set([...Object.values(CIRCUIT_SOURCE), ...getConfiguredLiveReserveCircuitSources()]);

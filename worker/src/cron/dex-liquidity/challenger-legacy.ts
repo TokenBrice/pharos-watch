@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeJsonString } from "../../lib/cache-json";
 import { isMissingTableError } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -112,7 +113,7 @@ export async function loadLegacyDexPoolChallengers(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[challenger-persistence] Unexpected error loading legacy challengers:", msg);
+      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading legacy challengers:", msg);
     }
   }
 
@@ -158,7 +159,7 @@ export async function loadLegacyDexPoolChallengers(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[challenger-persistence] Unexpected error loading legacy price-source challengers:", msg);
+      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading legacy price-source challengers:", msg);
     }
   }
 

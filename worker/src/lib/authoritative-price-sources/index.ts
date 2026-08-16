@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -419,7 +420,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           circuitAttempts.delete(circuitSource);
         }
         recordSkippedBudget(index + 1);
-        console.warn(`[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
+        logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] live override budget exhausted after ${budgetMs}ms`);
         break;
       }
       if (candidateTimeout?.isTimedOut() && !signal?.aborted) {
@@ -430,7 +431,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
           rejectionClass: "timeout",
           candidateAt,
         });
-        console.warn(
+        logWorkerEventArgs("lib", "warn",
           `[authoritative-price-sources] ${asset.id} live override exceeded ${providerTimeoutMs}ms candidate budget`,
         );
         continue;
@@ -446,7 +447,7 @@ export async function fetchAuthoritativeLivePriceOverrides(
         await recordOutcomeSafe(options.db, circuitSource, false);
         circuitAttempts.delete(circuitSource);
       }
-      console.warn(`[authoritative-price-sources] ${asset.id} live override failed:`, error);
+      logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${asset.id} live override failed:`, error);
     } finally {
       candidateTimeout?.dispose();
     }
@@ -479,7 +480,7 @@ export async function fetchAuthoritativeHistoricalPriceSeries(
     };
   } catch (error) {
     rethrowIfAborted(error, context.signal);
-    console.warn(`[authoritative-price-sources] ${meta.id} historical source failed:`, error);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${meta.id} historical source failed:`, error);
     return {
       matched: true,
       source: provider.source,

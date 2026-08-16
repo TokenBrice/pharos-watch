@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getChainRpc, type ChainRpcConfig } from "./chain-registry";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
@@ -311,7 +312,7 @@ async function fetchJsonRpcResult<T>(
   }
 
   if (failures.length > 0) {
-    console.warn(`[evm-rpc] ${method} failed across ${urls.length} RPCs: ${failures.join("; ")}`);
+    logWorkerEventArgs("lib", "warn", `[evm-rpc] ${method} failed across ${urls.length} RPCs: ${failures.join("; ")}`);
   }
   return null;
 }

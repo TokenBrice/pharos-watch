@@ -8,6 +8,8 @@ import {
   type DepegStepValue,
 } from "./telegram-constants";
 import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "./telegram-subscription-eligibility";
+import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
+import { TELEGRAM_ALERT_TYPES } from "@shared/types/status/telegram";
 
 // ---------- Types ----------
 
@@ -45,7 +47,7 @@ export type TickerResolutionScope = "subscribable" | "tracked";
 
 // ---------- Constants ----------
 
-const ALERT_TYPES = new Set(["dews", "depeg", "safety", "launch", "reserve", "freeze"]);
+const ALERT_TYPES: ReadonlySet<string> = new Set(TELEGRAM_ALERT_TYPES);
 const GLOBAL_SUBSCRIBE_TOKEN = "all";
 const DEPEG_STEP_TOKEN = "depeg-step";
 
@@ -183,6 +185,8 @@ export function parseTargetArgs(
       includeAll = true;
     } else if (presetId) {
       presetIds.push(presetId);
+    } else if (isTelegramReservedTargetToken(lower)) {
+      invalidTargets.push(token);
     } else if (symbols.has(lower) || ids.has(lower)) {
       tickers.push(token);
     } else {

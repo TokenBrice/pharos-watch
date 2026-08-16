@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
@@ -733,9 +734,9 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
 export function emitDepegDiagnostics(diagnostics: DepegDiagnostic[]): void {
   for (const diagnostic of diagnostics) {
     if (diagnostic.level === "warn") {
-      console.warn(diagnostic.message);
+      logWorkerEventArgs("handler", "warn", diagnostic.message);
     } else {
-      console.log(diagnostic.message);
+      logWorkerEventArgs("handler", "info", diagnostic.message);
     }
   }
 }

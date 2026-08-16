@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -244,7 +245,7 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
     } catch (err) {
       if (config.signal?.aborted) throw err;
       config.onRequestResult?.(token, "failure");
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[dex-liquidity] ${config.sourceLabel} pool crawl error for ${token.ourChain}:${token.address}:`,
         err,
       );

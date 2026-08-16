@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveInput } from "@shared/types/live-reserves";
 import { CHAIN_META } from "@shared/lib/chains";
@@ -230,14 +231,14 @@ async function fetchOnChainSupplyForContract(input: {
     if (Number.isFinite(mcap) && (mcap > 0 || allowZeroSupply)) {
       const chainLabel = contractChainLabel(input.supplyContract);
       if (mcap > 0) {
-        console.log(
+        logWorkerEventArgs("handler", "info",
           `[fiat-cg] ${chainLabel} supply fallback for ${input.meta.symbol}: ${supply.toFixed(2)} units -> $${mcap.toFixed(2)} mcap`,
         );
       }
       return { mcap, supplySource, chain: input.supplyContract.chain, chainLabel };
     }
   } catch (err) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[fiat-cg] ${contractChainLabel(input.supplyContract)} supply probe failed for ${input.meta.symbol}: ${String(err).slice(0, 200)}`,
     );
   }
@@ -301,7 +302,7 @@ export async function fetchOnChainMcap(
   const supplyContract = selectSupplementalOnChainSupplyContract(meta);
   if (!supplyContract) {
     if (!curated && (meta.contracts?.length ?? 0) > 1) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[fiat-cg] ${meta.symbol}: skipping on-chain supply fallback because multiple contracts could undercount global supply`,
       );
     }

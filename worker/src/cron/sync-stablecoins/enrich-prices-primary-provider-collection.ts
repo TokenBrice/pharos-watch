@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { PriceObservedAtMode } from "@shared/types/core";
 import { CIRCUIT_SOURCE, CURVE_ORACLE_MAX_STALENESS_SEC } from "../../lib/constants";
@@ -45,7 +46,7 @@ import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../lib/curve-on
 import { CURVE_POOL_CONFIGS } from "../../lib/curve-pool-configs";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { PriceValidationReferences } from "../../lib/price-validation";
-import { normalizePegTypeFromCurrency } from "../../lib/price-validation";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { DlListQuote, NavTelemetryQuote } from "../../lib/primary-price-collector";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { isUsableGeckoId } from "./enrich-prices-primary-shared";
@@ -162,7 +163,7 @@ function resolveNavUsdRate(params: {
   metaById: Map<string, (typeof ACTIVE_STABLECOINS)[number]>;
 }): number | null {
   const meta = params.metaById.get(params.asset.id);
-  const pegType = normalizePegTypeFromCurrency(meta?.flags?.pegCurrency) ?? params.asset.pegType;
+  const pegType = pegTypeFromCurrency(meta?.flags?.pegCurrency) ?? params.asset.pegType;
   if (!pegType || pegType.includes("USD")) return 1;
 
   const referenceType = params.references?.typeByPeg?.[pegType] ?? params.references?.type;
@@ -239,7 +240,7 @@ async function loadReserveNavPriceQuotes(params: {
     return quotes;
   } catch (err) {
     const msg = toErrorMessage(err);
-    console.warn(`[primary-prices] Failed to load reserve NAV telemetry: ${msg}`);
+    logWorkerEventArgs("handler", "warn", `[primary-prices] Failed to load reserve NAV telemetry: ${msg}`);
     return new Map();
   }
 }
@@ -255,7 +256,7 @@ async function runPrimaryProviderFetch(
     await recordOutcome(db, source, await fetcher());
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn(`[primary-prices] ${label} failed:`, err);
+    logWorkerEventArgs("handler", "warn", `[primary-prices] ${label} failed:`, err);
     await recordOutcome(db, source, false);
   }
 }
@@ -391,7 +392,7 @@ export async function buildPrimaryPricePlan(
     !curveOracleAllowed &&
     !Object.values(addressProvidersAllowed).some(Boolean)
   ) {
-    console.warn("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
+    logWorkerEventArgs("handler", "warn", "[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only");
   }
 
   const geckoIds = [...new Set(candidates.map((asset) => asset.geckoId).filter(isUsableGeckoId))];

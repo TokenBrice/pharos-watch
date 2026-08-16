@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
@@ -144,7 +145,7 @@ export async function processFetchedBlacklistRows(
   const duplicateRows = options.rows.filter((row) => !newRowIds.has(row.id));
   const duplicateCount = options.rows.length - newRows.length;
   if (duplicateCount > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-blacklist] Skipping ${duplicateCount} previously ingested row(s) before enrichment/cache sync`,
     );
   }
@@ -208,7 +209,7 @@ export async function processFetchedBlacklistRows(
       row.amount_status = "permanently_unavailable";
     }
   }
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[sync-blacklist] enrichRowBalances (${options.chainLabel}): attempted=${enrichCounters.attempted} succeeded=${enrichCounters.succeeded} failed=${enrichCounters.failed}`,
   );
 

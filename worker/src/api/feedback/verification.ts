@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { formatCurrency } from "@shared/lib/format";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -58,7 +59,7 @@ export async function verifyDataCorrection(
 
     return { block, verifiedLabel };
   } catch (err) {
-    console.warn("[feedback] Auto-verification failed:", err);
+    logWorkerEventArgs("api", "warn", "[feedback] Auto-verification failed:", err);
     return {
       block: "**Verification:** pending (cache unavailable at submission time)",
       verifiedLabel: "verified: pending",

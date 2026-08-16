@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { rethrowIfAborted } from "../../../lib/abort";
 import {
   fetchMajorStablecoinOrderbookDepthSummary,
@@ -19,7 +20,7 @@ export async function fetchDirectCexOrderbookDepthTelemetry(params: {
     return await fetchMajorStablecoinOrderbookDepthSummary(params.signal);
   } catch (err) {
     rethrowIfAborted(err, params.signal);
-    console.warn("[dex-liquidity] Direct CEX orderbook depth telemetry failed (non-fatal):", err);
+    logWorkerEventArgs("handler", "warn", "[dex-liquidity] Direct CEX orderbook depth telemetry failed (non-fatal):", err);
     params.failedSources.push("direct-cex-orderbook-depth");
     return null;
   }
@@ -35,7 +36,7 @@ export async function runFallbackCrawlerPhase(params: {
       (meta) => meta.id,
     ),
   );
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[dex-liquidity] Discovery staging supplied ${params.priceObservations.size} coins with price observations; ` +
       "inline discovery is disabled in the scoring lane",
   );

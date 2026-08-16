@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { applyTrackedAssetOverrides, fillMissingSupplyHistory } from "./phase-helpers";
 import { buildSyncMetadata, loadPreviousStablecoinsById } from "./shared";
 import { checkStablecoinsPriceStaleness } from "./runtime";
@@ -27,7 +28,7 @@ export async function restoreFallbackCacheState(
       if (prev?.circulatingPrevMonth) asset.circulatingPrevMonth = prev.circulatingPrevMonth;
     }
   } catch (error) {
-    console.warn("[sync-stablecoins] Failed to restore stale cache data:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to restore stale cache data:", error);
   }
 
   applyTrackedAssetOverrides(input.assets);
@@ -44,7 +45,7 @@ export async function fillFallbackSupplyHistoryStage(
     await fillMissingSupplyHistory(input.db, input.assets, input.signal);
   } catch (error) {
     if (input.signal?.aborted) return input.abortResult(input.signal, "fallback-fill-supply-history");
-    console.warn("[sync-stablecoins] supply_history fallback failed:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] supply_history fallback failed:", error);
   }
 
   return null;

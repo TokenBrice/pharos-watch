@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { YieldBenchmarkMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { getCache, getCaches, setCacheIfNewer } from "../../lib/db-cache";
 import {
@@ -337,7 +338,7 @@ export async function loadYieldSyncState(params: {
         stablecoinSupplyById.set(id, supplyUsd);
       }
     } catch (error) {
-      console.warn("[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
+      logWorkerEventArgs("handler", "warn", "[sync-yield-data] Failed to parse stablecoins cache for lending size gates:", error);
     }
   }
   const safetyScores = safetySnapshot.scores;

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { DepegEvent } from "@shared/types/market";
 import { DEPEG_PENDING_EXPIRY_SEC } from "../lib/constants";
 import {
@@ -99,7 +100,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
       provenance: null,
     };
 
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] PROMOTED ${row.symbol}: ${pendingState.firstSeenBps}bps confirmed by ${confirmedBy || "(none)"}${pendingState.reason ? ` (${pendingState.reason})` : ""}`
     );
     return [
@@ -139,7 +140,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     const reason = primarySameDirectionDepegged
       ? `two-hard-opposing-sources:${confirmationSourceList(evidence.hardOpposingSources)}`
       : "secondary-evidence-opposes";
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Rejected ${row.symbol}: secondary evidence opposes pending direction ` +
       `(offchain=${evidence.offchainStatus}, dex=${evidence.dexStatus}, cex=${evidence.cexStatus}, pool=${evidence.poolStatus})`,
     );
@@ -156,7 +157,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
 
   if (isExpired && finalExpiryExceeded) {
     const severe = isExtremeMovePending(pendingState.reason);
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Expired pending for ${row.symbol}: ${Math.round(age / 60)}min without confirmation ` +
       `(limit ${Math.round(expiryLimitSec / 60)}min)`,
     );
@@ -172,7 +173,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   }
 
   if (isExpired) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Kept pending for ${row.symbol} past base expiry: ` +
       `age=${Math.round(age / 60)}min, limit=${Math.round(expiryLimitSec / 60)}min, ` +
       `primarySameDirection=${primarySameDirectionDepegged}, unavailable=${confirmationSourceList(evidence.unavailableSources) || "none"}, ` +

@@ -1595,7 +1595,7 @@ describe("dex-liquidity scoring", () => {
   it("publishes only eligible depth-stability rows and propagates DB failures", async () => {
     const nowMs = Date.UTC(2026, 0, 1);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const db = makeQueryDb([
       {
@@ -1635,7 +1635,7 @@ describe("dex-liquidity scoring", () => {
     expect(upserts[1]?.boundValues).toEqual([1, "usdt-tether", "dex-liquidity-test"]);
     expect(executeAtomicBatch).toHaveBeenCalledTimes(1);
     expect(logSpy).toHaveBeenCalledWith(
-      "[dex-liquidity] Published depth stability for 1 coins from dex-liquidity-test",
+      expect.stringContaining("[dex-liquidity] Published depth stability for 1 coins from dex-liquidity-test"),
     );
 
     vi.mocked(batchExecute).mockClear();

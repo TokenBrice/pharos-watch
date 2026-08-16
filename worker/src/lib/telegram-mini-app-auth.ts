@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
@@ -85,7 +86,7 @@ function warnNovelMiniAppChatType(chatType: string | null): void {
     return;
   }
   warnedNovelMiniAppChatTypes.add(chatType);
-  console.warn(`[telegram-mini-app-auth] novel chat_type received: ${chatType}`);
+  logWorkerEventArgs("lib", "warn", `[telegram-mini-app-auth] novel chat_type received: ${chatType}`);
 }
 
 export async function validateTelegramMiniAppInitData(

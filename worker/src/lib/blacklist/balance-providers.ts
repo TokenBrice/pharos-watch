@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import type { ContractEventConfig } from "../blacklist-contracts";
 import { decimalNumberFromBigInt } from "../bigint";
 import { encodeBalanceOfCallData } from "../evm-selectors";
@@ -33,7 +34,7 @@ async function fetchEvmBalanceAtTag(
   const data = encodeBalanceOfCallData(address);
   const blockNumberOrTag = tag === "latest" ? "latest" : Number.parseInt(tag, 16);
   if (typeof blockNumberOrTag === "number" && !Number.isFinite(blockNumberOrTag)) {
-    console.warn(`[sync-blacklist] fetchEvmBalanceAtTag: invalid block tag "${tag}", returning null`);
+    logWorkerEventArgs("lib", "warn", `[sync-blacklist] fetchEvmBalanceAtTag: invalid block tag "${tag}", returning null`);
     return null;
   }
 
@@ -57,7 +58,7 @@ async function fetchEvmBalanceAtTag(
     return decimalNumberFromBigInt(BigInt(result), decimals);
   } catch (e) {
     rethrowIfAborted(e, signal);
-    console.warn("[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
+    logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
     return null;
   }
 }
@@ -97,7 +98,7 @@ async function fetchBalanceViaDrpc(
     return decimalNumberFromBigInt(BigInt(result), decimals);
   } catch (e) {
     rethrowIfAborted(e, signal);
-    console.warn("[sync-blacklist] fetchBalanceViaDrpc failed:", e);
+    logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchBalanceViaDrpc failed:", e);
     return null;
   }
 }
@@ -139,7 +140,7 @@ async function fetchBalanceViaChainRpc(
       return decimalNumberFromBigInt(BigInt(result), decimals);
     } catch (e) {
       rethrowIfAborted(e, signal);
-      console.warn("[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
+      logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
     }
   }
 
@@ -307,7 +308,7 @@ async function fetchTronTokenCurrentBalanceViaJsonRpc(
     return decimalNumberFromBigInt(BigInt(json.result), config.decimals);
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn("[sync-blacklist] fetchTronTokenCurrentBalanceViaJsonRpc failed:", error);
+    logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchTronTokenCurrentBalanceViaJsonRpc failed:", error);
     return null;
   }
 }
@@ -360,7 +361,7 @@ export async function fetchTronTokenCurrentBalance(
     return decimalNumberFromBigInt(BigInt(rawAmount), config.decimals);
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn("[sync-blacklist] fetchTronTokenCurrentBalance failed:", error);
+    logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchTronTokenCurrentBalance failed:", error);
     return null;
   }
 }

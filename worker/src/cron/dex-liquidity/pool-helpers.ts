@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { clamp, clampScore } from "@shared/lib/math";
 import { DURABILITY_COMPONENT_WEIGHTS } from "@shared/lib/liquidity-score-weights";
@@ -364,7 +365,7 @@ export function buildSymbolLookups(): SymbolLookups {
     }
   }
   if (collidingSymbols.size > 0) {
-    console.log(`[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
+    logWorkerEventArgs("handler", "info", `[dex-liquidity] Symbol collisions detected: ${[...collidingSymbols].join(", ")}`);
   }
 
   const addressToId = new Map<string, string>();

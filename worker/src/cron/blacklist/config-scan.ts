@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
 import { type RateLimitedFetch, getEvmBlockNumber } from "../../lib/evm-logs";
@@ -279,7 +280,7 @@ function recordIncompleteConfigScan(
     );
   }
   const cursorLabel = configState.config.chain.type === "tron" ? "ts" : "block";
-  console.warn(
+  logWorkerEventArgs("handler", "warn",
     `[sync-blacklist] Incomplete scan for ${configState.config.stablecoin} on ${configState.config.chain.chainName}, keeping sync at ${cursorLabel} ${configState.cursorValue}`,
   );
 }
@@ -299,7 +300,7 @@ function recordEvmApiError(configState: BlacklistConfigState, result: BlacklistS
     result.nextCursor != null
       ? `[sync-blacklist] Partial coverage scanning ${configState.config.stablecoin} on ${configState.config.chain.chainName}, advancing sync from ${configState.cursorValue} to ${result.nextCursor}`
       : `[sync-blacklist] API error scanning ${configState.config.stablecoin} on ${configState.config.chain.chainName}, keeping sync at block ${configState.cursorValue}`;
-  console.warn(message);
+  logWorkerEventArgs("handler", "warn", message);
 }
 
 async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
@@ -358,7 +359,7 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
     await finalizeSuccessfulConfigScan(args.db, configState, args.attempt, result, state, args.signal);
     state.totalFetchedEvents += result.rows.length;
     const syncLabel = config.chain.type === "tron" ? "ts" : "block";
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-blacklist] ${config.stablecoin} on ${config.chain.chainName}: ${result.rows.length} new events, ${syncLabel} ${result.latestCursor}`,
     );
   } catch (err) {
@@ -386,7 +387,7 @@ async function recordConfigScanException(args: ScanSingleConfigArgs, err: unknow
   configState.consecutiveSkips = 0;
   configState.lastOutcome = "exception";
   state.coverageOutcomeCounts.exception = (state.coverageOutcomeCounts.exception ?? 0) + 1;
-  console.warn(`[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
+  logWorkerEventArgs("handler", "warn", `[sync-blacklist] Failed ${config.stablecoin} on ${config.chain.chainName}:`, err);
 }
 
 async function skipTronGridCircuitConfig(args: ScanSingleConfigArgs): Promise<boolean> {
@@ -394,7 +395,7 @@ async function skipTronGridCircuitConfig(args: ScanSingleConfigArgs): Promise<bo
   const { config, configKey } = configState;
   if (config.chain.type !== "tron" || (await shouldAttemptFetch(args.db, CIRCUIT_SOURCE.TRONGRID))) return false;
 
-  console.log(`[sync-blacklist] TronGrid circuit open, skipping ${configKey}`);
+  logWorkerEventArgs("handler", "info", `[sync-blacklist] TronGrid circuit open, skipping ${configKey}`);
   state.contractsSkipped++;
   state.providerCircuitSkips++;
   state.tronGridCircuitSkips++;
@@ -475,7 +476,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
         skippedState.consecutiveSkips++;
         skippedState.lastOutcome = "budget_skipped";
       }
-      console.warn(`[sync-blacklist] Runtime budget reached, skipping ${state.contractsSkipped} remaining contracts`);
+      logWorkerEventArgs("handler", "warn", `[sync-blacklist] Runtime budget reached, skipping ${state.contractsSkipped} remaining contracts`);
       break;
     }
 

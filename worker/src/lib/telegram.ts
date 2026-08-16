@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { drainResponseBody, readResponseTextBoundedWithSignal } from "./response-body";
 import { escapeHtml } from "./telegram-html";
 import { logTelegramEvent } from "./telegram-log";
@@ -114,7 +115,7 @@ export async function postDigestToTelegram(
 ): Promise<void> {
   const text = buildTelegramMessage(title, extended, date, editionNumber, appendixHtml);
   await postTelegramMessage(text, creds);
-  console.log(`[telegram] Posted digest (${text.length} chars)`);
+  logWorkerEventArgs("lib", "info", `[telegram] Posted digest (${text.length} chars)`);
 }
 
 /**

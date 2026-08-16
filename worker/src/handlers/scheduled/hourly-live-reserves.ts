@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Four-hourly reserve-sync trigger (11 * / 4 * * *):
  *   sync-live-reserves (2) → sync-redemption-backstops (0) → sync-kinesis-supply (1) → reserve-post-sync-watchdog (1)
@@ -59,10 +60,10 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
       const driftSummary = drift.driftCoins
         .map((d) => `${d.id}: live=${d.liveScore}, curated=${d.curatedScore} (Δ${d.delta})`)
         .join("\n");
-      console.warn(`[live-reserves] Collateral drift detected:\n${driftSummary}`);
+      logWorkerEventArgs("handler", "warn", `[live-reserves] Collateral drift detected:\n${driftSummary}`);
     }
     if (drift.fallbackCoins.length > 5) {
-      console.warn(`[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
+      logWorkerEventArgs("handler", "warn", `[live-reserves] ${drift.fallbackCoins.length} live-enabled coins using curated fallback`);
     }
 
     // Persist the currently-drifting id-set for the Telegram reserve-drift alert
@@ -109,7 +110,7 @@ async function runReservePostSyncWatchdog(runtime: ScheduledRuntimeContext, sign
       const staleSummary = persistentlyStale
         .map((entry) => `${entry.stablecoinId}: ${Math.round(entry.ageSec / DAY_SECONDS)}d`)
         .join("\n");
-      console.warn(`[live-reserves] Persistently-stale independent sources:\n${staleSummary}`);
+      logWorkerEventArgs("handler", "warn", `[live-reserves] Persistently-stale independent sources:\n${staleSummary}`);
     }
   } catch (e) {
     rethrowIfAborted(e, signal);
@@ -184,7 +185,7 @@ function checkpointTask(
         try {
           await setScheduledCheckpointChildDisposition(runtime.db, identity, task.job, "failed");
         } catch (checkpointError) {
-          console.warn(`[hourly-live-reserves] Failed to mark ${task.job} checkpoint failed:`, checkpointError);
+          logWorkerEventArgs("handler", "warn", `[hourly-live-reserves] Failed to mark ${task.job} checkpoint failed:`, checkpointError);
         }
         throw error;
       }

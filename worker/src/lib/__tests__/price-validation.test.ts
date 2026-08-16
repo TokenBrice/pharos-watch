@@ -171,8 +171,7 @@ describe("loadPriceValidationReferences", () => {
       updatedAt: null,
     });
     expect(warnSpy).toHaveBeenCalledWith(
-      "[price-validation] Failed to load FX validation references; falling back to static references",
-      error,
+      expect.stringContaining("[price-validation] Failed to load FX validation references; falling back to static references"),
     );
     warnSpy.mockRestore();
   });

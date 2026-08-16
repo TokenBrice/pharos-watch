@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { throwIfAborted } from "../../../lib/abort";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
@@ -68,7 +69,7 @@ export async function fetchFiatCoinGeckoTokens(
 
         if (isZephyrScannerAssetId(meta.id)) {
           if (!zephyrProtocolStats) {
-            console.log(`[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
+            logWorkerEventArgs("handler", "info", `[fiat-cg] No Zephyr scanner supply for ${meta.symbol}, skipping`);
             return null;
           }
           return buildZephyrProtocolPeggedAsset(meta, zephyrProtocolStats, priceResolution, nowSec);
@@ -109,7 +110,7 @@ export async function fetchFiatCoinGeckoTokens(
         }
 
         if (!mcap) {
-          console.log(`[fiat-cg] No mcap for ${meta.symbol}, skipping`);
+          logWorkerEventArgs("handler", "info", `[fiat-cg] No mcap for ${meta.symbol}, skipping`);
           return null;
         }
 
@@ -147,7 +148,7 @@ export async function fetchFiatCoinGeckoTokens(
     return results.filter((token): token is PeggedAsset => token !== null);
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.error("[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
+    logWorkerEventArgs("handler", "error", "[fiat-cg] fetchFiatCoinGeckoTokens failed:", err);
     return [];
   }
 }

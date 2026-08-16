@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCache } from "./db-cache";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -72,7 +73,7 @@ export async function publishPegAnalyticsCache(
     });
     return true;
   } catch (error) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       "[peg-analytics-cache] publish failed (read paths fall back to direct compute):",
       toErrorMessage(error),
     );

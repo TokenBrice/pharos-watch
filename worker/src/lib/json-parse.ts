@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "./error-utils";
 
 export interface JsonParseFailure {
@@ -26,7 +27,7 @@ function recordFailure(options: JsonParseOptions, message: string): void {
     return;
   }
   if (options.context) {
-    console.warn(`[json-parse] Failed to parse JSON (${options.context}):`, message);
+    logWorkerEventArgs("lib", "warn", `[json-parse] Failed to parse JSON (${options.context}):`, message);
   }
 }
 

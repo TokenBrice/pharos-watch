@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { TronEventsResponseSchema } from "../../lib/external-api-schemas";
 import type { ContractEventConfig } from "../../lib/blacklist-contracts";
 import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
@@ -205,7 +206,7 @@ export async function fetchTronEventsIncremental(
         }
         const parsed = TronEventsResponseSchema.safeParse(result.body);
         if (!parsed.success) {
-          console.warn("[blacklist] TronGrid response validation failed:", parsed.error.message);
+          logWorkerEventArgs("handler", "warn", "[blacklist] TronGrid response validation failed:", parsed.error.message);
           apiError = true;
           return null;
         }

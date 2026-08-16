@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { materializeBlacklistGapMetrics } from "../lib/blacklist-gaps";
 import { materializeBlacklistSummarySnapshot } from "../api/blacklist-summary";
 import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
@@ -133,18 +134,18 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       );
       runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;
     } catch (err) {
-      console.warn("[sync-blacklist] Backfill failed:", err);
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Backfill failed:", err);
     }
   } else if (!etherscanCircuitAllowed) {
     etherscanCircuitSkips++;
-    console.warn("[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
   }
   if (!blacklistRuntimeBudgetReached(maintenanceRunBudget)) {
     try {
       legacyIdentityMigration = await migrateLegacyBlacklistIdentities(db, signal);
     } catch (error) {
       legacyIdentityMigrationError = error instanceof Error ? error.name : "UnknownError";
-      console.warn("[sync-blacklist] Legacy identity migration failed:", error);
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Legacy identity migration failed:", error);
     }
   }
   tronLedgerUpdated = await applyTronLedgerMirrorPass(db, "post-sync", {
@@ -202,7 +203,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
-  console.log(`[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
+  logWorkerEventArgs("handler", "info", `[sync-blacklist] Completed with ${budget.count}/${budget.limit} subrequests`);
   await reportCronProgress(
     onProgress,
     {

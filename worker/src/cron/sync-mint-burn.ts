@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { invalidateMintBurnFlowCaches } from "../lib/mint-burn-flows-service";
 import {
   createBudget,
@@ -356,13 +357,13 @@ export async function syncMintBurn(
     },
   }, budget);
 
-  console.log(`[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);
+  logWorkerEventArgs("handler", "info", `[sync-mint-burn] Completed with ${budget.count}/${budget.limit} subrequests (${status})`);
 
   if (status === "ok" || status === "degraded") {
     try {
       await invalidateMintBurnFlowCaches(db);
     } catch (e) {
-      console.warn("[sync-mint-burn] cache invalidation failed:", e);
+      logWorkerEventArgs("handler", "warn", "[sync-mint-burn] cache invalidation failed:", e);
     }
   }
 

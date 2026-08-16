@@ -346,6 +346,6 @@ describe("DEX liquidity history atomic identity replacement", () => {
       retentionPruneFailed: false,
     });
     expect(loadSnapshotIdentity(sqlite)).toEqual(before);
-    expect(warnSpy).toHaveBeenCalledWith("[dex-liquidity] Daily snapshot failed:", expect.any(Error));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-liquidity] Daily snapshot failed:"));
   });
 });

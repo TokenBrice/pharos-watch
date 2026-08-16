@@ -501,8 +501,7 @@ describe("runCronWithLease", () => {
 
       expect(result).toMatchObject({ status: "ok", result: "done" });
       expect(consoleError).toHaveBeenCalledWith(
-        "[cron-lease] Lease state observer failed for sync-stablecoins (acquired):",
-        expect.any(Error),
+        expect.stringContaining("[cron-lease] Lease state observer failed for sync-stablecoins (acquired):"),
       );
       const reacquired = await acquireCronLease(db, "sync-stablecoins", "owner-next", 120);
       expect(reacquired).toBe(true);
@@ -567,8 +566,7 @@ describe("runCronWithLease", () => {
         leaseRenewSuccesses: 1,
       });
       expect(consoleError).toHaveBeenCalledWith(
-        "[cron-lease] Lease state observer failed for sync-stablecoins (renewed):",
-        expect.any(Error),
+        expect.stringContaining("[cron-lease] Lease state observer failed for sync-stablecoins (renewed):"),
       );
     } finally {
       consoleError.mockRestore();
@@ -2123,8 +2121,7 @@ describe("runScheduledSlotWithFence", () => {
     await vi.advanceTimersByTimeAsync(15_000);
     await vi.waitFor(() =>
       expect(warnSpy).toHaveBeenCalledWith(
-        `[cron-slot] Failed to heartbeat slot daily0800Utc@${slotStartedAt}:`,
-        expect.any(Error),
+        expect.stringContaining(`[cron-slot] Failed to heartbeat slot daily0800Utc@${slotStartedAt}:`),
       ),
     );
 

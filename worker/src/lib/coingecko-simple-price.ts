@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { PriceObservedAtMode } from "@shared/types/core";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import type { FetcherOutcome } from "./fetcher-result";
@@ -43,14 +44,14 @@ export async function fetchCoingeckoSimplePrices(
       );
       if (!result?.response.ok) {
         hadBatchFailure = true;
-        console.warn(`[primary-prices] CG price API returned ${result?.response.status ?? "no response"}`);
+        logWorkerEventArgs("lib", "warn", `[primary-prices] CG price API returned ${result?.response.status ?? "no response"}`);
         continue;
       }
 
       const parsed = CoinGeckoSimplePriceSchema.safeParse(result.body);
       if (!parsed.success) {
         hadBatchFailure = true;
-        console.warn(`[primary-prices] CG price API payload invalid: ${parsed.error.message}`);
+        logWorkerEventArgs("lib", "warn", `[primary-prices] CG price API payload invalid: ${parsed.error.message}`);
         continue;
       }
       const data = parsed.data;
@@ -78,7 +79,7 @@ export async function fetchCoingeckoSimplePrices(
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[primary-prices] CG price API failed:", err);
+    logWorkerEventArgs("lib", "warn", "[primary-prices] CG price API failed:", err);
     return {
       kind: "upstream-error",
       value: prices,
@@ -87,7 +88,7 @@ export async function fetchCoingeckoSimplePrices(
   }
 
   if (staleCount > 0) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[primary-prices] Dropped ${staleCount} stale CoinGecko simple-price row(s) older than ${coingeckoMaxTrustedAgeSec}s`,
     );
   }

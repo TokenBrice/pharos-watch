@@ -1,4 +1,6 @@
-import { normalizeLegacyPegType, normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
+import { logWorkerEventArgs } from "./structured-log";
+import { normalizeLegacyPegType } from "@shared/lib/peg-price-bounds";
+import { pegTypeFromCurrency as canonicalPegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import {
   CORE_STABLECOIN_AGGREGATE_UNIVERSE,
@@ -27,7 +29,7 @@ function pegTypeFromCurrency(pegCurrency: string): string | null {
   if (pegCurrency === "VAR" || pegCurrency === "OTHER") {
     return `pegged${pegCurrency}`;
   }
-  return normalizePegTypeFromCurrency(pegCurrency) ?? null;
+  return canonicalPegTypeFromCurrency(pegCurrency) ?? null;
 }
 
 export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartConfig[] =
@@ -42,7 +44,7 @@ export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartC
       if (!pegType) {
         // Skip rather than throw so a new peg currency can roll out without a
         // simultaneous worker code change crashing the Worker on startup.
-        console.warn(
+        logWorkerEventArgs("lib", "warn",
           `[stablecoin-charts] skipping ${meta.id}: unsupported peg currency ${meta.flags.pegCurrency}`,
         );
         return [];

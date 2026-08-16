@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 /**
  * Public snapshot API handlers (ideas 12.6 + 11.14).
  *
@@ -318,13 +319,13 @@ async function parseStoredSnapshot(
     }
     envelope = parsed as StoredSnapshotEnvelope;
   } catch (err) {
-    console.error(`[snapshot] decompress/parse failed for ${date}:`, err);
+    logWorkerEventArgs("api", "error", `[snapshot] decompress/parse failed for ${date}:`, err);
     return errorResponse(500, "Snapshot payload corrupted");
   }
 
   const safetyValidation = validateStoredSafetyPublication(row, envelope, date);
   if (safetyValidation.kind === "error") {
-    console.error(`[snapshot] safety identity validation failed for ${date}: ${safetyValidation.reason}`);
+    logWorkerEventArgs("api", "error", `[snapshot] safety identity validation failed for ${date}: ${safetyValidation.reason}`);
     return errorResponse(500, "Snapshot safety identity corrupted");
   }
   return { payload, envelope, identity: safetyValidation.identity };

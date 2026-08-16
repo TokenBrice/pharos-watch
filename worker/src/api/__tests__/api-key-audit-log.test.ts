@@ -97,8 +97,7 @@ describe("api-key-audit-log handler", () => {
     const body = await response.json() as { entries: Array<{ detail: unknown }> };
     expect(body.entries[0]?.detail).toBeNull();
     expect(warn).toHaveBeenCalledWith(
-      "[api-key-audit-log] Failed to parse detail_json for row 2:",
-      expect.any(String),
+      expect.stringContaining("[api-key-audit-log] Failed to parse detail_json for row 2:"),
     );
   });
 });

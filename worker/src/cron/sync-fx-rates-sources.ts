@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { validatePayloadWithSchema } from "../lib/api-utils";
 import { USER_AGENT } from "../lib/constants";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
@@ -75,7 +76,7 @@ async function fetchSecondaryCurrencyCandidate(
       `sync-fx-rates:secondary:${endpoint}`,
     );
     if (!validation.ok) {
-      console.warn(`[sync-fx-rates] Secondary FX payload invalid (${endpoint}): ${validation.issues}`);
+      logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Secondary FX payload invalid (${endpoint}): ${validation.issues}`);
       return null;
     }
 
@@ -152,7 +153,7 @@ export async function loadSecondaryCurrencyCandidate(signal?: AbortSignal): Prom
     secondaryCandidate &&
     secondaryCandidate.endpoint !== primaryCandidate.endpoint
   ) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-fx-rates] Using fresher secondary FX mirror (${secondaryCandidate.endpoint} date=${secondaryCandidate.payload.date ?? "unknown"}, ` +
       `jsdelivr=${primaryCandidate.payload.date ?? "unknown"})`,
     );
@@ -176,11 +177,11 @@ export async function loadExchangeRateApiPayload(signal?: AbortSignal): Promise<
     "sync-fx-rates:exchange-rate-api",
   );
   if (!validation.ok) {
-    console.warn(`[sync-fx-rates] ExchangeRate-API payload invalid: ${validation.issues}`);
+    logWorkerEventArgs("handler", "warn", `[sync-fx-rates] ExchangeRate-API payload invalid: ${validation.issues}`);
     return null;
   }
   if (validation.data.result && validation.data.result !== "success") {
-    console.warn(`[sync-fx-rates] ExchangeRate-API returned result=${validation.data.result}`);
+    logWorkerEventArgs("handler", "warn", `[sync-fx-rates] ExchangeRate-API returned result=${validation.data.result}`);
     return null;
   }
   return validation.data;

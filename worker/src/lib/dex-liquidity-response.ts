@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { safeJsonParse } from "./api-utils";
 import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "./dex-liquidity";
 import { DexLiquidityCronMetadataSchema } from "./schemas";
@@ -266,7 +267,7 @@ export function normalizeTopPools(
     if (normalizedSource != null) {
       cleaned.source = normalizedSource;
     } else {
-      console.info("[dex-liquidity] Unknown pool source:", poolRecord.source);
+      logWorkerEventArgs("lib", "info", "[dex-liquidity] Unknown pool source:", poolRecord.source);
       delete cleaned.source;
     }
     pools.push(cleaned as DexLiquidityPoolResponse);
@@ -328,7 +329,7 @@ export function buildDexLiquidityWarning(latestCron: DexLiquidityCronRow | null)
       qualityDriftSeverity = parsed.sourceCoverage.qualityDriftSeverity ?? "none";
       qualityDriftFlags = parsed.sourceCoverage.qualityDriftFlags ?? [];
     } catch (err) {
-      console.info("[dex-liquidity] Malformed cron metadata:", toErrorMessage(err));
+      logWorkerEventArgs("lib", "info", "[dex-liquidity] Malformed cron metadata:", toErrorMessage(err));
     }
   }
 

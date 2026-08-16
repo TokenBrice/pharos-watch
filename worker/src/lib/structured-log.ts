@@ -157,3 +157,33 @@ export function logWorkerEvent(event: WorkerStructuredLogEvent): void {
     console.error(line);
   }
 }
+
+/**
+ * Compatibility bridge for legacy console-style call sites. It preserves the
+ * original severity while routing message, error, and supplemental arguments
+ * through the bounded structured sink. New call sites should prefer
+ * `logWorkerEvent()` with named fields.
+ */
+export function logWorkerEventArgs(
+  scope: WorkerLogScope,
+  level: WorkerLogLevel,
+  ...args: unknown[]
+): void {
+  const [first, ...rest] = args;
+  const error = args.find((value) => value instanceof Error);
+  const message = typeof first === "string"
+    ? first
+    : first instanceof Error
+      ? first.message
+      : "Worker event";
+  const metadataArgs = (typeof first === "string" ? rest : args)
+    .filter((value) => value !== error);
+
+  logWorkerEvent({
+    scope,
+    level,
+    message,
+    ...(error ? { error } : {}),
+    ...(metadataArgs.length > 0 ? { metadata: { arguments: metadataArgs } } : {}),
+  });
+}

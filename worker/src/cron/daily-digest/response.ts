@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DigestResponseSchema } from "../../lib/schemas";
 import { validateDigestLeadRequirements, type DigestLeadRequirement } from "./lead-requirements";
 import { findForbiddenTics, hasForwardLook, leadFamily, openingFingerprint, type LeadFamily } from "./voice-guards";
@@ -219,7 +220,7 @@ export function parseDigestModelResponse(
     }
     parsedMeta = normalizeParsedMeta(parsed.meta ? parsed.meta as Record<string, unknown> : null);
   } catch (err) {
-    console.warn(`[daily-digest] Failed to parse digest model response, using raw text fallback: ${toErrorMessage(err)}`);
+    logWorkerEventArgs("handler", "warn", `[daily-digest] Failed to parse digest model response, using raw text fallback: ${toErrorMessage(err)}`);
     digestTitle = "";
     digestText = rawText.trim();
     digestExtended = "";

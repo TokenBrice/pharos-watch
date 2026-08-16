@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronResult } from "../lib/cron-logger";
 import { RUB_FALLBACK, CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
@@ -144,7 +145,7 @@ async function runFxRatePublication(
     try {
       await fn();
     } catch (err) {
-      console.warn(`[sync-fx-rates] Best-effort step failed (${label}):`, err);
+      logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Best-effort step failed (${label}):`, err);
     }
   };
 
@@ -188,7 +189,7 @@ async function runFxRatePublication(
         secondaryMappings,
       });
       if (!appliedLiveFallback && cachedRateCount > 0) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-fx-rates] Frankfurter API unavailable (${frankfurterResult.statusCode ?? "no response"}), using ${cachedRateCount} cached rates`,
         );
         syncState.enterCachedFallback("error");
@@ -219,7 +220,7 @@ async function runFxRatePublication(
               : "partial";
           }
         } catch (e) {
-          console.warn("[sync-fx-rates] Secondary FX API failed:", e);
+          logWorkerEventArgs("handler", "warn", "[sync-fx-rates] Secondary FX API failed:", e);
         }
       } else if (frankfurterResult.kind === "invalid-payload") {
         const cachedRateCount = Object.keys(syncState.prevRates).length;
@@ -231,9 +232,9 @@ async function runFxRatePublication(
           secondaryMappings,
         });
         if (appliedLiveFallback) {
-          console.warn("[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
+          logWorkerEventArgs("handler", "warn", "[sync-fx-rates] Invalid Frankfurter payload, using live FX fallback");
         } else if (cachedRateCount > 0) {
-          console.warn(`[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
+          logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Invalid frankfurter payload, using ${cachedRateCount} cached rates`);
           syncState.enterCachedFallback("invalid-payload");
         } else {
           throw new Error(`Frankfurter API payload validation failed: ${frankfurterResult.issues}`);
@@ -280,13 +281,13 @@ async function runFxRatePublication(
       throw new Error("sync-fx-rates produced zero usable rates");
     }
     if (missing.length > 0) {
-      console.warn(`[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
+      logWorkerEventArgs("handler", "warn", `[sync-fx-rates] Missing rates for: ${missing.join(", ")}`);
     }
 
     const meta = syncState.buildPersistedMeta();
     return persistFxSyncResult(db, syncState, meta, syncStartSec, Object.values(SECONDARY_FX_CURRENCY_TO_PEG));
   } catch (err) {
-    console.error(`[sync-fx-rates] Failed:`, err);
+    logWorkerEventArgs("handler", "error", `[sync-fx-rates] Failed:`, err);
     throw err instanceof Error ? err : new Error(String(err));
   }
 }

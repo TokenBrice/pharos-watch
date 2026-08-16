@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   DexExitRouteObservationSchema,
   MAX_DEX_EXIT_ROUTE_OBSERVATIONS,
@@ -211,7 +212,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
         throw new Error(`Incomplete dex_liquidity coverage evidence for ${row.stablecoin_id}`);
       }
     } catch (error) {
-      console.error(`[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
       continue;
     }
     const evidence =

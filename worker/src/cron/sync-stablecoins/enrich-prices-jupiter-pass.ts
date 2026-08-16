@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   CIRCUIT_SOURCE,
   USER_AGENT,
@@ -113,7 +114,7 @@ export async function runJupiterPass(
     errorMessage: "Jupiter circuit open",
   });
   if (!jupiterAllowed) {
-    console.warn("[enrich] Jupiter circuit open — skipping pass 3");
+    logWorkerEventArgs("handler", "warn", "[enrich] Jupiter circuit open — skipping pass 3");
     return { resolved, failures: [], diagnostics };
   }
 
@@ -136,7 +137,7 @@ export async function runJupiterPass(
     const { data, diagnostic } = await fetchJupiterPrices(ids, stage, signal, jupiterApiKey);
     diagnostics.push(diagnostic);
     if (!diagnostic.success || !data) {
-      console.warn(`[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
+      logWorkerEventArgs("handler", "warn", `[enrich] Jupiter returned ${diagnostic.status ?? "no response"} for batch of ${ids.length}`);
       continue;
     }
 
@@ -154,7 +155,7 @@ export async function runJupiterPass(
 
     const currentSlot = await getCurrentSolanaSlot();
     if (currentSlot == null) {
-      console.warn("[enrich] Jupiter block freshness check skipped because Solana slot reference is unavailable");
+      logWorkerEventArgs("handler", "warn", "[enrich] Jupiter block freshness check skipped because Solana slot reference is unavailable");
       continue;
     }
     for (const entry of batch) {

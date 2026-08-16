@@ -54,7 +54,7 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchTextWithRetry: fetchTextWithRetryMock,
 }));
 
-const { handleStablecoinDetail } = await import("../stablecoin-detail");
+const { handleStablecoinDetail, resetStablecoinDetailStateForTests } = await import("../stablecoin-detail");
 
 type TestExecutionContext = ExecutionContext & {
   waitUntilPromises: Promise<unknown>[];
@@ -88,6 +88,7 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
 
 describe("handleStablecoinDetail", () => {
   beforeEach(() => {
+    resetStablecoinDetailStateForTests();
     fetchSpy.mockReset();
     fetchWithRetryMock.mockReset().mockImplementation(async (url, init, _maxRetries, options) => {
       try {
@@ -412,6 +413,32 @@ describe("handleStablecoinDetail", () => {
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
     await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts fresh single-flight coordination after isolate-local state is reset", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([{
+      match: "cache",
+      rows: [],
+      first: { value: cachedValue, updated_at: now - 900 },
+    }]);
+    const resolvers: Array<(response: Response) => void> = [];
+    fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => {
+      resolvers.push(resolve);
+    }));
+
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    await handleStablecoinDetail(db, "usdt-tether", ctxA);
+    resetStablecoinDetailStateForTests();
+    await handleStablecoinDetail(db, "usdt-tether", ctxB);
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    for (const resolve of resolvers) {
+      resolve(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
+    }
+    await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
   });
 
   it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {

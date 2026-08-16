@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import { CIRCUIT_SOURCE, DEFILLAMA_COINS } from "../../lib/constants";
@@ -116,7 +117,7 @@ async function fetchPriceMapByIds(
     }
     return prices;
   } catch {
-    console.error(`[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
+    logWorkerEventArgs("handler", "error", `[enrich-prices] Failed to parse JSON from ${source}: ${result.response.status}`);
     if (db) {
       await recordOutcome(db, CIRCUIT_SOURCE.DL_COINS, false);
     }
@@ -287,7 +288,7 @@ export async function runDlContractPasses(
     }
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    console.warn("[enrich-prices] Pass 1/1b (DefiLlama contracts) failed — continuing with CMC/DexScreener:", error);
+    logWorkerEventArgs("handler", "warn", "[enrich-prices] Pass 1/1b (DefiLlama contracts) failed — continuing with CMC/DexScreener:", error);
     if (!failures.includes("dl-contracts")) failures.push("dl-contracts");
   }
 

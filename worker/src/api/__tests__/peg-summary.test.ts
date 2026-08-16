@@ -329,8 +329,7 @@ describe("handlePegSummary", () => {
       };
       expect(body.coins.find((c) => c.id === "usdt-tether")?.dexPriceCheck).toBeUndefined();
       expect(warnSpy).toHaveBeenCalledWith(
-        "[peg-summary] DEX price query failed, falling back to empty:",
-        "no such table: dex_prices",
+        expect.stringContaining("[peg-summary] DEX price query failed, falling back to empty:"),
       );
     } finally {
       warnSpy.mockRestore();

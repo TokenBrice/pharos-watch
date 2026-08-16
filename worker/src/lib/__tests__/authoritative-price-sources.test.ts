@@ -367,12 +367,12 @@ describe("authoritative-price-sources", () => {
         fetchVaultAssetsPerShareViaSelector(vaultConfig, "0x12345678", "previewRedeem", "latest"),
       ).resolves.toBeNull();
 
-      expect(warnSpy).toHaveBeenCalledWith("[authoritative-price-sources] test-vault: previewRedeem() returned null");
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[authoritative-price-sources] test-vault: previewRedeem() returned null"));
       expect(warnSpy).toHaveBeenCalledWith(
-        "[authoritative-price-sources] test-vault: previewRedeem() returned zero or invalid output",
+        expect.stringContaining("[authoritative-price-sources] test-vault: previewRedeem() returned zero or invalid output"),
       );
       expect(warnSpy).toHaveBeenCalledWith(
-        "[authoritative-price-sources] test-vault: previewRedeem() ratio 11 outside trusted bounds",
+        expect.stringContaining("[authoritative-price-sources] test-vault: previewRedeem() ratio 11 outside trusted bounds"),
       );
     });
   });
@@ -1118,8 +1118,7 @@ describe("authoritative-price-sources", () => {
       prices: null,
     });
     expect(warnSpy).toHaveBeenCalledWith(
-      "[authoritative-price-sources] cusd-cap historical source failed:",
-      expect.any(Error),
+      expect.stringContaining("[authoritative-price-sources] cusd-cap historical source failed:"),
     );
     warnSpy.mockRestore();
   });

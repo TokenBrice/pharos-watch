@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import {
   buildBlacklistAddressCountKey,
   buildBlacklistContractBalanceKey,
@@ -284,7 +285,7 @@ async function fetchDestroyAmountFromLog(
     return extractDestroyAmountFromReceiptLogs(config, json.result.logs, affectedAddress);
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn("[sync-blacklist] fetchDestroyAmountFromLog failed:", error);
+    logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchDestroyAmountFromLog failed:", error);
     return null;
   }
 }
@@ -738,7 +739,7 @@ export async function backfillAmounts(
 
   if (stmts.length > 0) {
     await batchExecute(db, stmts, { signal });
-    console.log(`[sync-blacklist] Backfilled amounts for ${processedRepairRows} events`);
+    logWorkerEventArgs("lib", "info", `[sync-blacklist] Backfilled amounts for ${processedRepairRows} events`);
   }
 
   return {

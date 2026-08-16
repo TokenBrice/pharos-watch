@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
@@ -82,7 +83,7 @@ export async function runFallbackIntakePhase(
   const assets = buildFallbackAssetsFromCoinGecko(input);
 
   if (assets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(
+    logWorkerEventArgs("handler", "error",
       `[sync-stablecoins] CG fallback only got ${assets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
     );
     return buildInsufficientFallbackResult(assets.length);

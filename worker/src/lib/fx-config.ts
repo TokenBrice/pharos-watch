@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
 
 export const PRIMARY_FX_CURRENCIES = [
@@ -96,13 +97,13 @@ export function isValidFxRate(
 ): boolean {
   const bounds = FX_RATE_BOUNDS[pegKey];
   if (bounds && (rate < bounds[0] || rate > bounds[1])) {
-    console.warn(`${logPrefix} Rejected ${pegKey}=${rate}: outside bounds [${bounds[0]}, ${bounds[1]}]`);
+    logWorkerEventArgs("lib", "warn", `${logPrefix} Rejected ${pegKey}=${rate}: outside bounds [${bounds[0]}, ${bounds[1]}]`);
     return false;
   }
   if (prevRate != null && prevRate > 0) {
     const delta = Math.abs(rate - prevRate) / prevRate;
     if (delta > MAX_FX_RATE_DELTA_PCT) {
-      console.warn(`${logPrefix} Rejected ${pegKey}=${rate}: ${(delta * 100).toFixed(1)}% change from prev ${prevRate}`);
+      logWorkerEventArgs("lib", "warn", `${logPrefix} Rejected ${pegKey}=${rate}: ${(delta * 100).toFixed(1)}% change from prev ${prevRate}`);
       return false;
     }
   }

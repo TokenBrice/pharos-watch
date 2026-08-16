@@ -1767,8 +1767,7 @@ describe("confirmPendingDepegs", () => {
     ).rejects.toThrow("database is locked");
 
     expect(errorSpy).toHaveBeenCalledWith(
-      "[depeg-helpers] Unexpected error loading dex_prices:",
-      "database is locked",
+      expect.stringContaining("[depeg-helpers] Unexpected error loading dex_prices:"),
     );
   });
 

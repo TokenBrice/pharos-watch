@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -428,7 +429,7 @@ async function backfillHistoricalOnChainSupply(
 
   await batchExecute(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0) {
-    console.warn(
+    logWorkerEventArgs("api", "warn",
       `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s) and ${supplyMisses} supply read(s)`,
     );
   }
@@ -555,7 +556,7 @@ async function backfillHistoricalTotalSupply(
 
   await batchExecute(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
-    console.warn(
+    logWorkerEventArgs("api", "warn",
       JSON.stringify({
         scope: "backfill-supply",
         message: "historical totalSupply backfill skipped partial reads",
@@ -589,7 +590,7 @@ async function backfillCommodity(
     signal: config.signal,
     range: config.window ? backfillWindowToFetchRange(config.window) : undefined,
     onCoinDetailFailure: (status) => {
-      console.warn(
+      logWorkerEventArgs("api", "warn",
         `[backfill-commodity] ${config.geckoId}: coin detail fetch failed (${status}), sanity check skipped`,
       );
     },
@@ -642,7 +643,7 @@ async function backfillCommodity(
         if (!historicalTotalSupply.error) {
           return { rows: stmts.length + historicalTotalSupply.rows };
         }
-        console.warn(
+        logWorkerEventArgs("api", "warn",
           `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps; historical totalSupply fallback failed (${historicalTotalSupply.error})`,
         );
       }
@@ -809,7 +810,7 @@ async function executeBackfillSupplyHistory(
               signal,
               range: supplyBackfillWindow ? backfillWindowToFetchRange(supplyBackfillWindow) : undefined,
               onCoinDetailFailure: (status) => {
-                console.warn(
+                logWorkerEventArgs("api", "warn",
                   JSON.stringify({
                     scope: "backfill-supply",
                     message: "CoinGecko coin detail fetch failed; using market_chart prices only",
@@ -951,7 +952,7 @@ async function executeBackfillSupplyHistory(
         continue;
       }
       const reason = !geckoId ? "no geckoId" : "price API returned no data";
-      console.warn(
+      logWorkerEventArgs("api", "warn",
         `[backfill] ${meta.symbol}: ${reason}, using emergency constant fallback price $${fallbackPrice} for recent window only`,
       );
     }

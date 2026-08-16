@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { type DepegRow } from "../lib/depeg-helpers";
 import {
   resolveOrReject,
@@ -76,7 +77,7 @@ async function loadDexAvailability(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[depeg-events] Unexpected error loading DEX availability:", msg);
+      logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading DEX availability:", msg);
     }
     return new Map();
   }
@@ -104,7 +105,7 @@ async function loadPoolAvailability(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[depeg-events] Unexpected error loading pool availability:", msg);
+      logWorkerEventArgs("api", "error", "[depeg-events] Unexpected error loading pool availability:", msg);
     }
     return new Map();
   }

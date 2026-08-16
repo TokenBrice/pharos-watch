@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   CIRCUIT_SOURCE,
   USER_AGENT,
@@ -494,7 +495,7 @@ async function markCmcFetchCooldown(db: D1Database | undefined, reason: string):
   try {
     await setCache(db, CMC_LAST_FETCH_CACHE_KEY, "1");
   } catch (error) {
-    console.warn(`[enrich-prices] Failed to update CMC rate-limit timestamp after ${reason}:`, error);
+    logWorkerEventArgs("handler", "warn", `[enrich-prices] Failed to update CMC rate-limit timestamp after ${reason}:`, error);
   }
 }
 
@@ -567,7 +568,7 @@ export async function runCmcPass(
           shouldCall = false;
         }
       } catch (error) {
-        console.warn("[enrich-prices] CMC rate-limit check failed, proceeding with call:", error);
+        logWorkerEventArgs("handler", "warn", "[enrich-prices] CMC rate-limit check failed, proceeding with call:", error);
       }
     }
 
@@ -636,7 +637,7 @@ export async function runCmcPass(
           ) {
             const symbol = entry.symbol.toUpperCase();
             if (cmcBySymbol.has(symbol)) {
-              console.warn(`[enrich] CMC symbol collision: ${symbol} (existing=$${cmcBySymbol.get(symbol)?.price}, new=$${price})`);
+              logWorkerEventArgs("handler", "warn", `[enrich] CMC symbol collision: ${symbol} (existing=$${cmcBySymbol.get(symbol)?.price}, new=$${price})`);
             }
             const quote: CmcFallbackQuote = {
               price,
@@ -742,7 +743,7 @@ export async function runCmcPass(
           diagnostic,
           cmcResult ? responseFromBufferedBody(cmcResult) : null,
         ));
-        console.warn(`[enrich] CMC API returned ${cmcResult?.response.status ?? "no response"}`);
+        logWorkerEventArgs("handler", "warn", `[enrich] CMC API returned ${cmcResult?.response.status ?? "no response"}`);
         if (cmcResult?.response.status === 429) {
           await markCmcFetchCooldown(db, "429");
         }
@@ -776,7 +777,7 @@ export async function runCmcPass(
     if (blockedDiagnostic && blockedCandidates.length > 0) {
       blockedDiagnostic.assetAttempts = buildSkippedCmcAttempts(blockedCandidates, "circuit-open", "blocked");
     }
-    console.warn("[enrich] CoinMarketCap circuit open — skipping pass 2");
+    logWorkerEventArgs("handler", "warn", "[enrich] CoinMarketCap circuit open — skipping pass 2");
   }
 
   return { resolved, failures: [], diagnostics };

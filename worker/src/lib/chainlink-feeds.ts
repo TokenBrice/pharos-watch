@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { CHAIN_META } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "./chain-registry";
 import { throwIfAborted } from "./abort";
@@ -140,7 +141,7 @@ async function fetchChainlinkDrpcHex(
     );
     if (!result) continue;
     const methodLabel = data === DECIMALS_SELECTOR ? "decimals()" : "latestRoundData()";
-    console.log(`[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via dRPC (${target.label})`);
+    logWorkerEventArgs("lib", "info", `[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via dRPC (${target.label})`);
     return result;
   }
 
@@ -185,7 +186,7 @@ async function fetchChainlinkFeedCallHex(
   });
   if (proxyHex) {
     const methodLabel = data === DECIMALS_SELECTOR ? "decimals()" : "latestRoundData()";
-    console.log(`[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via Etherscan proxy`);
+    logWorkerEventArgs("lib", "info", `[chainlink-feeds] ${feed.pegKey} recovered ${methodLabel} via Etherscan proxy`);
   }
   return proxyHex;
 }
@@ -247,7 +248,7 @@ async function fetchSingleFeedQuote(
     };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn(`[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
+    logWorkerEventArgs("lib", "warn", `[chainlink-feeds] ${feed.pegKey} fetch failed:`, err);
     return { counter: "fetchErrors", quote: null };
   }
 }
@@ -301,14 +302,14 @@ export async function fetchChainlinkReferenceQuoteSnapshot(
     const nextCount = outcome === "success" ? 0 : priorCount + 1;
     failingRuns[feed.pegKey] = nextCount;
     if (nextCount > FAILING_RUNS_WARN_THRESHOLD) {
-      console.warn(
+      logWorkerEventArgs("lib", "warn",
         `[chainlink-feeds] ${feed.pegKey} has failed ${nextCount} consecutive runs`,
       );
     }
   }
 
   if (summary.usableQuotes === 0) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[chainlink-feeds] No usable quotes: configured=${summary.configuredFeeds}, ` +
       `decimalsUnavailable=${summary.decimalsUnavailable}, roundDataUnavailable=${summary.roundDataUnavailable}, ` +
       `stale=${summary.staleQuotes}, invalidDecimals=${summary.invalidDecimals}, ` +

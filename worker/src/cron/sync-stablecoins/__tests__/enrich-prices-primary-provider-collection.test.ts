@@ -60,7 +60,7 @@ describe("buildPrimaryPricePlan", () => {
     await buildPrimaryPricePlan([TEST_ASSET], {} as D1Database);
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only",
+      expect.stringContaining("[primary-prices] All live primary fetch circuits are open; continuing with local DL/DEX inputs only"),
     );
   });
 });

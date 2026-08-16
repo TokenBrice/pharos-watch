@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "./error-utils";
 import type {  RedemptionBackstopEntry,
   RedemptionBackstopDetails,
@@ -341,7 +342,7 @@ function toEntry(row: RedemptionBackstopRow): RedemptionBackstopEntry | null {
   };
   const parsed = RedemptionBackstopEntrySchema.safeParse(entry);
   if (!parsed.success) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       "[redemption-backstop] skipped malformed row",
       JSON.stringify({ stablecoinId: row.stablecoin_id, error: parsed.error.message }),
     );

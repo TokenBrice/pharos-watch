@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
 import { errorResponse } from "../lib/api-utils";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -24,7 +25,12 @@ interface SharedDetailRefreshResponse {
 // so under load multiple isolates can each run one refresh for the same coin. Cross-isolate
 // herd protection relies on the circuit breaker + D1 cache (stale-serve), not this Map.
 // Store bytes instead of Response objects so overlapping consumers never share a live body stream.
-const detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshResponse>>();
+let detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshResponse>>();
+
+/** @internal Reset isolate-local single-flight coordination so test files can share a process. */
+export function resetStablecoinDetailStateForTests(): void {
+  detailRefreshesInFlight = new Map<string, Promise<SharedDetailRefreshResponse>>();
+}
 
 function responseStatusForbidsBody(status: number): boolean {
   return status === 101 || status === 204 || status === 205 || status === 304;
@@ -56,7 +62,8 @@ function startStablecoinDetailRefresh(config: {
   coingeckoApiKey?: string | null;
 }): Promise<SharedDetailRefreshResponse> {
   const cacheKey = `detail:${config.id}`;
-  const existing = detailRefreshesInFlight.get(cacheKey);
+  const refreshesInFlight = detailRefreshesInFlight;
+  const existing = refreshesInFlight.get(cacheKey);
   if (existing) return existing;
 
   const refresh = (async () => {
@@ -78,10 +85,10 @@ function startStablecoinDetailRefresh(config: {
     );
     return materializeSharedResponse(response);
   })().finally(() => {
-    detailRefreshesInFlight.delete(cacheKey);
+    refreshesInFlight.delete(cacheKey);
   });
 
-  detailRefreshesInFlight.set(cacheKey, refresh);
+  refreshesInFlight.set(cacheKey, refresh);
   return refresh;
 }
 
@@ -98,7 +105,7 @@ function scheduleStablecoinDetailRefresh(config: {
     refresh
       .then(() => undefined)
       .catch((err) => {
-        console.warn(
+        logWorkerEventArgs("api", "warn",
           `[detail] background refresh failed stablecoin=${config.id} error=${String(err).slice(0, 300)}`,
         );
       }),
@@ -126,7 +133,7 @@ export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: Ex
         return createStaleCacheHitResponse(normalizedCached.value, age);
       }
       if (age >= DETAIL_STALE_CACHE_MAX_AGE_SECONDS) {
-        console.warn(
+        logWorkerEventArgs("api", "warn",
           `[detail] cache too stale stablecoin=${id} age=${age} max=${DETAIL_STALE_CACHE_MAX_AGE_SECONDS}; refreshing synchronously`,
         );
         const response = await startStablecoinDetailRefresh({

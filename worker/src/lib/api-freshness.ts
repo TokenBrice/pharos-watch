@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
@@ -168,7 +169,7 @@ async function loadProducerCronFallbacks(
       errorMessage: null,
     };
   } catch (error) {
-    console.warn("[api-freshness] Failed to read producer cron fallbacks", error);
+    logWorkerEventArgs("lib", "warn", "[api-freshness] Failed to read producer cron fallbacks", error);
     return {
       timestampsByKey: new Map(),
       errorMessage: toErrorMessage(error),
@@ -248,7 +249,7 @@ async function resolveSentinelBackedFreshness(params: {
           ...(sentinelFailureSource ? { failureSource: sentinelFailureSource } : {}),
           ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
         });
-        console.info(`[api-freshness] ${warning}`);
+        logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
       } else {
         diagnostics.push({
           key: params.key,
@@ -292,7 +293,7 @@ async function resolveSentinelBackedFreshness(params: {
         : undefined;
     if (warning) {
       warnings.push(warning);
-      console.info(`[api-freshness] ${warning}`);
+      logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
     }
     diagnostics.push({
       key: params.key,
@@ -517,7 +518,7 @@ export async function getLatestSuccessfulCronTimestampResult(
       status: "missing",
     };
   } catch (error) {
-    console.warn(`[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
+    logWorkerEventArgs("lib", "warn", `[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
     return {
       timestamp: null,
       status: "lookup_failed",

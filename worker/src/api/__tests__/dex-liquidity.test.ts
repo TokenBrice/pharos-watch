@@ -91,7 +91,6 @@ describe("handleDexLiquidity", () => {
     expect(body["usdt-tether"]?.protocolTvl).toEqual({});
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json); count=1:"),
-      expect.any(String),
     );
     warn.mockRestore();
   });

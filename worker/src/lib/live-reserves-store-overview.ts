@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./live-reserves-store-shared";
@@ -326,7 +327,7 @@ export async function computeReserveCompositionOverview(
   try {
     historyWriteGaps = await loadLiveReserveHistoryWriteGaps(db);
   } catch (error) {
-    console.warn("[live-reserves] Failed to reconcile reserve history write gaps:", error);
+    logWorkerEventArgs("lib", "warn", "[live-reserves] Failed to reconcile reserve history write gaps:", error);
   }
 
   const counts = countCoinsByStatus(configuredCoins, syncById, compositionById, now, freshnessSec);

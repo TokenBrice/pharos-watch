@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, DEFILLAMA_API, USER_AGENT } from "../../../lib/constants";
@@ -36,7 +37,7 @@ export async function fetchGoldTokens(
     let protocolFetchSuccesses = 0;
 
     if (!protocolsAllowed) {
-      console.warn("[gold] DefiLlama protocols circuit open; using CoinGecko market-cap fallback when available");
+      logWorkerEventArgs("handler", "warn", "[gold] DefiLlama protocols circuit open; using CoinGecko market-cap fallback when available");
     } else {
       for (let pi = 0; pi < tokensWithProtocol.length; pi += PROTOCOL_BATCH) {
         const batch = tokensWithProtocol.slice(pi, pi + PROTOCOL_BATCH);
@@ -53,7 +54,7 @@ export async function fetchGoldTokens(
               { returnFinalResponse: true },
             );
             if (!result?.response.ok) {
-              console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}: ${result?.response.status ?? "no response"}`);
+              logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}: ${result?.response.status ?? "no response"}`);
               return;
             }
 
@@ -65,7 +66,7 @@ export async function fetchGoldTokens(
             }
           } catch (err) {
             if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-            console.warn(`[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
+            logWorkerEventArgs("handler", "warn", `[sync-stablecoins] Protocol fetch failed for ${token.protocolSlug}:`, err);
           }
         }));
       }
@@ -91,7 +92,7 @@ export async function fetchGoldTokens(
       const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
       const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
       if (!mcap) {
-        console.warn(`[gold] No mcap for ${meta.symbol}, including with mcap=0`);
+        logWorkerEventArgs("handler", "warn", `[gold] No mcap for ${meta.symbol}, including with mcap=0`);
       }
 
       const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
@@ -105,7 +106,7 @@ export async function fetchGoldTokens(
     return tokens;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.error("[gold] fetchGoldTokens failed:", err);
+    logWorkerEventArgs("handler", "error", "[gold] fetchGoldTokens failed:", err);
     return [];
   }
 }

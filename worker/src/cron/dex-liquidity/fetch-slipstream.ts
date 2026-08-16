@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { decodeFunctionResult, encodeFunctionData, parseAbi } from "viem/utils";
 import { makeDexApiFetchResult, type DexApiFetchResult, type DexApiPool } from "../../lib/dex-api-common";
 import { throwIfAborted } from "../../lib/abort";
@@ -569,7 +570,7 @@ export async function fetchSlipstreamPools(
 
       const feeBps = getSlipstreamPoolFeeBps(pool.pool_fee);
       if (feeBps == null) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[fetch-slipstream] ${protocol} pool ${pool.lp}: unexpected pool_fee ${pool.pool_fee}`,
         );
       }
@@ -608,7 +609,7 @@ export async function fetchSlipstreamPools(
   } catch (error) {
     const message = toErrorMessage(error);
     errors.push(message);
-    console.warn("[fetch-slipstream]", protocol, message);
+    logWorkerEventArgs("handler", "warn", "[fetch-slipstream]", protocol, message);
   }
   if (db) {
     const recovered = await recoverSlipstreamPoolsFromStaging({
@@ -634,7 +635,7 @@ export async function fetchSlipstreamPools(
       });
     }
   }
-  if (pools.length > 0) console.log(`[fetch-slipstream] ${protocol} fetched ${pools.length} pools`);
+  if (pools.length > 0) logWorkerEventArgs("handler", "info", `[fetch-slipstream] ${protocol} fetched ${pools.length} pools`);
   return makeDexApiFetchResult(pools, {
     ok: pools.length > 0 || errors.length === 0,
     degraded: errors.length > 0,

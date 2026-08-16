@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PeggedAsset } from "./enrich-prices";
 import { queuePendingTrackedStablecoinAdditions } from "../../lib/telegram-digest-appendices";
 
@@ -13,11 +14,11 @@ export async function queueTrackedAdditionsNotice(
       assets.map((asset) => String(asset.id)),
     );
     if (trackedAdditions.queuedIds.length > 0) {
-      console.log(
+      logWorkerEventArgs("handler", "info",
         `[sync-stablecoins] Queued Telegram tracked additions: ${trackedAdditions.queuedIds.join(", ")}`,
       );
     }
   } catch (err) {
-    console.warn("[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to queue Telegram tracked additions:", err);
   }
 }

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
 import { addFreshnessHeaders, jsonResponseWithHeaders, readCachedJsonOr503 } from "./api-utils";
 import { CACHE_PROFILES } from "./constants";
@@ -177,7 +178,7 @@ function logMintBurnFallbackFailure(
   error: unknown,
 ): void {
   const summary = toErrorMessage(error);
-  console.error(
+  logWorkerEventArgs("lib", "error",
     `[mint-burn-flows] scope=${scope} event=live-query-failed cacheKey=${cacheKey} fallback=cache summary=${summary}`,
     error,
   );

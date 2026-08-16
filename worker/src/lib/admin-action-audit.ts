@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 export interface AdminActionLogEntry {
   action: string;
   target?: string | null;
@@ -15,7 +16,7 @@ export interface AdminActionLogEntry {
 export const DETAILS_MAX_LEN = 4096;
 
 function reportAuditWriteFailure(action: string, error: unknown): false {
-  console.warn(`[admin-action-audit] write failed for action=${action}:`, error);
+  logWorkerEventArgs("lib", "warn", `[admin-action-audit] write failed for action=${action}:`, error);
   return false;
 }
 

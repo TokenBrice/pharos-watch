@@ -1,6 +1,8 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "../lib/stability-index";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/stability-index";
 import { round1 } from "@shared/lib/math";
@@ -8,7 +10,7 @@ import { round1 } from "@shared/lib/math";
 export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
-  const todayMidnight = now - (now % DAY_SECONDS);
+  const todayMidnight = bucketUnixSecondsToUtcDay(now);
   const yesterdayMidnight = todayMidnight - DAY_SECONDS;
 
   let row: { avg_score: number | null; avg_severity: number | null; avg_breadth: number | null; avg_stress_breadth: number | null; avg_trend: number | null; cnt: number } | null;
@@ -42,7 +44,7 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
     throwIfAborted(signal);
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.error("[snapshot-psi] DB query failed:", err);
+    logWorkerEventArgs("handler", "error", "[snapshot-psi] DB query failed:", err);
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: "db_query_failed", error: String(err).slice(0, 200) }) };
   }
 
@@ -89,6 +91,6 @@ export async function snapshotPsiDaily(db: D1Database, signal?: AbortSignal): Pr
     .run();
   throwIfAborted(signal);
 
-  console.log(`[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
+  logWorkerEventArgs("handler", "info", `[snapshot-psi] yesterday avg=${score} band=${band} samples=${row.cnt}`);
   return { itemCount: 1, metadata: `avg=${score} band=${band} samples=${row.cnt}` };
 }

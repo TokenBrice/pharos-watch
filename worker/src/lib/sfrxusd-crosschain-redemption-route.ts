@@ -544,15 +544,14 @@ export function buildSfrxusdCrosschainV9ExitRouteObservation(args: {
     modeledExitSizeUsd,
     conservativePoint.executableUsd,
   );
-  const point: ExitRouteCapacityPoint = {
+  const point: ExitRouteCapacityPoint = buildExitRouteCapacityPoint({
     requestedNotionalUsd: modeledExitSizeUsd,
     maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-    executableUsd,
-    completionRatio: executableUsd / modeledExitSizeUsd,
+    capacityUsd: executableUsd,
     ...(executableUsd > 0 && conservativePoint.executionCostBps != null
       ? { executionCostBps: conservativePoint.executionCostBps }
       : {}),
-  };
+  }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
 
   return {
     routeId: "redemption:sfrxusd-frax:fraxtal-mint-redeem:ethereum",

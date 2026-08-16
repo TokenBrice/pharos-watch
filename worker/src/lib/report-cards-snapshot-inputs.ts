@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   DEX_LIQUIDITY_PUBLISHED_ROW_FILTER,
   loadDexLiquiditySnapshot,
@@ -350,7 +351,7 @@ export async function loadReportCardsSnapshotInputs(
     if (!(redemptionBackstopMapResult.reason instanceof RedemptionBackstopSnapshotUnavailableError)) {
       throw redemptionBackstopMapResult.reason;
     }
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       "[report-cards] Redemption backstop snapshot unavailable; suppressing redemption inputs:",
       redemptionBackstopMapResult.reason,
     );
@@ -372,7 +373,7 @@ export async function loadReportCardsSnapshotInputs(
           )
         : dexLiquiditySnapshotResult.value;
     if (dexDeploymentSupplyJoinResult.status === "rejected") {
-      console.warn(
+      logWorkerEventArgs("lib", "warn",
         "[report-cards] DEX deployment supply join unavailable; leaving materiality unknown:",
         dexDeploymentSupplyJoinResult.reason,
       );
@@ -380,15 +381,15 @@ export async function loadReportCardsSnapshotInputs(
     if (dexLiquiditySnapshot.latestUpdatedAt != null) {
       const ageSec = nowSec - dexLiquiditySnapshot.latestUpdatedAt;
       if (ageSec < 0) {
-        console.warn(`[report-cards] Liquidity data is future-dated (ahead: ${-ageSec}s)`);
+        logWorkerEventArgs("lib", "warn", `[report-cards] Liquidity data is future-dated (ahead: ${-ageSec}s)`);
         liquidityStale = true;
       } else if (ageSec > REPORT_CARD_DEX_LIQUIDITY_FRESHNESS_SEC) {
-        console.warn(`[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
+        logWorkerEventArgs("lib", "warn", `[report-cards] Liquidity data is stale (age: ${ageSec}s)`);
         liquidityStale = true;
       }
     }
   } else {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       "[report-cards] DEX liquidity snapshot unavailable; suppressing liquidity inputs:",
       dexLiquiditySnapshotResult.reason,
     );
@@ -399,7 +400,7 @@ export async function loadReportCardsSnapshotInputs(
     liveReserveMapResult.status === "fulfilled"
       ? liveReserveMapResult.value
       : (() => {
-          console.warn(
+          logWorkerEventArgs("lib", "warn",
             "[report-cards] Live reserve snapshot unavailable; falling back to curated reserves:",
             liveReserveMapResult.reason,
           );
@@ -419,7 +420,7 @@ export async function loadReportCardsSnapshotInputs(
   const redemptionStale = redemptionFreshness.stale;
   const redemptionBackstopMap = redemptionStale ? {} : redemptionBackstopSnapshot.map;
   if (redemptionStale) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[report-cards] Redemption backstop data is stale or missing` +
         (redemptionFreshness.ageSeconds != null ? ` (age: ${redemptionFreshness.ageSeconds}s)` : ""),
     );

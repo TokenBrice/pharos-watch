@@ -8,7 +8,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
-import YieldAnalysisClient from "./client";
+import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 
 export function generateStaticParams() {
   return TRACKED_STABLECOINS.filter(hasStaticYieldWorkbench).map((coin) => ({ id: coin.id }));

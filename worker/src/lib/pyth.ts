@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import type { FetcherOutcome } from "./fetcher-result";
@@ -62,7 +63,7 @@ export async function fetchPythPrices(
       { timeoutMs: PYTH_REQUEST_TIMEOUT_MS },
     );
     if (!result?.response.ok) {
-      console.warn(`[pyth] Hermes API returned ${result?.response.status ?? "no response"}`);
+      logWorkerEventArgs("lib", "warn", `[pyth] Hermes API returned ${result?.response.status ?? "no response"}`);
       return {
         kind: "upstream-error",
         value: results,
@@ -88,7 +89,7 @@ export async function fetchPythPrices(
 
       const nowSec = Math.floor(Date.now() / 1000);
       if (nowSec - feed.price.publish_time > PYTH_MAX_STALENESS_SEC) {
-        console.warn(`[pyth] Skipping stale feed for ${coinId}: publish_time=${feed.price.publish_time}, age=${nowSec - feed.price.publish_time}s`);
+        logWorkerEventArgs("lib", "warn", `[pyth] Skipping stale feed for ${coinId}: publish_time=${feed.price.publish_time}, age=${nowSec - feed.price.publish_time}s`);
         continue;
       }
 
@@ -103,11 +104,11 @@ export async function fetchPythPrices(
     }
 
     if (feedIds.size > 0 && results.size === 0) {
-      console.warn(`[pyth] Requested ${feedIds.size} feeds but Hermes returned 0 usable results`);
+      logWorkerEventArgs("lib", "warn", `[pyth] Requested ${feedIds.size} feeds but Hermes returned 0 usable results`);
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[pyth] Fetch failed:", err);
+    logWorkerEventArgs("lib", "warn", "[pyth] Fetch failed:", err);
     return {
       kind: "upstream-error",
       value: results,

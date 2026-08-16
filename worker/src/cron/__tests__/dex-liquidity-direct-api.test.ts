@@ -200,7 +200,7 @@ describe("fetchFluidPools", () => {
     expect(pools.errors).toEqual([]);
     expect(pools.warnings).toHaveLength(1);
     expect(pools.warnings?.[0]).toContain("enrichment failed");
-    expect(warnSpy).toHaveBeenCalledWith("[fetch-fluid] Pool enrichment failed:", expect.any(String));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[fetch-fluid] Pool enrichment failed:"));
     warnSpy.mockRestore();
   });
 

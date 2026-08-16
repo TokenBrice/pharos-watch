@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEX_LIQUIDITY_POOL_MIN_TVL_USD } from "./constants";
 import { buildUniqueEvmV2ExecutionCandidateFingerprintIndex } from "./constant-product-v2";
 import type { LiquidityMetrics } from "./types";
@@ -98,7 +99,7 @@ export function processPoolMetrics(
   const rejectionMap = new Map<string, PoolProcessingRejection>();
   const enforceDexProjectFilter = context.dexProjects.size > 0;
   if (!enforceDexProjectFilter) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run",
     );
   }
@@ -136,7 +137,7 @@ export function processPoolMetrics(
     }
   }
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[dex-liquidity] Matched ${metrics.size} stablecoins with DEX liquidity`,
   );
   return { metrics, rejections: [...rejectionMap.values()] };

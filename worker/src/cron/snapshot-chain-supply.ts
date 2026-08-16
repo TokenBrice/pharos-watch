@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { executeAtomicBatch, prepareMultiRowInsertStatements } from "../lib/db";
 import { CHAIN_META } from "@shared/lib/chains";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -47,14 +48,14 @@ export async function snapshotChainSupply(
 
   const cache = await loadStablecoinsCache(db, { mode: "strict" });
   if (cache.kind !== "ok") {
-    console.error("[snapshot-chain-supply] No stablecoins cache found");
+    logWorkerEventArgs("handler", "error", "[snapshot-chain-supply] No stablecoins cache found");
     return { status: "degraded", itemCount: 0, metadata: JSON.stringify({ reason: cache.reason }) };
   }
 
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
   const cacheAge = nowSec - cache.updatedAt;
   if (cacheAge > CACHE_MAX_AGE_SEC) {
-    console.warn(`[snapshot-chain-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
+    logWorkerEventArgs("handler", "warn", `[snapshot-chain-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
     return {
       status: "degraded",
       itemCount: 0,
@@ -129,7 +130,7 @@ export async function snapshotChainSupply(
   }
 
   if (chainRows.length === 0) {
-    console.warn("[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
+    logWorkerEventArgs("handler", "warn", "[snapshot-chain-supply] No valid chain rows produced, preserving previous snapshot");
     return {
       status: "degraded",
       itemCount: 0,
@@ -169,6 +170,6 @@ export async function snapshotChainSupply(
     };
   }
 
-  console.log(`[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
+  logWorkerEventArgs("handler", "info", `[snapshot-chain-supply] Inserted ${chainRows.length} rows for ${formatIsoDate(snapshotDate)}`);
   return { itemCount: chainRows.length };
 }

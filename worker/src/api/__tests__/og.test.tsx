@@ -8,7 +8,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import satori from "satori";
 // The aliased standalone stub used by handleOg, mocked below so the handler
 // tests can inspect the element it would render.
-import satoriStandalone from "satori/standalone";
+import satoriStandalone, { init as initSatoriStandalone } from "satori/standalone";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
@@ -17,7 +17,7 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-import { deriveStablecoinOgCardData, handleOg } from "../og";
+import { deriveStablecoinOgCardData, handleOg, resetOgWasmInitializationForTests } from "../og";
 import { StablecoinCard, type StablecoinCardData } from "../../lib/og-templates/stablecoin-card";
 
 vi.mock("satori/standalone", () => ({
@@ -33,6 +33,7 @@ import { DepegCard, type DepegCardData } from "../../lib/og-templates/depeg-card
 import { ChainCard, type ChainCardData } from "../../lib/og-templates/chain-card";
 
 afterEach(() => {
+  resetOgWasmInitializationForTests();
   vi.restoreAllMocks();
 });
 
@@ -173,6 +174,20 @@ describe("stablecoin OG card data", () => {
       expect(element.type).toBe(StablecoinCard);
       return element.props.data;
     }
+
+    it("reinitializes WASM only after isolate-local state is reset", async () => {
+      const db = makeOgDb([makeAsset({ id: "usdt-tether" })]);
+      const initMock = vi.mocked(initSatoriStandalone);
+      initMock.mockClear();
+
+      await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      expect(initMock).toHaveBeenCalledTimes(1);
+
+      resetOgWasmInitializationForTests();
+      await handleOg(db, "/api/og/stablecoin/usdt-tether");
+      expect(initMock).toHaveBeenCalledTimes(2);
+    });
 
     it("forces a null pegScore for nav tokens on the nav-inclusive cache-hit path", async () => {
       const db = makeOgDb([

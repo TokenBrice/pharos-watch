@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
@@ -58,7 +59,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       .prepare("SELECT stablecoin_id, peg_reference, started_at FROM depeg_events WHERE ended_at IS NULL")
       .all<{ stablecoin_id: string; peg_reference: number; started_at: number }>();
   } catch (err) {
-    console.warn("[stability-index] depeg query failed:", err);
+    logWorkerEventArgs("handler", "warn", "[stability-index] depeg query failed:", err);
     const depegEventsFailureReason = String(err);
     return {
       status: "degraded",
@@ -99,7 +100,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       }
     }
   } catch (error) {
-    console.warn("[stability-index] replay price cache unavailable; open-depeg fallback disabled:", error);
+    logWorkerEventArgs("handler", "warn", "[stability-index] replay price cache unavailable; open-depeg fallback disabled:", error);
   }
 
   // Read DEWS stress signals (from previous 15-min cycle) for stress breadth
@@ -220,7 +221,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
   if (!result) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[stability-index] skipped sample due to insufficient market-cap input (totalMcapUsd=${totalMcapUsd})`,
     );
     return {
@@ -275,7 +276,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     .bind(Math.floor(Date.now() / 1000) - 90 * DAY_SECONDS)
     .run();
 
-  console.log(`[stability-index] score=${result.score} band=${result.band}`);
+  logWorkerEventArgs("handler", "info", `[stability-index] score=${result.score} band=${result.band}`);
   return {
     itemCount: 1,
     productivity: {

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { hasConfiguredValue } from "@shared/lib/env-utils";
 import { errorResponse, parseRequestJsonWithSchema } from "../../lib/api-utils";
 import { hmacSha256Hex, randomBytes } from "../../lib/api-key-core";
@@ -33,7 +34,7 @@ export function requireInitialSelfServeEnv(env: ApiKeySelfServeEnv): RequiredIni
     !hasConfiguredValue(env.API_KEY_SELF_SERVE_PUBLIC_BASE_URL) ||
     !hasConfiguredValue(env.RESEND_API_KEY)
   ) {
-    console.error("[api-key-requests] self-serve email verification env is incomplete");
+    logWorkerEventArgs("api", "error", "[api-key-requests] self-serve email verification env is incomplete");
     return dependencyUnavailable();
   }
   return {
@@ -52,7 +53,7 @@ export function requireVerifySelfServeEnv(env: ApiKeySelfServeEnv): RequiredVeri
     !hasConfiguredValue(env.API_KEY_SELF_SERVE_IP_SALT) ||
     !hasConfiguredValue(env.API_KEY_SELF_SERVE_REQUEST_PEPPER)
   ) {
-    console.error("[api-key-requests] self-serve verification env is incomplete");
+    logWorkerEventArgs("api", "error", "[api-key-requests] self-serve verification env is incomplete");
     return dependencyUnavailable();
   }
   return {

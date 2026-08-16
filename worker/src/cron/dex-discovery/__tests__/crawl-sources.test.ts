@@ -149,15 +149,18 @@ describe("crawlCoin DexScreener hardening", () => {
     expect("priceObs" in result).toBe(false);
     expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
     expect(fetchDsTokenPoolsWithStatus).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[dex-discovery] dexscreener malformed pair for ethereum:0xAbC"),
-      expect.objectContaining({
+    const malformedLog = warnSpy.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as { message: string; metadata?: { arguments?: unknown[] } })
+      .find((record) => record.message.includes("dexscreener malformed pair"));
+    expect(malformedLog).toMatchObject({
+      message: expect.stringContaining("[dex-discovery] dexscreener malformed pair for ethereum:0xAbC"),
+      metadata: { arguments: [expect.objectContaining({
         pairAddress: "0xbadpool",
         dexId: "uniswap-v3",
         baseToken: null,
         quoteToken: "0xquote",
-      }),
-    );
+      })] },
+    });
   });
 
   it("reports every eligible DexScreener pair in the deployment census, including known pools", async () => {
@@ -210,7 +213,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(result).toMatchObject({ pools: [], unresolvedChains: [] });
     expect(result.deploymentOutcomes[0]).toMatchObject({ outcome: "provider_inaccessible" });
-    expect(warnSpy).toHaveBeenCalledWith("[dex-discovery] dexscreener error for ethereum:0xabc", expect.any(Error));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-discovery] dexscreener error for ethereum:0xabc"));
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
   });
 
@@ -785,7 +788,7 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(result.unresolvedChains).toEqual(["unsupported-chain"]);
     expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Chain "unsupported-chain" not in discovery provider registry for usdc-circle, skipping'),
+      expect.stringContaining("unsupported-chain"),
     );
   });
 

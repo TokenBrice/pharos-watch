@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 /**
  * Daily public-dataset snapshot writer.
  *
@@ -263,7 +264,7 @@ export async function snapshotPublicDataset(
   let stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
-    console.warn(`[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
+    logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Stablecoins cache unavailable: ${stablecoinsCache.kind}`);
     return {
       status: "degraded",
       itemCount: 0,
@@ -310,7 +311,7 @@ export async function snapshotPublicDataset(
   // --- 2. Active Safety Score publication (required and identity-bound) ---
   const safetySource = await loadSnapshotSafetySource(db, signal);
   if (safetySource.kind === "error") {
-    console.warn(`[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
+    logWorkerEventArgs("handler", "warn", `[snapshot-public-dataset] Active Safety Score unavailable: ${safetySource.reason}`);
     return {
       status: "degraded",
       itemCount: 0,
@@ -334,7 +335,7 @@ export async function snapshotPublicDataset(
     throwIfAborted(signal);
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn("[snapshot-public-dataset] PSI read failed:", err);
+    logWorkerEventArgs("handler", "warn", "[snapshot-public-dataset] PSI read failed:", err);
   }
   if (!psiRow) {
     return {

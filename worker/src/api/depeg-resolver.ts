@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { toErrorMessage } from "../lib/error-utils";
 import {
   cacheControlForDegradedPayload,
@@ -187,7 +188,7 @@ async function applyErrataOverlay(db: D1Database, response: DdrResponse): Promis
   try {
     errata = errataByPredictionId(await loadPredictionErrata(db, { publicPredictionIds }));
   } catch (error) {
-    console.warn(`[depeg-resolver] errata overlay unavailable: ${toErrorMessage(error)}`);
+    logWorkerEventArgs("api", "warn", `[depeg-resolver] errata overlay unavailable: ${toErrorMessage(error)}`);
     return response;
   }
   if (errata.size === 0) return response;
@@ -285,7 +286,7 @@ async function loadApiLockDeferrals(db: D1Database): Promise<DdrApiLockDeferralR
       .all<DdrApiLockDeferralRow>();
     return result.results ?? [];
   } catch (error) {
-    console.warn(`[depeg-resolver] lock deferral overlay unavailable: ${toErrorMessage(error)}`);
+    logWorkerEventArgs("api", "warn", `[depeg-resolver] lock deferral overlay unavailable: ${toErrorMessage(error)}`);
     return [];
   }
 }
@@ -560,7 +561,7 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
           maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
         });
       }
-      console.warn(`[depeg-resolver] cache contract invalid; serving degraded reason=${contract.reason}`);
+      logWorkerEventArgs("api", "warn", `[depeg-resolver] cache contract invalid; serving degraded reason=${contract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(contract.reason));
       return jsonFreshResponse(payload, {
@@ -580,7 +581,7 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
           maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.depegResolver,
         });
       }
-      console.warn(`[depeg-resolver] cache manifest mismatch; serving degraded reason=${manifestContract.reason}`);
+      logWorkerEventArgs("api", "warn", `[depeg-resolver] cache manifest mismatch; serving degraded reason=${manifestContract.reason}`);
       const nowSec = Math.floor(Date.now() / 1000);
       const payload = await decorateDdrResponse(db, degradedResponse(manifestContract.reason));
       return jsonFreshResponse(payload, {
@@ -602,7 +603,7 @@ export const handleDepegResolver = async (db: D1Database): Promise<Response> => 
   // No usable snapshot yet (e.g. before first cron run, or after a methodology bump):
   // serve a degraded 200 with no rows rather than failing — the module renders an
   // "unavailable" state and recovers on the next precompute.
-  console.warn(`[depeg-resolver] snapshot unavailable; serving degraded reason=${cached.reason}`);
+  logWorkerEventArgs("api", "warn", `[depeg-resolver] snapshot unavailable; serving degraded reason=${cached.reason}`);
   const nowSec = Math.floor(Date.now() / 1000);
   const payload = await decorateDdrResponse(db, degradedResponse(cached.reason));
   return jsonFreshResponse(payload, {

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { weightedMedian } from "@shared/lib/stats";
 import { roundTo } from "@shared/lib/math";
@@ -1420,7 +1421,7 @@ export async function computeDepthStability(
       `DEX depth stability publication changed ${publishedChanges}/${ACTIVE_STABLECOINS.length} current rows`,
     );
   }
-  console.log(`[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
+  logWorkerEventArgs("handler", "info", `[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
 }
 
 /** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
@@ -1746,17 +1747,17 @@ export async function computeDexPrices(
     const cleanup = await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
     const cleanedRows = Number(cleanup.meta?.changes ?? 0);
     if (cleanedRows !== observedIds.size) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[dex-liquidity] DEX price stage cleanup removed ${cleanedRows}/${observedIds.size} rows for ${generationId}`,
       );
     }
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn(`[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
+    logWorkerEventArgs("handler", "warn", `[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
   }
 
   if (observedIds.size > 0 || retiredCount > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
         (collapsedDuplicateGroups > 0
           ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`

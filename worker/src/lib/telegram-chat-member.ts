@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCache } from "./db-cache";
 import { drainResponseBody } from "./response-body";
 import { postTelegramBotApi } from "./telegram";
@@ -89,13 +90,13 @@ export async function getCachedChatAdministrators(
   try {
     response = await postTelegramBotApi(botToken, "getChatAdministrators", { chat_id: chatId });
   } catch (err) {
-    console.warn(`[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`, toErrorMessage(err));
+    logWorkerEventArgs("lib", "warn", `[telegram-chat-member] getChatAdministrators fetch failed for chat ${chatId}:`, toErrorMessage(err));
     return null;
   }
 
   if (!response.ok) {
     await drainResponseBody(response);
-    console.warn(`[telegram-chat-member] getChatAdministrators returned ${response.status} for chat ${chatId}`);
+    logWorkerEventArgs("lib", "warn", `[telegram-chat-member] getChatAdministrators returned ${response.status} for chat ${chatId}`);
     return null;
   }
 

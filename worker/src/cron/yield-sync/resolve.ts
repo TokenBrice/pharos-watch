@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { resolveTrackedYieldSources } from "./resolve-tracked-sources";
 import { appendLinkedVariantParentYieldSources, appendPoolFamilyYieldSources } from "./resolve-helpers";
@@ -64,7 +65,7 @@ export async function resolveYieldSources({
 
   const linkedVariantSourceCount = appendLinkedVariantParentYieldSources(trackedResolution.resolved);
   if (linkedVariantSourceCount > 0) {
-    console.log(`[sync-yield-data] Linked variant projection: ${linkedVariantSourceCount} parent sources`);
+    logWorkerEventArgs("handler", "info", `[sync-yield-data] Linked variant projection: ${linkedVariantSourceCount} parent sources`);
   }
 
   return trackedResolution;

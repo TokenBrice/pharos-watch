@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { DexLiquidityCronMetadataSchema } from "../../lib/schemas";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -52,7 +53,7 @@ function parseDexLiquidityCronMetadata(metadata: string | null): DexLiquidityCro
   try {
     return DexLiquidityCronMetadataSchema.parse(JSON.parse(metadata));
   } catch (err) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[dex-liquidity] Failed to parse previous cron metadata:",
       toErrorMessage(err),
     );
@@ -325,7 +326,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       )
       .first<{ cnt: number }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage count:", e instanceof Error ? e.message : e);
         return null;
       }),
     params.db
@@ -334,7 +335,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       )
       .first<{ total_tvl_usd: number | null; updated_at: number | null }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous global TVL:", e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous global TVL:", e);
         return null;
       }),
     params.db
@@ -347,7 +348,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       )
       .all<{ coverage_class: string | null; cnt: number }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous coverage classes:", e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous coverage classes:", e);
         return { results: [] as Array<{ coverage_class: string | null; cnt: number }> };
       }),
     params.db
@@ -362,7 +363,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       )
       .all<TopCoverageRow>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous top coverage:", e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous top coverage:", e);
         return { results: [] as TopCoverageRow[] };
       }),
     params.db
@@ -377,7 +378,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       )
       .all<{ started_at: number | null; status: string | null; metadata: string | null }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous cron metadata:", e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous cron metadata:", e);
         return {
           results: [] as Array<{ started_at: number | null; status: string | null; metadata: string | null }>,
         };
@@ -398,7 +399,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
         balance_measured_tvl_usd: number;
       }>()
       .catch((e) => {
-        console.warn("[dex-liquidity] Failed to read previous watchlist rows:", e);
+        logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to read previous watchlist rows:", e);
         return {
           results: [] as Array<{
             stablecoin_id: string;

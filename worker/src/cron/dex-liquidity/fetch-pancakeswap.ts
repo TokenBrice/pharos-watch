@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -223,7 +224,7 @@ export async function fetchPancakeSwapPools(
             rethrowIfAborted(error, signal);
             failedHourDataBatches++;
             const message = toErrorMessage(error);
-            console.warn(
+            logWorkerEventArgs("handler", "warn",
               "[fetch-pancakeswap]",
               chain,
               "poolHourDatas",
@@ -233,7 +234,7 @@ export async function fetchPancakeSwapPools(
           }
         }
         if (failedHourDataBatches > 0) {
-          console.warn(
+          logWorkerEventArgs("handler", "warn",
             "[fetch-pancakeswap]",
             chain,
             `page ${displayPage} completed with ${failedHourDataBatches}/${hourDataPoolIdBatches.length} hourData batch failures`,
@@ -313,12 +314,12 @@ export async function fetchPancakeSwapPools(
     } catch (error) {
       rethrowIfAborted(error, signal);
       errors.push(`${chain}: ${toErrorMessage(error)}`);
-      console.warn("[fetch-pancakeswap]", chain, error);
+      logWorkerEventArgs("handler", "warn", "[fetch-pancakeswap]", chain, error);
     }
   }
 
   if (pools.length > 0) {
-    console.log(`[fetch-pancakeswap] Fetched ${pools.length} pools`);
+    logWorkerEventArgs("handler", "info", `[fetch-pancakeswap] Fetched ${pools.length} pools`);
   }
 
   return makeDexApiFetchResult(pools, {

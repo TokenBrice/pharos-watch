@@ -647,7 +647,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
     expect(infoSpy).toHaveBeenCalledWith(
-      `[cron-slot] Skipping duplicate slot quarterHourly@${expectedSlotStartedAt}`,
+      expect.stringContaining(`[cron-slot] Skipping duplicate slot quarterHourly@${expectedSlotStartedAt}`),
     );
 
     infoSpy.mockRestore();
@@ -682,7 +682,7 @@ describe("worker.scheduled", () => {
 
     expect(cronMocks.syncStablecoins).not.toHaveBeenCalled();
     expect(infoSpy).toHaveBeenCalledWith(
-      `[cron-slot] Slot already running quarterHourly@${expectedSlotStartedAt}`,
+      expect.stringContaining(`[cron-slot] Slot already running quarterHourly@${expectedSlotStartedAt}`),
     );
 
     infoSpy.mockRestore();

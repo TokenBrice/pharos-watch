@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 /**
  * Fetch stablecoin prices via Curve StableSwap get_dy() on-chain calls.
  *
@@ -137,7 +138,7 @@ export async function fetchCurveOnchainPrices(
       }
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      console.warn(`[curve-onchain] get_dy failed for ${config.stablecoinId}:`, err);
+      logWorkerEventArgs("lib", "warn", `[curve-onchain] get_dy failed for ${config.stablecoinId}:`, err);
       rpcThrows++;
     }
   }

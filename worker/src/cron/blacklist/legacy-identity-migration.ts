@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import type { BlacklistStablecoin } from "@shared/types/market";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
@@ -217,7 +218,7 @@ export async function migrateLegacyBlacklistIdentities(
   // is what let a balance backfill sit at 6,122 rows while every run claimed 50.
   const balanceMigrated = Math.floor(balanceChanges / 2);
   if (balanceMigrated < balancePlanned) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       JSON.stringify({
         scope: "sync-blacklist",
         message: "Legacy balance identity migration applied fewer rows than planned",
