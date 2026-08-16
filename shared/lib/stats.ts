@@ -18,6 +18,17 @@ export function relativeChangeRatio(current: number, previous: number): Ratio | 
   return ratio(current - previous, previous);
 }
 
+/**
+ * Adopt an externally-validated number as a `Ratio` at a deserialization boundary.
+ *
+ * Wire schemas carry ratios as bare `z.number()`, so the brand is lost on the way in. Call this at
+ * the point of adoption rather than sprinkling `* 100`: every callsite is then a greppable claim
+ * that the value really is on the ratio scale.
+ */
+export function asRatio(value: number): Ratio {
+  return value as Ratio;
+}
+
 /** Convert a ratio to a 0-100 percentage at a presentation or serialization boundary. */
 export function ratioToPercentage(value: Ratio): number {
   return value * 100;
