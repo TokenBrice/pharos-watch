@@ -1,5 +1,6 @@
-import type { StablecoinMeta } from "@shared/types/core";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   accumulateBucketedExposure,
@@ -61,8 +62,12 @@ const FALCON_TRACKED_STABLE_ASSETS: Partial<Record<string, { name: string; coinI
   GHO: { name: "GHO cash-equivalent assets", coinId: "gho-aave", risk: "low" },
 };
 const FALCON_RWA_ASSETS = new Set(["USTB", "JTRSY", "JAAA", "XAUT"]);
-const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: string; risk: "medium" | "low" }>> = {
-  USTB: { name: "USTB tokenized Treasury assets", coinId: "ustb-superstate", risk: "medium" },
+const USTB_CANONICAL_RISK = getCanonicalReserveAssetRisk("USTB");
+if (USTB_CANONICAL_RISK == null) {
+  throw new Error("Falcon USTB reserve row requires a canonical reserve-risk entry");
+}
+const FALCON_TRACKED_RWA_ASSETS: Partial<Record<string, { name: string; coinId: string; risk: ReserveSlice["risk"] }>> = {
+  USTB: { name: "USTB tokenized Treasury assets", coinId: "ustb-superstate", risk: USTB_CANONICAL_RISK },
   JTRSY: { name: "JTRSY tokenized Treasury assets", coinId: "jtrsy-anemoy", risk: "medium" },
   JAAA: { name: "JAAA CLO assets", coinId: "jaaa-janus-henderson-anemoy", risk: "medium" },
   XAUT: { name: "XAUt gold token assets", coinId: "xaut-tether", risk: "medium" },

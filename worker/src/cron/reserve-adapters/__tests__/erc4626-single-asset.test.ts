@@ -242,6 +242,50 @@ describe("fetchErc4626SingleAssetReserves", () => {
     ]);
   });
 
+  it("preserves BigInt precision when the NAV divergence is just above 1%", async () => {
+    const totalAssetsRaw = 10n ** 30n;
+    const convertedAssetsRaw = totalAssetsRaw + totalAssetsRaw / 100n + 1n;
+    fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };
+      const data = body.params[0].data;
+      if (data === "0x38d52e0f") {
+        return jsonResponse({
+          result: "0x000000000000000000000000a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        });
+      }
+      if (data === "0x01e1d114" || data === "0x18160ddd") {
+        return jsonResponse({ result: uint256Result(totalAssetsRaw) });
+      }
+      if (data.startsWith("0x07a2d13a")) {
+        return jsonResponse({ result: uint256Result(convertedAssetsRaw) });
+      }
+      if (data.startsWith("0x70a08231")) {
+        return jsonResponse({ result: uint256Result(0n) });
+      }
+      if (data === "0x313ce567") {
+        return jsonResponse({ result: uint256Result(6) });
+      }
+      return null;
+    });
+
+    const { fetchErc4626SingleAssetReserves } = await import("../erc4626-single-asset");
+    const coin = TRACKED_META_BY_ID.get("syrupusdc-maple")!;
+    const result = await fetchErc4626SingleAssetReserves(
+      coin,
+      coin.liveReservesConfig!,
+      new AbortController().signal,
+      { chainRpcs: testChainRpcs },
+    );
+
+    expect(result.metadata).toMatchObject({
+      collateralizationRatio: 1.01,
+      convertToAssetsRaw: convertedAssetsRaw.toString(),
+    });
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "erc4626-nav-divergence",
+    }));
+  });
+
   it("throws when the vault asset differs from the configured expectation", async () => {
     fetchWithRetryMock.mockImplementation(async (_url: string, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body)) as { params: [{ data: string }] };

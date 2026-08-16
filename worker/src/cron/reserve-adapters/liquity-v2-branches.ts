@@ -9,6 +9,7 @@ import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selector
 import { rethrowIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "../../lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
+import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
 import { ERC4626_ASSET_SELECTOR, ERC4626_TOTAL_ASSETS_SELECTOR } from "./erc4626";
 import {
   buildRedemptionSnapshotMetadata,
@@ -304,22 +305,25 @@ async function fetchLiquityV2MechanismMetrics(
   }
 
   try {
-    const results = await fetchOnchainMulticall3({
-      calls,
-      chain: input.chain,
-      signal,
-      ctx,
-      rpcUrl: params.rpcUrl,
-      fallbackRpcUrl: params.fallbackRpcUrl,
-      timeoutMs: 12_000,
+    const observation = await executeEvmObservationPlan({
+      adapterKey: "liquity-v2-branches:mechanism-metrics",
+      fields: calls.map((entry) => rawObservation({
+        label: entry.label,
+        contract: entry.contract,
+        data: entry.data,
+        allowFailure: entry.allowFailure,
+      })),
+      read: (planCalls) => fetchOnchainMulticall3({
+        calls: planCalls,
+        chain: input.chain,
+        signal,
+        ctx,
+        rpcUrl: params.rpcUrl,
+        fallbackRpcUrl: params.fallbackRpcUrl,
+        timeoutMs: 12_000,
+      }),
     });
-    if (!results) throw new Error("Multicall3 request failed");
-
-    const byLabel = new Map<string, `0x${string}`>();
-    for (const result of results) {
-      if (!result.success) throw new Error(`Multicall3 entry failed: ${result.label}`);
-      byLabel.set(result.label, result.returnData);
-    }
+    const byLabel = observation.rawByLabel;
 
     const totalSupplyRaw = decodeRequiredUint256(
       byLabel.get("mechanism:total-supply"),

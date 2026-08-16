@@ -4,8 +4,13 @@ import { decodeAbiParameters } from "viem/utils";
 import { encodeBalanceOfCallData, encodeUint256 } from "../../lib/evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
-import { decodeBoolWord, decodeUint256Word } from "./abi-decode";
 import { resolveCoinContractAddress } from "./evm";
+import {
+  boolObservation,
+  customObservation,
+  executeEvmObservationPlan,
+  uint256Observation,
+} from "./evm-observation-plan";
 import {
   buildRedemptionSnapshotMetadata,
   decimalNumberFromBigInt,
@@ -15,7 +20,6 @@ import {
   reserveDegradedWarning,
   reserveInfoWarning,
   slicesFromValues,
-  type OnchainMulticall3Call,
 } from "./helpers";
 
 const ADAPTER_KEY = "3jane-usd3";
@@ -66,26 +70,7 @@ function safeIntegerFromBigInt(value: bigint, label: string): number {
   return converted;
 }
 
-function requireUintResult(
-  results: ReadonlyMap<string, `0x${string}`>,
-  label: string,
-): bigint {
-  const decoded = decodeUint256Word(results.get(label));
-  if (decoded == null) throw new Error(`${ADAPTER_KEY} ${label} call failed`);
-  return decoded;
-}
-
-function requireBoolResult(
-  results: ReadonlyMap<string, `0x${string}`>,
-  label: string,
-): boolean {
-  const decoded = decodeBoolWord(results.get(label));
-  if (decoded == null) throw new Error(`${ADAPTER_KEY} ${label} call failed`);
-  return decoded;
-}
-
-function decodeMarketLiquidity(raw: `0x${string}` | undefined): readonly [bigint, bigint, bigint, bigint] {
-  if (!raw) throw new Error(`${ADAPTER_KEY} getMarketLiquidity call failed`);
+function decodeMarketLiquidity(raw: `0x${string}`): readonly [bigint, bigint, bigint, bigint] {
   try {
     return decodeAbiParameters(
       [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }],
@@ -96,29 +81,25 @@ function decodeMarketLiquidity(raw: `0x${string}` | undefined): readonly [bigint
   }
 }
 
-async function fetchMulticallResults(
-  calls: readonly OnchainMulticall3Call[],
+async function executeObservationPlan<Fields extends Parameters<typeof executeEvmObservationPlan>[0]["fields"]>(
+  fields: Fields,
   chain: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<Map<string, `0x${string}`>> {
-  const results = await fetchOnchainMulticall3({
-    calls,
-    chain,
-    signal,
-    ctx,
-    rpcUrl: ETHEREUM_RPC_URL,
-    fallbackRpcUrl: ETHEREUM_FALLBACK_RPC_URL,
-    timeoutMs: 12_000,
+): Promise<Awaited<ReturnType<typeof executeEvmObservationPlan<Fields>>>> {
+  return executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
+    fields,
+    read: (calls) => fetchOnchainMulticall3({
+      calls,
+      chain,
+      signal,
+      ctx,
+      rpcUrl: ETHEREUM_RPC_URL,
+      fallbackRpcUrl: ETHEREUM_FALLBACK_RPC_URL,
+      timeoutMs: 12_000,
+    }),
   });
-  if (!results) throw new Error(`${ADAPTER_KEY} multicall failed`);
-
-  const byLabel = new Map<string, `0x${string}`>();
-  for (const result of results) {
-    if (!result.success) throw new Error(`${ADAPTER_KEY} multicall entry failed: ${result.label}`);
-    byLabel.set(result.label, result.returnData);
-  }
-  return byLabel;
 }
 
 export function adaptThreeJaneUsd3Snapshot(snapshot: ThreeJaneUsd3Snapshot): AdapterResult {
@@ -251,27 +232,32 @@ export async function fetchThreeJaneUsd3Reserves(
   const contractAddress = resolveCoinContractAddress(coin, input.chain);
   if (!contractAddress) throw new Error(`${ADAPTER_KEY} missing Ethereum USD3 contract metadata`);
 
-  const coreResults = await fetchMulticallResults([
-    { label: "nav", contract: contractAddress, data: NAV_SELECTOR },
-    { label: "totalAssets", contract: contractAddress, data: TOTAL_ASSETS_SELECTOR },
-    { label: "totalSupply", contract: contractAddress, data: TOTAL_SUPPLY_SELECTOR },
-    { label: "localWaUsdc", contract: contractAddress, data: BALANCE_OF_WAUSDC_SELECTOR },
-    { label: "suppliedWaUsdc", contract: contractAddress, data: SUPPLIED_WAUSDC_SELECTOR },
-    { label: "marketLiquidity", contract: contractAddress, data: GET_MARKET_LIQUIDITY_SELECTOR },
-    {
+  const core = await executeObservationPlan([
+    uint256Observation({ label: "nav", contract: contractAddress, data: NAV_SELECTOR }),
+    uint256Observation({ label: "totalAssets", contract: contractAddress, data: TOTAL_ASSETS_SELECTOR }),
+    uint256Observation({ label: "totalSupply", contract: contractAddress, data: TOTAL_SUPPLY_SELECTOR }),
+    uint256Observation({ label: "localWaUsdc", contract: contractAddress, data: BALANCE_OF_WAUSDC_SELECTOR }),
+    uint256Observation({ label: "suppliedWaUsdc", contract: contractAddress, data: SUPPLIED_WAUSDC_SELECTOR }),
+    customObservation({
+      label: "marketLiquidity",
+      contract: contractAddress,
+      data: GET_MARKET_LIQUIDITY_SELECTOR,
+      decode: decodeMarketLiquidity,
+    }),
+    uint256Observation({
       label: "availableWithdraw",
       contract: contractAddress,
       data: `${AVAILABLE_WITHDRAW_LIMIT_SELECTOR}${ZERO_ADDRESS.slice(2).padStart(64, "0")}`,
-    },
-    { label: "minCommitmentTime", contract: contractAddress, data: MIN_COMMITMENT_TIME_SELECTOR },
-    { label: "isShutdown", contract: contractAddress, data: IS_SHUTDOWN_SELECTOR },
-    { label: "idleUsdc", contract: USDC_ADDRESS, data: encodeBalanceOfCallData(contractAddress) },
-  ], input.chain, signal, ctx);
+    }),
+    uint256Observation({ label: "minCommitmentTime", contract: contractAddress, data: MIN_COMMITMENT_TIME_SELECTOR }),
+    boolObservation({ label: "isShutdown", contract: contractAddress, data: IS_SHUTDOWN_SELECTOR }),
+    uint256Observation({ label: "idleUsdc", contract: USDC_ADDRESS, data: encodeBalanceOfCallData(contractAddress) }),
+  ] as const, input.chain, signal, ctx);
 
-  const suppliedWaUsdcRaw = requireUintResult(coreResults, "suppliedWaUsdc");
-  const localWaUsdcRaw = requireUintResult(coreResults, "localWaUsdc");
+  const suppliedWaUsdcRaw = core.values.suppliedWaUsdc;
+  const localWaUsdcRaw = core.values.localWaUsdc;
   const [marketTotalSupplyAssetsRaw, marketTotalSharesRaw, marketTotalBorrowAssetsRaw, marketLiquidityRaw] =
-    decodeMarketLiquidity(coreResults.get("marketLiquidity"));
+    core.values.marketLiquidity;
   if (marketTotalSupplyAssetsRaw === 0n && suppliedWaUsdcRaw > 0n) {
     throw new Error(`${ADAPTER_KEY} strategy has a supplied position in an empty market`);
   }
@@ -288,25 +274,25 @@ export async function fetchThreeJaneUsd3Reserves(
   const creditPositionRaw = suppliedWaUsdcRaw - boundedMarketLiquidPositionRaw;
   const totalLiquidWaUsdcRaw = localWaUsdcRaw + boundedMarketLiquidPositionRaw;
 
-  const conversionResults = await fetchMulticallResults([
-    {
+  const conversion = await executeObservationPlan([
+    uint256Observation({
       label: "liquidPositionAssets",
       contract: WAUSDC_ADDRESS,
       data: `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(totalLiquidWaUsdcRaw)}`,
-    },
-    {
+    }),
+    uint256Observation({
       label: "creditPositionAssets",
       contract: WAUSDC_ADDRESS,
       data: `${CONVERT_TO_ASSETS_SELECTOR}${encodeUint256(creditPositionRaw)}`,
-    },
-  ], input.chain, signal, ctx);
+    }),
+  ] as const, input.chain, signal, ctx);
 
   return adaptThreeJaneUsd3Snapshot({
     contractAddress,
-    navRaw: requireUintResult(coreResults, "nav"),
-    totalAssetsRaw: requireUintResult(coreResults, "totalAssets"),
-    totalSupplyRaw: requireUintResult(coreResults, "totalSupply"),
-    idleUsdcRaw: requireUintResult(coreResults, "idleUsdc"),
+    navRaw: core.values.nav,
+    totalAssetsRaw: core.values.totalAssets,
+    totalSupplyRaw: core.values.totalSupply,
+    idleUsdcRaw: core.values.idleUsdc,
     localWaUsdcRaw,
     suppliedWaUsdcRaw,
     marketTotalSupplyAssetsRaw,
@@ -315,10 +301,10 @@ export async function fetchThreeJaneUsd3Reserves(
     marketLiquidityRaw,
     marketLiquidPositionRaw: boundedMarketLiquidPositionRaw,
     creditPositionRaw,
-    liquidPositionAssetsRaw: requireUintResult(conversionResults, "liquidPositionAssets"),
-    creditPositionAssetsRaw: requireUintResult(conversionResults, "creditPositionAssets"),
-    availableWithdrawRaw: requireUintResult(coreResults, "availableWithdraw"),
-    minCommitmentTimeRaw: requireUintResult(coreResults, "minCommitmentTime"),
-    isShutdown: requireBoolResult(coreResults, "isShutdown"),
+    liquidPositionAssetsRaw: conversion.values.liquidPositionAssets,
+    creditPositionAssetsRaw: conversion.values.creditPositionAssets,
+    availableWithdrawRaw: core.values.availableWithdraw,
+    minCommitmentTimeRaw: core.values.minCommitmentTime,
+    isShutdown: core.values.isShutdown,
   });
 }

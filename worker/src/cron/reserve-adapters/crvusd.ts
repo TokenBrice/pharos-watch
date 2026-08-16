@@ -10,6 +10,7 @@ import { mapWithConcurrency } from "../../lib/concurrency";
 import { fetchEvmCallHexAtBlock } from "../../lib/evm-rpc";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
 import type { AdapterContext, AdapterResult } from "./types";
+import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
 import { runAdapterIo } from "./concurrency";
 import {
   fetchDefiLlamaPrices,
@@ -307,30 +308,30 @@ async function fetchCrvUsdMulticallResults(
   label: string,
   signal: AbortSignal,
   ctx?: AdapterContext,
+  multicallBatchSize?: number,
 ): Promise<Map<string, `0x${string}`>> {
   if (calls.length === 0) return new Map();
 
-  const results = await fetchOnchainMulticall3({
-    calls,
-    chain: ETHEREUM_CHAIN,
-    signal,
-    ctx,
-    rpcUrl: ETHEREUM_RPC_URLS[0],
-    fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
-    timeoutMs: 12_000,
+  const snapshot = await executeEvmObservationPlan({
+    adapterKey: `crvUSD ${label}`,
+    fields: calls.map((entry) => rawObservation({
+      label: entry.label,
+      contract: entry.contract,
+      data: entry.data,
+      allowFailure: entry.allowFailure,
+    })),
+    read: (planCalls) => fetchOnchainMulticall3({
+      calls: planCalls,
+      chain: ETHEREUM_CHAIN,
+      signal,
+      ctx,
+      rpcUrl: ETHEREUM_RPC_URLS[0],
+      fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
+      timeoutMs: multicallBatchSize == null ? 12_000 : 20_000,
+      ...(multicallBatchSize != null ? { multicallBatchSize } : {}),
+    }),
   });
-  if (!results) {
-    throw new Error(`crvUSD ${label} multicall failed`);
-  }
-
-  const byLabel = new Map<string, `0x${string}`>();
-  for (const result of results) {
-    if (!result.success) {
-      throw new Error(`crvUSD ${label} multicall entry failed: ${result.label}`);
-    }
-    byLabel.set(result.label, result.returnData);
-  }
-  return byLabel;
+  return new Map(snapshot.rawByLabel);
 }
 
 function requireCrvUsdMulticallResult(
@@ -547,40 +548,31 @@ async function fetchLlammaMarketExposures(signal: AbortSignal, ctx?: AdapterCont
       });
     }
 
-    const results = await fetchOnchainMulticall3({
+    const results = await fetchCrvUsdMulticallResults(
       calls,
-      chain: ETHEREUM_CHAIN,
+      `LLAMMA bands for market ${market.marketId}`,
       signal,
       ctx,
-      rpcUrl: ETHEREUM_RPC_URLS[0],
-      fallbackRpcUrl: ETHEREUM_RPC_URLS[1],
-      timeoutMs: 20_000,
-      multicallBatchSize: DIRECT_LLAMMA_MULTICALL_BATCH_SIZE,
-    });
-    if (!results) {
-      throw new Error(`crvUSD LLAMMA band multicall failed for market ${market.marketId}`);
-    }
+      DIRECT_LLAMMA_MULTICALL_BATCH_SIZE,
+    );
 
     const totals = { y: 0n, x: 0n };
-    for (const result of results) {
-      if (!result.success) {
-        throw new Error(`crvUSD LLAMMA band call failed: ${result.label}`);
-      }
-      const [, axis] = result.label.split(":");
+    for (const [label, returnData] of results) {
+      const [, axis] = label.split(":");
       if (axis === "y") {
         totals.y += decodeFunctionResult({
           abi: CURVE_AMM_ABI,
           functionName: "bands_y",
-          data: result.returnData,
+          data: returnData,
         }) as bigint;
       } else if (axis === "x") {
         totals.x += decodeFunctionResult({
           abi: CURVE_AMM_ABI,
           functionName: "bands_x",
-          data: result.returnData,
+          data: returnData,
         }) as bigint;
       } else {
-        throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${result.label}`);
+        throw new Error(`crvUSD LLAMMA band call returned invalid axis: ${label}`);
       }
     }
 
