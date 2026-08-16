@@ -28,9 +28,12 @@ function candidateId(kind: DigestEditorialCandidateKind, parts: string[]): strin
 export function activeDepegEditorialCandidateId(
   depeg: DigestInputData["topDepegs"][number],
 ): string {
+  // Candidate IDs are persisted in digest metadata and lead history. They
+  // identify the active coin-level policy signal, not the underlying event;
+  // weekly event deduplication keeps its separate startedAt-based identity.
   return candidateId("depeg", [
     depeg.stablecoinId ?? depeg.symbol,
-    String(depeg.startedAt ?? "active"),
+    "active",
   ]);
 }
 

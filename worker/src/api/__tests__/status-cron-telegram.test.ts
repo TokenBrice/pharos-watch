@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { TELEGRAM_PENDING_CAPACITY_SQL } from "../../lib/telegram-pending-capacity";
 import {
   handleStatus,
   makeCacheRow,
@@ -464,7 +465,24 @@ describe("handleStatus", () => {
         first: { pending_count: 4, due_count: 4, deferred_count: 0 },
       },
       {
-        match: "FROM telegram_pending_alerts",
+        match: TELEGRAM_PENDING_CAPACITY_SQL,
+        rows: [],
+        first: {
+          total: 4,
+          expired: 0,
+          due: 4,
+          deferred: 0,
+          near_ttl: 0,
+          pending_sending: 0,
+          pending_execution_unknown: 0,
+          sent_cleanup: 0,
+          fresh_sending: 0,
+          fresh_execution_unknown: 0,
+          fresh_uncertain_sample_count: 0,
+        },
+      },
+      {
+        match: "SELECT COUNT(*) AS pending_count FROM telegram_pending_alerts WHERE delivery_state = 'pending'",
         rows: [],
         first: { pending_count: 4 },
       },

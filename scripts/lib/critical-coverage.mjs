@@ -8,6 +8,7 @@ export const CRITICAL_FILES = [
   "worker/src/api/safety-score-history-v2.ts",
   "worker/src/lib/api-cache-read.ts",
   "worker/src/lib/api-freshness.ts",
+  "worker/src/lib/api-freshness-age.ts",
   "worker/src/lib/api-freshness-headers.ts",
   "worker/src/lib/freshness-sentinels.ts",
   "worker/src/lib/api-history.ts",

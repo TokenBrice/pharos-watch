@@ -251,7 +251,11 @@ function resolveSelectedCoins(options: AuditMintAuthorityOptions): StablecoinMet
 function assertSafeOutputDir(cwd: string, outputDir: string): string {
   const target = resolve(cwd, outputDir);
   const stablecoinDataRoot = resolve(REPO_ROOT, "shared/data/stablecoins");
-  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, target);
+  const normalizedOutputDir = outputDir.replaceAll("\\", "/");
+  const safetyTarget = normalizedOutputDir.startsWith("@shared/")
+    ? resolve(REPO_ROOT, "shared", normalizedOutputDir.slice("@shared/".length))
+    : target;
+  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, safetyTarget);
   const isStablecoinDataPath =
     pathFromStablecoinDataRoot === "" ||
     (!!pathFromStablecoinDataRoot &&
