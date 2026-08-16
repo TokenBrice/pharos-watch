@@ -6,7 +6,10 @@ import {
   buildSafetyScoreV9ReviewedStandaloneReserveRows,
   type V9ExtensionRegistryMeta,
 } from "../safety-score-v9-extension";
-import { buildSafetyScoreV9ReserveClassifications } from "../safety-score-v9-extension-reserves";
+import {
+  buildSafetyScoreV9ReserveClassifications,
+  dependencyReserveSlices,
+} from "../safety-score-v9-extension-reserves";
 
 const CLOCK_SEC = Date.UTC(2026, 6, 14) / 1_000;
 
@@ -143,10 +146,8 @@ describe("buildReviewedReserveClassifications", () => {
     expect(classifications[0]!.classificationKey).toMatch(/^registry-reviewed:reserve:/);
   });
 
-  it("leaves mismatched, ambiguous, and unreviewed live rows source-native", () => {
+  it("matches legacy rows by unique name regardless of weight and rejects ambiguity or invalid review state", () => {
     const live = [{ name: "Cash", pct: 15, risk: "very-low" as const }];
-    // 22 vs 15 sits beyond the 5pp drift tolerance, so the weight mismatch
-    // is gross rather than normal rebalancing and the join must fail.
     const structuredCash: ReserveSlice = {
       name: "Cash",
       pct: 22,
@@ -157,9 +158,9 @@ describe("buildReviewedReserveClassifications", () => {
       liquidityHorizon: "immediate",
     };
     expect(buildReviewedReserveClassifications(live, reviewedMeta([structuredCash]), CLOCK_SEC)[0]).toMatchObject({
-      classificationKey: expect.stringMatching(/^source-native:/),
-      assetClass: null,
-      issuerOrObligorKey: null,
+      classificationKey: expect.stringMatching(/^registry-reviewed:/),
+      assetClass: "bank-deposit",
+      issuerOrObligorKey: "Reserve bank",
     });
 
     const ambiguous = reviewedMeta([
@@ -239,11 +240,7 @@ describe("buildReviewedReserveClassifications", () => {
     });
   });
 
-  it("keeps reviewed classifications joined across normal live composition drift", () => {
-    // 2026-07-18 regression: Circle's T-bill share moved 2.0pp in two days,
-    // which severed every USDC classification under the old 0.5pp bound and
-    // collapsed backing. Identity is the bijective name match; weight drift
-    // within 5pp must not destroy the slice's class.
+  it("keeps reviewed classifications joined across arbitrary live composition drift", () => {
     const reviewed = reviewedMeta([
       {
         name: "<3-Month U.S. Treasuries",
@@ -275,7 +272,88 @@ describe("buildReviewedReserveClassifications", () => {
       reviewed,
       CLOCK_SEC,
     );
-    expect(grosslyDifferent.every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+    expect(grosslyDifferent.every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
+  });
+
+  it("uses explicit source keys across label and weight changes and fails closed on key mismatch", () => {
+    const reviewed = reviewedMeta([{
+      sourceKey: "circle:usdc:treasuries-under-3m",
+      name: "<3-Month U.S. Treasuries",
+      pct: 71.9,
+      risk: "very-low",
+      assetClass: "treasury-bill",
+      issuerOrObligor: "United States Treasury",
+      coinId: "treasury-proxy",
+    }]);
+    const matchedLive: ReserveSlice[] = [{
+      sourceKey: "circle:usdc:treasuries-under-3m",
+      name: "Treasury securities under 93 days",
+      pct: 12,
+      risk: "very-low",
+    }];
+
+    expect(buildReviewedReserveClassifications(matchedLive, reviewed, CLOCK_SEC)[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^registry-reviewed:/),
+      assetClass: "treasury-bill",
+      issuerOrObligorKey: "United States Treasury",
+    });
+    expect(dependencyReserveSlices(matchedLive, reviewed, CLOCK_SEC)[0]).toMatchObject({
+      coinId: "treasury-proxy",
+    });
+
+    const mismatchedLive = [{
+      ...matchedLive[0]!,
+      sourceKey: "circle:usdc:different-slice",
+      name: "<3-Month U.S. Treasuries",
+    }];
+    expect(buildReviewedReserveClassifications(mismatchedLive, reviewed, CLOCK_SEC)[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^source-native:/),
+      assetClass: null,
+    });
+    expect(dependencyReserveSlices(mismatchedLive, reviewed, CLOCK_SEC)[0]!.coinId).toBeUndefined();
+  });
+
+  it("rejects duplicate explicit source keys on either side", () => {
+    const sourceKey = "fixture:alpha:cash";
+    const reviewed = reviewedMeta([{
+      sourceKey,
+      name: "Cash",
+      pct: 100,
+      risk: "very-low",
+      assetClass: "bank-deposit",
+    }]);
+    const duplicateLive = [
+      { sourceKey, name: "Cash A", pct: 50, risk: "very-low" as const },
+      { sourceKey, name: "Cash B", pct: 50, risk: "very-low" as const },
+    ];
+    expect(buildReviewedReserveClassifications(duplicateLive, reviewed, CLOCK_SEC)
+      .every((row) => row.classificationKey.startsWith("source-native:"))).toBe(true);
+
+    const duplicateReviewed = reviewedMeta([
+      ...reviewed.reserves!,
+      { ...reviewed.reserves![0]!, name: "Duplicate cash" },
+    ]);
+    expect(buildReviewedReserveClassifications([duplicateLive[0]!], duplicateReviewed, CLOCK_SEC)[0]).toMatchObject({
+      classificationKey: expect.stringMatching(/^source-native:/),
+    });
+  });
+
+  it("keeps the current USDC reserve repartition classified by stable source key", () => {
+    const live: ReserveSlice[] = [
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 65.7, risk: "very-low" },
+      { sourceKey: "circle:usdc:sifi-deposits", name: "Deposits at Systemically Important Institutions", pct: 18.6, risk: "very-low" },
+      { sourceKey: "circle:usdc:other-bank-deposits", name: "Other Bank Deposits", pct: 14.1, risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 1.6, risk: "very-low" },
+    ];
+    const reviewed = reviewedMeta([
+      { ...live[0]!, pct: 71.93275, assetClass: "treasury-bill", issuerOrObligor: "United States Treasury" },
+      { ...live[1]!, pct: 12.491316, assetClass: "bank-deposit", issuerOrObligor: "Systemically important financial institutions" },
+      { ...live[2]!, pct: 13.852994, assetClass: "bank-deposit", issuerOrObligor: "Other regulated financial institutions" },
+      { ...live[3]!, pct: 1.72294, assetClass: "repo", issuerOrObligor: "Leading global banks" },
+    ]);
+
+    expect(buildReviewedReserveClassifications(live, reviewed, CLOCK_SEC)
+      .every((row) => row.classificationKey.startsWith("registry-reviewed:"))).toBe(true);
   });
 
   it("rejects the current USDC repartition and USD1 aggregate basket as non-identical", () => {

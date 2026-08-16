@@ -29,6 +29,11 @@ import { WRAPPER_OPERATOR_VALUES } from "@shared/types/core";
 import { canonicalArrayBy } from "@shared/types/safety-score-v9-fact-primitives";
 
 export function computeSafetyScoreV9ReserveExposureKey(slice: ReserveSlice): string {
+  if (slice.sourceKey) {
+    return `reserve:${domainDigest("safety-score-v9.reserve-exposure-source-key.v1", {
+      sourceKey: slice.sourceKey,
+    }).slice(0, 24)}`;
+  }
   return `reserve:${domainDigest("safety-score-v9.reserve-exposure-key.v1", {
     name: slice.name.trim(),
     coinId: slice.coinId ?? null,

@@ -19,21 +19,22 @@ import { buildDocumentedRedemptionTelemetry } from "./redemption";
 interface CircleSliceConfig {
   attr: string;
   label: string;
+  sourceKey: string;
 }
 
 const CIRCLE_ABSOLUTE_MODE_MAX_RELATIVE_DIFF = 0.03;
 const CIRCLE_PERCENT_MODE_TOLERANCE_PCT = 2;
 
 const USDC_SLICES: CircleSliceConfig[] = [
-  { attr: "data-usdc-us-treasuries", label: "<3-Month U.S. Treasuries" },
-  { attr: "data-usdc-months", label: "Deposits at Systemically Important Institutions" },
-  { attr: "data-usdc-cash", label: "Other Bank Deposits" },
-  { attr: "data-usdc-in-circulation", label: "Overnight Reverse Treasury Repo" },
+  { attr: "data-usdc-us-treasuries", label: "<3-Month U.S. Treasuries", sourceKey: "circle:usdc:treasuries-under-3m" },
+  { attr: "data-usdc-months", label: "Deposits at Systemically Important Institutions", sourceKey: "circle:usdc:sifi-deposits" },
+  { attr: "data-usdc-cash", label: "Other Bank Deposits", sourceKey: "circle:usdc:other-bank-deposits" },
+  { attr: "data-usdc-in-circulation", label: "Overnight Reverse Treasury Repo", sourceKey: "circle:usdc:overnight-reverse-treasury-repo" },
 ];
 
 const EURC_SLICES: CircleSliceConfig[] = [
-  { attr: "data-eurocoin-cash", label: "Other Bank Deposits" },
-  { attr: "data-eurocoin-tokens", label: "Deposits at Systemically Important Institutions" },
+  { attr: "data-eurocoin-cash", label: "Other Bank Deposits", sourceKey: "circle:eurc:other-bank-deposits" },
+  { attr: "data-eurocoin-tokens", label: "Deposits at Systemically Important Institutions", sourceKey: "circle:eurc:sifi-deposits" },
 ];
 
 function extractAttrValue(html: string, attr: string): number | null {
@@ -98,7 +99,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   const missingAttrs: string[] = [];
   const warnings: LiveReserveWarning[] = [];
 
-  const entries: Array<{ name: string; value: number; risk: "very-low" }> = [];
+  const entries: Array<{ sourceKey: string; name: string; value: number; risk: "very-low" }> = [];
 
   for (const cfg of sliceConfigs) {
     const val = extractAttrValue(html, cfg.attr);
@@ -106,7 +107,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
       missingAttrs.push(cfg.attr);
       continue;
     }
-    entries.push({ name: cfg.label, value: val, risk: "very-low" });
+    entries.push({ sourceKey: cfg.sourceKey, name: cfg.label, value: val, risk: "very-low" });
   }
 
   if (missingAttrs.length > 0) {
@@ -130,6 +131,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
   const slices = useAbsoluteValues
     ? slicesFromValues(
       entries.map((entry) => ({
+        sourceKey: entry.sourceKey,
         name: entry.name,
         value: entry.value,
         risk: entry.risk,
@@ -138,6 +140,7 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
     )
     : slicesFromPercentages(
       entries.map((entry) => ({
+        sourceKey: entry.sourceKey,
         name: entry.name,
         pct: entry.value,
         risk: entry.risk,

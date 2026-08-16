@@ -2,6 +2,7 @@
   "id": "reusd-re-protocol",
   "reserves": [
     {
+      "sourceKey": "re-metrics:offchain-capital",
       "name": "Off-chain insurance / reinsurance capital",
       "pct": 81.5,
       "risk": "medium",
@@ -18,6 +19,7 @@
       "liquidityHorizon": "over-seven-days"
     },
     {
+      "sourceKey": "re-metrics:token:susde",
       "name": "sUSDe (delta-neutral ETH basis)",
       "pct": 15,
       "risk": "high",
@@ -36,6 +38,7 @@
       "liquidityHorizon": "seven-days"
     },
     {
+      "sourceKey": "re-metrics:token:usdc",
       "name": "USDC reserves",
       "pct": 2.5,
       "risk": "low",
@@ -50,6 +53,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "re-metrics:token:reusd/susde",
       "name": "reUSD / sUSDe LP position",
       "pct": 0.7,
       "risk": "high",
@@ -65,6 +69,7 @@
       "liquidityHorizon": "one-day"
     },
     {
+      "sourceKey": "re-metrics:token:usdt",
       "name": "USDT reserves",
       "pct": 0.2,
       "risk": "low",
@@ -79,6 +84,7 @@
       "liquidityHorizon": "immediate"
     },
     {
+      "sourceKey": "re-metrics:token:usde",
       "name": "USDe (delta-neutral ETH basis)",
       "pct": 0.1,
       "risk": "high",

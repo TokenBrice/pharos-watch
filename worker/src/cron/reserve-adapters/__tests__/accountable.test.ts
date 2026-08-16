@@ -233,7 +233,12 @@ describe("adaptAccountableDashboard", () => {
     ]);
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Other / unmapped Accountable buckets",
+      sourceKey: "accountable:noon:deployment:other",
       risk: "high",
+    }));
+    expect(result.slices).toContainEqual(expect.objectContaining({
+      name: "US Treasury Bills",
+      sourceKey: "accountable:noon:deployment:us-treasury-bills",
     }));
     expect(result.slices).not.toContainEqual(expect.objectContaining({
       name: "Funding Rate (BTC)",
