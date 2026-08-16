@@ -1,8 +1,5 @@
 import { formatCurrency } from "@shared/lib/format";
-import {
-  scoreToV9Grade,
-  v9GradeRange,
-} from "@shared/types/safety-score-v9-grade";
+import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 
@@ -37,7 +34,7 @@ export function buildV9GradeCounts(
     NR: 0,
   };
   for (const card of cards ?? []) {
-    counts[v9GradeRange(card.grade)] += 1;
+    counts[gradeRange(card.grade)] += 1;
   }
   return counts;
 }
@@ -70,7 +67,7 @@ export function filterAndSortV9Cards(
 ): V9ConsumerCard[] {
   const gradeFiltered = gradeFilter === "all"
     ? cards
-    : cards.filter((card) => v9GradeRange(card.grade) === gradeFilter);
+    : cards.filter((card) => gradeRange(card.grade) === gradeFilter);
   const filtered = pegFilter === "all"
     ? gradeFiltered
     : gradeFiltered.filter((card) => pegMatchesFilter(pegTypeMap.get(card.id), pegFilter));
@@ -105,7 +102,7 @@ export function groupV9CardsByGrade(
 ): Array<{ grade: string; cards: V9ConsumerCard[] }> {
   const groups = new Map<string, V9ConsumerCard[]>();
   for (const card of cards) {
-    const grade = v9GradeRange(card.grade);
+    const grade = gradeRange(card.grade);
     groups.set(grade, [...(groups.get(grade) ?? []), card]);
   }
   return GRADE_ORDER.flatMap((grade) => {
@@ -127,7 +124,7 @@ export function buildV9HeadlineStats(
   const totalSupply = ratedCards.reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
   const abSupply = ratedCards
     .filter((card) => {
-      const grade = v9GradeRange(card.grade);
+      const grade = gradeRange(card.grade);
       return grade === "A" || grade === "B";
     })
     .reduce((sum, card) => sum + (mcapMap.get(card.id) ?? 0), 0);
@@ -153,7 +150,7 @@ export function buildV9HeadlineStats(
     {
       label: "Ecosystem avg.",
       value: String(averageScore),
-      detail: scoreToV9Grade(averageScore),
+      detail: scoreToGrade(averageScore),
     },
     {
       label: "Supply in A/B",

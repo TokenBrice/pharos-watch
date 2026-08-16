@@ -8,8 +8,7 @@ import {
 } from "./safety-score-v9-public";
 import { V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
-
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
+import { Sha256Schema } from "./safety-schema-primitives";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 5;
 

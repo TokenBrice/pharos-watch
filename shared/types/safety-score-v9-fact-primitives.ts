@@ -1,9 +1,5 @@
 import { z } from "zod";
-
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
+import { CanonicalTextSchema } from "./safety-schema-primitives";
 
 export function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;

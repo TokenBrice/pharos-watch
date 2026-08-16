@@ -11,7 +11,8 @@
 export {
   GRADE_THRESHOLDS, REPORT_CARD_GRADE_RANK, UNKNOWN_REPORT_CARD_GRADE_RANK,
   getReportCardGradeRank, REPORT_CARD_GRADE_COLORS, GRADE_RADAR_COLORS,
-  scoreToGrade, gradeRange, type ReportCardGradeRange,
+  scoreToGrade, gradeRange, scoreToV9Grade,
+  V9_GRADE_THRESHOLDS, type ReportCardGradeRange,
 } from "./report-card-core";
 export {
   computeCollateralQualityFromReserves,

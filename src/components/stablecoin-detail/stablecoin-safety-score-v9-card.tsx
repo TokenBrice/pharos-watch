@@ -13,7 +13,7 @@ import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import type { SafetyScoreV9CurrentCard } from "@shared/types";
 import type { ReportCardsV9Response, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { scoreToV9Grade } from "@shared/types/safety-score-v9-grade";
+import { scoreToGrade } from "@shared/lib/report-card-core";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { AccessPosturePanel } from "@/components/stablecoin-detail/access-posture-panel";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
@@ -421,7 +421,7 @@ function PillarRow({
   const open = userOpen ?? false;
   const detailsId = useId();
   const hasDetails = pillar.breakdown !== null || pillar.componentCount > 0 || pillar.reasons.length > 0;
-  const scoreGrade = scoreToV9Grade(pillar.score);
+  const scoreGrade = scoreToGrade(pillar.score);
   const gradeMetadata = getSafetyGradeMetadata(scoreGrade);
   return (
     <div className="py-2">

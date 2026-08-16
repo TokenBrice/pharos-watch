@@ -1,18 +1,16 @@
 import type { ReportCardGrade } from "../types";
+import { V9_GRADE_THRESHOLDS } from "../types/safety-score-v9-grade";
 import { bandFromThresholds, clampScore } from "./math";
-import { V9_CANDIDATE_POLICY_V1 } from "./safety-score-v9/policy";
+
+export { V9_GRADE_THRESHOLDS, scoreToV9Grade } from "../types/safety-score-v9-grade";
 
 export type ReportCardGradeRange = "A" | "B" | "C" | "D" | "F" | "NR";
 
 /**
- * Presentation derives its grade bands from the active scoring policy so a
- * policy change cannot leave report-card labels on a different threshold set.
+ * Presentation uses the grade thresholds projected from the active V9 policy
+ * so a policy change cannot leave report-card labels on a different threshold set.
  */
-export const GRADE_THRESHOLDS: readonly { grade: ReportCardGrade; min: number }[] =
-  V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({
-    grade,
-    min: minScore,
-  }));
+export const GRADE_THRESHOLDS: readonly { grade: ReportCardGrade; min: number }[] = V9_GRADE_THRESHOLDS;
 
 export const REPORT_CARD_GRADE_RANK: Record<ReportCardGrade, number> = {
   NR: -1,

@@ -1,7 +1,5 @@
 import { z } from "zod";
-
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
+import { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
 
 /**
  * Persisted identity for the retired V8 projection and the compatible private
