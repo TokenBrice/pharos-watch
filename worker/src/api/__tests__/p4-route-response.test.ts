@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MAX_DEX_EXIT_ROUTE_OBSERVATIONS } from "@shared/types/market";
-import { normalizeDexScoreDetails } from "../dex-liquidity-response";
+import { normalizeDexScoreDetails } from "../../lib/dex-liquidity-response";
 
 describe("P4 route observation API compatibility", () => {
   it("marks old score-component envelopes as explicitly unknown", () => {

@@ -1,4 +1,4 @@
-import { logTelegramEvent } from "../lib/telegram-log";
+import { logTelegramEvent } from "./telegram-log";
 
 const QUIET_HOURS_TZ_FALLBACK_LOG_WINDOW_MS = 60 * 60 * 1000;
 

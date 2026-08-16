@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
-import { buildTelegramRecapDedupeKey } from "../telegram-recap-store";
+import { buildTelegramRecapDedupeKey } from "../../lib/telegram-recap-store";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];

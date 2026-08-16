@@ -2,8 +2,8 @@ import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { backfillTronFromLedger } from "./amount-recovery";
-import type { BlacklistRunBudget } from "./run-budget";
+import { backfillTronFromLedger } from "../../lib/blacklist/amount-recovery";
+import type { BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
 
 type ProcessedRows = {

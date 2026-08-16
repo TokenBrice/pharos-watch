@@ -6,7 +6,7 @@ import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
 import { buildInClause, chunkArray } from "../lib/db";
 import { classifyTelegramLogError, logTelegramEvent } from "../lib/telegram-log";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
-import { perCoinFlowCacheKey } from "../api/mint-burn-flows-shared";
+import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 

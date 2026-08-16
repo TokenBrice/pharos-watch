@@ -24,7 +24,7 @@ import {
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
 import type { DigestValidationIssue } from "./daily-digest/response";

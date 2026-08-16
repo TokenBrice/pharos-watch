@@ -11,7 +11,7 @@
  * hydration loaders.
  */
 
-import { isMissingTableError } from "../../../lib/db";
+import { isMissingTableError } from "../../db";
 
 const BOOTSTRAP_ALLOWED_MISSING_TABLE_SOURCES = new Set([
   "dex-prices",

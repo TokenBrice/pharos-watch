@@ -6,16 +6,15 @@ import {
 } from "@shared/lib/blacklist";
 import type { BlacklistAmountStatus, BlacklistStablecoin } from "@shared/types/market";
 import { fetchBlacklistAssetPriceFromCache } from "./row-preparation";
-import { shouldSuppressAsMirrorZero } from "./shared";
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../abort";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
   getBlacklistConfigsForSymbolAndChain,
   getBlacklistEventByTopic,
   type ContractEventConfig,
-} from "../../lib/blacklist-contracts";
-import { batchExecute, buildInClause, chunkArray } from "../../lib/db";
+} from "../blacklist-contracts";
+import { batchExecute, buildInClause, chunkArray } from "../db";
 import {
   type EtherscanLogEntry,
   type RateLimitedFetch,
@@ -24,15 +23,16 @@ import {
   decodeAddressWord,
   decodeUint256Word,
   readDataWord,
-} from "../../lib/evm-logs";
-import { ETHERSCAN_V2_BASE } from "../../lib/constants";
-import { toErrorMessage } from "../../lib/error-utils";
-import { fetchJsonWithRetry } from "../../lib/fetch-retry";
-import { fetchEvmTokenBalance } from "../blacklist/balance-providers";
-import type { BlacklistRow } from "../blacklist/shared";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
+} from "../evm-logs";
+import { ETHERSCAN_V2_BASE } from "../constants";
+import { toErrorMessage } from "../error-utils";
+import { fetchJsonWithRetry } from "../fetch-retry";
+import { fetchEvmTokenBalance } from "./balance-providers";
+import type { BlacklistRow } from "./shared";
+import type { ChainRpcConfig } from "../chain-registry";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
+import { buildRecoveredBlacklistAmountPersistence } from "./amount-persistence";
 
 // Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
@@ -674,43 +674,20 @@ export async function backfillAmounts(
 
     amountStatus = amount != null ? "resolved" : "provider_failed";
     if (amount != null) {
-      const shouldSuppress = shouldSuppressAsMirrorZero(config.stablecoin, row.event_type, amount);
-      // The SQL CASE-WHEN guard below ensures a row already marked
-      // `permanently_unavailable` is never downgraded by a later recovery pass.
-      const targetStatus = shouldSuppress ? "permanently_unavailable" : amountStatus;
-      stmts.push(
-        db
-          .prepare(
-            `UPDATE blacklist_events
-           SET amount = ?,
-               amount_native = ?,
-               amount_usd_at_event = ?,
-               amount_source = ?,
-               amount_status = CASE WHEN amount_status = 'permanently_unavailable' THEN amount_status ELSE ? END,
-               suppression_reason = COALESCE(suppression_reason, ?),
-               contract_address = COALESCE(contract_address, ?),
-               config_key = COALESCE(config_key, ?),
-               amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = ?,
-               amount_last_provider = ?
-           WHERE id = ?`,
-          )
-          .bind(
-            amount,
-            amount,
-            computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
-            amountSource,
-            targetStatus,
-            shouldSuppress ? "circle_mirror_zero_balance" : null,
-            config.contractAddress,
-            config.configKey,
-            attemptAt,
-            lastErrorClass,
-            lastProvider,
-            row.id,
-          ),
-      );
+      const persistence = buildRecoveredBlacklistAmountPersistence(db, {
+        eventId: row.id,
+        eventType: row.event_type,
+        config,
+        amount,
+        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount, assetPriceUsd),
+        amountSource,
+        amountStatus,
+        attemptedAt: attemptAt,
+        lastErrorClass,
+        lastProvider,
+      });
+      const { targetStatus } = persistence;
+      stmts.push(persistence.statement);
       stmts.push(
         buildBlacklistAmountRepairQueueUpdate(db, {
           eventId: row.id,

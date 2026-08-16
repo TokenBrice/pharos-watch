@@ -3,13 +3,13 @@ import { getCirculatingRaw, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@s
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { computeDEWS } from "../../lib/dews";
-import type { DEWSInput, DEWSResult, PoolEntry } from "../../lib/dews";
-import { isAuthoritativeDepegPegReference } from "../../lib/depeg-trust-policy";
+import { computeDEWS } from "../dews";
+import type { DEWSInput, DEWSResult, PoolEntry } from "../dews";
+import { isAuthoritativeDepegPegReference } from "../depeg-trust-policy";
 import type { ContagionAmplifiers, DewsScoringResult, DewsScoringState, PersistedJsonDecodeReason } from "./contracts";
-import { decodeJsonString } from "../../lib/cache-json";
-import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../../lib/constants";
-import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { decodeJsonString } from "../cache-json";
+import { CONTAGION_BUMP_DANGER, CONTAGION_BUMP_WARNING, CONTAGION_AMPLIFIER_CAP } from "../constants";
+import { CONTRACT_CONFIGS } from "../blacklist-contracts";
 
 const RawPoolDataSchema = z.object({
   tvlUsd: z.number().default(0),

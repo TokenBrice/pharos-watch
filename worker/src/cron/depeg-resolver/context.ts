@@ -18,7 +18,7 @@ import {
   getDexLiquidityTrendTolerances,
   selectTrendBaseline,
   type DexHistoryRow,
-} from "../../api/dex-liquidity-response";
+} from "../../lib/dex-liquidity-response";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import {
   loadRedemptionBackstopLiveSignalRows,

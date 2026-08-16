@@ -4,10 +4,10 @@ import {
 } from "@shared/lib/blacklist";
 import {
   upsertBlacklistCurrentBalance,
-} from "../../lib/blacklist-current-balances";
-import type { ContractEventConfig } from "../../lib/blacklist-contracts";
-import { type RateLimitedFetch } from "../../lib/evm-logs";
-import type { ChainRpcConfig } from "../../lib/chain-registry";
+} from "../blacklist-current-balances";
+import type { ContractEventConfig } from "../blacklist-contracts";
+import { type RateLimitedFetch } from "../evm-logs";
+import type { ChainRpcConfig } from "../chain-registry";
 import {
   fetchEvmTokenCurrentBalance,
   fetchTronTokenCurrentBalance,

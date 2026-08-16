@@ -22,7 +22,7 @@
  * `source-state-legacy.test.ts`), so this module is load-bearing.
  */
 
-import { decodeJsonString } from "../../../lib/cache-json";
+import { decodeJsonString } from "../../cache-json";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
 import type { PersistedJsonDecodeReason } from "../contracts";

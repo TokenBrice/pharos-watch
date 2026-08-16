@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { insertBlacklistRows } from "../persistence";
-import type { BlacklistRow } from "../shared";
+import type { BlacklistRow } from "../../../lib/blacklist/shared";
 
 function makeRow(overrides: Partial<BlacklistRow> = {}): BlacklistRow {
   return {

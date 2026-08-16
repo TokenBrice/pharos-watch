@@ -7,10 +7,10 @@ import {
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
-  buildEmptyDdrrSummary,
   buildDepegResolverReviewSnapshot,
   computeAndStoreDepegResolverReview,
 } from "../compute-depeg-resolver-review";
+import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
 
 afterEach(() => {

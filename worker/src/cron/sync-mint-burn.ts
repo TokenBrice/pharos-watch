@@ -1,4 +1,4 @@
-import { invalidateMintBurnFlowCaches } from "../api/mint-burn-flows-shared";
+import { invalidateMintBurnFlowCaches } from "../lib/mint-burn-flows-service";
 import {
   createBudget,
 } from "../lib/evm-logs";

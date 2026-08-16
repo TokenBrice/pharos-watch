@@ -176,8 +176,8 @@ vi.mock("../cron/sync-fx-rates", () => ({ syncFxRates: cronMocks.syncFxRates }))
 vi.mock("../cron/stability-index", () => ({ computeAndStoreStabilityIndex: cronMocks.computeAndStoreStabilityIndex }));
 vi.mock("../cron/compute-dews", () => ({ computeAndStoreDEWS: cronMocks.computeAndStoreDEWS }));
 vi.mock("../cron/project-tape", () => ({ projectTape: cronMocks.projectTape }));
-vi.mock("../cron/telegram-recap-store", async (importOriginal) => {
-  const original = await importOriginal<typeof import("../cron/telegram-recap-store")>();
+vi.mock("../lib/telegram-recap-store", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../lib/telegram-recap-store")>();
   return {
     ...original,
     cancelQueuedTelegramRecapsForRollout: cronMocks.cancelQueuedTelegramRecapsForRollout,

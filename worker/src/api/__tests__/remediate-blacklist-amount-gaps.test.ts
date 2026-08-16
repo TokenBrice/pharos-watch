@@ -6,12 +6,12 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 stubCryptoForAuth();
 
 vi.mock("../blacklist-summary", () => ({}));
-vi.mock("../../cron/blacklist/balance-providers", () => ({
+vi.mock("../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
 }));
 
 const { handleRemediateBlacklistAmountGapsTrusted } = await import("../remediate-blacklist-amount-gaps");
-const { fetchEvmTokenBalance } = await import("../../cron/blacklist/balance-providers");
+const { fetchEvmTokenBalance } = await import("../../lib/blacklist/balance-providers");
 
 const testChainRpcs = new Map<string, ChainRpcConfig>([
   ["avalanche", {
@@ -218,6 +218,11 @@ describe("handleRemediateBlacklistAmountGaps", () => {
         runMeta: { changes: 1 },
       },
       {
+        match: "FROM price_cache WHERE asset_id = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "DELETE FROM cache WHERE key = ?",
         rows: [],
         runMeta: { changes: 1 },
@@ -272,5 +277,65 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       "blacklist:gap-metrics:v1:86400:full",
       "blacklist:summary:producer:v1",
     ]);
+  });
+
+  it("cannot persist a Circle EURC mirror zero as resolved during admin remediation", async () => {
+    vi.mocked(fetchEvmTokenBalance).mockResolvedValue(0);
+
+    const db = mockD1([
+      {
+        match: "FROM blacklist_events",
+        rows: [{
+          id: "eurc-mirror-gap",
+          stablecoin: "EURC",
+          chain_id: "avalanche",
+          event_type: "blacklist",
+          address: "0xabc",
+          tx_hash: "0xmirror",
+          block_number: 26_857_200,
+          timestamp: 1_700_000_000,
+          amount_status: "recoverable_pending",
+          amount_attempt_count: 0,
+          amount_last_attempted_at: null,
+          contract_address: null,
+          config_key: null,
+        }],
+      },
+      {
+        match: "UPDATE blacklist_events",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+      {
+        match: "FROM price_cache WHERE asset_id = ?",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "DELETE FROM cache WHERE key = ?",
+        rows: [],
+        runMeta: { changes: 1 },
+      },
+    ], { requireMatch: true });
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST",
+      adminKey: "secret-key",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chainId: "avalanche", stablecoin: "EURC", dryRun: false }),
+    });
+
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      request,
+      chainRpcs: testChainRpcs,
+    });
+
+    expect(response.status).toBe(200);
+    const updateCall = db.getHistory().find((entry) => entry.sql.includes("UPDATE blacklist_events"));
+    expect(updateCall?.sql).toContain("CASE WHEN amount_status = 'permanently_unavailable'");
+    expect(updateCall?.binds[0]).toBe(0);
+    expect(updateCall?.binds[4]).toBe("permanently_unavailable");
+    expect(updateCall?.binds[5]).toBe("circle_mirror_zero_balance");
   });
 });

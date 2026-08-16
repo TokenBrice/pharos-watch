@@ -34,7 +34,7 @@ import {
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
   selectLargestEvents,
-} from "../mint-burn-flows-shared";
+} from "../../lib/mint-burn-flows-service";
 
 const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
 export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.stablecoinId));

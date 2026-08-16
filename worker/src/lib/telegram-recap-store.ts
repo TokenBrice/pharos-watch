@@ -1,4 +1,4 @@
-import { executeAtomicBatch } from "../lib/db";
+import { executeAtomicBatch } from "./db";
 import {
   TELEGRAM_RECAP_CADENCE,
   TELEGRAM_RECAP_DUE_PAGE_SIZE,

@@ -4,18 +4,18 @@ import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows } from "./current-balance-cache";
-import { type BlacklistRow, shouldSuppressAsMirrorZero } from "./shared";
-import { enrichRowBalances } from "./amount-recovery";
+import { syncCurrentBalanceCacheForRows } from "../../lib/blacklist/current-balance-cache";
+import { type BlacklistRow, shouldSuppressAsMirrorZero } from "../../lib/blacklist/shared";
+import { enrichRowBalances } from "../../lib/blacklist/amount-recovery";
 import { insertBlacklistRows } from "./persistence";
-import { type BlacklistRunBudget } from "./run-budget";
+import { type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import {
   buildCurrentBalanceSnapshotRows,
   buildLatestBlacklistRows,
   fetchBlacklistAssetPriceFromCache,
-} from "./row-preparation";
+} from "../../lib/blacklist/row-preparation";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
 // D1's practical SQL-variable ceiling can be lower than the nominal 100.

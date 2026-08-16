@@ -11,7 +11,7 @@ import {
   type TelegramProcessedUpdateBacklog,
 } from "../api/telegram-webhook-store";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
-import { pruneTelegramRecapTargets } from "./telegram-recap-store";
+import { pruneTelegramRecapTargets } from "../lib/telegram-recap-store";
 import {
   TELEGRAM_ADOPTION_SESSION_CACHE_PREFIX,
   TELEGRAM_ADOPTION_SESSION_TTL_SEC,

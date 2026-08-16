@@ -12,7 +12,7 @@ import { buildDedupeKey } from "./telegram-pending";
 import { buildPendingAlertEnqueueStatement } from "./telegram-pending/enqueue";
 import { emptyAlerts } from "./dispatch-telegram-routing";
 import { loadFreshFreezeAlerts, type FreezeAlert } from "./telegram-alert-freeze";
-import { isQuietHoursActive } from "./telegram-quiet-hours";
+import { isQuietHoursActive } from "../lib/telegram-quiet-hours";
 
 const FREEZE_CURSOR_KEY = "alert:freeze-tape-cursor";
 

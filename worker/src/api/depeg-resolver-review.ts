@@ -11,7 +11,7 @@ import {
   jsonFreshResponse,
 } from "../lib/api-utils";
 import { buildDdrMethodologyEnvelope } from "../lib/depeg-resolver-methodology";
-import { buildEmptyDdrrSummary } from "../cron/compute-depeg-resolver-review";
+import { buildEmptyDdrrSummary } from "../lib/depeg-resolver-review-response";
 import { loadDepegResolverReviewSnapshot } from "../lib/depeg-resolver-review-snapshot-cache";
 
 function degradedResponse(reason: string): DdrrResponse {

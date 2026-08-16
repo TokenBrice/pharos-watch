@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { projectTape, TAPE_PROJECTOR_JOBS } from "../project-tape";
+import { projectTape } from "../project-tape";
+import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 
 const SEC = 1_700_000_000;
 

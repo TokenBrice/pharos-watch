@@ -12,13 +12,13 @@ import {
   type FetchEvmEventsIncrementalResult,
 } from "./evm-source";
 import { fetchTronEventsIncremental, type FetchTronEventsIncrementalResult } from "./tron-source";
-import type { BlacklistScanResult } from "./shared";
+import type { BlacklistScanResult } from "../../lib/blacklist/shared";
 import { processFetchedBlacklistRows } from "./post-fetch";
 import {
   blacklistShouldStopBeforeNextConfig,
   blacklistSubrequestBudgetReached,
   type BlacklistRunBudget,
-} from "./run-budget";
+} from "../../lib/blacklist/run-budget";
 import {
   loadBlacklistConfigStates,
   recordApiErrorConfig,

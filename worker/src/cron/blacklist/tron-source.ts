@@ -5,8 +5,8 @@ import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { throwIfAborted } from "../../lib/abort";
-import { buildBlacklistRow, type BlacklistRow } from "./shared";
-import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
+import { buildBlacklistRow, type BlacklistRow } from "../../lib/blacklist/shared";
+import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { logWorkerEvent } from "../../lib/structured-log";
 
 interface TronEventResult {

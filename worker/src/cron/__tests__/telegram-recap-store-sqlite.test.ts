@@ -10,7 +10,7 @@ import {
   queueTelegramRecapTarget,
   recordTelegramRecapSkip,
   setTelegramRecapPreference,
-} from "../telegram-recap-store";
+} from "../../lib/telegram-recap-store";
 
 const NOW = 1_800_000_000;
 const dbs: DatabaseSync[] = [];

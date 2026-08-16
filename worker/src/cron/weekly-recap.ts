@@ -22,7 +22,7 @@ import {
 } from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import type { DigestValidationIssue } from "./daily-digest/response";

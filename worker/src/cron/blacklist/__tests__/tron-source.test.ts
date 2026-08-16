@@ -14,7 +14,7 @@ import { fetchTronEventsIncremental, parseTronEvent, validateTronPaginationUrl }
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
-import type { BlacklistRunBudget } from "../run-budget";
+import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 function findConfig(stablecoinId: string) {
   const config = CONTRACT_CONFIGS.find((c) => c.stablecoinId === stablecoinId && c.chain.chainId === "tron");

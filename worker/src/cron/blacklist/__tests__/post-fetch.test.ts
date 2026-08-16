@@ -3,10 +3,10 @@ import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../../lib/constants";
-import type { BlacklistRunBudget } from "../run-budget";
-import type { BlacklistRow } from "../shared";
+import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
+import type { BlacklistRow } from "../../../lib/blacklist/shared";
 
-vi.mock("../amount-recovery", () => ({
+vi.mock("../../../lib/blacklist/amount-recovery", () => ({
   enrichRowBalances: vi.fn(),
 }));
 
@@ -14,20 +14,20 @@ vi.mock("../persistence", () => ({
   insertBlacklistRows: vi.fn(),
 }));
 
-vi.mock("../current-balance-cache", () => ({
+vi.mock("../../../lib/blacklist/current-balance-cache", () => ({
   syncCurrentBalanceCacheForRows: vi.fn(),
 }));
 
-vi.mock("../row-preparation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../row-preparation")>();
+vi.mock("../../../lib/blacklist/row-preparation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/blacklist/row-preparation")>();
   return {
     ...actual,
     fetchBlacklistAssetPriceFromCache: vi.fn(async () => null),
   };
 });
 
-import { enrichRowBalances } from "../amount-recovery";
-import { syncCurrentBalanceCacheForRows } from "../current-balance-cache";
+import { enrichRowBalances } from "../../../lib/blacklist/amount-recovery";
+import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-balance-cache";
 import { insertBlacklistRows } from "../persistence";
 import { processFetchedBlacklistRows } from "../post-fetch";
 

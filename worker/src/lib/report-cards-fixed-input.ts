@@ -24,9 +24,6 @@ import {
   assertCommonFixedInputConsistency,
   assertSameIds,
   createFixedInputPayloadFields,
-  DexDeploymentSupplyCoverageSchema,
-  FreshnessEntrySchema,
-  NavPriceObservationSchema,
   normalizeCommonFixedInputRecords,
   SafetyScoreV9SupplyAttributionSchema,
   type DexDeploymentSupplyCoverage,
@@ -35,15 +32,10 @@ import {
   buildFixedInputCacheEntry,
   FixedInputCacheEnvelopeFields,
   parseFixedInputCacheEntry,
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
 } from "./report-cards-fixed-input-cache-codec";
 import { V9PublicationInputHealthSchema } from "./safety-score-v9-publication-assessment";
 
 export {
-  DexDeploymentSupplyCoverageSchema,
-  FreshnessEntrySchema,
-  NavPriceObservationSchema,
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
   SafetyScoreV9SupplyAttributionSchema,
   type DexDeploymentSupplyCoverage,
 };
@@ -330,16 +322,19 @@ function parseReportCardsFixedInput(value: unknown): ReportCardsFixedInput | Leg
 export function normalizeFixedInput(value: unknown): ReportCardsFixedInput {
   const input = parseReportCardsFixedInput(value);
   const redemptionBackstopMap = normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap);
-  const normalizedPayload: LegacyReportCardsFixedInputV3 = {
-    ...input,
+  const suppliedBaseInputGenerationId = "baseInputGenerationId" in input ? input.baseInputGenerationId : undefined;
+  const inputPayload = "baseInputGenerationId" in input
+    ? (({ baseInputGenerationId: _baseInputGenerationId, ...payload }) => payload)(input)
+    : input;
+  const normalizedPayload = LegacyReportCardsFixedInputV3Schema.parse({
+    ...inputPayload,
     activeAssetIds: [...input.activeAssetIds].sort(),
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
     ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeFixedDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap,
     collateralDriftCoins: [...input.collateralDriftCoins].sort((left, right) => left.id.localeCompare(right.id)),
-  };
-  const suppliedBaseInputGenerationId = "baseInputGenerationId" in input ? input.baseInputGenerationId : undefined;
+  });
   const normalized = ReportCardsFixedInputSchema.parse({
     ...normalizedPayload,
     baseInputGenerationId:

@@ -15,7 +15,7 @@ import {
   TELEGRAM_PENDING_PRIORITY,
 } from "../../lib/telegram-constants";
 import { recordTelegramDeliveryOutcomes } from "../../lib/telegram-usage-analytics";
-import { isQuietHoursActive } from "../telegram-quiet-hours";
+import { isQuietHoursActive } from "../../lib/telegram-quiet-hours";
 import {
   recordTelegramAlertTargetCancellations,
   recordTelegramAlertTargetStatuses,

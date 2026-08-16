@@ -24,13 +24,13 @@ import {
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
 
-export const FreshnessEntrySchema = z.object({
+const FreshnessEntrySchema = z.object({
   updatedAt: z.number().finite().nonnegative().nullable(),
   ageSeconds: z.number().finite().nonnegative().nullable(),
   stale: z.boolean(),
 });
 
-export const NavPriceObservationSchema = z.strictObject({
+const NavPriceObservationSchema = z.strictObject({
   priceUsd: z.number().finite().positive(),
   sourceId: z.string().min(1),
   observedAtSec: z.number().int().nonnegative(),
@@ -87,7 +87,7 @@ export const SafetyScoreV9SupplyAttributionSchema = z.discriminatedUnion("model"
 export type SafetyScoreV9SupplyAttribution = z.infer<typeof SafetyScoreV9SupplyAttributionSchema>;
 
 /** Per-asset DEX pool coverage of circulating supply. */
-export const DexDeploymentSupplyCoverageSchema = z.strictObject({
+const DexDeploymentSupplyCoverageSchema = z.strictObject({
   totalSupplyUsd: z.number().finite().positive(),
   observedSupplyUsd: z.number().finite().nonnegative(),
   verifiedNoPoolsSupplyUsd: z.number().finite().nonnegative(),

@@ -1,7 +1,7 @@
 import type { PegRateSource } from "@shared/lib/peg-rates";
 import type { StablecoinData } from "@shared/types/market";
 import type { YieldRankChangeAttribution, YieldSourceRisk } from "@shared/types/yield";
-import type { DEWSResult } from "../../lib/dews";
+import type { DEWSResult } from "../dews";
 
 export interface SourceFailure {
   source: string;

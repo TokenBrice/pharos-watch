@@ -23,8 +23,8 @@ import {
   type EtherscanLogEntry,
   type RateLimitedFetch,
 } from "../../lib/evm-logs";
-import { buildBlacklistRow, type BlacklistRow, type BlacklistScanCoverageOutcome } from "./shared";
-import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
+import { buildBlacklistRow, type BlacklistRow, type BlacklistScanCoverageOutcome } from "../../lib/blacklist/shared";
+import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 
 const RPC_LOG_SCAN_CHAIN_IDS = new Set(["base", "optimism", "avalanche", "bsc", "gnosis"]);
 const INDEXING_SAFETY_SEC = 15 * 60;

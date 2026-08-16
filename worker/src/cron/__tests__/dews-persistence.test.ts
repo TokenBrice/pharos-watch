@@ -6,8 +6,8 @@ import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlit
 import {
   persistDewsResults,
   reconcileDailyDewsHistorySnapshot,
-} from "../dews/persistence";
-import type { DewsComputedRow } from "../dews/contracts";
+} from "../../lib/dews/persistence";
+import type { DewsComputedRow } from "../../lib/dews/contracts";
 import { buildDewsStablecoinIdsDigest, readDewsPublishedGenerationResult } from "../../lib/dews-publication-pointer";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { handleStressSignals } from "../../api/stress-signals";

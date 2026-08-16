@@ -18,13 +18,14 @@ import {
 } from "../lib/blacklist-contracts";
 import { createBudget, createRateLimiter } from "../lib/evm-logs";
 import type { ChainRpcConfig } from "../lib/chain-registry";
-import { recoverBlacklistAmountForRow } from "../cron/blacklist/amount-recovery";
+import { recoverBlacklistAmountForRow } from "../lib/blacklist/amount-recovery";
+import { buildRecoveredBlacklistAmountPersistence } from "../lib/blacklist/amount-persistence";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
   type BlacklistRunBudget,
-} from "../cron/blacklist/run-budget";
-import { fetchBlacklistAssetPriceFromCache } from "../cron/blacklist/row-preparation";
+} from "../lib/blacklist/run-budget";
+import { fetchBlacklistAssetPriceFromCache } from "../lib/blacklist/row-preparation";
 import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
@@ -283,34 +284,18 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       resolved++;
       if (recovery.amount === 0) resolvedZero++;
       updates.push(
-        db
-          .prepare(
-            `UPDATE blacklist_events
-           SET amount = ?,
-               amount_native = ?,
-               amount_usd_at_event = ?,
-               amount_source = ?,
-               amount_status = ?,
-               contract_address = COALESCE(contract_address, ?),
-               config_key = COALESCE(config_key, ?),
-               amount_attempt_count = COALESCE(amount_attempt_count, 0) + 1,
-               amount_last_attempted_at = ?,
-               amount_last_error_class = NULL,
-               amount_last_provider = ?
-           WHERE id = ?`,
-          )
-          .bind(
-            recovery.amount,
-            recovery.amount,
-            recovery.amountUsd,
-            recovery.amountSource,
-            recovery.amountStatus,
-            config.contractAddress,
-            config.configKey,
-            attemptAt,
-            recovery.lastProvider,
-            row.id,
-          ),
+        buildRecoveredBlacklistAmountPersistence(db, {
+          eventId: row.id,
+          eventType: row.event_type,
+          config,
+          amount: recovery.amount,
+          amountUsd: recovery.amountUsd,
+          amountSource: recovery.amountSource,
+          amountStatus: recovery.amountStatus,
+          attemptedAt: attemptAt,
+          lastErrorClass: recovery.lastErrorClass,
+          lastProvider: recovery.lastProvider,
+        }).statement,
       );
     }
 

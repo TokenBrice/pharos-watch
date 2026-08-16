@@ -1,6 +1,6 @@
-import { safeJsonParse } from "../lib/api-utils";
-import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "../lib/dex-liquidity";
-import { DexLiquidityCronMetadataSchema } from "../lib/schemas";
+import { safeJsonParse } from "./api-utils";
+import { CURRENT_DEPLOYMENT_KEYS, deploymentKey } from "./dex-liquidity";
+import { DexLiquidityCronMetadataSchema } from "./schemas";
 import {
   ExitRouteObservationCoverageSchema,
   ExitRouteObservationSchema,
@@ -9,7 +9,7 @@ import {
   type ExitRouteObservationCoverage,
   type LiquidityPoolSourceFamily,
 } from "@shared/types/market";
-import { toErrorMessage } from "../lib/error-utils";
+import { toErrorMessage } from "./error-utils";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
 const TREND_24H_TOLERANCE_SEC = 12 * 3600;

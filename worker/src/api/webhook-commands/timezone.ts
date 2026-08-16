@@ -1,6 +1,6 @@
 import { escapeHtml } from "../../lib/telegram";
 import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
-import { isValidIanaTimezone } from "../../cron/telegram-quiet-hours";
+import { isValidIanaTimezone } from "../../lib/telegram-quiet-hours";
 import {
   loadSubscriberByChat,
   setSubscriberTimezone,

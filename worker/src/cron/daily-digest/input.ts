@@ -31,7 +31,7 @@ import {
 import { markCollectorDegraded } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";

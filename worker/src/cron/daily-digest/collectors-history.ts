@@ -1,7 +1,7 @@
 import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { SECONDS } from "../../lib/time-constants";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
 
 export async function collectTotalMcapAth(

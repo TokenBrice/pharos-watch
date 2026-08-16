@@ -1,5 +1,4 @@
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { derivePegRates } from "@shared/lib/peg-rates";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -11,19 +10,17 @@ import {
 } from "../lib/api-utils";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
-import { getCache } from "../lib/db-cache";
 import { computeDEWS } from "../lib/dews";
 import type { DEWSInput } from "../lib/dews";
-import { runAdminRoute } from "../lib/route-wrappers";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
-import { computeAndStoreDEWS } from "../cron/compute-dews";
-import { buildDewsScoringResult } from "../cron/dews/scoring";
+import { assembleDewsScoringInput } from "../lib/dews/input-assembly";
+import { buildDewsScoringResult } from "../lib/dews/scoring";
 import type {
   MalformedPersistedInput,
   PersistedJsonDecodeReason,
   SourceFailure,
-} from "../cron/dews/contracts";
-import { loadDewsSourceState } from "../cron/dews/source-state";
+} from "../lib/dews/contracts";
+import { runAdminRoute } from "../lib/route-wrappers";
+import { computeAndStoreDEWS } from "../lib/dews/service";
 import { parseOptionalDayWindow } from "./backfill-depegs-window";
 
 interface DepegEventRow {
@@ -61,7 +58,6 @@ interface HistoryRowSample {
   snapshotDate: number;
 }
 
-const DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY = "dews:bootstrap-complete";
 const DEWS_TRUST_REPAIR_WINDOW_START_DAY = 1_773_014_400; // 2026-03-09T00:00:00Z (live $1M DEX trust floor launch)
 const HISTORY_SAMPLE_LIMIT = 50;
 
@@ -77,13 +73,7 @@ function parseRepairMode(raw: string | null): DewsRepairMode | null {
 }
 
 async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview | Response> {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
-  if (stablecoinsCache.kind !== "ok") {
-    return errorResponse(503, `DEWS refresh preview unavailable: stablecoins cache ${stablecoinsCache.reason}`);
-  }
-
   const nowSec = Math.floor(Date.now() / 1000);
-  const bootstrapPending = (await getCache(db, DEWS_BOOTSTRAP_SENTINEL_CACHE_KEY)) == null;
   const sourceFailures: SourceFailure[] = [];
   const malformedPersistedInputs: MalformedPersistedInput[] = [];
   let validationFailures = 0;
@@ -118,22 +108,27 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
     });
   };
 
-  const assetById = new Map(stablecoinsCache.payload.peggedAssets.map((asset) => [asset.id, asset]));
-  const { rates: pegRates } = derivePegRates(
-    stablecoinsCache.payload.peggedAssets,
-    PSI_ELIGIBLE_META_BY_ID,
-    stablecoinsCache.payload.fxFallbackRates,
-  );
-  const sourceState = await loadDewsSourceState({
+  const assembled = await assembleDewsScoringInput({
     db,
     nowSec,
-    bootstrapPending,
     registerSourceFailure,
     registerMalformedPersistedInput,
   });
+  if (assembled.kind !== "ok") {
+    return errorResponse(503, `DEWS refresh preview unavailable: stablecoins cache ${assembled.reason}`);
+  }
+  const {
+    assetById,
+    pegRates,
+    pegRateSources,
+    pegRateContributorCounts,
+    sourceState,
+  } = assembled;
   const { results, insufficientDataCount } = buildDewsScoringResult({
     assetById,
     pegRates,
+    pegRateSources,
+    pegRateContributorCounts,
     sourceState,
     registerMalformedPersistedInput,
   });
@@ -145,7 +140,10 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
     targetStablecoinIds: results.map((row) => row.stablecoinId),
     insufficientDataCount,
     validationFailures,
-    sourceCoverage: sourceState.sourceCoverage,
+    sourceCoverage: {
+      stablecoins: assembled.eligibleAssets.length,
+      ...sourceState.sourceCoverage,
+    },
     sourceFailures,
     malformedPersistedInputs,
   };

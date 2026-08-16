@@ -13,7 +13,7 @@ import { planTelegramPersonalizedRecaps } from "../../cron/telegram-recap-planne
 import {
   cancelQueuedTelegramRecapsForRollout,
   type TelegramRecapRolloutCleanupResult,
-} from "../../cron/telegram-recap-store";
+} from "../../lib/telegram-recap-store";
 import { resolveTelegramRecapRolloutPolicy } from "@shared/lib/telegram-recap-rollout";
 import {
   TELEGRAM_RECAP_PLANNER_SOFT_DEADLINE_MS,

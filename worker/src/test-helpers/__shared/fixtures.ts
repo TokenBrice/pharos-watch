@@ -9,7 +9,7 @@ import type {
   BlacklistStablecoin,
   StablecoinData,
 } from "@shared/types/market";
-import type { DexLiquidityRow } from "../../api/dex-liquidity-response";
+import type { DexLiquidityRow } from "../../lib/dex-liquidity-response";
 import type { ApiKeyRow } from "../../lib/api-key-core";
 import { makeStablecoin, TEST_STABLECOIN_TIMESTAMP_SEC } from "@shared/test-utils/stablecoin";
 

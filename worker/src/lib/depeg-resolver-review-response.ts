@@ -6,7 +6,7 @@ import {
   type DdrrSummary,
 } from "@shared/types/depeg-resolver-review";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { buildDdrMethodologyEnvelope } from "../../lib/depeg-resolver-methodology";
+import { buildDdrMethodologyEnvelope } from "./depeg-resolver-methodology";
 
 /** Published as `_meta.assessmentRowLimit`; retained for response-shape compatibility. */
 const DDRR_ASSESSMENT_ROW_CAP = 20_000;

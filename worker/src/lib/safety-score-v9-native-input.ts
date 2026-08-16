@@ -60,7 +60,9 @@ export const NativeDexLiquidityRowSchema = z
       ...row,
     });
     if (!canonical.success) {
-      for (const issue of canonical.error.issues) ctx.addIssue(issue);
+      for (const issue of canonical.error.issues) {
+        ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
+      }
     }
   });
 
@@ -296,14 +298,14 @@ export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input
     throw new Error(`Malformed native V9 input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
   }
   const input = parsed.data;
-  const normalizedPayload = {
+  const normalizedPayload = NativeSafetyScoreV9InputIntakeSchema.parse({
     ...input,
     activeAssetIds: [...input.activeAssetIds].sort(),
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
     ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeNativeDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap: normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap),
-  };
+  });
   const suppliedBaseInputGenerationId = input.baseInputGenerationId;
   const normalized = NativeSafetyScoreV9InputSchema.parse({
     ...normalizedPayload,

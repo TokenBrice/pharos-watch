@@ -174,7 +174,7 @@ describe("native Safety Score V9 input", () => {
         updatedAt: DEX_UPDATED_AT,
         exitRouteObservations: [],
         exitRouteObservationCoverage: {
-          status: "populated",
+          status: "populated" as const,
           capabilityMatrixVersion: "fixture-v1",
           retainedPoolCount: 1,
           observationCount: 1,

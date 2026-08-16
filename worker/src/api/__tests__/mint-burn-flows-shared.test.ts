@@ -7,9 +7,17 @@ import {
   ETHEREUM_CHAIN_ID,
   readMintBurnCronSnapshot,
   selectLargestEvents,
-} from "../mint-burn-flows-shared";
+} from "../../lib/mint-burn-flows-service";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { FLOW_CACHE_PREFIX, readCachedFlow } from "../mint-burn-flows-shared";
+
+describe("legacy mint/burn shared compatibility", () => {
+  it("retains the allowlisted cache exports at their historical path", () => {
+    expect(FLOW_CACHE_PREFIX).toBe("mint-burn-flows:v3");
+    expect(typeof readCachedFlow).toBe("function");
+  });
+});
 
 describe("cachedFlowFallbackResponse", () => {
   beforeEach(() => {

@@ -1,4 +1,4 @@
-import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
+import type { CronProgressReporter, CronResult } from "../cron-logger";
 
 export type DewsProgressMetadata = {
   rowsComputed?: number;

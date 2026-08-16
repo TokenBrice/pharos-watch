@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinData } from "@shared/types/market";
-import { buildDewsScoringResult } from "../scoring";
-import type { DewsSourceState } from "../contracts";
+import { buildDewsScoringResult } from "../../../lib/dews/scoring";
+import type { DewsSourceState } from "../../../lib/dews/contracts";
 
 function createAsset(id: string): StablecoinData {
   return {

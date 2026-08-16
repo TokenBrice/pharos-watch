@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
-import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../amount-repair-queue";
+import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";

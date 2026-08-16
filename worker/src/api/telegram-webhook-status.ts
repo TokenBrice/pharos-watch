@@ -2,7 +2,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../lib/dex-liquidity";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
-import { perCoinFlowCacheKey } from "./mint-burn-flows-shared";
+import { perCoinFlowCacheKey } from "../lib/mint-burn-flows-service";
 import { getCache } from "../lib/db-cache";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadStressSignalCurrentRowForCoin } from "../lib/stress-signals-current-rows";

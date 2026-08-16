@@ -1,4 +1,4 @@
-import { budgetExhausted, createBudget, type SubrequestBudget } from "../../lib/evm-logs";
+import { budgetExhausted, createBudget, type SubrequestBudget } from "../evm-logs";
 
 export interface BlacklistRunBudget {
   subrequestBudget: SubrequestBudget;

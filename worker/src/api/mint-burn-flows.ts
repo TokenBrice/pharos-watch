@@ -37,7 +37,7 @@ import {
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
   withMintBurnFlowFallback,
-} from "./mint-burn-flows-shared";
+} from "../lib/mint-burn-flows-service";
 import {
   appendSyncWarning,
   buildAggregateQueryParams,

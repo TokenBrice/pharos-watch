@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isBootstrapAllowedMissingTableSource,
   resolveBootstrapAllowed,
-} from "../fallback";
+} from "../../../../lib/dews/source-state/fallback";
 
 const ALLOWLISTED_SOURCES = [
   "dex-prices",

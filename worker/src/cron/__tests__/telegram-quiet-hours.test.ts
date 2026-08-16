@@ -5,7 +5,7 @@ import {
   isQuietHoursActive,
   isValidIanaTimezone,
   resetQuietHoursFallbackTelemetryForTests,
-} from "../telegram-quiet-hours";
+} from "../../lib/telegram-quiet-hours";
 
 const hour = (hourUtc: number) => hourUtc * 3600;
 

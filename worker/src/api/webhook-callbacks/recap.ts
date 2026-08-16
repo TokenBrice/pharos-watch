@@ -7,7 +7,7 @@ import { recordTelegramUsageEvent } from "../../lib/telegram-usage-analytics";
 import {
   getTelegramRecapPreference,
   setTelegramRecapPreference,
-} from "../../cron/telegram-recap-store";
+} from "../../lib/telegram-recap-store";
 import { loadSubscriberByChat, unixNow } from "../telegram-webhook-store";
 import { createTelegramWebhookIntent } from "../telegram-webhook-effect-fence";
 import {

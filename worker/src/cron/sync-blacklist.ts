@@ -4,13 +4,13 @@ import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";
 import { reportCronProgress, withBudgetMetadata } from "../lib/cron-progress";
-import { backfillAmounts, type BlacklistAmountBackfillResult } from "./blacklist/amount-recovery";
+import { backfillAmounts, type BlacklistAmountBackfillResult } from "../lib/blacklist/amount-recovery";
 import {
   blacklistRuntimeBudgetReached,
   blacklistSubrequestBudgetReached,
   createBlacklistRunBudget,
   type BlacklistRunBudget,
-} from "./blacklist/run-budget";
+} from "../lib/blacklist/run-budget";
 import { applyTronLedgerMirrorPass, deriveSyncBlacklistStatus } from "./blacklist/sync-support";
 import { toErrorMessage } from "../lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";

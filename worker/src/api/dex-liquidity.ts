@@ -16,7 +16,7 @@ import {
   type DexHistoryRow,
   type DexLiquidityRow,
   type DexPriceRow,
-} from "./dex-liquidity-response";
+} from "../lib/dex-liquidity-response";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 

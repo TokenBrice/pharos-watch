@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillTape } from "../backfill-tape";
-import { TAPE_PROJECTOR_JOBS } from "../../cron/project-tape";
+import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 
 stubCryptoForAuth();
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStressSignalPruneIds } from "../persistence";
+import { computeStressSignalPruneIds } from "../../../lib/dews/persistence";
 
 describe("DEWS prune set", () => {
   it("preserves frozen coin rows", () => {

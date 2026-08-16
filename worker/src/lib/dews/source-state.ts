@@ -1,5 +1,5 @@
 /**
- * DEWS source-state orchestrator.
+ * Domain-level DEWS source-state orchestrator.
  *
  * Loads each upstream slice and assembles the `DewsSourceState`
  * consumed by downstream scoring. Each slice's loader lives in
