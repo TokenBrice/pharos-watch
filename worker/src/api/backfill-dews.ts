@@ -3,9 +3,11 @@ import { derivePegRates } from "@shared/lib/peg-rates";
 import { resolvePsiInclusiveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import {
   errorResponse,
   jsonResponse,
+  methodNotAllowedResponse,
 } from "../lib/api-utils";
 import { BACKTEST_ANCHORS, BACKTEST_NEGATIVE_CONTROLS } from "../lib/backtest-anchors";
 import { BACKTEST_LOOKBACK_DAYS } from "../lib/constants";
@@ -64,7 +66,7 @@ const DEWS_TRUST_REPAIR_WINDOW_START_DAY = 1_773_014_400; // 2026-03-09T00:00:00
 const HISTORY_SAMPLE_LIMIT = 50;
 
 function getTodayMidnightUtcSec(nowSec = Math.floor(Date.now() / 1000)): number {
-  return Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
+  return bucketUnixSecondsToUtcDay(nowSec);
 }
 
 function parseRepairMode(raw: string | null): DewsRepairMode | null {
@@ -379,7 +381,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
 
     for (let d = 7; d >= 0; d--) {
       const targetDay = event.started_at - d * DAY_SECONDS;
-      const dayMidnight = Math.floor(targetDay / DAY_SECONDS) * DAY_SECONDS;
+      const dayMidnight = bucketUnixSecondsToUtcDay(targetDay);
 
       const current = coinSupply?.get(dayMidnight) ?? 0;
       const prevDay = coinSupply?.get(dayMidnight - DAY_SECONDS) ?? current;
@@ -616,11 +618,9 @@ export function handleBackfillDEWS({
         }
         if (repairMode) {
           if (!dryRun) {
-            return new Response(
-              JSON.stringify({
-                error: "Method not allowed. GET supports repair previews only with dry-run=true; use POST for DEWS repair mutations.",
-              }),
-              { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
+            return methodNotAllowedResponse(
+              "Method not allowed. GET supports repair previews only with dry-run=true; use POST for DEWS repair mutations.",
+              ["POST"],
             );
           }
           return repairMode === "refresh-current"

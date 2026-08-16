@@ -3,8 +3,17 @@ import {
   LIQUIDITY_METHODOLOGY_CHANGELOG_PATH,
   PSI_METHODOLOGY_CHANGELOG_PATH,
 } from "@shared/lib/methodology-versions/constants";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { projectMethodologyBumps } from "../methodology";
+
+const TAPE_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
+}
 
 function extractInsertBinds(db: MockD1Database): unknown[][] {
   return db
@@ -23,7 +32,7 @@ function extractSourceUrlsForType(db: MockD1Database, type: string): Set<unknown
 
 describe("methodology projector", () => {
   it("uses shared public changelog paths for Liquidity Score and PSI source URLs", async () => {
-    const db = mockD1([
+    const db = mockTapeD1([
       { match: "FROM tape_events WHERE type = ?", rows: [] },
     ]) as MockD1Database;
 

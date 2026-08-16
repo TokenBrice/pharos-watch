@@ -5,6 +5,8 @@ import {
   jsonFreshResponse,
   parseBooleanParam,
   parseJsonCursorParam,
+  parseQueryParams,
+  resolveOrReject,
   buildFreshnessMeta,
 } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
@@ -16,6 +18,8 @@ import {
   type TapeEvent,
   type TapeEventSeverity,
 } from "@shared/types/tape-event";
+import { PEG_CURRENCY_VALUES } from "@shared/types/core";
+import { resolveChainId } from "@shared/lib/chains";
 
 const DEFAULT_LIMIT = 50;
 const MIN_LIMIT = 1;
@@ -27,6 +31,7 @@ const MAX_FILTER_EPOCH_MS = Date.UTC(2100, 0, 1);
 const FRESHNESS_MAX_AGE_SEC = 600;
 
 const SEVERITY_SET = new Set<string>(TAPE_EVENT_SEVERITY_VALUES);
+const PEG_CURRENCY_SET = new Set<string>(PEG_CURRENCY_VALUES);
 
 function isPrefixWildcard(value: string): boolean {
   return value.endsWith(".*");
@@ -115,15 +120,17 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
   const until = parseIntOrNull(params.get("until"));
   if (until === "invalid") return errorResponse(400, "Invalid until: must be epoch ms");
 
-  const limitRaw = params.get("limit");
-  let limit = DEFAULT_LIMIT;
-  if (limitRaw != null && limitRaw !== "") {
-    if (!/^\d+$/.test(limitRaw)) return errorResponse(400, "Invalid limit: must be a number");
-    limit = Number(limitRaw);
-    if (limit < MIN_LIMIT || limit > MAX_LIMIT) {
-      return errorResponse(400, `Invalid limit: must be between ${MIN_LIMIT} and ${MAX_LIMIT}`);
-    }
-  }
+  const pagination = parseQueryParams(params, {
+    limit: {
+      type: "int",
+      default: DEFAULT_LIMIT,
+      min: MIN_LIMIT,
+      max: MAX_LIMIT,
+      rangePolicy: "reject",
+    },
+  });
+  if (pagination instanceof Response) return pagination;
+  const { limit } = pagination;
 
   const includeTotal = parseBooleanParam(params.get("includeTotal"), "includeTotal", false);
   if (includeTotal instanceof Response) return includeTotal;
@@ -131,12 +138,26 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
   const cursor = parseCursor(params.get("cursor"));
   if (cursor instanceof Response) return cursor;
 
-  const coinIds = params
-    .getAll("coin")
-    .map((raw) => raw.trim())
-    .filter(Boolean);
-  const pegCurrency = params.get("pegCurrency");
-  const chain = params.get("chain");
+  const coinIds: string[] = [];
+  for (const rawCoin of params.getAll("coin")) {
+    const coin = rawCoin.trim();
+    if (!coin) continue;
+    const resolved = resolveOrReject(coin);
+    if (resolved instanceof Response) return resolved;
+    coinIds.push(resolved.canonicalId);
+  }
+
+  const pegCurrencyRaw = params.get("pegCurrency")?.trim() ?? "";
+  const pegCurrency = pegCurrencyRaw.toUpperCase();
+  if (pegCurrency && !PEG_CURRENCY_SET.has(pegCurrency)) {
+    return errorResponse(400, `Invalid pegCurrency: must be one of ${PEG_CURRENCY_VALUES.join(", ")}`);
+  }
+
+  const chainRaw = params.get("chain")?.trim() ?? "";
+  const chain = chainRaw ? resolveChainId(chainRaw) : null;
+  if (chainRaw && !chain) {
+    return errorResponse(400, "Invalid chain: unknown chain");
+  }
   const qRaw = params.get("q");
   const q = qRaw ? qRaw.trim().toLowerCase() : "";
   if (q.length > MAX_Q_LENGTH) {
@@ -147,8 +168,8 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     typeExact: typeFilters.exact,
     typePrefixes: typeFilters.prefixes,
     coinIds,
-    pegCurrency: pegCurrency && pegCurrency.length > 0 ? pegCurrency : null,
-    chain: chain && chain.length > 0 ? chain : null,
+    pegCurrency: pegCurrency || null,
+    chain,
     severitiesAllowed,
     since,
     until,

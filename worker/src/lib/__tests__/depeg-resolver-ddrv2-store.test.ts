@@ -3074,6 +3074,17 @@ describe("DDRv2 storage migrations and stores", () => {
       db.sqlite
         .prepare(
           `UPDATE depeg_resolver_publication_snapshots_v2
+              SET base_payload_bytes = 1
+            WHERE snapshot_token = ?`,
+        )
+        .run("ddrpub:test:bad-json");
+      await expect(loadLatestPublicationManifest(db)).rejects.toThrow(
+        /exceeds its declared uncompressed byte length/,
+      );
+
+      db.sqlite
+        .prepare(
+          `UPDATE depeg_resolver_publication_snapshots_v2
            SET base_payload_bytes = ?, public_prediction_ids_json = ?
            WHERE snapshot_token = ?`,
         )

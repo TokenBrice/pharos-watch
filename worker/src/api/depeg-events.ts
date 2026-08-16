@@ -213,7 +213,10 @@ async function loadThresholdCrossingCount(db: D1Database, stablecoinId: string):
 export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Response> => {
     const params = url.searchParams;
     const stablecoin = params.get("stablecoin");
-    const active = params.get("active");
+    const active = parseBooleanParam(params.get("active"), "active", false);
+    if (active instanceof Response) {
+      return active;
+    }
     const includePending = parseBooleanParam(params.get("includePending"), "includePending", false);
     if (includePending instanceof Response) {
       return includePending;
@@ -232,7 +235,7 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       filterBindings.push(resolved.canonicalId);
       stablecoinId = resolved.canonicalId;
     }
-    if (active === "true") {
+    if (active) {
       conditions.push("ended_at IS NULL");
     }
     const activeIncidentProjectionLoad = await loadActiveIncidentProjections(db, stablecoinId);
@@ -264,7 +267,7 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       buildExtraBody: async (_events, total, latestEventTs) => {
         const methodologyVersion = getDepegDewsMethodologyVersionAt(latestEventTs);
         const thresholdCrossingCount = stablecoinId != null &&
-          active !== "true" &&
+          !active &&
           params.get("includeTotal") !== "false"
           ? await loadThresholdCrossingCount(db, stablecoinId)
           : null;

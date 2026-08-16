@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
+import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
@@ -91,6 +92,54 @@ function makeDepegEventRow(overrides: Partial<{
 }
 
 describe("handlePegSummary", () => {
+  it("uses the exhaustive canonical currency-to-peg-type vocabulary", () => {
+    const expected: Record<PegCurrency, string | undefined> = {
+      USD: "peggedUSD",
+      EUR: "peggedEUR",
+      GBP: "peggedGBP",
+      CHF: "peggedCHF",
+      BRL: "peggedREAL",
+      RUB: "peggedRUB",
+      JPY: "peggedJPY",
+      KRW: "peggedKRW",
+      IDR: "peggedIDR",
+      INR: "peggedINR",
+      MYR: "peggedMYR",
+      SGD: "peggedSGD",
+      HKD: "peggedHKD",
+      TRY: "peggedTRY",
+      AUD: "peggedAUD",
+      ZAR: "peggedZAR",
+      CAD: "peggedCAD",
+      CNY: "peggedCNY",
+      CNH: "peggedCNH",
+      PHP: "peggedPHP",
+      MXN: "peggedMXN",
+      VND: "peggedVND",
+      UAH: "peggedUAH",
+      ARS: "peggedARS",
+      KGS: "peggedKGS",
+      NGN: "peggedNGN",
+      XOF: "peggedXOF",
+      COP: "peggedCOP",
+      CLP: "peggedCLP",
+      GHS: "peggedGHS",
+      KES: "peggedKES",
+      PEN: "peggedPEN",
+      GOLD: "peggedGOLD",
+      SILVER: "peggedSILVER",
+      VAR: undefined,
+      OTHER: undefined,
+    };
+
+    expect(Object.fromEntries(
+      PEG_CURRENCY_VALUES.map((currency) => [
+        currency,
+        __pegSummaryTestHooks.normalizePegTypeFromCurrency(currency),
+      ]),
+    )).toEqual(expected);
+  });
+
   it("returns 503 when stablecoins cache is missing", async () => {
     const db = mockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },

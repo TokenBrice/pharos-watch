@@ -1,5 +1,6 @@
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import { MINI_APP_PAYLOAD_NAMES, formatCoinPayload } from "@shared/lib/telegram-mini-app-payloads";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { escapeHtml } from "./telegram";
 import {
   TELEGRAM_MESSAGE_CHUNK_LIMIT,
@@ -129,8 +130,8 @@ function formatDurationMinutes(durationMinutes: number): string {
 }
 
 function formatPrice(value: number, currency = "USD", fractionDigits = 4): string {
-  const prefix = ({ USD: "$", EUR: "€", GBP: "£", JPY: "¥" } as const)[currency as "USD" | "EUR" | "GBP" | "JPY"]
-    ?? `${currency} `;
+  const normalizedCurrency = currency.trim().toUpperCase();
+  const prefix = getPegTaxonomyByCurrency(normalizedCurrency)?.symbol ?? `${normalizedCurrency || currency} `;
   return `${prefix}${value.toFixed(fractionDigits)}`;
 }
 

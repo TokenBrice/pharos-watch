@@ -1,5 +1,4 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
-import { throwIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -7,7 +6,6 @@ import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
-  type EvmBlockHeader,
 } from "./evm-rpc";
 import {
   DECIMALS_SELECTOR,
@@ -15,12 +13,9 @@ import {
   encodeAddress,
 } from "./evm-selectors";
 import {
-  buildReviewedDeploymentRouteInventory,
-  deriveReviewedDeploymentUnitPartition,
   expectedCentrifugeDeploymentIdentity,
   normalizeReviewedDeploymentAddress,
   reviewedDeploymentIdentityValidationError,
-  reviewedDeploymentObservationTimingIssue,
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
@@ -28,37 +23,21 @@ import {
   decodeEvmHexBytes,
   decodeEvmUint256,
   fetchReviewedDeploymentSolanaObservation,
+  observeReviewedDeploymentUnitPartitionAttempt,
+  rewindEvmBlockHeaderToScoringClock,
   safetyScoreV9EvmObservationOptions,
   type SafetyScoreV9SolanaRpcFetcher,
+  type ReviewedDeploymentObservationAttempt,
+  type ReviewedDeploymentObservationRejectionCode,
+  type ReviewedDeploymentObservationResult,
 } from "./safety-score-v9-supply-observation-primitives";
 
 const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const WARDS_SELECTOR = "0xbf353dbb";
 const ZERO_STORAGE_WORD = `0x${"0".repeat(64)}`;
-const MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
-
-export type CentrifugeReviewedDeploymentRejectionCode =
-  | "route-inventory-unavailable"
-  | "deployment-identity-unavailable"
-  | "chain-rpc-unavailable"
-  | "safe-block-unavailable"
-  | "deployment-state-unavailable"
-  | "deployment-state-invalid"
-  | "deployment-identity-mismatch"
-  | "deployment-observation-skew"
-  | "packet-reconciliation-failed";
-
-export type CentrifugeReviewedDeploymentObservationAttempt =
-  | {
-      status: "accepted";
-      attribution: ReviewedDeploymentUnitPartitionV1;
-    }
-  | {
-      status: "rejected";
-      rejectionCode: CentrifugeReviewedDeploymentRejectionCode;
-      failedRouteId: string | null;
-    };
+export type CentrifugeReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
+export type CentrifugeReviewedDeploymentObservationAttempt = ReviewedDeploymentObservationAttempt;
 
 interface CentrifugeObserverDependencies {
   sha256HexFromBytes: typeof sha256HexFromBytes;
@@ -86,13 +65,7 @@ const DEFAULT_DEPENDENCIES: CentrifugeObserverDependencies = {
   fetchSolanaObservation: fetchSolanaCentrifugeDeploymentObservation,
 };
 
-type DeploymentObservationResult =
-  | { status: "accepted"; observation: ReviewedDeploymentSupplyObservation }
-  | {
-      status: "rejected";
-      rejectionCode: CentrifugeReviewedDeploymentRejectionCode;
-      failedRouteId: string;
-    };
+type DeploymentObservationResult = ReviewedDeploymentObservationResult;
 
 function rejectDeployment(
   failedRouteId: string,
@@ -137,28 +110,16 @@ async function observeCentrifugeEvmDeployment(
     return rejectDeployment(routeId, "safe-block-unavailable");
   }
 
-  let blockNumber = headBlockNumber - identity.safeBlockLag;
-  let blockHeader: EvmBlockHeader | null = null;
-  for (
-    let rewind = 0;
-    rewind <= MAX_SCORING_CLOCK_REWIND_BLOCKS && blockNumber >= 0;
-    rewind += 1
-  ) {
-    throwIfAborted(signal);
-    blockHeader = await dependencies.fetchEvmBlockHeader(
-      chainId,
-      blockNumber,
-      options,
-    );
-    if (blockHeader === null) {
-      return rejectDeployment(routeId, "safe-block-unavailable");
-    }
-    if (blockHeader.timestamp <= scoringClockSec) break;
-    blockNumber -= 1;
-  }
-  if (blockHeader === null || blockHeader.timestamp > scoringClockSec) {
+  const blockHeader = await rewindEvmBlockHeaderToScoringClock({
+    initialBlockNumber: headBlockNumber - identity.safeBlockLag,
+    scoringClockSec,
+    signal,
+    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
+  });
+  if (blockHeader === null) {
     return rejectDeployment(routeId, "safe-block-unavailable");
   }
+  const blockNumber = blockHeader.number;
 
   const calls = [
     {
@@ -291,106 +252,31 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
   dependencyOverrides: Partial<CentrifugeObserverDependencies> = {},
 ): Promise<CentrifugeReviewedDeploymentObservationAttempt> {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
-  const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
-  if (!inventory) {
-    return {
-      status: "rejected",
-      rejectionCode: "route-inventory-unavailable",
-      failedRouteId: null,
-    };
-  }
-
-  const observations: ReviewedDeploymentSupplyObservation[] = [];
-  for (const route of inventory.routes) {
-    throwIfAborted(input.signal);
-    const identity = expectedCentrifugeDeploymentIdentity(
-      input.assetId,
-      route.routeId,
-    );
-    if (!identity) {
-      return {
-        status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
-        failedRouteId: route.routeId,
-      };
-    }
-    const result =
-      identity.runtime === "evm"
-        ? await observeCentrifugeEvmDeployment(
-            input.assetId,
-            route.routeId,
-            route.chainId,
-            route.contractAddress,
-            input.scoringClockSec,
-            input.chainRpcs,
-            dependencies,
-            input.signal,
-          )
-        : await dependencies
-            .fetchSolanaObservation(
-              input.assetId,
-              route.routeId,
-              route.contractAddress,
-              input.signal,
-            )
-            .then<DeploymentObservationResult>((observation) =>
-              observation
-                ? { status: "accepted", observation }
-                : rejectDeployment(
-                    route.routeId,
-                    "deployment-state-unavailable",
-                  ),
-            );
-    if (result.status === "rejected") return result;
-    const identityError = reviewedDeploymentIdentityValidationError(
-      result.observation,
-      input.assetId,
-    );
-    if (identityError) {
-      return {
-        status: "rejected",
-        rejectionCode: "deployment-identity-mismatch",
-        failedRouteId: route.routeId,
-      };
-    }
-    observations.push(result.observation);
-  }
-
-  const blockTimes = observations.map(
-    (observation) => observation.blockTimeSec,
-  );
-  const captureStartedAtSec = Math.min(...blockTimes);
-  const captureEndedAtSec = Math.max(...blockTimes);
-  const timingIssue = reviewedDeploymentObservationTimingIssue({
-    assetId: input.assetId,
-    clockSec: input.scoringClockSec,
-    captureStartedAtSec,
-    captureEndedAtSec,
-    observedAtSec: captureEndedAtSec,
-    deployments: observations,
-  });
-  if (timingIssue) {
-    return {
-      status: "rejected",
-      rejectionCode: "deployment-observation-skew",
-      failedRouteId: timingIssue.failedRouteId,
-    };
-  }
-
-  const attribution = deriveReviewedDeploymentUnitPartition({
+  return observeReviewedDeploymentUnitPartitionAttempt({
     assetId: input.assetId,
     aggregateSupplyUsd: input.aggregateSupplyUsd,
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
-    observations,
+    signal: input.signal,
+    identityRuntime: (routeId) => expectedCentrifugeDeploymentIdentity(input.assetId, routeId)?.runtime ?? null,
+    observeEvm: (route) => observeCentrifugeEvmDeployment(
+      input.assetId,
+      route.routeId,
+      route.chainId,
+      route.contractAddress,
+      input.scoringClockSec,
+      input.chainRpcs,
+      dependencies,
+      input.signal,
+    ),
+    observeSolana: (route) => dependencies.fetchSolanaObservation(
+      input.assetId,
+      route.routeId,
+      route.contractAddress,
+      input.signal,
+    ),
+    identityValidationError: (observation) => reviewedDeploymentIdentityValidationError(observation, input.assetId),
   });
-  return attribution
-    ? { status: "accepted", attribution }
-    : {
-        status: "rejected",
-        rejectionCode: "packet-reconciliation-failed",
-        failedRouteId: null,
-      };
 }
 
 export async function observeCentrifugeReviewedDeploymentUnitPartition(

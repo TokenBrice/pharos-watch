@@ -2,6 +2,7 @@ import { getDepegThresholdBps } from "../../lib/constants";
 import type { DepegRow } from "../../lib/depeg-helpers";
 import { deriveDepegSignal } from "../../lib/depeg-signals";
 import type { PsiDepegEventRow } from "../../lib/psi-recompute";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 const SYNTHETIC_SPLIT_MAX_GAP_SEC = 30 * 60;
 const SYNTHETIC_SPLIT_RECOVERY_BAR_BPS = 50;
@@ -30,8 +31,8 @@ export interface SyntheticSplitMutationPlan {
 }
 
 function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
-  const startDay = Math.floor(startedAt / DAY_SECONDS) * DAY_SECONDS;
-  const endDay = Math.floor(endedAt / DAY_SECONDS) * DAY_SECONDS;
+  const startDay = bucketUnixSecondsToUtcDay(startedAt);
+  const endDay = bucketUnixSecondsToUtcDay(endedAt);
   for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
     affectedDays.add(day);
   }

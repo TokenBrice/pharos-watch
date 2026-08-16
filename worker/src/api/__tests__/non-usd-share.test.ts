@@ -31,6 +31,16 @@ describe("handleNonUsdShare", () => {
     vi.restoreAllMocks();
   });
 
+  it("rejects malformed and out-of-range day windows instead of defaulting or clamping", async () => {
+    for (const days of ["nope", "0", "29", "5001"]) {
+      const res = await handleNonUsdShare(
+        mockD1([]),
+        new URL(`https://example.com/api/non-usd-share?days=${days}`),
+      );
+      expect(res.status, days).toBe(400);
+    }
+  });
+
   it("requests the default long-range window and returns split non-USD shares within D1 bind limits", async () => {
     const nowMs = Date.UTC(2026, 3, 8, 12, 0, 0);
     const cutoff = Math.floor(nowMs / 1000) - 5000 * 86400;

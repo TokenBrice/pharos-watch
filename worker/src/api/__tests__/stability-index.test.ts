@@ -69,6 +69,12 @@ describe("handleStabilityIndex contract tests", () => {
     }
   });
 
+  it("rejects malformed detail booleans instead of silently treating them as false", async () => {
+    const res = await handleStabilityIndex(mockD1([]), new URL("https://x/api/stability-index?detail=yes"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid detail: must be true or false" });
+  });
+
   it("serves full history: detail query is unbounded and omits the per-row input_snapshot blob", async () => {
     // Regression guard: a LIMIT here truncates the chart's date range and drops the
     // historical event annotations (events go back to 2018); input_snapshot is a heavy

@@ -1,7 +1,7 @@
 import { ALCHEMY_CHAINS } from "./chain-registry";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
-import { buildInClause } from "./db";
+import { batchExecute, buildInClause } from "./db";
 import { throwIfAborted } from "./abort";
 import { cancelResponseBodyQuietly } from "./response-body";
 import { logWorkerEvent } from "./structured-log";
@@ -814,10 +814,10 @@ export async function resolveBlockTimestamps(
         )
         .bind(persistentCache.chainId, block, ts, nowSec),
     );
-    for (let i = 0; i < stmts.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
-      throwIfAborted(options?.signal);
-      await persistentCache.db.batch(stmts.slice(i, i + TIMESTAMP_CACHE_READ_CHUNK));
-    }
+    await batchExecute(persistentCache.db, stmts, {
+      chunkSize: TIMESTAMP_CACHE_READ_CHUNK,
+      signal: options?.signal,
+    });
   }
 
   return timestamps;

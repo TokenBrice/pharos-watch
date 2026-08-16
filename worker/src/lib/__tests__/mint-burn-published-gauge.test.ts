@@ -82,7 +82,14 @@ describe("parsePublishedMintBurnGauge", () => {
 
 describe("readPublishedMintBurnGauge", () => {
   it("returns missing when nothing has been published", async () => {
-    const result = await readPublishedMintBurnGauge(mockD1([]), NOW_SEC);
+    const result = await readPublishedMintBurnGauge(mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+        rows: [],
+        first: null,
+      },
+    ]), NOW_SEC);
     expect(result).toEqual({ kind: "unavailable", reason: "missing" });
   });
 

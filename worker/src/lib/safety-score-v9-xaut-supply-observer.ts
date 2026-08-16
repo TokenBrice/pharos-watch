@@ -37,6 +37,7 @@ import {
   decodeEvmAddressHex,
   decodeEvmHexBytes,
   decodeEvmUint256,
+  rewindEvmBlockHeaderToScoringClock,
   safetyScoreV9EvmObservationOptions,
 } from "./safety-score-v9-supply-observation-primitives";
 
@@ -44,7 +45,6 @@ const EIP1967_IMPLEMENTATION_SLOT =
   "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const ADAPTER_TOKEN_SELECTOR = "0xfc0c546a";
 const ADAPTER_ENDPOINT_SELECTOR = "0x5e280f11";
-const MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
 const XAUT_TRANSPARENCY_MAX_RESPONSE_BYTES = 1_000_000;
 
 export interface XautTransparencyDisclosure {
@@ -255,28 +255,22 @@ async function finalizedHeaderAtScoringClock(
   signal?: AbortSignal,
 ): Promise<EvmBlockHeader | null> {
   const options = rpcOptions(chainRpcs, signal);
-  let header = await dependencies.fetchEvmBlockHeader(
+  const header = await dependencies.fetchEvmBlockHeader(
     XAUT_CANONICAL_CHAIN_ID,
     "finalized",
     options,
   );
   if (!header) return null;
-  for (
-    let rewind = 0;
-    header.timestamp > scoringClockSec &&
-    rewind < MAX_SCORING_CLOCK_REWIND_BLOCKS &&
-    header.number > 0;
-    rewind += 1
-  ) {
-    throwIfAborted(signal);
-    header = await dependencies.fetchEvmBlockHeader(
+  return rewindEvmBlockHeaderToScoringClock({
+    initialHeader: header,
+    scoringClockSec,
+    signal,
+    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(
       XAUT_CANONICAL_CHAIN_ID,
-      header.number - 1,
+      blockNumber,
       options,
-    );
-    if (!header) return null;
-  }
-  return header.timestamp <= scoringClockSec ? header : null;
+    ),
+  });
 }
 
 export async function observeXautRepresentationGroupSupplyAttributionAttempt(

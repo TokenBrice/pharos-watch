@@ -5,10 +5,11 @@ import {
   getTelegramBotStats,
   loadTelegramMiniAppDailyAggregate,
   mapTelegramBotStats,
-  TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL,
 } from "../status/telegram-bot-stats";
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { loadTelegramPendingCapacity } from "../telegram-pending-capacity";
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
   return {
@@ -25,19 +26,24 @@ function unavailableDeliverySli(): TelegramDeliverySliStatus {
 }
 
 describe("Telegram delivery telemetry SQL", () => {
-  it("counts a fresh execution-unknown target when the pending table is empty", () => {
+  it("counts durable pending-table execution-unknown rows and uses the oldest ambiguity", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-          sqlite.exec(`
-      INSERT INTO telegram_alert_job_targets
-        (job_id, target_key, chat_id, alert_type, pending_dedupe_key, effect_state, created_at)
-        VALUES ('stats-job', 'stats-target', 'stats-chat', 'dews', 'stats-key', 'execution_unknown', 100);
-    `);
-      const bindCount = TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL.match(/\?/g)?.length ?? 0;
-      const row = sqlite
-        .prepare(TELEGRAM_PENDING_DELIVERY_TELEMETRY_SQL)
-        .get(...new Array(bindCount).fill(5_001)) as { fresh_execution_unknown_count: number };
-      expect(row.fresh_execution_unknown_count).toBe(1);
+      sqlite.exec(`
+        INSERT INTO telegram_pending_alerts
+          (chat_id, message_html, created_at, expires_at, delivery_state, delivery_started_at)
+        VALUES ('pending-chat', 'test', 100, 10000, 'execution_unknown', 100);
+        INSERT INTO telegram_alert_job_targets
+          (job_id, target_key, chat_id, alert_type, pending_dedupe_key, effect_state, created_at)
+        VALUES ('stats-job', 'stats-target', 'stats-chat', 'dews', 'stats-key', 'execution_unknown', 200);
+      `);
+      const snapshot = await loadTelegramPendingCapacity(createSqliteD1(sqlite), 5_001);
+      expect(snapshot).toMatchObject({
+        pendingExecutionUnknown: 1,
+        freshExecutionUnknown: 1,
+        executionUnknown: 2,
+        oldestExecutionUnknownAgeSec: 4_901,
+      });
     } finally {
       sqlite.close();
     }
@@ -71,22 +77,28 @@ describe("mapTelegramBotStats", () => {
       },
       pendingDisambiguations: { pending_count: "11" },
       pendingDeliveries: { pending_count: "12" },
-      pendingDeliveryTelemetry: {
-        pending_count: "12",
-        oldest_created_at: "1710000040",
-        oldest_due_created_at: "1710000070",
-        due_count: "8",
-        deferred_count: "3",
-        expired_count: "1",
-        near_ttl_count: "2",
-        pending_sending_count: "1",
-        pending_execution_unknown_count: "1",
-        fresh_sending_count: "2",
-        fresh_execution_unknown_count: "1",
-        oldest_pending_execution_unknown_at: "1710000010",
-        oldest_fresh_execution_unknown_at: "1710000020",
-        execution_unknown_sample_count: "2",
-        completed_cleanup_count: "1",
+      pendingCapacity: {
+        total: 12,
+        active: 11,
+        due: 8,
+        deferred: 3,
+        expired: 1,
+        nearTtl: 2,
+        sending: 3,
+        pendingSending: 1,
+        freshSending: 2,
+        pendingExecutionUnknown: 1,
+        freshExecutionUnknown: 1,
+        executionUnknown: 2,
+        sentCleanup: 1,
+        oldestExecutionUnknownAgeSec: 90,
+        executionUnknownSampleLimit: 5_001,
+        executionUnknownLowerBound: false,
+        oldestPendingAgeSec: 60,
+        oldestDuePendingAgeSec: 30,
+        estimatedDrainTimeSec: 300,
+        drainBudgetPerRun: 1_800,
+        dispatchIntervalSec: 300,
       },
       webhookEffectUnknown: {
         pending_count: "3",
@@ -379,15 +391,13 @@ describe("getTelegramBotStats", () => {
       {
         match: "oldest_due_created_at",
         first: {
-          pending_count: 2,
-          oldest_created_at: 1_710_000_040,
+          total: 2,
+          oldest_pending_created_at: 1_710_000_040,
           oldest_due_created_at: 1_710_000_070,
-          due_count: 1,
-          deferred_count: 1,
-          expired_count: 0,
-          near_ttl_count: 0,
-          execution_unknown_count: 0,
-          completed_cleanup_count: 0,
+          due: 1,
+          deferred: 1,
+          expired: 0,
+          near_ttl: 0,
         },
         rows: [],
       },

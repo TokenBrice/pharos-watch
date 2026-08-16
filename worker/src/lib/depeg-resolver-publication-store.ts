@@ -1,7 +1,8 @@
 import { DDR_HASH_DOMAINS, stableJsonHashV1, stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import { isRecord } from "@shared/lib/type-guards";
-import { runChunkedInRead } from "./db";
+import { executeAtomicBatch, runChunkedInRead } from "./db";
+import { gunzipTextBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 import {
   bindDdrAssessmentInsert,
   ddrAssessmentInsertSql,
@@ -25,6 +26,8 @@ import {
 } from "./depeg-resolver-store-validators";
 
 export type DdrPublicPredictionOutcomeKind = "prediction" | "no_call";
+const DDR_PUBLICATION_MAX_COMPRESSED_BYTES = 1_350_000;
+const DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES = 8_000_000;
 export type DdrPublicPredictionLockTiming = "on_time" | "late_confirmation" | "late_freeze" | "deferred";
 
 export interface DdrPublicAssessmentSealInput {
@@ -331,24 +334,19 @@ function bytesFromBlob(value: ArrayBuffer | Uint8Array): Uint8Array {
   return value instanceof Uint8Array ? value : new Uint8Array(value);
 }
 
-async function gzipText(value: string): Promise<Uint8Array> {
-  const input = new TextEncoder().encode(value);
-  const stream = new Response(input).body!.pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function gunzipText(value: ArrayBuffer | Uint8Array): Promise<string> {
-  const stream = new Response(bytesFromBlob(value)).body!.pipeThrough(new DecompressionStream("gzip"));
-  return new Response(stream).text();
-}
-
 async function mapCompressedPublicationManifest(
   row: CompressedPublicationManifestRow,
 ): Promise<DdrPublicationManifest> {
-  const basePayloadJson = await gunzipText(row.base_payload_gzip);
-  if (new TextEncoder().encode(basePayloadJson).byteLength !== row.base_payload_bytes) {
-    throw new Error(`Compressed publication manifest ${row.snapshot_token} payload length mismatch`);
+  const compressed = bytesFromBlob(row.base_payload_gzip);
+  if (compressed.byteLength !== row.compressed_payload_bytes) {
+    throw new Error(`Compressed publication manifest ${row.snapshot_token} compressed payload length mismatch`);
   }
+  const basePayloadJson = await gunzipTextBounded(compressed, {
+    label: `Compressed publication manifest ${row.snapshot_token}`,
+    maximumCompressedBytes: DDR_PUBLICATION_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+    expectedUncompressedBytes: row.base_payload_bytes,
+  });
   parseJsonObject(basePayloadJson, "basePayloadJson");
   return mapPublicationManifest({ ...row, base_payload_json: basePayloadJson });
 }
@@ -610,12 +608,12 @@ async function sealPublicOutcome(
     attachDdrPublicRowHash(input.sealedPayload as Record<string, unknown>, input.rowHash),
     "sealedPayload",
   );
-  const results = await db.batch([
+  const results = await executeAtomicBatch(db, [
     await insertPublicPredictionAssessment(db, input, payloadJson),
     lockStateStatement(db, input, outcomeKind === "prediction" ? "frozen" : "no_call"),
     sealedPredictionStatement(db, input, outcomeKind, payloadJson),
     lockAuditStatement(db, input, outcomeKind === "prediction" ? "locked_prediction" : "locked_no_call"),
-  ]);
+  ], { returnResults: true });
   const sealedChanges = Number(results[2]?.meta?.changes ?? 0);
   if (sealedChanges !== 1) {
     throw new Error(`Expected to seal one DDR public ${outcomeKind}; inserted ${sealedChanges}`);
@@ -826,10 +824,13 @@ export async function writePublicationManifest(
     input.snapshotToken ??
     `ddrpub:${input.publishedAt}:${basePayloadHash.slice(0, 16)}:${publicPredictionIdsHash.slice(0, 8)}`;
   const createdAt = input.createdAt ?? input.publishedAt;
-  const basePayloadBytes = new TextEncoder().encode(basePayloadJson).byteLength;
-  const compressedPayload = await gzipText(basePayloadJson);
+  const compressedPayload = await gzipCanonicalJson(basePayloadJson, {
+    label: "DDR public publication manifest",
+    maximumCompressedBytes: DDR_PUBLICATION_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+  });
 
-  await db.batch([
+  await executeAtomicBatch(db, [
     db
       .prepare(
         `INSERT INTO depeg_resolver_publication_snapshots_v2
@@ -858,9 +859,9 @@ export async function writePublicationManifest(
         publicPredictionIdsHash,
         publicPredictionIdsJson,
         publicPredictionRowHashesJson,
-        compressedPayload,
-        basePayloadBytes,
-        compressedPayload.byteLength,
+        compressedPayload.compressed,
+        compressedPayload.uncompressedBytes,
+        compressedPayload.compressed.byteLength,
         payloadRows.length,
         ids.length,
         createdAt,

@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { DetailResponseHelpers } from "./shared";
@@ -43,7 +44,7 @@ export async function handleCacheBackedDetail(
     return detail.staleCacheOrError(404, `Stablecoin ${config.stablecoinId} not found`);
   }
 
-  const currentDay = Math.floor(stablecoinsCache.updatedAt / DAY_SECONDS) * DAY_SECONDS;
+  const currentDay = bucketUnixSecondsToUtcDay(stablecoinsCache.updatedAt);
   const tokens = [
     buildCacheFallbackToken(currentDay - 30 * DAY_SECONDS, coin.circulatingPrevMonth, config.pegType, coin.price),
     buildCacheFallbackToken(currentDay - 7 * DAY_SECONDS, coin.circulatingPrevWeek, config.pegType, coin.price),

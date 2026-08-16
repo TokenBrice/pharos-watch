@@ -1,7 +1,7 @@
 import type { MintBurnPriceContext } from "./types";
 import { buildInClause } from "../db";
 import { chunkArray } from "../collections";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 const DEFAULT_SQL_IN_CHUNK_SIZE = 90;
 
@@ -15,7 +15,7 @@ export function findMintBurnHistoricalPrice(
   stablecoinId: string,
   timestamp: number,
 ): MintBurnHistoricalPriceResolution | null {
-  const eventDay = Math.floor(timestamp / DAY_SECONDS) * DAY_SECONDS;
+  const eventDay = bucketUnixSecondsToUtcDay(timestamp);
   const history = priceHistory.get(stablecoinId) ?? [];
 
   let bestIdx = -1;

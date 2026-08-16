@@ -56,6 +56,10 @@ describe("cadence buckets", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [{ key: "cadence:test", value: failedValue, updated_at: 1_010 }],
+    }, {
+      match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+      rows: [],
+      runMeta: { changes: 1 },
     }]);
     const claimResult = await claimCadenceBucket(db, {
       key: "cadence:test",
@@ -79,6 +83,10 @@ describe("cadence buckets", () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache WHERE key = ?",
       rows: [{ key: "cadence:test", value: claimedValue, updated_at: 900 }],
+    }, {
+      match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+      rows: [],
+      runMeta: { changes: 1 },
     }]);
     const claimResult = await claimCadenceBucket(db, {
       key: "cadence:test",

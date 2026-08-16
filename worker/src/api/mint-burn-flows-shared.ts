@@ -6,6 +6,7 @@ import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
 import { decodeJsonString } from "../lib/cache-json";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { toErrorMessage } from "../lib/error-utils";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 
 import { FLOW_CACHE_PREFIX } from "../lib/mint-burn-flow-cache-keys";
 
@@ -95,7 +96,7 @@ export interface FlowAggregate {
 }
 
 export function bucketDay(ts: number): number {
-  return Math.floor(ts / DAY_SECONDS) * DAY_SECONDS;
+  return bucketUnixSecondsToUtcDay(ts);
 }
 
 function emptyFlowAggregate(): FlowAggregate {

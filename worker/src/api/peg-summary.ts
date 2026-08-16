@@ -1,6 +1,8 @@
 import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { normalizePegTypeFromCurrency } from "@shared/lib/peg-price-bounds";
 import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { PegSummaryCoin, StablecoinData } from "@shared/types/market";
@@ -26,39 +28,6 @@ import {
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 
-const PEG_TYPE_BY_CURRENCY: Record<string, string> = {
-  USD: "peggedUSD",
-  EUR: "peggedEUR",
-  GBP: "peggedGBP",
-  CHF: "peggedCHF",
-  BRL: "peggedREAL",
-  RUB: "peggedRUB",
-  JPY: "peggedJPY",
-  IDR: "peggedIDR",
-  SGD: "peggedSGD",
-  TRY: "peggedTRY",
-  AUD: "peggedAUD",
-  ZAR: "peggedZAR",
-  CAD: "peggedCAD",
-  CNY: "peggedCNY",
-  CNH: "peggedCNH",
-  PHP: "peggedPHP",
-  MXN: "peggedMXN",
-  UAH: "peggedUAH",
-  ARS: "peggedARS",
-  KGS: "peggedKGS",
-  NGN: "peggedNGN",
-  XOF: "peggedXOF",
-  VND: "peggedVND",
-  GOLD: "peggedGOLD",
-  SILVER: "peggedSILVER",
-  VAR: "peggedVAR",
-};
-
-function pegTypeFromCurrency(pegCurrency: string): string | null {
-  return PEG_TYPE_BY_CURRENCY[pegCurrency] ?? null;
-}
-
 function deriveDexDeviationBps(
   dexPriceUsd: number,
   pegType: string | null,
@@ -83,6 +52,7 @@ function deriveDexDeviationBps(
 
 export const __pegSummaryTestHooks = {
   deriveDexDeviationBps,
+  normalizePegTypeFromCurrency,
 };
 
 export const handlePegSummary = async (db: D1Database): Promise<Response> => {
@@ -144,7 +114,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     });
     pegDataById = pegAnalytics.pegDataById;
     // Count depeg events started today vs yesterday (UTC day boundaries)
-    const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+    const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
     const yesterdayStartSec = todayStartSec - DAY_SECONDS;
     depegEventsToday = 0;
     depegEventsYesterday = 0;
@@ -198,7 +168,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       pegData.pegReferenceUnavailable !== true &&
       dexRow && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
     ) {
-      const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency);
+      const pegType = pegData.pegType || asset?.pegType || normalizePegTypeFromCurrency(meta.flags.pegCurrency) || null;
       const dexBps = deriveDexDeviationBps(
         dexRow.dex_price_usd,
         pegType,

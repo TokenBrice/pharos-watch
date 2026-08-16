@@ -4,7 +4,7 @@ import { getRedemptionBackstopConfig, type RedemptionBackstopConfig } from "@sha
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ExitRouteObservation, ExitRouteOutput } from "@shared/types/market";
 import type { LiveReserveRedemptionOutputValuation } from "@shared/types/live-reserves";
-import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
+import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
 import type {
   RedemptionBackstopEntry,
   RedemptionCapacityProfile,
@@ -257,14 +257,16 @@ export function buildRedemptionExitRouteObservation(
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, maxCurveRequest))
     .sort((left, right) => left - right);
-  const capacityCurve = requests.map((request) =>
-    buildExitRouteCapacityPoint({
+  const capacityCurve = requests.map((request) => {
+    const costBps = resolveCostBps(input.config, input.resolvedFeeBps, request);
+    return buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
+      maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
       capacityUsd: input.scoringCapacityUsd!,
-      costBps: resolveCostBps(input.config, input.resolvedFeeBps, request),
-      admitUnboundedCost: boundedUnknownFee,
-    }),
-  );
+      admitted: (costBps != null && costBps <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps)
+        || boundedUnknownFee,
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
+  });
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(input.stablecoinId, input.config.routeFamily);
   const settlementHorizonSec = Math.max(
@@ -389,15 +391,14 @@ export function deriveSupplyModelExitRouteObservation(
   const requests = [...new Set([...REDEMPTION_CAPACITY_CURVE_REQUESTS_USD, modeledExitSizeUsd])]
     .filter((request) => request <= Math.max(modeledExitSizeUsd, eventualUsd))
     .sort((left, right) => left - right);
-  const capacityCurve = requests.map((request) => {
-    const executableUsd = withinCost || boundedUnknownFee ? Math.min(request, eventualUsd) : 0;
-    return {
+  const capacityCurve = requests.map((request) =>
+    buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
       maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
-      executableUsd,
-      completionRatio: executableUsd / request,
-    };
-  });
+      capacityUsd: eventualUsd,
+      admitted: withinCost || boundedUnknownFee,
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null }),
+  );
   const point = capacityCurve.find((candidate) => candidate.requestedNotionalUsd === modeledExitSizeUsd)!;
   const { scope, commonModeKeys } = resolveScopeAndCommonModes(entry.stablecoinId, entry.routeFamily);
 

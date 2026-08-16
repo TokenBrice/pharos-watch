@@ -1,8 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../yield";
 
 const SEC = 1_700_000_000;
+const TAPE_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []): MockD1Database {
+  return createMockD1([...tables, ...TAPE_WRITE_TABLES]);
+}
 
 // Substring matchers — the mock-d1 helper does a substring search against the
 // raw SQL emitted by the projector, so each pattern only has to be unique

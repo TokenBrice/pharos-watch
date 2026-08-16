@@ -20,8 +20,3 @@ export const SECONDS = {
   ONE_WEEK: WEEK_SECONDS,
   THIRTY_DAYS: THIRTY_DAYS_SECONDS,
 } as const;
-
-/** Epoch seconds at UTC midnight of the given date's day. */
-export function startOfUtcDaySec(date = new Date()): number {
-  return Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 1000);
-}

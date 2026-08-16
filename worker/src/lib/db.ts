@@ -13,6 +13,12 @@ export interface BatchExecuteOptions {
 
 export interface AtomicBatchExecuteOptions {
   signal?: AbortSignal;
+  returnResults?: false;
+}
+
+export interface AtomicBatchExecuteResultOptions {
+  signal?: AbortSignal;
+  returnResults: true;
 }
 
 function d1ErrorMessage(error: unknown): string {
@@ -55,12 +61,22 @@ export async function batchExecute(
 }
 
 /** Execute one bounded D1 batch so every statement commits or rolls back together. */
+export function executeAtomicBatch(
+  db: D1Database,
+  stmts: D1PreparedStatement[],
+  options: AtomicBatchExecuteResultOptions,
+): Promise<D1Result[]>;
+export function executeAtomicBatch(
+  db: D1Database,
+  stmts: D1PreparedStatement[],
+  options?: AtomicBatchExecuteOptions,
+): Promise<number>;
 export async function executeAtomicBatch(
   db: D1Database,
   stmts: D1PreparedStatement[],
-  options: AtomicBatchExecuteOptions = {},
-): Promise<number> {
-  if (stmts.length === 0) return 0;
+  options: AtomicBatchExecuteOptions | AtomicBatchExecuteResultOptions = {},
+): Promise<number | D1Result[]> {
+  if (stmts.length === 0) return options.returnResults ? [] : 0;
   if (stmts.length > D1_BATCH_SIZE) {
     throw new RangeError(
       `executeAtomicBatch supports at most ${D1_BATCH_SIZE} statements (received ${stmts.length})`,
@@ -71,6 +87,7 @@ export async function executeAtomicBatch(
   if (signal?.aborted) throw signal.reason ?? new Error("aborted");
   const result = await runWithOverloadRetry(() => db.batch(stmts), 3, signal);
   if (signal?.aborted) throw signal.reason ?? new Error("aborted");
+  if (options.returnResults) return result;
   return result.reduce((changes, row) => changes + Number(row?.meta?.changes ?? 0), 0);
 }
 

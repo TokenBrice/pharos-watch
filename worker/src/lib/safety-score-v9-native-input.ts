@@ -19,6 +19,7 @@ import {
 } from "@shared/lib/report-cards-fixed-input-identity";
 import { sha256Hex } from "@shared/lib/sha256";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   SafetyScoreV9InputIdentitySchema,
   type SafetyScoreV9InputIdentity,
@@ -50,6 +51,7 @@ import {
 } from "./safety-score-v9-xaut-supply-attribution-contract";
 import { V9PublicationInputHealthSchema } from "./safety-score-v9-publication-assessment";
 import { parseJson } from "./json-parse";
+import { gunzipTextBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 
 /**
  * DEX liquidity row as the native V9 capture carries it. The V8 report-card
@@ -200,6 +202,8 @@ export type SafetyScoreV9CompilerInput = Omit<
 // (the definition site); only the envelope version differs between the two lanes.
 export const NATIVE_V9_INPUT_CACHE_KEY = REPORT_CARDS_FIXED_INPUT_CACHE_KEY;
 const NATIVE_V9_INPUT_CACHE_MAX_BYTES = 1_900_000;
+const NATIVE_V9_INPUT_MAX_COMPRESSED_BYTES = 1_350_000;
+const NATIVE_V9_INPUT_MAX_UNCOMPRESSED_BYTES = 8_000_000;
 
 // The prefix is a published format namespace (public fact-set schemas, OpenAPI,
 // the publication codec, and the `safety_score_history_v2` CHECK all pin it),
@@ -414,7 +418,7 @@ function assertNativeV9InputConsistency(
       throw new Error("Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required");
     }
     const aggregate = input.aggregateCirculatingById[assetId];
-    const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);
+    const aggregateSupplyUsd = getCirculatingRaw(aggregate ?? {});
     const attributedSupplyUsd =
       attribution.model === "canonical-lock-mint-partition-v1"
         ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)
@@ -584,16 +588,6 @@ export function normalizeSafetyScoreV9CompilerInput(value: unknown): SafetyScore
   return normalizeFixedInput(value);
 }
 
-async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function gunzipText(bytes: Uint8Array): Promise<string> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
-  return new Response(stream).text();
-}
-
 export async function buildNativeV9InputCacheEntry(
   value: unknown,
   safetyScoreIdentity: SafetyScoreV9InputIdentity,
@@ -615,8 +609,11 @@ export async function buildNativeV9InputCacheEntry(
     ...baseInput
   } = input;
   const payload = JSON.stringify(baseInput);
-  const uncompressedBytes = new TextEncoder().encode(payload);
-  const compressed = await gzipBytes(uncompressedBytes);
+  const compressed = await gzipCanonicalJson(payload, {
+    label: "Native V9 input cache artifact",
+    maximumCompressedBytes: NATIVE_V9_INPUT_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: NATIVE_V9_INPUT_MAX_UNCOMPRESSED_BYTES,
+  });
   const envelope = JSON.stringify({
     schemaVersion: 2,
     kind: "report-cards-fixed-input-exact",
@@ -624,8 +621,8 @@ export async function buildNativeV9InputCacheEntry(
     sourceGeneration: input.sourceGeneration,
     safetyScoreIdentity: identity,
     payloadSha256: sha256Hex(payload),
-    uncompressedBytes: uncompressedBytes.byteLength,
-    payload: bytesToBase64(compressed),
+    uncompressedBytes: compressed.uncompressedBytes,
+    payload: bytesToBase64(compressed.compressed),
   });
   const storedBytes = new TextEncoder().encode(envelope).byteLength;
   if (storedBytes > NATIVE_V9_INPUT_CACHE_MAX_BYTES) {
@@ -637,7 +634,7 @@ export async function buildNativeV9InputCacheEntry(
     key: NATIVE_V9_INPUT_CACHE_KEY,
     value: envelope,
     storedBytes,
-    uncompressedBytes: uncompressedBytes.byteLength,
+    uncompressedBytes: compressed.uncompressedBytes,
   };
 }
 
@@ -653,10 +650,15 @@ export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<N
   }
   const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
   const envelope = NativeV9InputCacheEnvelopeSchema.parse(raw);
-  const payload = await gunzipText(base64ToBytes(envelope.payload));
-  if (new TextEncoder().encode(payload).byteLength !== envelope.uncompressedBytes) {
-    throw new Error("Native V9 input cache artifact byte length does not match its envelope");
+  if (envelope.payload.length > Math.ceil(NATIVE_V9_INPUT_MAX_COMPRESSED_BYTES / 3) * 4) {
+    throw new Error("Native V9 input cache artifact exceeds its compressed byte limit");
   }
+  const payload = await gunzipTextBounded(base64ToBytes(envelope.payload), {
+    label: "Native V9 input cache artifact",
+    maximumCompressedBytes: NATIVE_V9_INPUT_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: NATIVE_V9_INPUT_MAX_UNCOMPRESSED_BYTES,
+    expectedUncompressedBytes: envelope.uncompressedBytes,
+  });
   if (sha256Hex(payload) !== envelope.payloadSha256) {
     throw new Error("Native V9 input cache artifact checksum mismatch");
   }

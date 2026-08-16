@@ -3,6 +3,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { isRecord } from "@shared/lib/type-guards";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
 import { CACHE_PROFILES } from "../lib/constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 
 interface DigestRow {
   generated_at: number;
@@ -62,7 +63,7 @@ export const handleDigestSnapshot = async (
   }
 
   // Compute UTC day boundaries (epoch seconds)
-  const dayStart = Math.floor(parsed.getTime() / 1000);
+  const dayStart = startOfUtcDaySec(parsed);
   const dayEnd = dayStart + 86_400;
 
   const targetFilter = isWeekly

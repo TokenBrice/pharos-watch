@@ -515,6 +515,7 @@ describe("loadCronHealth — running scheduled slot telemetry", () => {
       { match: "UNION ALL", rows },
       { match: "FROM cron_leases", rows: [] },
       { match: "FROM cron_run_progress", rows: [] },
+      { match: "FROM cache", rows: [] },
       {
         match: "FROM cron_slot_executions",
         rows: [

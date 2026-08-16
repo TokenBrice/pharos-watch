@@ -1,5 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { StablecoinMeta } from "@shared/types/core";
 import { batchExecute, buildInClause } from "./db";
 import { cgHeaders, cgUrl } from "./coingecko";
@@ -298,7 +299,7 @@ export const productionHistoricalMintPriceSourceLoader: HistoricalMintPriceSourc
 };
 
 function eventDay(timestamp: number): number {
-  return Math.floor(timestamp / DAY_SECONDS) * DAY_SECONDS;
+  return bucketUnixSecondsToUtcDay(timestamp);
 }
 
 function isValidHistoricalPrice(meta: StablecoinMeta, price: number): boolean {

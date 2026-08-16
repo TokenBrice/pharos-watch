@@ -6,7 +6,7 @@ import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
 import { decodeJsonString } from "./cache-json";
 import { sanitizeRecordValues } from "./normalizers";
 import { inferFxSourceCadence, type FxSourceCadence } from "./fx-cadence";
-import { startOfUtcDaySec } from "./time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { IsolateLocalState } from "./isolate-local-state";
 
 const FX_RATES_KEY = "fx-rates";

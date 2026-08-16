@@ -1,6 +1,7 @@
 import { SUPPLY_HISTORY_UPSERT_SQL } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEFILLAMA_BASE, DEFILLAMA_API, DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
@@ -183,14 +184,14 @@ function backfillWindowToFetchRange(
 }
 
 function getLastCompletedUtcDay(nowSec = Math.floor(Date.now() / 1000)): number {
-  return Math.floor((nowSec - DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+  return bucketUnixSecondsToUtcDay(nowSec - DAY_SECONDS);
 }
 
 function normalizeCoinGeckoDailyPrices(prices: [number, number][]): TimestampedRatePoint[] {
   const priceBySnapshotDate = new Map<number, number>();
   for (const [timestampMs, price] of prices) {
     if (!Number.isFinite(timestampMs) || !Number.isFinite(price) || price <= 0) continue;
-    const snapshotDate = Math.floor(timestampMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+    const snapshotDate = bucketUnixMillisecondsToUtcDay(timestampMs) / 1000;
     if (!priceBySnapshotDate.has(snapshotDate)) {
       priceBySnapshotDate.set(snapshotDate, price);
     }
@@ -612,7 +613,7 @@ async function backfillCommodity(
 
     for (const [ts, price] of marketHistory.prices) {
       if (!Number.isFinite(price) || price <= 0) continue;
-      const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
+      const snapshotDate = bucketUnixMillisecondsToUtcDay(ts) / 1000;
       if (seenSnapshotDates.has(snapshotDate)) continue;
       if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
       const cgMcap = cgMcapByDate.get(new Date(ts).toISOString().slice(0, 10));
@@ -726,7 +727,7 @@ async function backfillCommodity(
   for (const point of tvlHistory) {
     const mcap = point.totalLiquidityUSD;
     if (mcap <= 0) continue;
-    const snapshotDate = Math.floor(point.date / DAY_SECONDS) * DAY_SECONDS;
+    const snapshotDate = bucketUnixSecondsToUtcDay(point.date);
     const price = findPrice(point.date);
     if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
     pushSupplyUpsert(stmts, db, id, snapshotDate, mcap, price);
@@ -926,7 +927,7 @@ async function executeBackfillSupplyHistory(
 
     if (needsConversion && historicalPrices.length === 0) {
       const windowedTokens = tokens.filter((entry) =>
-        isWithinBackfillWindow(Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS, supplyBackfillWindow),
+        isWithinBackfillWindow(bucketUnixSecondsToUtcDay(entry.date), supplyBackfillWindow),
       );
       const fxPrices = await fetchHistoricalPegFxPrices(db, meta, windowedTokens, signal);
       historicalPrices = fxPrices.map((point) => ({
@@ -961,7 +962,7 @@ async function executeBackfillSupplyHistory(
       rate: point.price,
     }));
     for (const point of historicalPrices) {
-      const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
+      const snapshotDate = bucketUnixSecondsToUtcDay(point.timestamp);
       priceBySnapshotDate.set(snapshotDate, point.price);
     }
 
@@ -991,7 +992,7 @@ async function executeBackfillSupplyHistory(
       if (rawSum <= 0) continue;
 
       // Floor to UTC midnight
-      const snapshotDate = Math.floor(entry.date / DAY_SECONDS) * DAY_SECONDS;
+      const snapshotDate = bucketUnixSecondsToUtcDay(entry.date);
       if (!isWithinBackfillWindow(snapshotDate, supplyBackfillWindow)) continue;
       let marketCapUsd: number;
       let price = findHistoricalPrice(snapshotDate);

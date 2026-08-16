@@ -1,6 +1,6 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "./collections";
-import { buildInClause } from "./db";
+import { buildInClause, executeAtomicBatch } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
 import {
@@ -91,12 +91,10 @@ export async function repairAuthoritativeReserveSyncHistory(
   stablecoinId: string,
   attemptId: string,
 ): Promise<boolean> {
-  await runWithOverloadRetry(() =>
-    db.batch([
+  await executeAtomicBatch(db, [
       buildReserveCompositionHistoryRepairStatement(db, stablecoinId, attemptId),
       buildReserveSyncAttemptHistoryRepairStatement(db, stablecoinId, attemptId),
-    ]),
-  );
+    ]);
   const row = await runWithOverloadRetry(() =>
     buildReserveAuthoritativeHistoryRepairReadbackStatement(db, stablecoinId, attemptId)
       .first<{ repaired: number }>(),
@@ -115,12 +113,10 @@ export async function finalizeReserveSyncSuccess(
   let finalized = false;
 
   try {
-    const [compositionRes, finalizeRes] = await runWithOverloadRetry(() =>
-      db.batch<unknown>([
+    const [compositionRes, finalizeRes] = await executeAtomicBatch(db, [
         buildReserveCompositionFinalizeSuccessStatement(db, composition),
         buildReserveSyncFinalizeSuccessStatement(db, syncState, finalizeDeadlineMs),
-      ]),
-    );
+      ], { returnResults: true });
     compositionApplied = ((compositionRes as D1Result).meta.changes ?? 0) > 0;
     finalized = ((finalizeRes as D1Result).meta.changes ?? 0) > 0;
   } catch (error) {
@@ -154,8 +150,7 @@ export async function finalizeReserveSyncSuccess(
   await onAuthoritativeWrite?.();
 
   try {
-    await runWithOverloadRetry(() =>
-      db.batch([
+    await executeAtomicBatch(db, [
         buildReserveCompositionHistoryInsertStatement(db, composition),
         buildReserveSyncAttemptHistoryInsertStatement(db, {
           stablecoinId: syncState.stablecoinId,
@@ -169,8 +164,7 @@ export async function finalizeReserveSyncSuccess(
           metadata: syncState.metadata,
           attemptId: syncState.lastAttemptId ?? null,
         }),
-      ]),
-    );
+      ]);
   } catch (error) {
     return {
       finalized: true,

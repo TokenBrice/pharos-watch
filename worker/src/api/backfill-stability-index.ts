@@ -1,5 +1,6 @@
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
 import { getPsiMethodologyVersionAt } from "@shared/lib/methodology-versions/stability-index";
 import { buildSupplySnapshotMap, type PsiDepegEventRow, type PsiSupplyRow } from "../lib/psi-recompute";
@@ -57,7 +58,7 @@ export async function handleBackfillStabilityIndex({
     ].join(" ");
 
     const now = Math.floor(Date.now() / 1000);
-    const todayMidnight = Math.floor(now / DAY_SECONDS) * DAY_SECONDS;
+    const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
     // Determine backfill window: find earliest depeg event
     const earliest = await db
@@ -69,7 +70,7 @@ export async function handleBackfillStabilityIndex({
     }
 
     // Start from earliest depeg event, iterate day by day
-    const earliestDay = Math.floor(earliest.earliest / DAY_SECONDS) * DAY_SECONDS;
+    const earliestDay = bucketUnixSecondsToUtcDay(earliest.earliest);
     const latestCompletedDay = todayMidnight - DAY_SECONDS;
     const window = parseOptionalDayWindow(url, {
       defaultStartDay: earliestDay,

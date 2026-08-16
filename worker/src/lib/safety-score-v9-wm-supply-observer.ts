@@ -1,5 +1,4 @@
 import { sha256HexFromBytes } from "@shared/lib/sha256";
-import { throwIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
 import {
   fetchEvmBlockHeader,
@@ -7,16 +6,12 @@ import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
-  type EvmBlockHeader,
 } from "./evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "./evm-selectors";
 import {
-  buildReviewedDeploymentRouteInventory,
-  deriveReviewedDeploymentUnitPartition,
   expectedWmDeploymentIdentity,
   normalizeReviewedDeploymentAddress,
   reviewedDeploymentIdentityValidationError,
-  reviewedDeploymentObservationTimingIssue,
   type ReviewedDeploymentSupplyObservation,
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
@@ -26,8 +21,13 @@ import {
   decodeEvmHexBytes,
   decodeEvmUint256,
   fetchReviewedDeploymentSolanaObservation,
+  observeReviewedDeploymentUnitPartitionAttempt,
+  rewindEvmBlockHeaderToScoringClock,
   safetyScoreV9EvmObservationOptions,
   type SafetyScoreV9SolanaRpcFetcher,
+  type ReviewedDeploymentObservationAttempt,
+  type ReviewedDeploymentObservationRejectionCode,
+  type ReviewedDeploymentObservationResult,
 } from "./safety-score-v9-supply-observation-primitives";
 
 const EIP1967_IMPLEMENTATION_SLOT =
@@ -36,7 +36,6 @@ const M_TOKEN_SELECTOR = "0xc3b6f939";
 const MINTER_GATEWAY_SELECTOR = "0x48545a3c";
 const PORTAL_SELECTOR = "0x6425666b";
 const PLUME_RPC_URL = "https://rpc.plume.org";
-const MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
 
 export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = {
   ethereum: 2,
@@ -45,27 +44,8 @@ export const WM_EVM_SAFE_BLOCK_LAG_BY_CHAIN: Readonly<Record<string, number>> = 
   plume: 24,
 };
 
-export type WmReviewedDeploymentRejectionCode =
-  | "route-inventory-unavailable"
-  | "deployment-identity-unavailable"
-  | "chain-rpc-unavailable"
-  | "safe-block-unavailable"
-  | "deployment-state-unavailable"
-  | "deployment-state-invalid"
-  | "deployment-identity-mismatch"
-  | "deployment-observation-skew"
-  | "packet-reconciliation-failed";
-
-export type WmReviewedDeploymentObservationAttempt =
-  | {
-      status: "accepted";
-      attribution: ReviewedDeploymentUnitPartitionV1;
-    }
-  | {
-      status: "rejected";
-      rejectionCode: WmReviewedDeploymentRejectionCode;
-      failedRouteId: string | null;
-    };
+export type WmReviewedDeploymentRejectionCode = ReviewedDeploymentObservationRejectionCode;
+export type WmReviewedDeploymentObservationAttempt = ReviewedDeploymentObservationAttempt;
 
 interface WmObserverDependencies {
   sha256HexFromBytes: typeof sha256HexFromBytes;
@@ -105,13 +85,7 @@ function rpcOptions(
   });
 }
 
-type WmDeploymentObservationResult =
-  | { status: "accepted"; observation: ReviewedDeploymentSupplyObservation }
-  | {
-      status: "rejected";
-      rejectionCode: WmReviewedDeploymentRejectionCode;
-      failedRouteId: string;
-    };
+type WmDeploymentObservationResult = ReviewedDeploymentObservationResult;
 
 function rejectDeployment(
   failedRouteId: string,
@@ -149,21 +123,16 @@ async function observeWmEvmDeployment(
     return rejectDeployment(routeId, "safe-block-unavailable");
   }
 
-  let blockNumber = headBlockNumber - safetyLag;
-  let blockHeader: EvmBlockHeader | null = null;
-  for (
-    let rewind = 0;
-    rewind <= MAX_SCORING_CLOCK_REWIND_BLOCKS && blockNumber >= 0;
-    rewind += 1
-  ) {
-    blockHeader = await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
-    if (blockHeader === null) return rejectDeployment(routeId, "safe-block-unavailable");
-    if (blockHeader.timestamp <= scoringClockSec) break;
-    blockNumber -= 1;
-  }
-  if (blockHeader === null || blockHeader.timestamp > scoringClockSec) {
+  const blockHeader = await rewindEvmBlockHeaderToScoringClock({
+    initialBlockNumber: headBlockNumber - safetyLag,
+    scoringClockSec,
+    signal,
+    fetchHeader: (blockNumber) => dependencies.fetchEvmBlockHeader(chainId, blockNumber, options),
+  });
+  if (blockHeader === null) {
     return rejectDeployment(routeId, "safe-block-unavailable");
   }
+  const blockNumber = blockHeader.number;
 
   const controllerSelector =
     identity.controllerRead === "minter-gateway" ? MINTER_GATEWAY_SELECTOR : PORTAL_SELECTOR;
@@ -296,88 +265,29 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
   dependencyOverrides: Partial<WmObserverDependencies> = {},
 ): Promise<WmReviewedDeploymentObservationAttempt> {
   const dependencies = { ...DEFAULT_DEPENDENCIES, ...dependencyOverrides };
-  const inventory = buildReviewedDeploymentRouteInventory("wm-m0");
-  if (!inventory) {
-    return {
-      status: "rejected",
-      rejectionCode: "route-inventory-unavailable",
-      failedRouteId: null,
-    };
-  }
-
-  const observations: ReviewedDeploymentSupplyObservation[] = [];
-  for (const route of inventory.routes) {
-    throwIfAborted(input.signal);
-    const identity = expectedWmDeploymentIdentity(route.routeId);
-    if (!identity) {
-      return {
-        status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
-        failedRouteId: route.routeId,
-      };
-    }
-    const result =
-      identity.runtime === "evm"
-        ? await observeWmEvmDeployment(
-            route.routeId,
-            route.chainId,
-            route.contractAddress,
-            input.scoringClockSec,
-            input.chainRpcs,
-            dependencies,
-            input.signal,
-          )
-        : await dependencies
-            .fetchSolanaObservation(route.routeId, route.contractAddress, input.signal)
-            .then<WmDeploymentObservationResult>((observation) =>
-              observation
-                ? { status: "accepted", observation }
-                : rejectDeployment(route.routeId, "deployment-state-unavailable"),
-            );
-    if (result.status === "rejected") return result;
-    const identityError = reviewedDeploymentIdentityValidationError(result.observation);
-    if (identityError) {
-      return {
-        status: "rejected",
-        rejectionCode: "deployment-identity-mismatch",
-        failedRouteId: route.routeId,
-      };
-    }
-    observations.push(result.observation);
-  }
-
-  const blockTimes = observations.map((observation) => observation.blockTimeSec);
-  const captureStartedAtSec = Math.min(...blockTimes);
-  const captureEndedAtSec = Math.max(...blockTimes);
-  const timingIssue = reviewedDeploymentObservationTimingIssue({
-    clockSec: input.scoringClockSec,
-    captureStartedAtSec,
-    captureEndedAtSec,
-    observedAtSec: captureEndedAtSec,
-    deployments: observations,
-  });
-  if (timingIssue) {
-    return {
-      status: "rejected",
-      rejectionCode: "deployment-observation-skew",
-      failedRouteId: timingIssue.failedRouteId,
-    };
-  }
-
-  const attribution = deriveReviewedDeploymentUnitPartition({
+  return observeReviewedDeploymentUnitPartitionAttempt({
     assetId: "wm-m0",
     aggregateSupplyUsd: input.aggregateSupplyUsd,
     registryFingerprint: input.registryFingerprint,
     scoringClockSec: input.scoringClockSec,
-    observations,
+    signal: input.signal,
+    identityRuntime: (routeId) => expectedWmDeploymentIdentity(routeId)?.runtime ?? null,
+    observeEvm: (route) => observeWmEvmDeployment(
+      route.routeId,
+      route.chainId,
+      route.contractAddress,
+      input.scoringClockSec,
+      input.chainRpcs,
+      dependencies,
+      input.signal,
+    ),
+    observeSolana: (route) => dependencies.fetchSolanaObservation(
+      route.routeId,
+      route.contractAddress,
+      input.signal,
+    ),
+    identityValidationError: reviewedDeploymentIdentityValidationError,
   });
-  return attribution
-    ? { status: "accepted", attribution }
-    : {
-        status: "rejected",
-        rejectionCode: "packet-reconciliation-failed",
-        failedRouteId: null,
-      };
 }
 
 export async function observeWmReviewedDeploymentUnitPartition(

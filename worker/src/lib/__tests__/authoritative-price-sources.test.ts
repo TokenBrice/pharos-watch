@@ -2636,6 +2636,11 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         match: "FROM authoritative_vault_rates",
         rows: [{ stablecoin_id: "gtusdc-gauntlet", rate: 1.0221, observed_at: nowSec - 3600 }],
       },
@@ -2692,6 +2697,11 @@ describe("authoritative-price-sources", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = mockD1([
       {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
         // The 24h read-side WHERE bound excludes this row, and even a returned
         // stale row would fail the in-memory trust check.
         match: "FROM authoritative_vault_rates",
@@ -2733,7 +2743,17 @@ describe("authoritative-price-sources", () => {
     const oneShareUsdcRaw = 1_010_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = mockD1([]);
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        rows: [],
+        first: null,
+      },
+      {
+        match: "INSERT INTO authoritative_vault_rates",
+        rows: [],
+      },
+    ]);
 
     const overrides = await fetchAuthoritativeLivePriceOverrides(
       [

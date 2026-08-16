@@ -1,4 +1,4 @@
-import { buildPaginatedQuery } from "./db";
+import { buildPaginatedQuery, executeAtomicBatch } from "./db";
 import { getLatestSuccessfulCronTimestamp } from "./api-freshness";
 import {
   encodeJsonCursor,
@@ -267,13 +267,13 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
       limit: 0,
       offset: 0,
     });
-    const [countBatch, dataResult] = await db.batch([
+    const [countBatch, dataResult] = await executeAtomicBatch(db, [
       // SAFETY: `tableName` has already passed the explicit `PAGINATED_TABLES` allowlist check above.
       db.prepare(
         `SELECT ${buildSqlComment(config.queryComment, "count")}COUNT(*) as total FROM ${fromClause}${countWhere}`,
       ).bind(...config.filterBindings),
       dataStatement,
-    ]);
+    ], { returnResults: true });
     total = ((countBatch.results ?? []) as { total: number }[])[0]?.total ?? 0;
     dataBatch = dataResult as D1Result<TRow>;
   } else {

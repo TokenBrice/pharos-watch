@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../operational-cache-keys";
 import {
   beginReserveSyncAttempt,
@@ -17,6 +17,26 @@ import { getConfiguredLiveReserveCoins } from "../live-reserves-store-shared";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
+
+const RESERVE_DEFAULT_TABLES: MockTableConfig[] = [
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "FROM reserve_sync_state", rows: [] },
+  { match: "FROM reserve_composition", rows: [] },
+  { match: "INSERT INTO reserve_sync_state", rows: [] },
+  { match: "INSERT INTO reserve_composition", rows: [] },
+  { match: "UPDATE reserve_sync_state", rows: [] },
+  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
+  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
+  {
+    match: "SELECT 1 AS finalized FROM reserve_composition c JOIN reserve_sync_state",
+    rows: [],
+    first: null,
+  },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...RESERVE_DEFAULT_TABLES]);
+}
 
 type MockRow = Record<string, unknown>;
 

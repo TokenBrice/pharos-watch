@@ -5,6 +5,7 @@ import { buildInClause } from "../lib/db";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
 import type { PsiDepegEventRow } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
   runCoinGeckoAuditBatch,
@@ -249,8 +250,8 @@ function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; s
 }
 
 function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
-  const startDay = Math.floor(startedAt / DAY_SECONDS) * DAY_SECONDS;
-  const endDay = Math.floor(endedAt / DAY_SECONDS) * DAY_SECONDS;
+  const startDay = bucketUnixSecondsToUtcDay(startedAt);
+  const endDay = bucketUnixSecondsToUtcDay(endedAt);
   for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
     affectedDays.add(day);
   }

@@ -22,6 +22,10 @@ import {
 } from "./freshness-sentinels";
 import { toErrorMessage } from "./error-utils";
 import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
+import {
+  API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+  measureFreshnessAge,
+} from "./api-freshness-age";
 
 export { addFreshnessHeaders } from "./api-freshness-headers";
 
@@ -82,11 +86,17 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCa
 };
 
 export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
-  const age = Math.floor(Date.now() / 1000) - updatedAt;
+  const { ageSeconds, futureSkewSeconds } = measureFreshnessAge(
+    Date.now() / 1000,
+    updatedAt,
+    API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+  );
   return {
     updatedAt,
-    ageSeconds: age,
-    status: classifyFreshnessRatio(age / maxAgeSec),
+    ageSeconds,
+    status: futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC
+      ? "degraded"
+      : classifyFreshnessRatio(ageSeconds / maxAgeSec),
   };
 }
 

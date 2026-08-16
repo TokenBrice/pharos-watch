@@ -1,6 +1,6 @@
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { ExitRouteCapacityPoint, ExitRouteObservation } from "@shared/types/exit-route";
-import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
+import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { z } from "zod";
 
@@ -526,10 +526,11 @@ export function buildSfrxusdCrosschainV9ExitRouteObservation(args: {
   const capacityCurve = state.protocolCostCurve.map((point) =>
     buildExitRouteCapacityPoint({
       requestedNotionalUsd: point.requestedNotionalUsd,
+      maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
       capacityUsd: state.capacity.capacityUsd,
-      costBps: point.allInCostBps!,
-      publishExecutionCost: true,
-    }),
+      admitted: point.allInCostBps! <= SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
+      executionCostBps: point.allInCostBps!,
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null }),
   );
   const exactPoint = capacityCurve.find(
     (point) => point.requestedNotionalUsd === modeledExitSizeUsd,

@@ -160,6 +160,26 @@ describe("db utility helpers", () => {
     );
   });
 
+  it("retries an overloaded atomic batch and preserves per-statement results for CAS callers", async () => {
+    const results = [
+      { success: true, results: [{ total: 2 }], meta: { changes: 0 } },
+      { success: true, results: [], meta: { changes: 1 } },
+    ] as D1Result[];
+    const batch = vi.fn()
+      .mockRejectedValueOnce(new Error("D1 DB is overloaded"))
+      .mockResolvedValueOnce(results);
+    const db = { batch } as unknown as D1Database;
+    const statements = [{}, {}] as D1PreparedStatement[];
+
+    const pending = executeAtomicBatch(db, statements, { returnResults: true });
+    await vi.runAllTimersAsync();
+
+    await expect(pending).resolves.toBe(results);
+    expect(batch).toHaveBeenCalledTimes(2);
+    expect(batch).toHaveBeenNthCalledWith(1, statements);
+    expect(batch).toHaveBeenNthCalledWith(2, statements);
+  });
+
   it("packs multi-row inserts under the D1 bind limit", () => {
     const { db, calls } = makeDb();
     const rows = Array.from({ length: 26 }, (_, index) => [

@@ -19,6 +19,7 @@ import {
 } from "@shared/lib/report-cards-fixed-input-identity";
 import { sha256Hex } from "@shared/lib/sha256";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   SafetyScoreV8PublicationIdentitySchema,
   type SafetyScoreV8PublicationIdentity,
@@ -41,6 +42,7 @@ import {
   xautRepresentationGroupAttributionValidationError,
 } from "./safety-score-v9-xaut-supply-attribution-contract";
 import { parseJson } from "./json-parse";
+import { gunzipTextBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 import {
   V9PublicationInputHealthSchema,
 } from "./safety-score-v9-publication-assessment";
@@ -261,6 +263,8 @@ function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
 // intact instead of introducing a cycle.
 export const REPORT_CARDS_FIXED_INPUT_CACHE_KEY = "report-cards:fixed-input:exact";
 const REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES = 1_900_000;
+const REPORT_CARDS_FIXED_INPUT_MAX_COMPRESSED_BYTES = 1_350_000;
+const REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES = 8_000_000;
 
 const FixedInputCacheEnvelopeSchema = z.object({
   schemaVersion: z.literal(1),
@@ -286,16 +290,6 @@ function base64ToBytes(value: string): Uint8Array {
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
   return bytes;
-}
-
-async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function gunzipText(bytes: Uint8Array): Promise<string> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
-  return new Response(stream).text();
 }
 
 async function buildFixedInputCacheEntry(
@@ -324,8 +318,11 @@ async function buildFixedInputCacheEntry(
     ...baseInput
   } = input;
   const payload = JSON.stringify(baseInput);
-  const uncompressedBytes = new TextEncoder().encode(payload);
-  const compressed = await gzipBytes(uncompressedBytes);
+  const compressed = await gzipCanonicalJson(payload, {
+    label: "Exact report-card fixed input cache artifact",
+    maximumCompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
+  });
   const envelope = JSON.stringify({
     schemaVersion: 1,
     kind: "report-cards-fixed-input-exact",
@@ -333,8 +330,8 @@ async function buildFixedInputCacheEntry(
     sourceGeneration: input.sourceGeneration,
     ...(identity ? { safetyScoreIdentity: identity } : {}),
     payloadSha256: sha256Hex(payload),
-    uncompressedBytes: uncompressedBytes.byteLength,
-    payload: bytesToBase64(compressed),
+    uncompressedBytes: compressed.uncompressedBytes,
+    payload: bytesToBase64(compressed.compressed),
   });
   const storedBytes = new TextEncoder().encode(envelope).byteLength;
   if (storedBytes > REPORT_CARDS_FIXED_INPUT_CACHE_MAX_BYTES) {
@@ -346,7 +343,7 @@ async function buildFixedInputCacheEntry(
     key: REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
     value: envelope,
     storedBytes,
-    uncompressedBytes: uncompressedBytes.byteLength,
+    uncompressedBytes: compressed.uncompressedBytes,
   };
 }
 
@@ -374,10 +371,15 @@ export async function parseReportCardsFixedInputCacheArtifact(
   }
   const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
   const envelope = FixedInputCacheEnvelopeSchema.parse(raw);
-  const payload = await gunzipText(base64ToBytes(envelope.payload));
-  if (new TextEncoder().encode(payload).byteLength !== envelope.uncompressedBytes) {
-    throw new Error("Exact report-card fixed input cache artifact byte length does not match its envelope");
+  if (envelope.payload.length > Math.ceil(REPORT_CARDS_FIXED_INPUT_MAX_COMPRESSED_BYTES / 3) * 4) {
+    throw new Error("Exact report-card fixed input cache artifact exceeds its compressed byte limit");
   }
+  const payload = await gunzipTextBounded(base64ToBytes(envelope.payload), {
+    label: "Exact report-card fixed input cache artifact",
+    maximumCompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_COMPRESSED_BYTES,
+    maximumUncompressedBytes: REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES,
+    expectedUncompressedBytes: envelope.uncompressedBytes,
+  });
   if (sha256Hex(payload) !== envelope.payloadSha256) {
     throw new Error("Exact report-card fixed input cache artifact checksum mismatch");
   }
@@ -592,7 +594,7 @@ function assertFixedInputConsistency(
       );
     }
     const aggregate = input.aggregateCirculatingById[assetId];
-    const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);
+    const aggregateSupplyUsd = getCirculatingRaw(aggregate ?? {});
     const attributedSupplyUsd =
       attribution.model === "canonical-lock-mint-partition-v1"
         ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)

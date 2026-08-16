@@ -108,6 +108,11 @@ describe("native Safety Score V9 input", () => {
     // The stored checksum must actually gate the payload.
     const tampered = JSON.stringify({ ...envelope, payloadSha256: "f".repeat(64) });
     await expect(parseNativeV9InputCacheValue(tampered)).rejects.toThrow(/checksum mismatch/);
+
+    const corruptLength = JSON.stringify({ ...envelope, uncompressedBytes: 1 });
+    await expect(parseNativeV9InputCacheValue(corruptLength)).rejects.toThrow(
+      "exceeds its declared uncompressed byte length",
+    );
   });
 
   it("refuses a v1 envelope on the native parser", async () => {
