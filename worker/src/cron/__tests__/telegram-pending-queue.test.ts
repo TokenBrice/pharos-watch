@@ -241,7 +241,7 @@ vi.mock("../../lib/telegram-transport-control", async (importOriginal) => {
     recordTelegramTransportOutcomes: transportMocks.record,
   };
 });
-vi.mock("../../api/telegram-store/forget", () => ({
+vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
   migrateTelegramChatId: mockMigrateTelegramChatId,
 }));
 

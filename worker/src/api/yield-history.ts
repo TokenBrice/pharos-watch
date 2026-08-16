@@ -12,8 +12,8 @@ import { buildOnChainSourceKey, isOnChainBootstrapYieldSeed, parseYieldWarningSi
 import { resolveYieldSourceUrl } from "../lib/yield-source-links";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
-import { parseYieldRankingsPublishedCutoff } from "../cron/yield-sync/cache";
-import { isSuppressedYieldHistoryRow } from "../cron/yield-sync/history";
+import { parseYieldRankingsPublishedCutoff } from "../lib/yield-rankings-cache";
+import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isRecord } from "@shared/lib/type-guards";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";

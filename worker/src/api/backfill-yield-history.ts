@@ -2,7 +2,7 @@ import { batchExecute } from "../lib/db";
 import { jsonResponse } from "../lib/api-utils";
 import { runAdminRoute } from "../lib/route-wrappers";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../lib/backfill-query";
-import { fetchZephyrZysSource } from "../cron/yield-sync/sources-optional-protocols-protocol-api";
+import { fetchZephyrZysSource } from "../lib/yield-source-adapters/zephyr";
 
 const DEFAULT_BATCH_SIZE = 10;
 const ZEPHYR_YIELD_SOURCE_KEY = "protocol-api:zys-zephyr-protocol";
@@ -108,4 +108,3 @@ export async function handleBackfillYieldHistory({
     },
   );
 }
-

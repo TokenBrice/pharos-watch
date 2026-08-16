@@ -72,7 +72,7 @@ import {
   telegramTransportPermitSkip,
   type TelegramTransportPermit,
 } from "../../lib/telegram-transport-control";
-import { migrateTelegramChatId } from "../../api/telegram-store/forget";
+import { migrateTelegramChatId } from "../../lib/telegram-subscriber-lifecycle";
 
 export const PENDING_CLAIM_TTL_SEC = 10 * 60;
 const PENDING_WAVE_FINALIZATION_RESERVE_MS = 15_000;

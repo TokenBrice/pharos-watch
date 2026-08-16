@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { materializeBlacklistGapMetrics } from "../lib/blacklist-gaps";
-import { materializeBlacklistSummarySnapshot } from "../api/blacklist-summary";
+import { materializeBlacklistSummarySnapshot } from "../lib/blacklist-summary-service";
 import { type RateLimitedFetch, createRateLimiter } from "../lib/evm-logs";
 import { type ChainRpcConfig } from "../lib/chain-registry";
 import type { CronProgressReporter } from "../lib/cron-logger";

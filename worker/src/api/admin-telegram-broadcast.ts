@@ -8,17 +8,21 @@ import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 import {
   enqueuePendingAlerts,
+} from "../lib/telegram-pending-queue";
+import {
   estimateTelegramDrainTimeSec,
-  readPendingCapacitySnapshot,
+  readTelegramPendingCapacitySnapshot as readPendingCapacitySnapshot,
+} from "../lib/telegram-pending-capacity";
+import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../cron/telegram-pending";
+} from "../lib/telegram-constants";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   TELEGRAM_ALERT_TTL_SEC,
 } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
-import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../cron/dispatch-telegram-subscribers";
+import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../lib/telegram-broadcast-targets";
 import { sendToChat, type BatchMessage } from "../lib/telegram";
 import { z } from "zod";
 import {

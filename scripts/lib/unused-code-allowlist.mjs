@@ -257,8 +257,6 @@ export const DEBT_EXPORTS = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/telegram-pending/upsert-sql.ts::PENDING_ALERT_UPSERT_COLUMNS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/yield-sync/cache.ts::YieldRankingsPublishedCutoffResult":
-    "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/yield-sync/cache.ts::filterValidDlPools":
     "Unreferenced here: consumers import the same name from './cache/defillama-pool-cache' instead.",
   "worker/src/cron/yield-sync/cache.ts::ParsedYieldSupplementalSourcesCache":

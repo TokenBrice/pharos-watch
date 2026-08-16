@@ -96,15 +96,6 @@ export interface PendingDrainResult {
   notBeforeAt: number | null;
 }
 
-export interface PendingEnqueueOptions {
-  notBeforeAt?: number | null;
-  lastErrorClass?: TelegramSendErrorClass | null;
-  retryAfterSec?: number | null;
-  sourceType?: "risk_alert" | "personalized_recap" | "admin_broadcast" | "admin_replay" | "legacy";
-  priority?: number | null;
-  ttlSec?: number | null;
-}
-
 export type PendingCapacitySnapshot = TelegramPendingCapacitySnapshot;
 
 export type PendingCapacityReadResult =

@@ -20,11 +20,11 @@ const mockSource: ResolvedYield = {
   comparisonAnchorObservedAt: null,
 };
 
-vi.mock("../../cron/yield-sync/sources-optional-protocols-protocol-api", () => ({
+vi.mock("../../lib/yield-source-adapters/zephyr", () => ({
   fetchZephyrZysSource: vi.fn(async () => mockSource),
 }));
 
-import { fetchZephyrZysSource } from "../../cron/yield-sync/sources-optional-protocols-protocol-api";
+import { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 
 function makeDb(capturedStatements: Array<{ sql: string; args: unknown[] }> = []): D1Database {
   const stmt = (_sql: string) => ({

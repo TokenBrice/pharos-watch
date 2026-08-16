@@ -9,8 +9,6 @@ import {
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../../lib/yield-history-ownership-handoffs";
 
-export { isSuppressedYieldHistoryRow } from "../../lib/yield-history-ownership-handoffs";
-
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const STALE_YIELD_DELETE_FIXED_BIND_COUNT = 1;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;

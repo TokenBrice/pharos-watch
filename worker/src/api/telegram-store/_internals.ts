@@ -1,21 +1,12 @@
 /**
- * Module-internal helpers shared across telegram-store submodules. Not
- * re-exported from `telegram-webhook-store.ts` (the barrel) — keep these out
- * of the public surface.
+ * Compatibility re-export for the Telegram store's internal helpers.
+ *
+ * The operation-batch primitives live in `worker/src/lib` so API and cron
+ * services share one implementation and preserve the same atomic statement
+ * ordering.
  */
-
-export function d1ChangeCount(result: D1Result<unknown>): number {
-  const changes = Number(result.meta?.changes ?? 0);
-  return Number.isFinite(changes) ? changes : 0;
-}
-
-export interface TelegramOperationBatchOptions {
-  operationStatements?: D1PreparedStatement[];
-}
-
-export function appendTelegramOperationStatements(
-  statements: D1PreparedStatement[],
-  options: TelegramOperationBatchOptions | undefined,
-): D1PreparedStatement[] {
-  return [...statements, ...(options?.operationStatements ?? [])];
-}
+export {
+  appendTelegramOperationStatements,
+  d1ChangeCount,
+} from "../../lib/telegram-operation-batch";
+export type { TelegramOperationBatchOptions } from "../../lib/telegram-operation-batch";
