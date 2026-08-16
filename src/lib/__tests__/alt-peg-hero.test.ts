@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeStablecoin } from "@/test/fixtures/stablecoins";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 

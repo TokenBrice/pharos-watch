@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SupplyMovesCard } from "@/components/home-alt-mini-cards/supply-moves-card";
-import { makeStablecoin as makeStablecoinFixture } from "@/test/fixtures/stablecoins";
+import { makeStablecoin as makeStablecoinFixture } from "@shared/test-utils/stablecoin";
 import type { StablecoinData } from "@shared/types";
 
 const { useLogosMock, useStablecoinsMock } = vi.hoisted(() => ({

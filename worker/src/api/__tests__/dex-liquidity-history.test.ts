@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeDexLiquidityHistoryRow } from "../../test-helpers/__shared/fixtures";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDexLiquidityHistory } from "../dex-liquidity-history";
 
 describe("handleDexLiquidityHistory", () => {
@@ -92,20 +93,6 @@ describe("handleDexLiquidityHistory", () => {
     expect(body).toEqual([]);
   });
 
-  it("returns 400 when stablecoin param is missing", async () => {
-    const db = mockD1([]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
-  });
-
-  it("returns 404 for unknown stablecoin ID", async () => {
-    const db = mockD1([]);
-    const res = await handleDexLiquidityHistory(db, new URL("https://x/api/dex-liquidity-history?stablecoin=../etc"));
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
-  });
-
   it("maps snake_case columns to camelCase", async () => {
     const db = mockD1([{ match: "dex_liquidity_history", rows: [row] }]);
     const res = await handleDexLiquidityHistory(
@@ -160,4 +147,10 @@ describe("handleDexLiquidityHistory", () => {
     expect(body[0]?.hasMeasuredLiquidityEvidence).toBe(false);
     expect(body[0]?.trendworthy).toBe(false);
   });
+});
+
+registerStablecoinParameterContract({
+  name: "DEX liquidity history",
+  path: "/api/dex-liquidity-history",
+  invoke: handleDexLiquidityHistory,
 });

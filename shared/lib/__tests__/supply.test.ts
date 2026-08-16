@@ -8,11 +8,7 @@ import {
   getPrevWeekRawOrNull,
   getPrevMonthRawOrNull,
 } from "../supply";
-import type { StablecoinData } from "../../types";
-
-function mockCoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
-  return overrides as StablecoinData;
-}
+import { makeStablecoin } from "../../test-utils/stablecoin";
 
 describe("sumPegBuckets", () => {
   it("returns 0 for undefined", () => {
@@ -42,31 +38,31 @@ describe("sumPegBuckets", () => {
 
 describe("getCirculatingRaw", () => {
   it("sums circulating peg buckets", () => {
-    const coin = { circulating: { usd: 1_000_000 } } as never;
+    const coin = makeStablecoin({ circulating: { usd: 1_000_000 } });
     expect(getCirculatingRaw(coin)).toBe(1_000_000);
   });
 });
 
 describe("getPrevDayRaw", () => {
   it("sums circulatingPrevDay peg buckets", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevDay: { peggedUSD: 900_000 },
     });
     expect(getPrevDayRaw(coin)).toBe(900_000);
   });
 
   it("returns 0 when circulatingPrevDay is undefined", () => {
-    expect(getPrevDayRaw(mockCoin())).toBe(0);
+    expect(getPrevDayRaw(makeStablecoin({ circulatingPrevDay: undefined }))).toBe(0);
   });
 });
 
 describe("getPrevDayRawOrNull", () => {
   it("returns null when circulatingPrevDay is undefined", () => {
-    expect(getPrevDayRawOrNull(mockCoin())).toBeNull();
+    expect(getPrevDayRawOrNull(makeStablecoin({ circulatingPrevDay: undefined }))).toBeNull();
   });
 
   it("returns null when all buckets are missing-equivalent", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevDay: {
         peggedEUR: null as unknown as number,
         peggedGBP: undefined as unknown as number,
@@ -76,7 +72,7 @@ describe("getPrevDayRawOrNull", () => {
   });
 
   it("returns zero when an explicit finite bucket is zero", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevDay: {
         peggedUSD: 0,
       },
@@ -85,7 +81,7 @@ describe("getPrevDayRawOrNull", () => {
   });
 
   it("returns zero when real bucket data exists but sums to zero", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevDay: {
         peggedUSD: 100,
         peggedEUR: -100,
@@ -97,31 +93,31 @@ describe("getPrevDayRawOrNull", () => {
 
 describe("getPrevWeekRaw", () => {
   it("sums circulatingPrevWeek peg buckets", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
     });
     expect(getPrevWeekRaw(coin)).toBe(900_000);
   });
 
   it("returns 0 when circulatingPrevWeek is undefined", () => {
-    expect(getPrevWeekRaw(mockCoin())).toBe(0);
+    expect(getPrevWeekRaw(makeStablecoin({ circulatingPrevWeek: undefined }))).toBe(0);
   });
 });
 
 describe("getPrevWeekRawOrNull", () => {
   it("returns null when circulatingPrevWeek is undefined", () => {
-    expect(getPrevWeekRawOrNull(mockCoin())).toBeNull();
+    expect(getPrevWeekRawOrNull(makeStablecoin({ circulatingPrevWeek: undefined }))).toBeNull();
   });
 
   it("returns zero when an explicit finite week bucket is zero", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevWeek: { peggedUSD: 0 },
     });
     expect(getPrevWeekRawOrNull(coin)).toBe(0);
   });
 
   it("returns summed value when any bucket has data", () => {
-    const coin = mockCoin({
+    const coin = makeStablecoin({
       circulatingPrevWeek: { peggedUSD: 800_000, peggedEUR: 100_000 },
     });
     expect(getPrevWeekRawOrNull(coin)).toBe(900_000);
@@ -130,17 +126,17 @@ describe("getPrevWeekRawOrNull", () => {
 
 describe("getPrevMonthRawOrNull", () => {
   it("returns null when no prev month data", () => {
-    const coin = { circulatingPrevMonth: undefined } as never;
+    const coin = makeStablecoin({ circulatingPrevMonth: undefined });
     expect(getPrevMonthRawOrNull(coin)).toBeNull();
   });
 
   it("returns zero when an explicit finite month bucket is zero", () => {
-    const coin = { circulatingPrevMonth: { usd: 0 } } as never;
+    const coin = makeStablecoin({ circulatingPrevMonth: { usd: 0 } });
     expect(getPrevMonthRawOrNull(coin)).toBe(0);
   });
 
   it("returns sum when data exists", () => {
-    const coin = { circulatingPrevMonth: { usd: 500_000 } } as never;
+    const coin = makeStablecoin({ circulatingPrevMonth: { usd: 500_000 } });
     expect(getPrevMonthRawOrNull(coin)).toBe(500_000);
   });
 });

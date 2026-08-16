@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
 import { YieldHistoryResponseSchema, type YieldHistoryResponse } from "@shared/types/yield";
@@ -181,20 +182,6 @@ describe("handleYieldHistory", () => {
     const body = (await res.json()) as { current: null; history: unknown[] };
     expect(body.current).toBeNull();
     expect(body.history).toEqual([]);
-  });
-
-  it("returns 400 when stablecoin param is missing", async () => {
-    const db = mockD1([]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
-  });
-
-  it("returns 404 for unknown stablecoin ID", async () => {
-    const db = mockD1([]);
-    const res = await handleYieldHistory(db, new URL("https://x/api/yield-history?stablecoin=DROP TABLE"));
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
@@ -869,4 +856,10 @@ describe("handleYieldHistory", () => {
     const historyQuery = db.getHistory().find((entry) => entry.sql.includes("FROM yield_history h"));
     expect(historyQuery?.binds).toContain(nowSec - 60);
   });
+});
+
+registerStablecoinParameterContract({
+  name: "yield history",
+  path: "/api/yield-history",
+  invoke: handleYieldHistory,
 });
