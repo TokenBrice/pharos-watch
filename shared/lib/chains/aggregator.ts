@@ -4,7 +4,7 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRawOrNull } from "../supply";
 import { relativeChangeRatio } from "../stats";
-import { ZERO_RATIO } from "@shared/types/ratio";
+import { ZERO_RATIO } from "../../types/ratio";
 import {
   ACTIVE_BACKING_DIVERSITY_TYPES,
   computeConcentrationScore,

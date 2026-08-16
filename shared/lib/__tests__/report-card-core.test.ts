@@ -3,19 +3,29 @@ import {
   getReportCardGradeRank,
   GRADE_THRESHOLDS,
   REPORT_CARD_GRADE_RANK,
+  scoreToV9Grade,
   scoreToGrade,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
+  V9_GRADE_THRESHOLDS,
 } from "../report-cards";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 describe("scoreToGrade", () => {
   it("derives presentation thresholds from the active scoring policy", () => {
-    expect(GRADE_THRESHOLDS).toEqual(
-      V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({
-        grade,
-        min: minScore,
-      })),
-    );
+    const expected = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({
+      grade,
+      min: minScore,
+    }));
+    expect(GRADE_THRESHOLDS).toEqual(expected);
+    expect(V9_GRADE_THRESHOLDS).toEqual(expected);
+  });
+
+  it("keeps the V9 grade conversion bound to policy thresholds", () => {
+    for (const { grade, minScore } of V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds) {
+      expect(scoreToV9Grade(minScore)).toBe(grade);
+      if (minScore > 0) expect(scoreToV9Grade(minScore - 0.1)).not.toBe(grade);
+    }
+    expect(scoreToV9Grade(null)).toBe("NR");
   });
 
   it("returns NR for null", () => {

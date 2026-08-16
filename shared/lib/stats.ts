@@ -1,4 +1,4 @@
-import type { Ratio } from "@shared/types/ratio";
+import type { Ratio } from "../types/ratio";
 
 export type { Ratio };
 
