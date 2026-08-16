@@ -4,6 +4,7 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { getPegReference } from "../peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw, getPrevMonthRawOrNull } from "../supply";
 import { relativeChangeRatio } from "../stats";
+import { ZERO_RATIO } from "@shared/types/ratio";
 import {
   ACTIVE_BACKING_DIVERSITY_TYPES,
   computeConcentrationScore,
@@ -200,11 +201,11 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       type: meta.type,
       totalUsd: acc.totalUsd,
       change24h,
-      change24hPct: acc.prevDay > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevDay) ?? 0) : 0,
+      change24hPct: acc.prevDay > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevDay) ?? ZERO_RATIO) : ZERO_RATIO,
       change7d,
-      change7dPct: acc.prevWeek > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevWeek) ?? 0) : 0,
+      change7dPct: acc.prevWeek > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevWeek) ?? ZERO_RATIO) : ZERO_RATIO,
       change30d,
-      change30dPct: acc.prevMonth > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevMonth) ?? 0) : 0,
+      change30dPct: acc.prevMonth > 0 ? (relativeChangeRatio(acc.totalUsd, acc.prevMonth) ?? ZERO_RATIO) : ZERO_RATIO,
       stablecoinCount: acc.coins.length,
       dominantStablecoin: {
         id: dominant.id,
@@ -227,9 +228,9 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
     globalTotalUsd,
     chainAttributedTotalUsd,
     unattributedTotalUsd,
-    globalChange24hPct: globalPrevDayUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevDayUsd) ?? 0) : 0,
-    globalChange7dPct: globalPrevWeekUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevWeekUsd) ?? 0) : 0,
-    globalChange30dPct: globalPrevMonthUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevMonthUsd) ?? 0) : 0,
+    globalChange24hPct: globalPrevDayUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevDayUsd) ?? ZERO_RATIO) : ZERO_RATIO,
+    globalChange7dPct: globalPrevWeekUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevWeekUsd) ?? ZERO_RATIO) : ZERO_RATIO,
+    globalChange30dPct: globalPrevMonthUsd > 0 ? (relativeChangeRatio(globalTotalUsd, globalPrevMonthUsd) ?? ZERO_RATIO) : ZERO_RATIO,
     updatedAt: Math.floor(Date.now() / 1000),
     healthMethodologyVersion: HEALTH_METHODOLOGY_VERSION,
   };

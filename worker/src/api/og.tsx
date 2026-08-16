@@ -11,7 +11,7 @@ import { StabilityIndexCard, type StabilityIndexCardData } from "../lib/og-templ
 import { ChainCard, type ChainCardData } from "../lib/og-templates/chain-card";
 import { isActiveChainAggregateAsset } from "./chains";
 import { aggregateChains } from "@shared/lib/chain-aggregator";
-import { asRatio, ratioToPercentage } from "@shared/lib/stats";
+import { ratioToPercentage } from "@shared/lib/stats";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/lib/chains";
 import { resolveOrReject } from "../lib/api-utils";
@@ -740,7 +740,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     ? {
         name: chain.name,
         totalUsd: chain.totalUsd,
-        change7dPercent: ratioToPercentage(asRatio(chain.change7dPct)),
+        change7dPercent: ratioToPercentage(chain.change7dPct),
         stablecoinCount: chain.stablecoinCount,
         dominanceShare: chain.dominanceShare,
         healthScore: chain.healthScore,
