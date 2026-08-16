@@ -7,7 +7,7 @@ import {
 } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-const USAGE = `Usage: npm --prefix worker run deploy
+const USAGE: string = `Usage: npm --prefix worker run deploy
 
 Production publishing is intentionally unavailable through this command.
 Use the production release workflow. For local debugging, run:
@@ -16,12 +16,12 @@ Use the production release workflow. For local debugging, run:
 Options:
   -h, --help  Show this help`;
 
-export function parseWorkerDeployGuardArgs(argv) {
+export function parseWorkerDeployGuardArgs(argv: readonly string[]): { help: boolean } {
   const { values } = parseStrictCliArgs(argv);
   return { help: values.help === true };
 }
 
-export function runWorkerDeployGuard(argv = process.argv.slice(2)) {
+export function runWorkerDeployGuard(argv: readonly string[] = process.argv.slice(2)): void {
   const options = parseWorkerDeployGuardArgs(argv);
   if (writeCliHelpIfRequested(options, USAGE)) return;
   throw new Error(

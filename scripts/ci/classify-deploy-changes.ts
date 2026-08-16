@@ -15,7 +15,32 @@ import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-const ZERO_SHA = /^0+$/;
+const ZERO_SHA: RegExp = /^0+$/;
+
+type GitExec = (
+  file: string,
+  args: readonly string[],
+  options: { encoding: "utf8" },
+) => string;
+
+interface DeployClassification {
+  changedFiles: string[];
+  criticalCoverageChanged: boolean;
+  deployRequired: boolean;
+  docsOnly: boolean;
+  pagesChanged: boolean;
+  pagesDeployRequired: boolean;
+  reason: string;
+  workerChanged: boolean;
+  workerDeployRequired: boolean;
+}
+
+interface ClassifyDeployChangesOptions {
+  baseSha?: string;
+  eventName?: string;
+  execFile?: GitExec;
+  headSha?: string;
+}
 
 export {
   hasDeployImpact,
@@ -29,13 +54,16 @@ export {
 
 // Parses NUL-delimited `git diff -z` output; see splitNullDelimited for why the
 // separator matters.
-export function normalizeChangedFiles(rawOutput) {
+export function normalizeChangedFiles(rawOutput: string): string[] {
   return splitNullDelimited(rawOutput)
     .map((path) => normalizeRepoPath(path))
     .filter(Boolean);
 }
 
-export function classifyChangedFiles(changedFiles, { reason } = {}) {
+export function classifyChangedFiles(
+  changedFiles: readonly string[],
+  { reason }: { reason?: string } = {},
+): DeployClassification {
   const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
   const pagesChanged = hasPagesDeployImpact(normalizedFiles);
   const pagesDeployRequired = hasPagesPublishImpact(normalizedFiles);
@@ -58,15 +86,12 @@ export function classifyChangedFiles(changedFiles, { reason } = {}) {
   };
 }
 
-/**
- * @param {{
- *   baseSha?: string,
- *   eventName?: string,
- *   execFile?: (file: string, args: readonly string[], options: { encoding: "utf8" }) => string,
- *   headSha?: string,
- * }} [options]
- */
-export function classifyDeployChanges({ baseSha, eventName, execFile = execFileSync, headSha } = {}) {
+export function classifyDeployChanges({
+  baseSha,
+  eventName,
+  execFile = execFileSync as GitExec,
+  headSha,
+}: ClassifyDeployChangesOptions = {}): DeployClassification {
   if (eventName !== "push") {
     return {
       changedFiles: [],
@@ -123,11 +148,11 @@ export function classifyDeployChanges({ baseSha, eventName, execFile = execFileS
   });
 }
 
-function writeGithubOutputLine(key, value) {
+function writeGithubOutputLine(key: string, value: string): void {
   process.stdout.write(`${key}=${value}\n`);
 }
 
-export function emitGithubOutputs(classification) {
+export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("critical_coverage_changed", classification.criticalCoverageChanged ? "true" : "false");
   writeGithubOutputLine("deploy_required", classification.deployRequired ? "true" : "false");
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
@@ -137,7 +162,7 @@ export function emitGithubOutputs(classification) {
   writeGithubOutputLine("worker_deploy_required", classification.workerDeployRequired ? "true" : "false");
 }
 
-function runCli(env = process.env) {
+export function runCli(env: NodeJS.ProcessEnv = process.env): void {
   const classification = classifyDeployChanges({
     baseSha: env.DEPLOY_BASE_SHA,
     eventName: env.DEPLOY_EVENT_NAME,

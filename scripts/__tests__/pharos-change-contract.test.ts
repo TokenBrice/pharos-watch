@@ -11,7 +11,7 @@ import {
   classifyChangedFiles,
   formatContract,
   normalizeChangedFiles,
-} from "../ci/pharos-change-contract.mjs";
+} from "../ci/pharos-change-contract.ts";
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -84,7 +84,7 @@ describe("classifyChangedFiles", () => {
     const contract = classifyChangedFiles([
       ".codex/config.toml",
       ".claude/settings.json",
-      "scripts/ci/pharos-change-contract.mjs",
+      "scripts/ci/pharos-change-contract.ts",
     ]);
 
     expect(contract.families.map((family: { id: string }) => family.id)).toContain("agent-hooks-process");

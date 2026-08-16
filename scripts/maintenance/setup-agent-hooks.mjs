@@ -7,7 +7,7 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const HOOKS_PATH = resolve(ROOT, ".codex/hooks.json");
 
-const command = 'node "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.mjs"';
+const command = 'node --import tsx "$(git rev-parse --show-toplevel)/scripts/ci/pharos-change-contract.ts"';
 export function buildCodexHookConfig() {
   return {
     hooks: {

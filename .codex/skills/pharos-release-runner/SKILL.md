@@ -33,7 +33,7 @@ Do not use this for a pure review with no requested commit/push, or while anothe
 3. `docs/testing.md`
 4. `docs/process/agent-artifacts.md`
 
-Use the task router and `scripts/ci/pharos-change-contract.mjs` to choose any additional docs/checks for the touched files.
+Use the task router and `scripts/ci/pharos-change-contract.ts` to choose any additional docs/checks for the touched files.
 
 ## Workflow
 

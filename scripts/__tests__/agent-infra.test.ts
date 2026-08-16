@@ -21,7 +21,7 @@ describe("agent hook setup", () => {
       "PreToolUse",
       "SessionStart",
     ]);
-    expect(renderCodexHookConfig()).toContain("pharos-change-contract.mjs");
+    expect(renderCodexHookConfig()).toContain("pharos-change-contract.ts");
     expect(renderCodexHookConfig()).not.toContain("PostToolUse");
     expect(renderCodexHookConfig()).not.toContain("Stop");
   });

@@ -1,23 +1,61 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
+import {
+  spawnSync,
+  type SpawnSyncOptionsWithStringEncoding,
+  type SpawnSyncReturns,
+} from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-const registryUrl = new URL("./dependency-audit-exceptions.json", import.meta.url);
+const registryUrl: URL = new URL("./dependency-audit-exceptions.json", import.meta.url);
 
-export const DEPENDENCY_AUDIT_EXCEPTION_REGISTRY = JSON.parse(readFileSync(registryUrl, "utf8"));
+type Severity = "high" | "critical";
 
-function isHighOrCritical(vulnerability) {
-  return vulnerability?.severity === "high" || vulnerability?.severity === "critical";
+interface AuditException {
+  advisoryId: string;
+  affectedPackages: string[];
+  dependency: string;
+  expiresOn: string;
+  nodes: string[];
+  range: string;
+  severity: Severity;
+  source: number;
+  [key: string]: unknown;
 }
 
-function isObject(value) {
+interface AuditVulnerability extends Record<string, unknown> {
+  effects?: unknown;
+  nodes?: unknown;
+  severity: Severity;
+  via?: unknown;
+}
+
+interface DependencyAuditResult {
+  acceptedExceptionIds: string[];
+}
+
+type AuditSpawn = (
+  command: string,
+  args: string[],
+  options: SpawnSyncOptionsWithStringEncoding,
+) => SpawnSyncReturns<string>;
+
+export const DEPENDENCY_AUDIT_EXCEPTION_REGISTRY: unknown = JSON.parse(readFileSync(registryUrl, "utf8"));
+
+function isHighOrCritical(vulnerability: unknown): vulnerability is AuditVulnerability {
+  return (
+    isObject(vulnerability) &&
+    (vulnerability.severity === "high" || vulnerability.severity === "critical")
+  );
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function sortedUniqueStrings(value, fieldName) {
+function sortedUniqueStrings(value: unknown, fieldName: string): string[] {
   if (!Array.isArray(value) || value.length === 0 || value.some((item) => typeof item !== "string" || !item)) {
     throw new Error(`Dependency-audit exception ${fieldName} must be a non-empty string array.`);
   }
@@ -28,7 +66,7 @@ function sortedUniqueStrings(value, fieldName) {
   return sorted;
 }
 
-function validateExpiration(expiresOn, now) {
+function validateExpiration(expiresOn: unknown, now: Date): asserts expiresOn is string {
   if (typeof expiresOn !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(expiresOn)) {
     throw new Error("Dependency-audit exception expiresOn must be an ISO calendar date.");
   }
@@ -41,12 +79,12 @@ function validateExpiration(expiresOn, now) {
   }
 }
 
-function validateRegistry(registry, now) {
+function validateRegistry(registry: unknown, now: Date): AuditException[] {
   if (!isObject(registry) || registry.version !== 1 || !Array.isArray(registry.exceptions)) {
     throw new Error("Dependency-audit exception registry must declare version 1 and an exceptions array.");
   }
 
-  const exceptionKeys = new Set();
+  const exceptionKeys = new Set<string>();
   return registry.exceptions.map((exception) => {
     if (
       !isObject(exception) ||
@@ -68,18 +106,24 @@ function validateRegistry(registry, now) {
 
     return {
       ...exception,
+      advisoryId: exception.advisoryId,
       affectedPackages: sortedUniqueStrings(exception.affectedPackages, "affectedPackages"),
+      dependency: exception.dependency,
+      expiresOn: exception.expiresOn,
       nodes: sortedUniqueStrings(exception.nodes, "nodes"),
+      range: exception.range,
+      severity: exception.severity,
+      source: exception.source,
     };
   });
 }
 
-function hasExactNodes(vulnerability, exception) {
+function hasExactNodes(vulnerability: AuditVulnerability, exception: AuditException): boolean {
   const nodes = Array.isArray(vulnerability.nodes) ? [...vulnerability.nodes].sort() : [];
   return nodes.length === exception.nodes.length && nodes.every((node, index) => node === exception.nodes[index]);
 }
 
-function isExactDirectAdvisory(via, exception) {
+function isExactDirectAdvisory(via: unknown, exception: AuditException): boolean {
   return (
     isObject(via) &&
     via.source === exception.source &&
@@ -92,23 +136,32 @@ function isExactDirectAdvisory(via, exception) {
   );
 }
 
-function findMatchingException(name, vulnerability, exceptions) {
+function findMatchingException(
+  name: string,
+  vulnerability: AuditVulnerability,
+  exceptions: readonly AuditException[],
+): AuditException | undefined {
   if (!Array.isArray(vulnerability.via) || vulnerability.via.length !== 1) return undefined;
+  const [directAdvisory] = vulnerability.via;
   return exceptions.find(
     (exception) =>
       exception.dependency === name &&
       vulnerability.severity === exception.severity &&
       hasExactNodes(vulnerability, exception) &&
-      isExactDirectAdvisory(vulnerability.via[0], exception),
+      isExactDirectAdvisory(directAdvisory, exception),
   );
 }
 
-function reachableVulnerabilities(rootNames, vulnerabilities) {
+function reachableVulnerabilities(
+  rootNames: readonly string[],
+  vulnerabilities: Record<string, AuditVulnerability>,
+): Set<string> {
   const reachable = new Set(rootNames);
   const pending = [...rootNames];
 
   while (pending.length > 0) {
     const name = pending.pop();
+    if (!name) continue;
     const effects = vulnerabilities[name]?.effects;
     if (!Array.isArray(effects)) continue;
     for (const effect of effects) {
@@ -126,9 +179,9 @@ function reachableVulnerabilities(rootNames, vulnerabilities) {
  * changed paths, direct advisories, and expiry all throw rather than waive risk.
  */
 export function verifyDependencyAuditReport(
-  report,
-  { registry = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY, now = new Date() } = {},
-) {
+  report: unknown,
+  { registry = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY, now = new Date() }: { registry?: unknown; now?: Date } = {},
+): DependencyAuditResult {
   const exceptions = validateRegistry(registry, now);
   if (!isObject(report) || !isObject(report.vulnerabilities)) {
     throw new Error("npm audit did not return a valid audit report.");
@@ -136,8 +189,8 @@ export function verifyDependencyAuditReport(
 
   const highVulnerabilities = Object.fromEntries(
     Object.entries(report.vulnerabilities).filter(([, vulnerability]) => isHighOrCritical(vulnerability)),
-  );
-  const matchedExceptions = new Map();
+  ) as Record<string, AuditVulnerability>;
+  const matchedExceptions = new Map<string, AuditException>();
 
   for (const [name, vulnerability] of Object.entries(highVulnerabilities)) {
     const directAdvisories = Array.isArray(vulnerability.via)
@@ -179,19 +232,17 @@ export function verifyDependencyAuditReport(
   };
 }
 
-/**
- * @param {object} [options]
- * @param {NodeJS.ProcessEnv} [options.env]
- * @param {Date} [options.now]
- * @param {typeof DEPENDENCY_AUDIT_EXCEPTION_REGISTRY} [options.registry]
- * @param {(command: string, args: string[], options: import("node:child_process").SpawnSyncOptionsWithStringEncoding) => import("node:child_process").SpawnSyncReturns<string>} [options.spawn]
- */
 export function runFullLockfileDependencyAudit({
   env = process.env,
   now = new Date(),
   registry = DEPENDENCY_AUDIT_EXCEPTION_REGISTRY,
-  spawn = spawnSync,
-} = {}) {
+  spawn = spawnSync as AuditSpawn,
+}: {
+  env?: NodeJS.ProcessEnv;
+  now?: Date;
+  registry?: unknown;
+  spawn?: AuditSpawn;
+} = {}): DependencyAuditResult {
   const result = spawn("npm", ["audit", "--json", "--audit-level=high"], { encoding: "utf8", env });
   if (result.error) throw result.error;
   if (result.status !== 0 && result.status !== 1) {
@@ -207,7 +258,7 @@ export function runFullLockfileDependencyAudit({
   return verifyDependencyAuditReport(report, { now, registry });
 }
 
-function runCli() {
+function runCli(): void {
   try {
     const { acceptedExceptionIds } = runFullLockfileDependencyAudit();
     const accepted = acceptedExceptionIds.length > 0 ? acceptedExceptionIds.join(", ") : "none";

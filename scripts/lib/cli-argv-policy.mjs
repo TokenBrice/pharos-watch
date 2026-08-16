@@ -21,7 +21,7 @@ export const CLI_ARGV_EXEMPTION_CATEGORIES = Object.freeze({
 
 export const CLI_ARGV_POLICY = Object.freeze({
   strict: Object.freeze([
-    strict("scripts/ci/guard-worker-deploy.mjs"),
+    strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/maintenance/freeze-stablecoin.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-evidence-gap-queue.ts"),
     strict("scripts/maintenance/generate-safety-score-v9-mint-posture-queue.ts"),
@@ -81,12 +81,12 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-worker-migrations.ts", "build"),
     exempt("scripts/ci/check-worker-package.mjs", "test"),
     exempt("scripts/ci/check-worker-wrangler-config.ts", "read-only"),
-    exempt("scripts/ci/classify-deploy-changes.mjs", "read-only"),
-    exempt("scripts/ci/pharos-change-contract.mjs", "build"),
+    exempt("scripts/ci/classify-deploy-changes.ts", "read-only"),
+    exempt("scripts/ci/pharos-change-contract.ts", "build"),
     exempt("scripts/ci/run-changed-eslint.mjs", "test"),
     exempt("scripts/ci/run-gitleaks.mjs", "test"),
     exempt("scripts/ci/select-generated-artifacts.mts", "read-only"),
-    exempt("scripts/ci/verify-dependency-audit.mjs", "read-only"),
+    exempt("scripts/ci/verify-dependency-audit.ts", "read-only"),
     exempt("scripts/lib/coverage-audit-cli.ts", "build"),
     exempt(
       "scripts/lib/source-files.mts",

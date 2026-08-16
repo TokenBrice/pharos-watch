@@ -68,7 +68,7 @@ jobs:
                 ;;
             esac
           else
-            node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+            node --import tsx scripts/ci/classify-deploy-changes.ts >> "$GITHUB_OUTPUT"
           fi
 
   deploy-worker:

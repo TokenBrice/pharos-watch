@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { parseWorkerDeployGuardArgs } from "../ci/guard-worker-deploy.mjs";
+import { parseWorkerDeployGuardArgs } from "../ci/guard-worker-deploy.ts";
 import { syncJson } from "../lib/sync-from-api";
 import { parseFreezeStablecoinArgs } from "../maintenance/freeze-stablecoin";
 import { parseZoneCachePurgeArgs } from "../maintenance/purge-cloudflare-zone-cache.mjs";

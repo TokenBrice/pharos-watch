@@ -11,7 +11,7 @@ import {
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
   normalizeChangedFiles,
-} from "../ci/classify-deploy-changes.mjs";
+} from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
@@ -171,7 +171,7 @@ describe("hasDeployImpact", () => {
     const deploySupportFiles = [
       "scripts/lib/deploy-impact.mjs",
       "scripts/lib/automation-registry.mjs",
-      "scripts/ci/classify-deploy-changes.mjs",
+      "scripts/ci/classify-deploy-changes.ts",
       ".github/workflows/deploy-cloudflare.yml",
     ];
 

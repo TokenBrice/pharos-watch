@@ -14,8 +14,76 @@ import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const RISK_RANK = new Map([
+type UnknownRecord = Record<string, unknown>;
+type GitExec = (
+  file: string,
+  args: readonly string[],
+  options: { cwd: string; encoding: "utf8" },
+) => string;
+
+interface PathFamilyRule {
+  checks: string[];
+  docsLikelyRequired: string[];
+  docsToRead: string[];
+  exactPaths?: string[];
+  hardRules: string[];
+  id: string;
+  label: string;
+  prefixes?: string[];
+  regexes?: RegExp[];
+  risk: string;
+}
+
+interface MatchedFamily {
+  id: string;
+  label: string;
+  matchedFiles: string[];
+  risk: string;
+}
+
+interface ChangeContract {
+  changedFiles: string[];
+  checks: string[];
+  deploy: {
+    deployImpact: boolean;
+    pagesImpact: boolean;
+    workerImpact: boolean;
+  };
+  docsLikelyRequired: string[];
+  docsToRead: string[];
+  families: MatchedFamily[];
+  hardRules: string[];
+  warnings: string[];
+}
+
+interface HookViolation {
+  file?: string;
+  reason: string;
+}
+
+interface ShellInvocation {
+  name: string;
+  tokens: string[];
+}
+
+interface ChangedFileOptions {
+  baseRef?: string;
+  execFile?: GitExec;
+  headRef?: string;
+  staged?: boolean;
+}
+
+interface CliOptions {
+  baseRef?: string;
+  format: "json" | "text";
+  headRef?: string;
+  help: boolean;
+  hook: string | null;
+  staged: boolean;
+}
+
+const REPO_ROOT: string = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const RISK_RANK: ReadonlyMap<string, number> = new Map([
   ["high", 3],
   ["medium", 2],
   ["low", 1],
@@ -25,7 +93,7 @@ const MUTATING_SQL_RE = /\b(alter|create|delete|drop|insert|replace|truncate|upd
 const UNSAFE_MIGRATION_SQL_RE =
   /\b(drop\s+table|drop\s+column|alter\s+table[\s\S]{0,160}\bdrop\b|delete\s+from|truncate\b|pragma\s+writable_schema|rename\s+(?:table|column))\b/i;
 
-const PROTECTED_WRITE_RULES = [
+const PROTECTED_WRITE_RULES: ReadonlyArray<{ label: string; test: (file: string) => boolean }> = [
   {
     label: "environment files",
     test: (file) => /(^|\/)\.env(?:\.|$)/.test(file) || file === ".dev.vars" || file === "worker/.dev.vars",
@@ -44,11 +112,19 @@ const PROTECTED_WRITE_RULES = [
   },
 ];
 
-function unique(values) {
+const TYPED_PATH_FAMILIES = PATH_FAMILIES as PathFamilyRule[];
+const TYPED_DEFAULT_BASE_DOCS = DEFAULT_BASE_DOCS as string[];
+const TYPED_CORE_RULES = CORE_RULES as string[];
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function unique(values: readonly string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
-function normalizeLocalPath(value) {
+function normalizeLocalPath(value: unknown): string {
   const raw = normalizeRepoPath(String(value ?? "").trim());
   if (!raw) return "";
 
@@ -61,36 +137,36 @@ function normalizeLocalPath(value) {
   return normalized.replace(/^\.\//, "");
 }
 
-function fileMatchesRule(file, rule) {
+function fileMatchesRule(file: string, rule: PathFamilyRule): boolean {
   if (rule.exactPaths?.includes(file)) return true;
   if (rule.prefixes?.some((prefix) => file.startsWith(prefix))) return true;
   if (rule.regexes?.some((regex) => regex.test(file))) return true;
   return false;
 }
 
-function compareFamilyRisk(a, b) {
+function compareFamilyRisk(a: PathFamilyRule, b: PathFamilyRule): number {
   const rankDelta = (RISK_RANK.get(b.risk) ?? 0) - (RISK_RANK.get(a.risk) ?? 0);
   if (rankDelta !== 0) return rankDelta;
   return a.label.localeCompare(b.label);
 }
 
-export function normalizeChangedFiles(files) {
+export function normalizeChangedFiles(files: readonly string[]): string[] {
   return unique(files.map((file) => normalizeRepoPath(file.trim())).filter(Boolean)).sort();
 }
 
-export function classifyChangedFiles(files) {
+export function classifyChangedFiles(files: readonly string[]): ChangeContract {
   const changedFiles = normalizeChangedFiles(files);
-  const matchedFamilies = PATH_FAMILIES.map((family) => ({
+  const matchedFamilies = TYPED_PATH_FAMILIES.map((family) => ({
     ...family,
     matchedFiles: changedFiles.filter((file) => fileMatchesRule(file, family)),
   }))
     .filter((family) => family.matchedFiles.length > 0)
     .sort(compareFamilyRisk);
 
-  const docsToRead = unique([...DEFAULT_BASE_DOCS, ...matchedFamilies.flatMap((family) => family.docsToRead)]);
+  const docsToRead = unique([...TYPED_DEFAULT_BASE_DOCS, ...matchedFamilies.flatMap((family) => family.docsToRead)]);
   const docsLikelyRequired = unique(matchedFamilies.flatMap((family) => family.docsLikelyRequired));
   const checks = unique(matchedFamilies.flatMap((family) => family.checks));
-  const hardRules = unique([...CORE_RULES, ...matchedFamilies.flatMap((family) => family.hardRules)]);
+  const hardRules = unique([...TYPED_CORE_RULES, ...matchedFamilies.flatMap((family) => family.hardRules)]);
   const warnings = buildWarnings(changedFiles);
 
   return {
@@ -114,25 +190,26 @@ export function classifyChangedFiles(files) {
   };
 }
 
-function getToolInput(hookInput = {}) {
-  return hookInput.tool_input ?? hookInput.toolInput ?? hookInput.input ?? hookInput.arguments ?? {};
+function getToolInput(hookInput: UnknownRecord = {}): UnknownRecord {
+  const candidate = hookInput.tool_input ?? hookInput.toolInput ?? hookInput.input ?? hookInput.arguments;
+  return isRecord(candidate) ? candidate : {};
 }
 
-function getCommandFromHookInput(hookInput = {}) {
+function getCommandFromHookInput(hookInput: UnknownRecord = {}): string {
   const toolInput = getToolInput(hookInput);
   return String(toolInput.command ?? hookInput.command ?? "");
 }
 
-function collectArrayPaths(value) {
+function collectArrayPaths(value: unknown): unknown[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (typeof item === "string") return [item];
-    if (!item || typeof item !== "object") return [];
+    if (!isRecord(item)) return [];
     return [item.file_path, item.filePath, item.path, item.filename].filter(Boolean);
   });
 }
 
-function extractPatchPaths(patchText) {
+function extractPatchPaths(patchText: unknown): string[] {
   return [...String(patchText ?? "").matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)].map((match) => match[1]);
 }
 
@@ -166,20 +243,20 @@ const GIT_GLOBAL_FLAG_OPTIONS = new Set([
 ]);
 const WRANGLER_GLOBAL_VALUE_OPTIONS = new Set(["-c", "--config", "-e", "--env", "--cwd"]);
 
-function commandIsRawPatchPayload(command) {
+function commandIsRawPatchPayload(command: unknown): boolean {
   return String(command ?? "")
     .trimStart()
     .startsWith("*** Begin Patch");
 }
 
-function commandLooksLikePatchPayload(command) {
+function commandLooksLikePatchPayload(command: unknown): boolean {
   const text = String(command ?? "").trimStart();
   return commandIsRawPatchPayload(text) || /^apply_patch(?:\s|$)/.test(text);
 }
 
-function stripHereDocBodies(command) {
+function stripHereDocBodies(command: unknown): string {
   const lines = String(command ?? "").split(/\r?\n/g);
-  const kept = [];
+  const kept: string[] = [];
   let marker = "";
 
   for (const line of lines) {
@@ -200,13 +277,13 @@ function stripHereDocBodies(command) {
   return kept.join("\n");
 }
 
-function getExecutableShellText(command) {
+function getExecutableShellText(command: unknown): string {
   if (commandIsRawPatchPayload(command)) return "";
   return stripHereDocBodies(command);
 }
 
-function tokenizeShell(command) {
-  const tokens = [];
+function tokenizeShell(command: unknown): string[] {
+  const tokens: string[] = [];
   let token = "";
   let quote = "";
   let escaping = false;
@@ -289,11 +366,11 @@ function tokenizeShell(command) {
   return tokens;
 }
 
-function splitShellTokens(command) {
+function splitShellTokens(command: unknown): string[] {
   return tokenizeShell(getExecutableShellText(command)).filter((token) => !SHELL_CONTROL_TOKENS.has(token));
 }
 
-function shellCommandName(token) {
+function shellCommandName(token: unknown): string {
   return (
     String(token ?? "")
       .replace(/\\/g, "/")
@@ -303,15 +380,19 @@ function shellCommandName(token) {
   );
 }
 
-function isShellControlToken(token) {
-  return SHELL_CONTROL_TOKENS.has(token);
+function isShellControlToken(token: unknown): boolean {
+  return typeof token === "string" && SHELL_CONTROL_TOKENS.has(token);
 }
 
-function isEnvAssignment(token) {
+function isEnvAssignment(token: unknown): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*=/.test(String(token ?? ""));
 }
 
-function skipLeadingOptions(tokens, startIndex, valueOptions = new Set()) {
+function skipLeadingOptions(
+  tokens: readonly string[],
+  startIndex: number,
+  valueOptions: ReadonlySet<string> = new Set<string>(),
+): number {
   let index = startIndex;
   while (index < tokens.length && !isShellControlToken(tokens[index]) && tokens[index]?.startsWith("-")) {
     const option = tokens[index].split("=")[0];
@@ -323,7 +404,7 @@ function skipLeadingOptions(tokens, startIndex, valueOptions = new Set()) {
   return index;
 }
 
-function resolveExecutableIndex(tokens, startIndex, depth = 0) {
+function resolveExecutableIndex(tokens: readonly string[], startIndex: number, depth = 0): number | null {
   if (depth > 4 || startIndex >= tokens.length || isShellControlToken(tokens[startIndex])) {
     return null;
   }
@@ -350,7 +431,7 @@ function resolveExecutableIndex(tokens, startIndex, depth = 0) {
   return startIndex;
 }
 
-function getShellEvalArgument(tokens) {
+function getShellEvalArgument(tokens: readonly string[]): string {
   if (!SHELL_EVAL_COMMANDS.has(shellCommandName(tokens[0]))) return "";
 
   for (let index = 1; index < tokens.length; index += 1) {
@@ -363,9 +444,9 @@ function getShellEvalArgument(tokens) {
   return "";
 }
 
-function getShellCommandInvocations(command, depth = 0) {
+function getShellCommandInvocations(command: unknown, depth = 0): ShellInvocation[] {
   const tokens = tokenizeShell(getExecutableShellText(command));
-  const invocations = [];
+  const invocations: ShellInvocation[] = [];
   let atCommandStart = true;
 
   for (let index = 0; index < tokens.length; index += 1) {
@@ -401,16 +482,16 @@ function getShellCommandInvocations(command, depth = 0) {
   return invocations;
 }
 
-function stripWranglerGlobalOptions(tokens) {
+function stripWranglerGlobalOptions(tokens: readonly string[]): string[] {
   return tokens.slice(skipLeadingOptions(tokens, 0, WRANGLER_GLOBAL_VALUE_OPTIONS));
 }
 
-function invocationHasHelpFlag(tokens) {
+function invocationHasHelpFlag(tokens: readonly string[]): boolean {
   return tokens.includes("--help") || tokens.includes("-h");
 }
 
-function extractBashWritePaths(command) {
-  const paths = [];
+function extractBashWritePaths(command: unknown): string[] {
+  const paths: string[] = [];
   const tokens = splitShellTokens(command);
   for (let i = 0; i < tokens.length; i += 1) {
     const token = tokens[i];
@@ -431,7 +512,7 @@ function extractBashWritePaths(command) {
   return paths;
 }
 
-function collectToolPaths(hookInput = {}) {
+function collectToolPaths(hookInput: UnknownRecord = {}): string[] {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
   return normalizeChangedFiles(
@@ -452,9 +533,9 @@ function collectToolPaths(hookInput = {}) {
   );
 }
 
-function collectToolText(hookInput = {}) {
+function collectToolText(hookInput: UnknownRecord = {}): string {
   const toolInput = getToolInput(hookInput);
-  const chunks = [
+  const chunks: unknown[] = [
     toolInput.content,
     toolInput.new_string,
     toolInput.newString,
@@ -463,12 +544,16 @@ function collectToolText(hookInput = {}) {
     getCommandFromHookInput(hookInput),
   ];
   if (Array.isArray(toolInput.edits)) {
-    chunks.push(...toolInput.edits.map((edit) => edit?.new_string ?? edit?.newString ?? ""));
+    chunks.push(
+      ...toolInput.edits.map((edit) =>
+        isRecord(edit) ? edit.new_string ?? edit.newString ?? "" : "",
+      ),
+    );
   }
   return chunks.filter((chunk) => typeof chunk === "string").join("\n");
 }
 
-function extractAddedPatchText(hookInput = {}) {
+function extractAddedPatchText(hookInput: UnknownRecord = {}): string {
   const toolInput = getToolInput(hookInput);
   const command = getCommandFromHookInput(hookInput);
   const patchText = String(
@@ -482,7 +567,7 @@ function extractAddedPatchText(hookInput = {}) {
     .join("\n");
 }
 
-function findProtectedWrite(paths) {
+function findProtectedWrite(paths: readonly string[]): HookViolation | null {
   for (const path of paths) {
     const file = normalizeLocalPath(path);
     const rule = PROTECTED_WRITE_RULES.find((candidate) => candidate.test(file));
@@ -496,7 +581,7 @@ function findProtectedWrite(paths) {
   return null;
 }
 
-function gitSubcommandCursor(tokens) {
+function gitSubcommandCursor(tokens: readonly string[]): number {
   let cursor = 1;
   while (cursor < tokens.length) {
     const token = tokens[cursor];
@@ -522,7 +607,7 @@ function gitSubcommandCursor(tokens) {
   return cursor;
 }
 
-function* gitSubcommandTokens(command, subcommand) {
+function* gitSubcommandTokens(command: unknown, subcommand: string): Generator<string[]> {
   for (const invocation of getShellCommandInvocations(command)) {
     if (invocation.name !== "git") continue;
     const { tokens } = invocation;
@@ -532,7 +617,7 @@ function* gitSubcommandTokens(command, subcommand) {
   }
 }
 
-function commandInvokesGitCleanForceDelete(command) {
+function commandInvokesGitCleanForceDelete(command: unknown): boolean {
   for (const optionTokens of gitSubcommandTokens(command, "clean")) {
     const optionText = optionTokens
       .slice(0, 5)
@@ -545,7 +630,7 @@ function commandInvokesGitCleanForceDelete(command) {
   return false;
 }
 
-function commandInvokesGitResetHard(command) {
+function commandInvokesGitResetHard(command: unknown): boolean {
   for (const optionTokens of gitSubcommandTokens(command, "reset")) {
     if (optionTokens.slice(0, 7).includes("--hard")) {
       return true;
@@ -554,7 +639,7 @@ function commandInvokesGitResetHard(command) {
   return false;
 }
 
-function commandInvokesRemoteD1Mutation(command) {
+function commandInvokesRemoteD1Mutation(command: unknown): boolean {
   return getShellCommandInvocations(command).some((invocation) => {
     if (invocation.name !== "wrangler" || invocationHasHelpFlag(invocation.tokens)) return false;
 
@@ -579,7 +664,7 @@ function commandInvokesRemoteD1Mutation(command) {
   });
 }
 
-function commandInvokesRawProductionDeploy(command) {
+function commandInvokesRawProductionDeploy(command: unknown): boolean {
   return getShellCommandInvocations(command).some((invocation) => {
     if (invocationHasHelpFlag(invocation.tokens)) return false;
 
@@ -600,7 +685,7 @@ function commandInvokesRawProductionDeploy(command) {
   });
 }
 
-function findUnsafeMigrationSql(paths, hookInput = {}) {
+function findUnsafeMigrationSql(paths: readonly string[], hookInput: UnknownRecord = {}): HookViolation | null {
   if (!paths.some((path) => /^worker\/migrations\/.*\.sql$/i.test(path))) {
     return null;
   }
@@ -615,7 +700,7 @@ function findUnsafeMigrationSql(paths, hookInput = {}) {
   };
 }
 
-function findCommandViolation(command) {
+function findCommandViolation(command: unknown): string | null {
   if (!command) return null;
 
   if (commandInvokesGitResetHard(command)) {
@@ -637,7 +722,7 @@ function findCommandViolation(command) {
   return null;
 }
 
-export function findPreToolUseViolation(hookInput = {}) {
+export function findPreToolUseViolation(hookInput: UnknownRecord = {}): HookViolation | null {
   const command = getCommandFromHookInput(hookInput);
   const commandViolation = findCommandViolation(command);
   if (commandViolation) {
@@ -658,7 +743,7 @@ export function findPreToolUseViolation(hookInput = {}) {
   return null;
 }
 
-export function findPermissionRequestViolation(hookInput = {}) {
+export function findPermissionRequestViolation(hookInput: UnknownRecord = {}): HookViolation | null {
   const command = getCommandFromHookInput(hookInput);
   if (commandInvokesRawProductionDeploy(command)) {
     return {
@@ -673,8 +758,8 @@ export function findPermissionRequestViolation(hookInput = {}) {
   return null;
 }
 
-function buildWarnings(changedFiles) {
-  const warnings = [];
+function buildWarnings(changedFiles: readonly string[]): string[] {
+  const warnings: string[] = [];
   if (changedFiles.some((file) => file.startsWith("src/components/ui/"))) {
     warnings.push("src/components/ui contains shadcn primitives; edit only when explicitly required.");
   }
@@ -690,7 +775,12 @@ function buildWarnings(changedFiles) {
   return warnings;
 }
 
-function getRepoChangedFiles({ baseRef, execFile = execFileSync, headRef, staged = false } = {}) {
+function getRepoChangedFiles({
+  baseRef,
+  execFile = execFileSync as GitExec,
+  headRef,
+  staged = false,
+}: ChangedFileOptions = {}): string[] {
   if (baseRef || headRef) {
     const base = baseRef || "origin/main";
     const head = headRef || "HEAD";
@@ -717,7 +807,7 @@ function getRepoChangedFiles({ baseRef, execFile = execFileSync, headRef, staged
   return [...splitNullDelimited(trackedRaw), ...splitNullDelimited(untrackedRaw)];
 }
 
-export function readChangedFiles(options = {}) {
+export function readChangedFiles(options: ChangedFileOptions = {}): string[] {
   try {
     return normalizeChangedFiles(getRepoChangedFiles(options));
   } catch {
@@ -725,7 +815,7 @@ export function readChangedFiles(options = {}) {
   }
 }
 
-function formatBullets(values, { limit = 8 } = {}) {
+function formatBullets(values: readonly string[], { limit = 8 }: { limit?: number } = {}): string {
   const shown = values.slice(0, limit);
   const lines = shown.map((value) => `- ${value}`);
   if (values.length > shown.length) {
@@ -734,14 +824,17 @@ function formatBullets(values, { limit = 8 } = {}) {
   return lines.join("\n");
 }
 
-function formatFamilies(families) {
+function formatFamilies(families: readonly MatchedFamily[]): string {
   if (families.length === 0) return "- No specific task family matched yet.";
   return families
     .map((family) => `- ${family.label} (${family.risk}): ${family.matchedFiles.slice(0, 3).join(", ")}`)
     .join("\n");
 }
 
-export function formatContract(contract, { mode = "full" } = {}) {
+export function formatContract(
+  contract: ChangeContract,
+  { mode = "full" }: { mode?: "full" | "stop" } = {},
+): string {
   const changedSummary =
     contract.changedFiles.length > 0
       ? formatBullets(contract.changedFiles, { limit: mode === "stop" ? 6 : 12 })
@@ -791,7 +884,7 @@ export function formatContract(contract, { mode = "full" } = {}) {
   return sections.join("\n");
 }
 
-export function buildSessionStartContext(contract) {
+export function buildSessionStartContext(contract: ChangeContract): string {
   if (contract.changedFiles.length === 0) {
     return [
       "Pharos agent context: no current changed files.",
@@ -820,16 +913,17 @@ export function buildSessionStartContext(contract) {
   return sections.join("\n");
 }
 
-function readHookInput() {
+function readHookInput(): UnknownRecord {
   try {
     const raw = readFileSync(0, "utf8").trim();
-    return raw ? JSON.parse(raw) : {};
+    const parsed: unknown = raw ? JSON.parse(raw) : {};
+    return isRecord(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
 
-export function buildSessionStartHookOutput(contract) {
+export function buildSessionStartHookOutput(contract: ChangeContract) {
   return {
     hookSpecificOutput: {
       additionalContext: buildSessionStartContext(contract),
@@ -838,7 +932,7 @@ export function buildSessionStartHookOutput(contract) {
   };
 }
 
-function buildToolDenyOutput(reason, hookEventName = "PreToolUse") {
+function buildToolDenyOutput(reason: string, hookEventName = "PreToolUse") {
   return {
     decision: "block",
     hookSpecificOutput: {
@@ -850,7 +944,7 @@ function buildToolDenyOutput(reason, hookEventName = "PreToolUse") {
   };
 }
 
-function buildPermissionRequestDenyOutput(reason) {
+function buildPermissionRequestDenyOutput(reason: string) {
   return {
     hookSpecificOutput: {
       hookEventName: "PermissionRequest",
@@ -862,7 +956,7 @@ function buildPermissionRequestDenyOutput(reason) {
   };
 }
 
-export function buildPreToolUseHookOutput(hookInput = {}) {
+export function buildPreToolUseHookOutput(hookInput: UnknownRecord = {}) {
   const violation = findPreToolUseViolation(hookInput);
   if (!violation) {
     return { continue: true };
@@ -871,7 +965,7 @@ export function buildPreToolUseHookOutput(hookInput = {}) {
   return buildToolDenyOutput(violation.reason, "PreToolUse");
 }
 
-export function buildPermissionRequestHookOutput(hookInput = {}) {
+export function buildPermissionRequestHookOutput(hookInput: UnknownRecord = {}) {
   const violation = findPermissionRequestViolation(hookInput);
   if (!violation) {
     return { continue: true };
@@ -880,15 +974,16 @@ export function buildPermissionRequestHookOutput(hookInput = {}) {
   return buildPermissionRequestDenyOutput(violation.reason);
 }
 
-function parseArgs(argv) {
-  const options = {
+function parseArgs(argv: readonly string[]): { explicitFiles: string[]; options: CliOptions } {
+  const options: CliOptions = {
     baseRef: process.env.PHAROS_CHANGE_CONTRACT_BASE_REF,
     format: "text",
     headRef: process.env.PHAROS_CHANGE_CONTRACT_HEAD_REF,
+    help: false,
     hook: null,
     staged: false,
   };
-  const explicitFiles = [];
+  const explicitFiles: string[] = [];
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -920,7 +1015,7 @@ function parseArgs(argv) {
   return { explicitFiles, options };
 }
 
-function normalizeHookMode(hook) {
+function normalizeHookMode(hook: string | null): string | null {
   if (!hook) return null;
   const normalized = String(hook)
     .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -928,8 +1023,8 @@ function normalizeHookMode(hook) {
   return normalized;
 }
 
-function printHelp() {
-  console.log(`Usage: node scripts/ci/pharos-change-contract.mjs [options]
+function printHelp(): void {
+  console.log(`Usage: node --import tsx scripts/ci/pharos-change-contract.ts [options]
 
 Classify the current Pharos diff into docs, checks, and agent guardrails.
 
@@ -946,7 +1041,7 @@ Options:
 `);
 }
 
-export function runCli(argv = process.argv.slice(2)) {
+export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
   const { explicitFiles, options } = parseArgs(argv);
   if (options.help) {
     printHelp();

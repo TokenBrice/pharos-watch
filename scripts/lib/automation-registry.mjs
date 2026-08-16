@@ -53,7 +53,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       ".github/workflows/deploy-cloudflare.yml",
       "package-lock.json",
       "package.json",
-      "scripts/ci/classify-deploy-changes.mjs",
+      "scripts/ci/classify-deploy-changes.ts",
       "scripts/lib/automation-registry.mjs",
       "scripts/lib/deploy-impact.mjs",
     ],
