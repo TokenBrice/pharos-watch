@@ -164,7 +164,13 @@ export async function readResponseTextWithinLimitWithSignal(
     throw new ResponseBodyTooLargeError(maxBytes, declaredBytes);
   }
   if (!response.body) {
-    if (typeof response.text !== "function") return "";
+    if (typeof response.text !== "function") {
+      if (typeof response.json !== "function") return "";
+      const value = await readResponseBodyWithSignal(response, signal, async () => await response.json());
+      const text = JSON.stringify(value) ?? "";
+      assertTextWithinLimit(text, maxBytes);
+      return text;
+    }
     const text = await readResponseBodyWithSignal(response, signal, async () => await response.text());
     assertTextWithinLimit(text, maxBytes);
     return text;

@@ -1,7 +1,7 @@
 import { stripSensitive } from "./safe-error-message";
 
 export type WorkerLogLevel = "debug" | "info" | "warn" | "error";
-export type WorkerLogScope = "http" | "api" | "status" | "admin" | "lib";
+export type WorkerLogScope = "http" | "api" | "status" | "admin" | "lib" | "handler";
 
 export interface WorkerStructuredLogEvent {
   scope: WorkerLogScope;

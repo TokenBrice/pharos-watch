@@ -7,6 +7,13 @@ import { buildTelegramMessage, sendToChat, type TelegramCreds } from "./telegram
 import { splitMessage } from "./telegram-alerts";
 import type { TelegramDigestSuccessAction } from "./telegram-digest-appendices";
 import {
+  claimTelegramTransportPermit,
+  recordTelegramTransportOutcomes,
+  type TelegramTransportOutcome,
+} from "./telegram-transport-control";
+import type { TelegramTransportErrorClass } from "./telegram-transport-errors";
+import { logWorkerEvent } from "./structured-log";
+import {
   DigestSafetyContextSchema,
   type DigestSafetyContext,
 } from "@shared/types/digest";
@@ -103,6 +110,49 @@ export interface TelegramDigestOutboxDrainSummary {
   retainedExecutionUnknown: number;
   retainedFailedPermanent: number;
   prunedSent: number;
+}
+
+function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
+}
+
+function digestTransportOutcome(
+  chatId: string,
+  delivery: TelegramDigestDeliveryResult,
+): TelegramTransportOutcome | null {
+  if (delivery.outcome === "sent") {
+    return {
+      chatId,
+      result: { ok: true, errorClass: null, retryAfterSec: null },
+    };
+  }
+  const errorClass = telegramTransportErrorClass(delivery.errorClass);
+  if (errorClass == null || delivery.outcome === "skipped") return null;
+  return {
+    chatId,
+    result: {
+      ok: false,
+      errorClass,
+      retryAfterSec: delivery.retryAfterSec,
+      ...(errorClass === "rate_limit" ? { rateLimitScope: "chat" as const } : {}),
+    },
+  };
 }
 
 function parseStringArray(raw: string, label: string): string[] {
@@ -240,7 +290,7 @@ export async function enqueueTelegramDigestEdition(
     && row.safety_context_json === safetyContextJson
     && row.target_chat_id === input.targetChatId;
   if (!payloadMatched) {
-    console.warn(`[telegram-digest-outbox] Preserving immutable existing edition ${input.editionKey}`);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "telegram_digest_immutable_edition_preserved", message: "Preserving immutable existing Telegram digest edition", metadata: { editionKey: input.editionKey } });
   }
   return {
     created: Number(insert.meta?.changes ?? 0) > 0,
@@ -400,10 +450,10 @@ async function bestEffortMarkExecutionUnknown(
       )
       .run();
     if (Number(result.meta?.changes ?? 0) === 0) {
-      console.error(`[telegram-digest-outbox] Could not persist ambiguity for ${claim.row.edition_key}`);
+      logWorkerEvent({ scope: "lib", level: "error", event: "telegram_digest_ambiguity_persistence_lost", message: "Could not persist Telegram digest delivery ambiguity", metadata: { editionKey: claim.row.edition_key } });
     }
   } catch (error) {
-    console.error(`[telegram-digest-outbox] Failed to persist ambiguity for ${claim.row.edition_key}:`, error);
+    logWorkerEvent({ scope: "lib", level: "error", event: "telegram_digest_ambiguity_persistence_failed", message: "Failed to persist Telegram digest delivery ambiguity", error, metadata: { editionKey: claim.row.edition_key } });
   }
 }
 
@@ -851,7 +901,30 @@ export async function drainTelegramDigestOutbox(
   };
   for (const editionKey of editionKeys) {
     throwIfAborted(options.signal);
-    const result = await deliverTelegramDigestEdition(db, creds, editionKey, options.signal);
+    const permit = await claimTelegramTransportPermit(db, {
+      mode: "fresh",
+      owner: `telegram-digest-outbox-drain:${editionKey}`,
+      nowSec: Math.floor(Date.now() / 1000),
+      requestedDistinctChats: 1,
+    });
+    if (!permit.allowed) {
+      summary.skipped += editionKeys.length - summary.attempted;
+      break;
+    }
+    let result: TelegramDigestDeliveryResult;
+    try {
+      result = await deliverTelegramDigestEdition(db, creds, editionKey, options.signal);
+      const transportOutcome = digestTransportOutcome(creds.chatId, result);
+      await recordTelegramTransportOutcomes(
+        db,
+        permit,
+        transportOutcome == null ? [] : [transportOutcome],
+        Math.floor(Date.now() / 1000),
+      );
+    } catch (error) {
+      await recordTelegramTransportOutcomes(db, permit, [], Math.floor(Date.now() / 1000));
+      throw error;
+    }
     summary.attempted++;
     if (result.outcome === "sent") summary.sent++;
     else if (result.outcome === "pending") summary.pending++;

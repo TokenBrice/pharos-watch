@@ -2,6 +2,11 @@ import { D1_BATCH_SIZE } from "./constants";
 import { chunkArray } from "./collections";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
+import {
+  readCacheWithPolicy,
+  writeCacheWithPolicy,
+  type CachePolicy,
+} from "./db-cache";
 
 export const D1_MAX_BOUND_PARAMETERS = 100;
 export { D1_SAFE_IN_CLAUSE_BIND_LIMIT, chunkArray } from "./collections";
@@ -273,25 +278,31 @@ function parseFirstSeenCache(value: string): Map<string, number> | null {
   }
 }
 
+const FIRST_SEEN_CACHE_POLICY: CachePolicy<Map<string, number>> = {
+  key: FIRST_SEEN_CACHE_KEY,
+  storage: "d1-kv",
+  schemaId: "supply-history:first-seen:v1",
+  ttlSec: FIRST_SEEN_CACHE_MAX_AGE_SEC,
+  maxEntries: 1,
+  stale: "fallback-only",
+  invalid: "retain",
+  decode: parseFirstSeenCache,
+  encode: (value) => JSON.stringify({
+    version: 1,
+    firstSeenById: Object.fromEntries(value),
+  } satisfies FirstSeenCachePayload),
+};
+
 async function readFirstSeenCache(
   db: D1Database,
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<FirstSeenCacheRead | null> {
-  const row = await runWithOverloadRetry(() =>
-    db
-      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-      .bind(FIRST_SEEN_CACHE_KEY)
-      .first<{ value: string; updated_at: number }>(),
-    3,
-    signal,
-  );
-  if (!row) return null;
-  const parsed = parseFirstSeenCache(row.value);
-  if (!parsed) return null;
+  const cached = await readCacheWithPolicy(db, FIRST_SEEN_CACHE_POLICY, nowSec, signal);
+  if (cached.state === "missing" || cached.state === "invalid" || cached.value == null) return null;
   return {
-    map: parsed,
-    fresh: nowSec - row.updated_at <= FIRST_SEEN_CACHE_MAX_AGE_SEC,
+    map: cached.value,
+    fresh: cached.state === "fresh",
   };
 }
 
@@ -301,16 +312,7 @@ async function writeFirstSeenCache(
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<void> {
-  const firstSeenById = Object.fromEntries(firstSeen);
-  const payload: FirstSeenCachePayload = { version: 1, firstSeenById };
-  await runWithOverloadRetry(() =>
-    db
-      .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(FIRST_SEEN_CACHE_KEY, JSON.stringify(payload), nowSec)
-      .run(),
-    3,
-    signal,
-  );
+  await writeCacheWithPolicy(db, FIRST_SEEN_CACHE_POLICY, firstSeen, nowSec, signal);
 }
 
 function mergeFirstSeen(map: Map<string, number>, id: string, firstSeenSec: number): boolean {

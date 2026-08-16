@@ -11,14 +11,13 @@ import {
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
 import { USER_AGENT } from "./constants";
-import { fetchJsonWithRetry } from "./fetch-retry";
-import { sleepWithSignal, throwIfAborted } from "./abort";
+import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { mapWithConcurrency } from "./concurrency";
 import {
   endpointLabel,
   errorClassFor,
   errorMessageFor,
-  readResponseSnippet,
+  responseSnippet,
   type PricingProviderAttemptDiagnostic,
 } from "./pricing-provider-diagnostics";
 import type { FetcherOutcome } from "./fetcher-result";
@@ -27,6 +26,7 @@ import {
   recordProviderEnvironmentAvailable,
   recordProviderEnvironmentBlocked,
 } from "./pricing-provider-runtime-state";
+import { logWorkerEvent } from "./structured-log";
 
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
@@ -219,87 +219,92 @@ async function fetchBinanceTickerUrl(
     success: false,
   };
 
-  // On HTTP 5xx/429/403/451 we do NOT retry the same host — we return so the
-  // caller can jump to the next URL in the Binance cascade. Same-host retry is
-  // reserved for catchable network errors (fetch() throws).
-  for (let attempt = 0; attempt <= CEX_REQUEST_RETRIES; attempt++) {
-    throwIfAborted(signal);
-    try {
-      const perRequestTimeout = AbortSignal.timeout(CEX_REQUEST_TIMEOUT_MS);
-      const combinedSignal = signal ? AbortSignal.any([signal, perRequestTimeout]) : perRequestTimeout;
-      const response = await fetch(url, {
-        signal: combinedSignal,
+  // On HTTP failures we do not retry the same host; the caller immediately
+  // advances through the Binance host cascade. Only thrown transport failures
+  // receive the bounded same-host retry policy.
+  try {
+    const fetched = await fetchTextWithRetry(
+      url,
+      {
+        signal,
         headers: { Accept: "application/json", "User-Agent": USER_AGENT },
-      });
+      },
+      CEX_REQUEST_RETRIES,
+      {
+        timeoutMs: CEX_REQUEST_TIMEOUT_MS,
+        maxResponseBytes: 4 * 1024 * 1024,
+        returnFinalResponse: true,
+        retryMode: "network-only",
+        throwOnFinalNetworkError: true,
+      },
+    );
+    if (!fetched) return { prices: results, diagnostic };
+    const response = fetched.response;
 
-      diagnostic = {
-        source: "binance",
-        stage: "primary",
-        endpoint,
-        status: response.status,
-        ok: response.ok,
-        success: false,
-      };
+    diagnostic = {
+      source: "binance",
+      stage: "primary",
+      endpoint,
+      status: response.status,
+      ok: response.ok,
+      success: false,
+    };
 
-      if (!response.ok) {
-        diagnostic.snippet = await readResponseSnippet(response);
-        return { prices: results, diagnostic };
-      }
-
-      const payload = (await response.json()) as unknown;
-      if (!Array.isArray(payload)) {
-        diagnostic.errorClass = "invalid-shape";
-        diagnostic.errorMessage = "Expected Binance ticker response to be an array";
-        return { prices: results, diagnostic };
-      }
-
-      diagnostic.responseRowCount = payload.length;
-      const pendingStableQuoted: Array<{ symbol: string; quoteSymbol: string; quotePrice: number }> = [];
-      for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
-        const market = ticker.symbol ? BINANCE_PAIR_TO_MARKET.get(ticker.symbol) : undefined;
-        const price = parseCexPrice(ticker.price);
-        if (!market || price == null) continue;
-
-        if (market.quoteSymbol) {
-          pendingStableQuoted.push({
-            symbol: market.symbol,
-            quoteSymbol: market.quoteSymbol,
-            quotePrice: price,
-          });
-        } else {
-          results.set(market.symbol, price);
-        }
-      }
-
-      for (const market of pendingStableQuoted) {
-        const quoteUsd = results.get(market.quoteSymbol);
-        if (quoteUsd == null) continue;
-
-        const convertedPrice = market.quotePrice * quoteUsd;
-        const existingPrice = results.get(market.symbol);
-        results.set(market.symbol, existingPrice == null ? convertedPrice : (existingPrice + convertedPrice) / 2);
-      }
-
-      diagnostic.matchedCount = results.size;
-      diagnostic.success = results.size > 0;
+    if (!response.ok) {
+      diagnostic.snippet = responseSnippet(fetched.body);
       return { prices: results, diagnostic };
-    } catch (err) {
-      if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-      diagnostic = {
-        source: "binance",
-        stage: "primary",
-        endpoint,
-        status: null,
-        ok: false,
-        success: false,
-        errorClass: errorClassFor(err),
-        errorMessage: errorMessageFor(err),
-      };
-      console.warn("[cex-binance] Fetch failed:", err);
-      if (attempt < CEX_REQUEST_RETRIES) {
-        await sleepWithSignal(1000 * 2 ** attempt, signal);
+    }
+
+    const payload = JSON.parse(fetched.body) as unknown;
+    if (!Array.isArray(payload)) {
+      diagnostic.errorClass = "invalid-shape";
+      diagnostic.errorMessage = "Expected Binance ticker response to be an array";
+      return { prices: results, diagnostic };
+    }
+
+    diagnostic.responseRowCount = payload.length;
+    const pendingStableQuoted: Array<{ symbol: string; quoteSymbol: string; quotePrice: number }> = [];
+    for (const ticker of payload as Array<{ symbol?: string; price?: string }>) {
+      const market = ticker.symbol ? BINANCE_PAIR_TO_MARKET.get(ticker.symbol) : undefined;
+      const price = parseCexPrice(ticker.price);
+      if (!market || price == null) continue;
+
+      if (market.quoteSymbol) {
+        pendingStableQuoted.push({
+          symbol: market.symbol,
+          quoteSymbol: market.quoteSymbol,
+          quotePrice: price,
+        });
+      } else {
+        results.set(market.symbol, price);
       }
     }
+
+    for (const market of pendingStableQuoted) {
+      const quoteUsd = results.get(market.quoteSymbol);
+      if (quoteUsd == null) continue;
+
+      const convertedPrice = market.quotePrice * quoteUsd;
+      const existingPrice = results.get(market.symbol);
+      results.set(market.symbol, existingPrice == null ? convertedPrice : (existingPrice + convertedPrice) / 2);
+    }
+
+    diagnostic.matchedCount = results.size;
+    diagnostic.success = results.size > 0;
+    return { prices: results, diagnostic };
+  } catch (err) {
+    if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
+    diagnostic = {
+      source: "binance",
+      stage: "primary",
+      endpoint,
+      status: null,
+      ok: false,
+      success: false,
+      errorClass: errorClassFor(err),
+      errorMessage: errorMessageFor(err),
+    };
+    logWorkerEvent({ scope: "lib", level: "warn", event: "cex_binance_fetch_failed", message: "Binance ticker fetch failed", provider: "binance", error: err, metadata: { endpoint } });
   }
 
   return { prices: results, diagnostic };
@@ -411,7 +416,7 @@ export async function fetchKrakenPrices(
       return { kind: "upstream-error", value: results, reason: "Kraken ticker HTTP error" };
     }
     if (Array.isArray(payload.error) && payload.error.length > 0) {
-      console.warn(`[cex-kraken] API error: ${payload.error.join(", ")}`);
+      logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_api_error", message: "Kraken ticker API returned an error", provider: "kraken", metadata: { errors: payload.error } });
       return { kind: "no-data", value: results };
     }
 
@@ -425,7 +430,7 @@ export async function fetchKrakenPrices(
     );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[cex-kraken] Fetch failed:", err);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_fetch_failed", message: "Kraken ticker fetch failed", provider: "kraken", error: err });
     return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
   }
 
@@ -472,7 +477,7 @@ export async function fetchBitstampPrices(signal?: AbortSignal): Promise<Fetcher
     );
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[cex-bitstamp] Fetch failed:", err);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "cex_bitstamp_fetch_failed", message: "Bitstamp ticker fetch failed", provider: "bitstamp", error: err });
     return { kind: "upstream-error", value, reason: errorMessageFor(err) };
   }
 
@@ -524,7 +529,7 @@ export async function fetchCoinbasePrices(
         }
       } catch (err) {
         if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-        console.warn(`[cex-coinbase] ${product.productId} fetch failed:`, err);
+        logWorkerEvent({ scope: "lib", level: "warn", event: "cex_coinbase_fetch_failed", message: "Coinbase ticker fetch failed", provider: "coinbase", error: err, metadata: { productId: product.productId } });
         transportFailures++;
       }
     },

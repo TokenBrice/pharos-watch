@@ -1,5 +1,10 @@
 import { decodeCachedJson } from "./cache-json";
-import { getCache, setCache } from "./db-cache";
+import {
+  readCacheWithPolicy,
+  writeCacheWithPolicy,
+  type CachePolicy,
+  type CacheRetentionPolicy,
+} from "./db-cache";
 
 interface SafeParseSuccess<T> {
   success: true;
@@ -38,6 +43,7 @@ type VersionFailure<TReason extends string> = { reason: TReason; message?: strin
 
 export interface VersionedSnapshotCacheOptions<TPayload, TReason extends string> {
   cacheKey: string;
+  retention: CacheRetentionPolicy;
   label: string;
   generation: number;
   methodologyVersion: string;
@@ -57,7 +63,25 @@ export async function loadVersionedSnapshotCache<TPayload, TReason extends strin
   db: D1Database,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): Promise<VersionedSnapshotCacheLoadResult<TPayload, TReason>> {
-  return parseVersionedSnapshotCache(await getCache(db, options.cacheKey), options);
+  const policy = rawSnapshotPolicy(options);
+  const cached = await readCacheWithPolicy(db, policy);
+  return parseVersionedSnapshotCache(
+    (cached.state === "fresh" || cached.state === "stale") && cached.usable
+      ? { value: cached.value, updatedAt: cached.updatedAt }
+      : null,
+    options,
+  );
+}
+
+function rawSnapshotPolicy<TPayload, TReason extends string>(
+  options: VersionedSnapshotCacheOptions<TPayload, TReason>,
+): CachePolicy<string> {
+  return {
+    key: options.cacheKey,
+    ...options.retention,
+    decode: (value) => value,
+    encode: (value) => value,
+  };
 }
 
 function parseVersionedSnapshotCache<TPayload, TReason extends string>(
@@ -106,7 +130,7 @@ export async function writeVersionedSnapshotCache<TPayload, TReason extends stri
   snapshot: TPayload,
   options: VersionedSnapshotCacheOptions<TPayload, TReason>,
 ): Promise<void> {
-  await setCache(db, options.cacheKey, buildVersionedSnapshotCacheValue(snapshot, options));
+  await writeCacheWithPolicy(db, rawSnapshotPolicy(options), buildVersionedSnapshotCacheValue(snapshot, options));
 }
 
 function buildVersionedSnapshotCacheValue<TPayload, TReason extends string>(

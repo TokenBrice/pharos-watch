@@ -3,11 +3,13 @@ import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
 import { throwIfAborted } from "./abort";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { fetchTextWithRetry } from "./fetch-retry";
 import { logWorkerEvent } from "./structured-log";
+import type { CacheRetentionPolicy } from "./db-cache";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 
 const ALCHEMY_RPC_TIMEOUT_MS = 30_000;
+const ALCHEMY_RPC_MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 // --- Types ---
 
@@ -100,16 +102,23 @@ async function jsonRpcCall<T>(
   signal?: AbortSignal,
   timeoutMs = ALCHEMY_RPC_TIMEOUT_MS,
 ): Promise<JsonRpcCallResult<T>> {
-  const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
-  let res: Response;
-  try {
-    res = await fetch(alchemyUrl, {
+  const fetched = await fetchTextWithRetry(
+    alchemyUrl,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    });
-  } catch (err) {
+      signal,
+    },
+    0,
+    {
+      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+      maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+      returnFinalResponse: true,
+      retryMode: "network-only",
+    },
+  );
+  if (!fetched) {
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -117,7 +126,6 @@ async function jsonRpcCall<T>(
       message: "Alchemy JSON-RPC fetch failed",
       provider: "alchemy",
       metadata: { method },
-      error: err,
     });
     return {
       result: null,
@@ -126,12 +134,13 @@ async function jsonRpcCall<T>(
       transientHttpError: true,
     };
   }
+  const res = fetched.response;
 
   const transientHttpError = !res.ok && (res.status >= 500 || res.status === 429 || res.status === 408);
 
   let json: JsonRpcResponse<T> | null = null;
   try {
-    json = (await res.json()) as JsonRpcResponse<T>;
+    json = JSON.parse(fetched.body) as JsonRpcResponse<T>;
   } catch (err) {
     logWorkerEvent({
       scope: "lib",
@@ -268,26 +277,33 @@ export async function getAlchemyTransactionContextBatchMany(
     },
   ]);
 
-  const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
-  let res: Response;
-  try {
-    res = await fetch(alchemyUrl, {
+  const fetched = await fetchTextWithRetry(
+    alchemyUrl,
+    {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    });
-  } catch (err) {
+      signal,
+    },
+    0,
+    {
+      timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+      maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+      returnFinalResponse: true,
+      retryMode: "network-only",
+    },
+  );
+  if (!fetched) {
     logWorkerEvent({
       scope: "lib",
       level: "debug",
       event: "alchemy_transaction_context_batch_fetch_failed",
       message: "Alchemy transaction-context batch fetch failed",
       provider: "alchemy",
-      error: err,
     });
     return results;
   }
+  const res = fetched.response;
 
   if (!res.ok) {
     logWorkerEvent({
@@ -298,13 +314,12 @@ export async function getAlchemyTransactionContextBatchMany(
       provider: "alchemy",
       status: res.status,
     });
-    await cancelResponseBodyQuietly(res);
     return results;
   }
 
   let parsed: unknown;
   try {
-    parsed = await res.json();
+    parsed = JSON.parse(fetched.body) as unknown;
   } catch (err) {
     logWorkerEvent({
       scope: "lib",
@@ -588,6 +603,14 @@ const D1_SAFE_MAX_SQL_VARIABLES = 90;
 const TIMESTAMP_CACHE_READ_FIXED_BINDINGS = 2; // chain_id + updated_at
 const TIMESTAMP_CACHE_READ_CHUNK = Math.max(1, D1_SAFE_MAX_SQL_VARIABLES - TIMESTAMP_CACHE_READ_FIXED_BINDINGS);
 const DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC = 14 * DAY_SECONDS;
+export const ALCHEMY_BLOCK_TIMESTAMP_CACHE_POLICY = {
+  storage: "domain-table",
+  schemaId: "alchemy:block-timestamp:v1",
+  ttlSec: DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC,
+  maxEntries: null,
+  stale: "reject",
+  invalid: "retain",
+} satisfies CacheRetentionPolicy;
 const TIMESTAMP_RETRY_BATCH_SIZES = [TIMESTAMP_BATCH_SIZE, 10, 1] as const;
 
 interface BlockTimestampBatchResult {
@@ -616,13 +639,24 @@ async function fetchBlockTimestampBatch(
   }));
 
   try {
-    const timeout = AbortSignal.timeout(Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)));
-    const res = await fetch(alchemyUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-    });
+    const fetched = await fetchTextWithRetry(
+      alchemyUrl,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal,
+      },
+      0,
+      {
+        timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
+        maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
+        returnFinalResponse: true,
+        retryMode: "network-only",
+      },
+    );
+    if (!fetched) return missingAll();
+    const res = fetched.response;
     if (!res.ok) {
       logWorkerEvent({
         scope: "lib",
@@ -633,11 +667,10 @@ async function fetchBlockTimestampBatch(
         status: res.status,
         metadata: { method: "eth_getBlockByNumber", batchSize: batch.length },
       });
-      await cancelResponseBodyQuietly(res);
       return missingAll();
     }
 
-    const parsed = (await res.json()) as unknown;
+    const parsed = JSON.parse(fetched.body) as unknown;
     if (!Array.isArray(parsed)) {
       logWorkerEvent({
         scope: "lib",
@@ -728,7 +761,7 @@ export async function resolveBlockTimestamps(
   let unresolved = uniqueBlocks.filter((block) => !timestamps.has(block));
 
   if (persistentCache && unresolved.length > 0) {
-    const maxAgeSec = persistentCache.maxAgeSec ?? DEFAULT_TIMESTAMP_CACHE_MAX_AGE_SEC;
+    const maxAgeSec = persistentCache.maxAgeSec ?? ALCHEMY_BLOCK_TIMESTAMP_CACHE_POLICY.ttlSec;
     const cutoff = nowSec - maxAgeSec;
     for (let i = 0; i < unresolved.length; i += TIMESTAMP_CACHE_READ_CHUNK) {
       throwIfAborted(options?.signal);

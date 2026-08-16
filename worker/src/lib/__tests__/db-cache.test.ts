@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getPriceCache, savePriceCache } from "../db-cache";
+import { getPriceCache, readCacheWithPolicy, savePriceCache } from "../db-cache";
 
 interface FullPriceCacheRow {
   asset_id: string;
@@ -113,10 +113,10 @@ describe("getPriceCache", () => {
 
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("source, confidence, observed_at");
-    expect(warn).toHaveBeenCalledWith(
-      "[db-cache] Full-column price_cache query failed:",
-      "D1_ERROR: no such column: agree_sources_json",
-    );
+    expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toMatchObject({
+      event: "price_cache_full_column_query_failed",
+      errorMessage: "D1_ERROR: no such column: agree_sources_json",
+    });
   });
 
   it("does not fallback when the full-schema query fails unexpectedly", async () => {
@@ -128,7 +128,41 @@ describe("getPriceCache", () => {
 
     expect(queries).toHaveLength(1);
     expect(queries[0]).toContain("source, confidence, observed_at");
-    expect(warn).toHaveBeenCalledWith("[db-cache] Full-column price_cache query failed:", "network connection reset");
+    expect(JSON.parse(String(warn.mock.calls[0]?.[0]))).toMatchObject({
+      event: "price_cache_full_column_query_failed",
+      errorMessage: "network connection reset",
+    });
+  });
+});
+
+describe("readCacheWithPolicy", () => {
+  it("returns a stale fallback value without presenting it as fresh", async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          first: async () => ({ value: JSON.stringify({ count: 4 }), updated_at: 100 }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    const result = await readCacheWithPolicy(db, {
+      key: "test:stale-seed",
+      storage: "d1-kv",
+      schemaId: "test:count:v1",
+      ttlSec: 30,
+      maxEntries: 1,
+      stale: "fallback-only",
+      invalid: "retain",
+      decode: (value) => JSON.parse(value) as { count: number },
+      encode: JSON.stringify,
+    }, 200);
+
+    expect(result).toEqual({
+      state: "stale",
+      value: { count: 4 },
+      updatedAt: 100,
+      usable: false,
+    });
   });
 });
 

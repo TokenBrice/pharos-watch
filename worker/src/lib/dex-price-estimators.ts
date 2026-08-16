@@ -1,3 +1,5 @@
+import { weightedMedian } from "@shared/lib/stats";
+
 export interface WeightedPricePoint {
   price: number;
   weight: number;
@@ -43,20 +45,8 @@ export function computeWeightedMedianPrice(points: WeightedPricePoint[]): number
       point.price > 0 &&
       Number.isFinite(point.weight) &&
       point.weight > 0
-    ))
-    .sort((left, right) => left.price - right.price);
-  if (validPoints.length === 0) return null;
-
-  const totalWeight = validPoints.reduce((sum, point) => sum + point.weight, 0);
-  const halfWeight = totalWeight / 2;
-  let cumulativeWeight = 0;
-  for (const point of validPoints) {
-    cumulativeWeight += point.weight;
-    if (cumulativeWeight >= halfWeight) {
-      return point.price;
-    }
-  }
-  return validPoints[validPoints.length - 1]?.price ?? null;
+    ));
+  return weightedMedian(validPoints.map((point) => ({ value: point.price, weight: point.weight })));
 }
 
 export function aggregateProtocolPrices(

@@ -17,6 +17,7 @@ import { bytesToHex } from "./hash";
 import { bytesToBase64Url } from "@shared/lib/base64url";
 import { IsolateLocalState } from "./isolate-local-state";
 import type { MinimalD1Database } from "./minimal-d1";
+import type { CacheRetentionPolicy } from "./db-cache";
 
 const API_KEY_PREFIX_BYTES = 8;
 const API_KEY_SECRET_BYTES = 24;
@@ -27,6 +28,14 @@ const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 export const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
 export const API_KEY_AUTH_CACHE_TTL_MS = 5_000;
 export const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
+export const API_KEY_AUTH_CACHE_POLICY = {
+  storage: "isolate-memory",
+  schemaId: "api-key-auth-row:v1",
+  ttlSec: API_KEY_AUTH_CACHE_TTL_MS / 1_000,
+  maxEntries: API_KEY_AUTH_CACHE_MAX_ENTRIES,
+  stale: "reject",
+  invalid: "delete",
+} satisfies CacheRetentionPolicy;
 export const API_KEY_USAGE_UPDATE_WINDOW_SEC = 120;
 export const API_KEY_USAGE_UPDATE_CACHE_MAX_ENTRIES = 4_096;
 export const API_KEY_LOCAL_RATE_LIMIT_MAX_ENTRIES = 4_096;
@@ -411,7 +420,7 @@ export async function lookupApiKeyByPrefix(db: ApiKeyDb, keyPrefix: string): Pro
     pruneExpiredApiKeyCache(nowMs);
     state.apiKeyCache.delete(keyPrefix);
     state.apiKeyCache.set(keyPrefix, {
-      freshUntilMs: nowMs + API_KEY_AUTH_CACHE_TTL_MS,
+      freshUntilMs: nowMs + API_KEY_AUTH_CACHE_POLICY.ttlSec * 1_000,
       row,
     });
     pruneOldestMapEntries(state.apiKeyCache, API_KEY_AUTH_CACHE_MAX_ENTRIES);

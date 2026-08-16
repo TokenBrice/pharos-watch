@@ -1,7 +1,7 @@
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { decimalNumberFromBigInt } from "./bigint";
 import { fetchJsonWithRetry } from "./fetch-retry";
-import { cancelResponseBodyQuietly } from "./response-body";
+import { logWorkerEvent } from "./structured-log";
 
 const MAX_RECURSION_DEPTH = 8;
 const ETHERSCAN_MAX_RESULTS = 1000;
@@ -119,12 +119,13 @@ export async function getEvmBlockNumber(
   try {
     budget.count++;
     const json = await rateLimit(async () => {
-      const res = await fetch(`${ETHERSCAN_V2_BASE}?${params}`, { signal });
-      if (!res.ok) {
-        await cancelResponseBodyQuietly(res);
-        return null;
-      }
-      return res.json() as Promise<{ result?: string }>;
+      const result = await fetchJsonWithRetry<{ result?: string }>(
+        `${ETHERSCAN_V2_BASE}?${params}`,
+        { signal },
+        0,
+        { returnFinalResponse: true, maxResponseBytes: 256 * 1024 },
+      );
+      return result?.response.ok ? result.body : null;
     });
     if (!json?.result || !/^0x[0-9a-fA-F]+$/.test(json.result)) return null;
     const parsed = Number.parseInt(json.result, 16);
@@ -273,7 +274,7 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
     );
     if (!result?.response.ok) {
       if (result) {
-        console.warn(`[evm-logs] Etherscan v2 (chain ${evmChainId}) HTTP ${result.response.status}`);
+        logWorkerEvent({ scope: "lib", level: "warn", event: "etherscan_logs_http_error", message: "Etherscan log request returned an HTTP error", provider: "etherscan", status: result.response.status, metadata: { chainId: evmChainId } });
       }
       return null;
     }
@@ -285,11 +286,9 @@ export async function fetchEvmLogsForTopicsWithCompleteness(
       return { logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
     }
     // API error — return incomplete so callers know the scan was not reliable.
-    if (json)
-      console.warn(
-        `[evm-logs] Etherscan v2 (chain ${evmChainId}) API error: ${json.message}`,
-        json.result ? String(json.result).slice(0, 200) : "no result",
-      );
+    if (json) {
+      logWorkerEvent({ scope: "lib", level: "warn", event: "etherscan_logs_api_error", message: "Etherscan log request returned an API error", provider: "etherscan", metadata: { chainId: evmChainId, upstreamMessage: json.message, upstreamResult: json.result ? String(json.result).slice(0, 200) : "no result" } });
+    }
     return {
       logs: [],
       complete: false,

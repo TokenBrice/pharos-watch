@@ -5,6 +5,7 @@ import {
   summarizeThrownScheduledJob,
   type ScheduledSlotJobSummary,
 } from "./slot-summary";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 interface RunBestEffortScheduledJobOptions {
   errorMessage?: string;
@@ -31,7 +32,7 @@ export async function runBestEffortScheduledJobWithOutcome(
       summary: summarizeCronResult(job, result),
     };
   } catch (err) {
-    console.error(options.errorMessage ?? `[cron] ${job} failed in ${slotLabel}:`, err);
+    logWorkerEvent({ scope: "handler", level: "error", event: "scheduled_best_effort_job_failed", message: options.errorMessage ?? `${job} failed in ${slotLabel}`, job, metadata: { slotLabel }, error: err });
     return {
       job,
       result: null,

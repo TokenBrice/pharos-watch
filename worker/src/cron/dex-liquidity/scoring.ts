@@ -1,4 +1,5 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { weightedMedian } from "@shared/lib/stats";
 import { roundTo } from "@shared/lib/math";
 import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
@@ -1586,19 +1587,12 @@ export async function computeDexPrices(
       tvl: o.tvl * dexPriceConfidenceForSourceFamily(o.sourceFamily),
     }));
 
-    // TVL-weighted median: sort by price, walk until cumulative (confidence-weighted) TVL crosses 50%
-    adjustedObs.sort((a, b) => a.price - b.price);
-    const adjustedTotalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
-    const halfTvl = adjustedTotalTvl / 2;
-    let cumTvl = 0;
-    let medianPrice = adjustedObs[0].price;
-    for (const obs of adjustedObs) {
-      cumTvl += obs.tvl;
-      if (cumTvl >= halfTvl) {
-        medianPrice = obs.price;
-        break;
-      }
-    }
+    // TVL-weighted lower-discrete median. The first-observation fallback
+    // preserves the scoring lane's non-empty-input contract if all adjusted
+    // confidence weights are non-positive.
+    const medianPrice = weightedMedian(
+      adjustedObs.map((observation) => ({ value: observation.price, weight: observation.tvl })),
+    ) ?? adjustedObs[0].price;
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
     const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);

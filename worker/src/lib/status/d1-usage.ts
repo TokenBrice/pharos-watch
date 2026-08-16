@@ -1,7 +1,7 @@
 import { assessD1Capacity } from "@shared/lib/d1-capacity";
 import type { D1CapacityAssessment, D1UsageSummary } from "@shared/types/status";
 import type { CloudflareD1StatusConfig } from "../env";
-import { cancelResponseBodyQuietly } from "../response-body";
+import { fetchTextWithRetry } from "../fetch-retry";
 import { isRecord } from "@shared/lib/type-guards";
 import { logWorkerEvent } from "../structured-log";
 import {
@@ -167,16 +167,15 @@ function parseAnalyticsEnvelope(
 }
 
 async function fetchJson(url: string, init: RequestInit, errorPrefix: string): Promise<unknown> {
-  const response = await fetch(url, {
-    ...init,
-    signal: AbortSignal.timeout(5_000),
+  const result = await fetchTextWithRetry(url, init, 0, {
+    timeoutMs: 5_000,
+    maxResponseBytes: 2 * 1024 * 1024,
+    returnFinalResponse: true,
   });
-  if (!response.ok) {
-    await cancelResponseBodyQuietly(response);
-    throw new Error(`${errorPrefix} (${response.status})`);
-  }
+  if (!result) throw new Error(errorPrefix);
+  if (!result.response.ok) throw new Error(`${errorPrefix} (${result.response.status})`);
   try {
-    return await response.json() as unknown;
+    return JSON.parse(result.body) as unknown;
   } catch {
     throw new Error(`${errorPrefix}: invalid JSON response`);
   }

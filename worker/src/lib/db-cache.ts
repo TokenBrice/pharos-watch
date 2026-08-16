@@ -1,14 +1,56 @@
-import { batchExecute, buildInClause } from "./db";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { throwIfAborted } from "./abort";
+import { D1_BATCH_SIZE } from "./constants";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
 import {
   getFreshnessSentinelCacheKey,
   getFreshnessSentinelProducerJob,
   type FreshnessSentinelBackedCacheKey,
 } from "./freshness-sentinels";
-import { toErrorMessage } from "./error-utils";
 import { parseJsonStringArray } from "./json-parse";
+import { logWorkerEvent } from "./structured-log";
+
+export type CacheStaleSemantics = "accept" | "fallback-only" | "reject";
+export type CacheInvalidationSemantics = "retain" | "delete";
+
+export interface CacheRetentionPolicy {
+  storage: "d1-kv" | "domain-table" | "isolate-memory";
+  /** Null means identity/schema controls validity and wall-clock age does not expire the value. */
+  ttlSec: number | null;
+  maxEntries: number | null;
+  stale: CacheStaleSemantics;
+  invalid: CacheInvalidationSemantics;
+  schemaId: string;
+}
+
+export interface CachePolicy<T> extends CacheRetentionPolicy {
+  key: string;
+  decode(value: string): T | null;
+  encode(value: T): string;
+}
+
+export type PolicyCacheRead<T> =
+  | { state: "missing" | "invalid"; value: null; updatedAt: number | null; usable: false }
+  | { state: "fresh" | "stale"; value: T; updatedAt: number; usable: boolean };
+
+function buildCacheInClause(values: readonly unknown[]): { sql: string; binds: unknown[] } {
+  if (values.length === 0 || values.length > 100) {
+    throw new RangeError(`cache IN clause requires 1-100 values (received ${values.length})`);
+  }
+  return { sql: new Array(values.length).fill("?").join(","), binds: [...values] };
+}
+
+async function executeCacheBatches(
+  db: D1Database,
+  statements: readonly D1PreparedStatement[],
+  signal?: AbortSignal,
+): Promise<void> {
+  for (let index = 0; index < statements.length; index += D1_BATCH_SIZE) {
+    throwIfAborted(signal);
+    await runWithOverloadRetry(() => db.batch(statements.slice(index, index + D1_BATCH_SIZE)), 3, signal);
+  }
+  throwIfAborted(signal);
+}
 
 export async function getCache(
   db: D1Database,
@@ -38,7 +80,7 @@ export async function getCaches(
   const rowsByKey = new Map<string, { value: string; updatedAt: number }>();
   if (uniqueKeys.length === 0) return rowsByKey;
 
-  const keyClause = buildInClause(uniqueKeys);
+  const keyClause = buildCacheInClause(uniqueKeys);
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(`SELECT key, value, updated_at FROM cache WHERE key IN (${keyClause.sql})`)
@@ -66,11 +108,21 @@ export async function getCacheUpdatedAt(db: D1Database, key: string): Promise<nu
 }
 
 export async function setCache(db: D1Database, key: string, value: string, signal?: AbortSignal): Promise<void> {
+  await setCacheAt(db, key, value, Math.floor(Date.now() / 1000), signal);
+}
+
+export async function setCacheAt(
+  db: D1Database,
+  key: string,
+  value: string,
+  updatedAt: number,
+  signal?: AbortSignal,
+): Promise<void> {
   throwIfAborted(signal);
   await runWithOverloadRetry(() =>
     db
       .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-      .bind(key, value, Math.floor(Date.now() / 1000))
+      .bind(key, value, updatedAt)
       .run(),
     3,
     signal,
@@ -92,12 +144,52 @@ export async function setCacheMany(
   if (entries.length === 0) return;
   const updatedAt = Math.floor(Date.now() / 1000);
   const statement = db.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
-  await batchExecute(db, entries.map((entry) => statement.bind(entry.key, entry.value, updatedAt)), { signal });
+  await executeCacheBatches(db, entries.map((entry) => statement.bind(entry.key, entry.value, updatedAt)), signal);
   throwIfAborted(signal);
 }
 
 export async function deleteCache(db: D1Database, key: string): Promise<void> {
   await runWithOverloadRetry(() => db.prepare("DELETE FROM cache WHERE key = ?").bind(key).run());
+}
+
+export async function readCacheWithPolicy<T>(
+  db: D1Database,
+  policy: CachePolicy<T>,
+  nowSec = Math.floor(Date.now() / 1000),
+  signal?: AbortSignal,
+): Promise<PolicyCacheRead<T>> {
+  if (policy.storage !== "d1-kv") throw new Error(`cache policy ${policy.schemaId} is not backed by D1 key/value cache`);
+  const cached = await getCache(db, policy.key, signal);
+  if (!cached) return { state: "missing", value: null, updatedAt: null, usable: false };
+  let value: T | null;
+  try {
+    value = policy.decode(cached.value);
+  } catch {
+    value = null;
+  }
+  if (value == null) {
+    if (policy.invalid === "delete") await deleteCache(db, policy.key);
+    return { state: "invalid", value: null, updatedAt: cached.updatedAt, usable: false };
+  }
+  const fresh = policy.ttlSec == null || nowSec - cached.updatedAt <= policy.ttlSec;
+  if (fresh) return { state: "fresh", value, updatedAt: cached.updatedAt, usable: true };
+  return {
+    state: "stale",
+    value,
+    updatedAt: cached.updatedAt,
+    usable: policy.stale === "accept",
+  };
+}
+
+export async function writeCacheWithPolicy<T>(
+  db: D1Database,
+  policy: CachePolicy<T>,
+  value: T,
+  updatedAt = Math.floor(Date.now() / 1000),
+  signal?: AbortSignal,
+): Promise<void> {
+  if (policy.storage !== "d1-kv") throw new Error(`cache policy ${policy.schemaId} is not backed by D1 key/value cache`);
+  await setCacheAt(db, policy.key, policy.encode(value), updatedAt, signal);
 }
 
 
@@ -138,7 +230,7 @@ export async function setCacheIfNewer(
   );
   throwIfAborted(signal);
   if (result.meta.changes === 0) {
-    console.log(`[cache] Skipped write for "${key}" — existing data is newer (started_at > ${syncStartSec})`);
+    logWorkerEvent({ scope: "lib", level: "info", event: "cache_write_skipped_newer", message: "Skipped cache write because existing data is newer", metadata: { key, syncStartSec } });
     return { written: false, skippedBecauseNewer: true };
   }
   return { written: true, skippedBecauseNewer: false };
@@ -200,7 +292,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       )
       .all<PriceCacheRow>();
   } catch (err) {
-    console.warn("[db-cache] Full-column price_cache query failed:", toErrorMessage(err));
+    logWorkerEvent({ scope: "lib", level: "warn", event: "price_cache_full_column_query_failed", message: "Full-column price cache query failed", error: err });
     throw err;
   }
   for (const row of result.results ?? []) {
@@ -270,5 +362,5 @@ export async function savePriceCache(db: D1Database, entries: PriceCacheWriteEnt
         JSON.stringify(e.consensusSources ?? []),
       ),
   );
-  await batchExecute(db, stmts);
+  await executeCacheBatches(db, stmts);
 }

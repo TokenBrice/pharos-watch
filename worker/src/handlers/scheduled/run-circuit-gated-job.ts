@@ -6,6 +6,7 @@ import {
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
 import { logSkippedCronRun } from "./preflight-skip";
+import { logWorkerEvent } from "../../lib/structured-log";
 
 interface CircuitGatedScheduledJobOptions {
   circuitSource: string;
@@ -21,7 +22,7 @@ export async function runCircuitGatedLeasedScheduledJob(
 ): Promise<CronResult | null> {
   const allowed = await shouldAttemptFetch(runtime.db, options.circuitSource);
   if (!allowed) {
-    console.warn(options.skipMessage);
+    logWorkerEvent({ scope: "handler", level: "warn", event: "scheduled_job_circuit_open", message: options.skipMessage, job: options.job, provider: options.circuitSource });
     await logSkippedCronRun(runtime, {
       job: options.job,
       reason: "circuit-open",
@@ -40,12 +41,12 @@ export async function runCircuitGatedLeasedScheduledJob(
       options.circuitSource,
       mapCronStatusToCircuitOutcome(result?.status),
     ).catch((err) => {
-      console.error(`[cron] Failed to record ${options.outcomeLabel} success outcome:`, err);
+      logWorkerEvent({ scope: "handler", level: "error", event: "scheduled_job_circuit_success_write_failed", message: `Failed to record ${options.outcomeLabel} success outcome`, job: options.job, provider: options.circuitSource, error: err });
     });
     return result ?? null;
   } catch (err) {
     await recordOutcomeDecision(runtime.db, options.circuitSource, "failure").catch((outcomeErr) => {
-      console.error(`[cron] Failed to record ${options.outcomeLabel} failure outcome:`, outcomeErr);
+      logWorkerEvent({ scope: "handler", level: "error", event: "scheduled_job_circuit_failure_write_failed", message: `Failed to record ${options.outcomeLabel} failure outcome`, job: options.job, provider: options.circuitSource, error: outcomeErr });
     });
     throw err;
   }

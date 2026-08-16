@@ -4,11 +4,18 @@
  * State is persisted in the D1 cache table under keys like "circuit:defillama-stablecoins".
  */
 
-import { getCache, setCache } from "./db-cache";
+import {
+  getCaches,
+  readCacheWithPolicy,
+  writeCacheWithPolicy,
+  type CachePolicy,
+  type CacheRetentionPolicy,
+} from "./db-cache";
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
 import { CIRCUIT_SOURCE } from "./constants";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
+import { logWorkerEvent } from "./structured-log";
 
 export type CircuitRecord = SharedCircuitRecord;
 export type CircuitState = "closed" | "open" | "half-open";
@@ -25,7 +32,14 @@ const DEFAULT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
-const CIRCUIT_RECORD_MEMO_TTL_MS = 5_000;
+export const CIRCUIT_RECORD_MEMO_POLICY = {
+  storage: "isolate-memory",
+  schemaId: "circuit-record:memo:v1",
+  ttlSec: 5,
+  maxEntries: null,
+  stale: "reject",
+  invalid: "delete",
+} satisfies CacheRetentionPolicy;
 
 interface CircuitRecordMemoCache {
   records: Map<string, { record: CircuitRecord; expiresAtMs: number }>;
@@ -79,15 +93,32 @@ function cacheKey(source: string): string {
   return `circuit:${source}`;
 }
 
+function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
+  return {
+    key: cacheKey(source),
+    storage: "d1-kv",
+    schemaId: "circuit-record:v1",
+    ttlSec: null,
+    maxEntries: null,
+    stale: "accept",
+    invalid: "retain",
+    decode: (value) => {
+      try {
+        const parsed: unknown = JSON.parse(value);
+        return isCircuitRecord(parsed) ? parsed : null;
+      } catch {
+        return null;
+      }
+    },
+    encode: JSON.stringify,
+  };
+}
+
 async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
-  const cached = await getCache(db, cacheKey(source));
-  if (!cached) return cloneCircuitRecord(DEFAULT_RECORD);
-  try {
-    const parsed = JSON.parse(cached.value);
-    return isCircuitRecord(parsed) ? cloneCircuitRecord(parsed) : cloneCircuitRecord(DEFAULT_RECORD);
-  } catch {
-    return cloneCircuitRecord(DEFAULT_RECORD);
-  }
+  const cached = await readCacheWithPolicy(db, circuitRecordPolicy(source));
+  return cached.state === "fresh" || cached.state === "stale"
+    ? cloneCircuitRecord(cached.value)
+    : cloneCircuitRecord(DEFAULT_RECORD);
 }
 
 export async function getCircuitRecord(db: D1Database, source: string): Promise<CircuitRecord> {
@@ -109,7 +140,7 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
       if ((cache.versions.get(source) ?? 0) === version) {
         cache.records.set(source, {
           record: cloneCircuitRecord(record),
-          expiresAtMs: Date.now() + CIRCUIT_RECORD_MEMO_TTL_MS,
+          expiresAtMs: Date.now() + CIRCUIT_RECORD_MEMO_POLICY.ttlSec * 1_000,
         });
       }
       return record;
@@ -125,7 +156,7 @@ export async function getCircuitRecord(db: D1Database, source: string): Promise<
 
 async function setCircuitRecord(db: D1Database, source: string, record: CircuitRecord): Promise<void> {
   invalidateCircuitRecord(db, source);
-  await setCache(db, cacheKey(source), JSON.stringify(record));
+  await writeCacheWithPolicy(db, circuitRecordPolicy(source), record);
 }
 
 const CIRCUIT_RECORD_READ_CHUNK_SIZE = 100;
@@ -144,22 +175,12 @@ export async function getCircuitRecordsForSources(
   for (let offset = 0; offset < uniqueSources.length; offset += CIRCUIT_RECORD_READ_CHUNK_SIZE) {
     const chunk = uniqueSources.slice(offset, offset + CIRCUIT_RECORD_READ_CHUNK_SIZE);
     const keys = chunk.map(cacheKey);
-    const placeholders = keys.map(() => "?").join(", ");
-    const result = await db
-      .prepare(`SELECT key, value FROM cache WHERE key IN (${placeholders})`)
-      .bind(...keys)
-      .all<{ key: string; value: string }>();
-    for (const row of result.results ?? []) {
-      if (!row.key.startsWith("circuit:")) continue;
-      const source = row.key.slice("circuit:".length);
-      try {
-        const parsed = JSON.parse(row.value);
-        if (isCircuitRecord(parsed)) {
-          records[source] = cloneCircuitRecord(parsed);
-        }
-      } catch {
-        // skip malformed rows
-      }
+    const cached = await getCaches(db, keys);
+    for (const source of chunk) {
+      const row = cached.get(cacheKey(source));
+      if (!row) continue;
+      const parsed = circuitRecordPolicy(source).decode(row.value);
+      if (parsed) records[source] = cloneCircuitRecord(parsed);
     }
   }
   return records;
@@ -179,7 +200,7 @@ export async function shouldAttemptFetch(db: D1Database, source: string): Promis
       // Transition to half-open — allow one probe request
       record.state = "half-open";
       await setCircuitRecord(db, source, record);
-      console.log(`[circuit-breaker] ${source}: open -> half-open (probe allowed)`);
+      logWorkerEvent({ scope: "lib", level: "info", event: "circuit_probe_allowed", message: "Circuit transitioned from open to half-open", provider: source, metadata: { state: "half-open" } });
       return true;
     }
     return false;
@@ -216,7 +237,7 @@ export async function recordOutcome(
     record.openedAt = null;
     await setCircuitRecord(db, source, record);
     if (wasOpen) {
-      console.log(`[circuit-breaker] ${source}: CLOSED (recovered)`);
+      logWorkerEvent({ scope: "lib", level: "info", event: "circuit_recovered", message: "Circuit closed after recovery", provider: source, metadata: { state: "closed" } });
     }
     return { before, after: { ...record } };
   }
@@ -229,13 +250,11 @@ export async function recordOutcome(
     // Probe failed — reopen
     record.state = "open";
     record.openedAt = now;
-    console.log(
-      `[circuit-breaker] ${source}: half-open -> open (probe failed, ${record.consecutiveFailures} consecutive failures)`,
-    );
+    logWorkerEvent({ scope: "lib", level: "info", event: "circuit_probe_failed", message: "Circuit reopened after a failed probe", provider: source, metadata: { state: "open", consecutiveFailures: record.consecutiveFailures } });
   } else if (record.consecutiveFailures >= CIRCUIT_OPEN_THRESHOLD && record.state === "closed") {
     record.state = "open";
     record.openedAt = now;
-    console.log(`[circuit-breaker] ${source}: closed -> OPEN (${record.consecutiveFailures} consecutive failures)`);
+    logWorkerEvent({ scope: "lib", level: "info", event: "circuit_opened", message: "Circuit opened after consecutive failures", provider: source, metadata: { state: "open", consecutiveFailures: record.consecutiveFailures } });
     await setCircuitRecord(db, source, record);
     return { before, after: { ...record } };
   }
@@ -290,7 +309,7 @@ export async function recordOutcomeSafe(
   try {
     return await recordOutcome(db, source, success);
   } catch (err) {
-    console.warn(`[circuit-breaker] Failed to record outcome (${source}):`, err);
+    logWorkerEvent({ scope: "lib", level: "warn", event: "circuit_outcome_write_failed", message: "Failed to record circuit outcome", provider: source, error: err });
     return null;
   }
 }

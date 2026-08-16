@@ -14,6 +14,7 @@ import {
   type TelegramCurrentLifecycleSnapshot,
 } from "../telegram-usage-analytics";
 import { loadTelegramDeliverySliRollup } from "../telegram-delivery-sli";
+import { getCache } from "../db-cache";
 import {
   loadTelegramPendingCapacity,
   type TelegramPendingCapacitySnapshot,
@@ -410,10 +411,7 @@ async function loadInactiveSubscribersCleanedThisWeek(db: D1Database, now: numbe
 }
 
 async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
-  const row = await db
-    .prepare("SELECT value FROM cache WHERE key = ?")
-    .bind(PRESET_QUERY_FAILURE_CACHE_KEY)
-    .first<{ value: string }>();
+  const row = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
   if (!row) return 0;
   const parsed = Number(row.value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;

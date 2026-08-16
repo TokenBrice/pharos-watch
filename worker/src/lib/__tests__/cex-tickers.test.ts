@@ -186,7 +186,9 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("returns blocked outcome when every Binance host returns 403/451", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("blocked", { status: 451 })));
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(
+      async () => new Response("blocked", { status: 451 }),
+    ));
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("blocked");
     expect(outcome.value.prices.size).toBe(0);

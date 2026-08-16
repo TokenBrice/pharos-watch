@@ -13,8 +13,6 @@ import { toErrorMessage } from "../../lib/error-utils";
 // `ctx.waitUntil` was abandoned.
 import { generateDailyDigest } from "../../cron/daily-digest";
 import { buildTelegramCreds, buildTwitterCreds } from "../../lib/runtime-credentials";
-import { shouldAttemptFetch, recordOutcomeSafe } from "../../lib/circuit-breaker";
-import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { drainTelegramDigestOutbox } from "../../lib/telegram-digest-outbox";
 import { deleteCache, getCache, setCache } from "../../lib/db-cache";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../api/admin-actions";
@@ -25,6 +23,7 @@ import {
 } from "./context";
 import type { CronResult } from "../../lib/cron-logger";
 import { recordBudgetSurfaceTelemetry, type BudgetSurfaceOutcome } from "../../lib/budget-surface-telemetry";
+import { logWorkerEvent } from "../../lib/structured-log";
 import {
   buildScheduledSlotSummary,
   summarizeCronResult,
@@ -53,19 +52,6 @@ async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): P
     return;
   }
   try {
-    if (!(await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.TELEGRAM_API))) {
-      await recordBudgetSurfaceTelemetry(runtime.db, {
-        surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
-        durationMs: Date.now() - startedMs,
-        dueCount: 0,
-        processedCount: 0,
-        outcome: "skipped",
-        skippedReason: "telegram-circuit-open",
-        metadata: { telegramCredentialsConfigured: true },
-        producer: getRuntimeProducerIdentity(runtime, TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE),
-      });
-      return;
-    }
     const summary = await runRuntimeBudgetOnlyTask(
       runtime,
       TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
@@ -77,9 +63,6 @@ async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): P
     const unresolved = currentAttemptFailures
       + summary.retainedExecutionUnknown
       + summary.retainedFailedPermanent;
-    if (summary.attempted > 0) {
-      await recordOutcomeSafe(runtime.db, CIRCUIT_SOURCE.TELEGRAM_API, currentAttemptFailures === 0);
-    }
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
       durationMs: Date.now() - startedMs,
@@ -94,7 +77,7 @@ async function runTelegramDigestOutboxDrain(runtime: ScheduledRuntimeContext): P
     });
   } catch (err) {
     const error = toErrorMessage(err);
-    console.error("[telegram-digest-outbox] Drain failed:", err);
+    logWorkerEvent({ scope: "handler", level: "error", event: "telegram_digest_outbox_drain_failed", message: "Telegram digest outbox drain failed", job: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE, error: err });
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: TELEGRAM_DIGEST_OUTBOX_DRAIN_SURFACE,
       durationMs: Date.now() - startedMs,
@@ -146,9 +129,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
 
   const payload = parseForceRunPayload(pending.value);
   if (!payload) {
-    console.warn(
-      `[digest-trigger-poll] Malformed force-run payload, clearing: ${pending.value.slice(0, 200)}`,
-    );
+    logWorkerEvent({ scope: "handler", level: "warn", event: "digest_force_run_payload_malformed", message: "Malformed digest force-run payload; clearing", job: DIGEST_TRIGGER_POLL_SURFACE, metadata: { payloadPrefix: pending.value.slice(0, 200) } });
     await deleteCache(runtime.db, DIGEST_FORCE_RUN_CACHE_KEY);
     await recordBudgetSurfaceTelemetry(runtime.db, {
       surface: DIGEST_TRIGGER_POLL_SURFACE,
@@ -182,7 +163,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
     )) ?? null;
   } catch (err) {
     caught = err;
-    console.error(`[digest-trigger-poll] daily-digest failed for request ${payload.requestId}:`, err);
+    logWorkerEvent({ scope: "handler", level: "error", event: "digest_force_run_failed", message: "Forced daily digest failed", job: DIGEST_TRIGGER_POLL_SURFACE, error: err, metadata: { requestId: payload.requestId } });
   }
 
   const leaseLocked = result?.status === "skipped_locked";
@@ -230,7 +211,7 @@ export async function runDigestTriggerPollSlot(runtime: ScheduledRuntimeContext)
       }),
     );
   } catch (err) {
-    console.warn("[digest-trigger-poll] Failed to persist last-trigger-result:", err);
+    logWorkerEvent({ scope: "handler", level: "warn", event: "digest_trigger_result_persistence_failed", message: "Failed to persist digest trigger result", job: DIGEST_TRIGGER_POLL_SURFACE, error: err });
   }
 
   const telemetryOutcome: BudgetSurfaceOutcome =

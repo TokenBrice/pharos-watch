@@ -1,4 +1,5 @@
 import type { BatchMessage, TelegramSendErrorClass } from "../../lib/telegram";
+import type { TelegramPendingCapacitySnapshot } from "../../lib/telegram-pending-capacity";
 import type { TelegramAlertType } from "@shared/types/status";
 
 export interface PendingAlertRow {
@@ -104,29 +105,7 @@ export interface PendingEnqueueOptions {
   ttlSec?: number | null;
 }
 
-export interface PendingCapacitySnapshot {
-  total: number;
-  active: number;
-  due: number;
-  deferred: number;
-  expired: number;
-  nearTtl: number;
-  sending: number;
-  pendingSending?: number;
-  freshSending?: number;
-  pendingExecutionUnknown: number;
-  freshExecutionUnknown: number;
-  executionUnknown: number;
-  sentCleanup: number;
-  oldestExecutionUnknownAgeSec: number | null;
-  executionUnknownSampleLimit: number;
-  executionUnknownLowerBound: boolean;
-  oldestPendingAgeSec: number | null;
-  oldestDuePendingAgeSec: number | null;
-  estimatedDrainTimeSec: number;
-  drainBudgetPerRun: number;
-  dispatchIntervalSec: number;
-}
+export type PendingCapacitySnapshot = TelegramPendingCapacitySnapshot;
 
 export type PendingCapacityReadResult =
   | { status: "available"; value: PendingCapacitySnapshot }

@@ -295,12 +295,15 @@ describe("db utility helpers", () => {
 
   it("returns skipped outcome and logs when setCacheIfNewer skips write due to fresher row", async () => {
     const { db } = makeDb({ setCacheIfNewerChanges: 0 });
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const result = await setCacheIfNewer(db, "stablecoins", '{"x":1}', 1700000000);
 
     expect(result).toEqual({ written: false, skippedBecauseNewer: true });
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Skipped write for "stablecoins"'));
+    expect(JSON.parse(String(logSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "cache_write_skipped_newer",
+      metadata: { key: "stablecoins", syncStartSec: 1700000000 },
+    });
     logSpy.mockRestore();
   });
 

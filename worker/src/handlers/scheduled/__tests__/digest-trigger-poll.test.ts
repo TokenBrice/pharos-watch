@@ -16,10 +16,6 @@ vi.mock("../../../lib/db-cache", () => ({
 vi.mock("../../../lib/budget-surface-telemetry", () => ({
   recordBudgetSurfaceTelemetry: vi.fn(async () => {}),
 }));
-vi.mock("../../../lib/circuit-breaker", () => ({
-  shouldAttemptFetch: vi.fn(async () => true),
-  recordOutcomeSafe: vi.fn(async () => {}),
-}));
 vi.mock("../../../lib/telegram-digest-outbox", () => ({
   drainTelegramDigestOutbox: vi.fn(),
 }));
@@ -28,7 +24,6 @@ import { generateDailyDigest } from "../../../cron/daily-digest";
 import { deleteCache, getCache, setCache } from "../../../lib/db-cache";
 import { recordBudgetSurfaceTelemetry } from "../../../lib/budget-surface-telemetry";
 import { buildTelegramCreds, buildTwitterCreds } from "../../../lib/runtime-credentials";
-import { recordOutcomeSafe, shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { drainTelegramDigestOutbox } from "../../../lib/telegram-digest-outbox";
 import { runDigestTriggerPollSlot, DIGEST_LAST_TRIGGER_RESULT_CACHE_KEY } from "../digest-trigger-poll";
 import { DIGEST_FORCE_RUN_CACHE_KEY } from "../../../api/admin-actions";
@@ -45,7 +40,6 @@ describe("runDigestTriggerPollSlot", () => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     runLeasedCron = vi.fn();
     vi.mocked(buildTelegramCreds).mockReturnValue(null);
-    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     vi.mocked(drainTelegramDigestOutbox).mockResolvedValue({
       due: 0,
       attempted: 0,
@@ -119,7 +113,7 @@ describe("runDigestTriggerPollSlot", () => {
     });
   });
 
-  it("surfaces retained terminal rows without feeding a no-attempt failure into the circuit", async () => {
+  it("surfaces retained terminal rows from the authoritative outbox drain", async () => {
     vi.mocked(buildTelegramCreds).mockReturnValue({ botToken: "bot", chatId: "channel" });
     vi.mocked(drainTelegramDigestOutbox).mockResolvedValueOnce({
       due: 0,
@@ -139,7 +133,6 @@ describe("runDigestTriggerPollSlot", () => {
     await runDigestTriggerPollSlot(buildRuntime());
 
     expect(drainTelegramDigestOutbox).toHaveBeenCalledTimes(1);
-    expect(recordOutcomeSafe).not.toHaveBeenCalled();
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
@@ -173,7 +166,6 @@ describe("runDigestTriggerPollSlot", () => {
     expect(drainTelegramDigestOutbox).toHaveBeenCalledTimes(1);
     expect(generateDailyDigest).not.toHaveBeenCalled();
     expect(runLeasedCron).not.toHaveBeenCalled();
-    expect(recordOutcomeSafe).toHaveBeenCalledWith(expect.anything(), "telegram-api", true);
   });
 
   it("does not attribute a drain infrastructure exception to the Telegram provider", async () => {
@@ -183,7 +175,6 @@ describe("runDigestTriggerPollSlot", () => {
 
     await runDigestTriggerPollSlot(buildRuntime());
 
-    expect(recordOutcomeSafe).not.toHaveBeenCalled();
     expect(recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
