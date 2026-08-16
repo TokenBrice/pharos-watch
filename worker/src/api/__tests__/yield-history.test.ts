@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeYieldHistoryRow } from "../../test-helpers/__shared/fixtures";
 import { handleYieldHistory } from "../yield-history";
 import { YIELD_HISTORY_OWNERSHIP_HANDOFFS } from "../../lib/yield-history-ownership-handoffs";
@@ -11,6 +11,17 @@ import {
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'", rows: [], first: null },
+  ], options);
+}
 
 const v748HistoryPayload = {
   current: {

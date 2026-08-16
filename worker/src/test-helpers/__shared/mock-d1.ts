@@ -33,8 +33,10 @@ export interface MockD1Database extends D1Database {
 export interface MockD1Options {
   /** Shorthand for requireMatch + strictSql. */
   strict?: boolean;
-  /** Require every executed statement to match a configured table entry. */
+  /** @deprecated mockD1 requires matches by default. Use allowUnmatched for permissive suites. */
   requireMatch?: boolean;
+  /** Allow unmatched statements to return the legacy empty/success responses. */
+  allowUnmatched?: boolean;
   /** Match normalized SQL exactly instead of substring search. */
   strictSql?: boolean;
 }
@@ -74,9 +76,13 @@ function isCacheKeyLookup(sql: string): boolean {
 }
 
 export function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}): MockD1Database {
+  if (options.allowUnmatched === true && (options.strict === true || options.requireMatch === true)) {
+    throw new Error("mockD1: allowUnmatched cannot be combined with strict or requireMatch");
+  }
+
   const history: Array<{ sql: string; binds: unknown[] }> = [];
   const matchHits = new Map<MockTableConfig, number>();
-  const requireMatch = options.strict === true || options.requireMatch === true;
+  const requireMatch = options.allowUnmatched !== true;
   const strictSql = options.strict === true || options.strictSql === true;
 
   function findTable(sql: string, boundValues: unknown[]): MockTableConfig | undefined {

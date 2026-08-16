@@ -3,7 +3,7 @@ import {
   fixtureFetchPrimaryPrices,
   fixtureApplyPoolChallenge,
   fixtureApplyListAggregatorDowngrade,
-  fixtureMockD1,
+  fixtureMockD1 as createFixtureMockD1,
   type PeggedAsset,
   type PrimaryPriceResult,
   type PriceValidationStats,
@@ -12,6 +12,18 @@ import {
 } from "./enrich-prices.test-support";
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";
 import type { PoolEntry } from "../dex-liquidity/types";
+
+function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
+  return createFixtureMockD1([
+    ...tables,
+    { match: "FROM dex_prices", rows: [] },
+    { match: "FROM dex_price_challenger_snapshots", rows: [] },
+    { match: "FROM dex_price_challengers", rows: [] },
+    { match: "FROM dex_liquidity", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ]);
+}
 
 describe("pool challenge — soft-only high confidence downgrade", () => {
   afterEach(() => {

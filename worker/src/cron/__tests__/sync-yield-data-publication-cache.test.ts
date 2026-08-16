@@ -1,15 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   mutableActiveStablecoins,
-  makeDb,
   makeStablecoinsCacheValue,
   getPublishedYieldRows,
   getYieldRankingsCachePayload,
-  makeYieldOrphanDb,
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
   fixtureSyncYieldData,
+  fixtureMockD1,
   fixtureBatchExecute,
   fixtureGetCache,
   fixtureWriteFreshnessSentinel,
@@ -23,11 +22,27 @@ import {
   type CronProgressUpdate,
 } from "./sync-yield-data.test-support";
 
+function makePublicationCacheDb(existingIds: Record<string, unknown>[] = []) {
+  return fixtureMockD1([
+    { match: "pharos:yield-sync:yield-data-existing-ids", rows: existingIds },
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+    { match: "ranked_linked_generations", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "source_switch = 0", rows: [] },
+  ]);
+}
+
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);
   afterEach(cleanupSyncYieldDataTest);
   it("syncs yield data from DeFiLlama pools on normal path", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
 
     // DL yields API returns a pool matching sDAI
     fixtureMockFetch([
@@ -69,7 +84,7 @@ describe("syncYieldData", () => {
   });
 
   it("loads stablecoin supply once and requests the published safety generation", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     const updatedAt = Math.floor(Date.now() / 1000);
     vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
       if (key === "stablecoins") {
@@ -91,7 +106,7 @@ describe("syncYieldData", () => {
   });
 
   it("reports writer-pause progress metadata before returning", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     const progressUpdates: CronProgressUpdate[] = [];
     const reportProgress = vi.fn(async (update: CronProgressUpdate) => {
       progressUpdates.push(update);
@@ -130,7 +145,7 @@ describe("syncYieldData", () => {
   });
 
   it("publishes evaluated warning signals into the yield rankings cache", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     vi.mocked(fixtureYieldHelpersModule.detectWarningSignals).mockReturnValue(["yield-spike"]);
 
     fixtureMockFetch([
@@ -167,7 +182,7 @@ describe("syncYieldData", () => {
   });
 
   it("continues when published-generation repair fails before history load", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(fixturePublicationModule, "repairPublishedYieldGenerationFromCache").mockRejectedValueOnce(
       new Error("repair failed"),
@@ -217,7 +232,7 @@ describe("syncYieldData", () => {
   });
 
   it("returns a degraded no-op result while the cleanup writer pause is armed", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {
       if (key === "yield-history-cleanup:writer-pause") {
@@ -244,7 +259,7 @@ describe("syncYieldData", () => {
   });
 
   it("purges stale yield rows for refreshed coins after writing the current source set", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     mockHealthyRiskFreeRateCache();
 
     fixtureMockFetch([
@@ -285,7 +300,10 @@ describe("syncYieldData", () => {
   });
 
   it("purges orphan yield rows for coins outside the tracked stablecoin set", async () => {
-    const db = makeYieldOrphanDb(["orphan-coin", "legacy-coin"]);
+    const db = makePublicationCacheDb([
+      { stablecoin_id: "orphan-coin" },
+      { stablecoin_id: "legacy-coin" },
+    ]);
     mockHealthyRiskFreeRateCache();
 
     fixtureMockFetch([
@@ -334,7 +352,7 @@ describe("syncYieldData", () => {
   });
 
   it("chunks stale-yield cleanup under the D1 bind limit", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
     const originalLength = fixtureACTIVE_STABLECOINS.length;
     mockHealthyRiskFreeRateCache();
 
@@ -399,7 +417,7 @@ describe("syncYieldData", () => {
   });
 
   it("uses cached DL pools from DEX sync when available", async () => {
-    const db = makeDb();
+    const db = makePublicationCacheDb();
 
     // Simulate cached pools from DEX sync
     vi.mocked(fixtureGetCache).mockImplementation(async (_db, key) => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   countTelegramProcessedUpdateBacklog,
@@ -10,6 +10,16 @@ import {
   upsertSubscriberRow,
 } from "../telegram-webhook-store";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+  ], options);
+}
 
 describe("upsertSubscriberRow", () => {
   it("updates only quiet-hours columns on a mute-only call", async () => {

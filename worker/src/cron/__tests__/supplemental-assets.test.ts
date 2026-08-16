@@ -12,8 +12,15 @@ import {
 import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
 import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ]);
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();

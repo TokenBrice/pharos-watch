@@ -1,10 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database, type MockPreparedStatement } from "../../test-helpers/__shared/mock-d1";
+import {
+  mockD1 as baseMockD1,
+  type MockD1Database,
+  type MockPreparedStatement,
+} from "../../test-helpers/__shared/mock-d1";
 import {
   handleTelegramPulse,
   publishTelegramPulseSnapshot,
   publishTelegramPulseSnapshotWithOutcome,
 } from "../telegram-pulse";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily WHERE day = ?", rows: [], first: null },
+    { match: "FROM telegram_adoption_daily", rows: [] },
+    { match: "FROM telegram_usage_daily", rows: [], first: null },
+    { match: "FROM telegram_adoption_retention_daily", rows: [] },
+    { match: "INSERT INTO telegram_adoption_retention_daily", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ], options);
+}
 
 describe("handleTelegramPulse", () => {
   it("serves a fresh materialized pulse snapshot without live aggregate reads", async () => {

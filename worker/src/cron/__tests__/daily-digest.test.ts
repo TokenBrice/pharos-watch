@@ -364,6 +364,7 @@ function publishedGaugeTable(
 function makeBaseTables(
   options: {
     dewsRows?: TestDewsRow[];
+    stabilityIndexCount?: number;
   } = {},
 ): MockTableConfig[] {
   const nowSec = Math.floor(Date.now() / 1000);
@@ -396,6 +397,61 @@ function makeBaseTables(
       match:
         "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
       rows: [],
+    },
+    {
+      match: "SELECT digest_title, digest_text, digest_extended, digest_meta, input_data\n       FROM daily_digest",
+      rows: [],
+    },
+    {
+      match: "SELECT digest_meta FROM daily_digest",
+      rows: [],
+    },
+    {
+      match: "SELECT digest_title FROM daily_digest",
+      rows: [],
+    },
+    { match: "SELECT generated_at, input_data FROM daily_digest\n         WHERE generated_at", rows: [] },
+    { match: "SELECT MIN(generated_at) as oldest FROM daily_digest", rows: [], first: null },
+    {
+      match: "as ath_date\n         FROM daily_digest\n         WHERE (",
+      rows: [],
+      first: null,
+    },
+    {
+      match: "SELECT COUNT(*) as cnt FROM stability_index",
+      rows: [],
+      first: { cnt: options.stabilityIndexCount ?? 1 },
+    },
+    {
+      match: "SELECT score, band, components, computed_at as stored_at FROM stability_index",
+      rows: [],
+      first: {
+        score: 89.5,
+        band: "STEADY",
+        components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
+        stored_at: todayTs,
+      },
+    },
+    {
+      match: "SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals",
+      rows: [],
+    },
+    {
+      match: "SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date",
+      rows: [],
+    },
+    { match: "SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", rows: [], first: null },
+    { match: "SELECT stablecoin_id, score, band FROM stress_signal_history", rows: [] },
+    { match: "GROUP BY recorded_at HAVING COUNT(*) > 15", rows: [] },
+    { match: "SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version", rows: [] },
+    { match: "INSERT INTO daily_digest", rows: [] },
+    { match: "INSERT OR IGNORE INTO cache", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "DELETE FROM cache", rows: [] },
+    {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      rows: [],
+      first: null,
     },
     {
       match: "SELECT COUNT(*) as cnt FROM daily_digest WHERE",
@@ -432,6 +488,16 @@ function makeBaseTables(
       match: "FROM stability_index WHERE computed_at = ?",
       rows: [],
       first: { score: 89.5, band: "STEADY" },
+    },
+    {
+      match: "SELECT score, band, components, computed_at as stored_at FROM stability_index",
+      rows: [],
+      first: {
+        score: 89.5,
+        band: "STEADY",
+        components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
+        stored_at: todayTs,
+      },
     },
     {
       match: "FROM blacklist_events",
@@ -1090,7 +1156,6 @@ describe("generateDailyDigest", () => {
     ];
     const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
-      ...baseTables,
       // Yesterday's snapshot
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
@@ -1099,6 +1164,7 @@ describe("generateDailyDigest", () => {
           { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
         ],
       },
+      ...baseTables,
     ]);
 
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -1137,7 +1203,6 @@ describe("generateDailyDigest", () => {
     ];
     const baseTables = makeBaseTables({ dewsRows });
     const db = mockD1([
-      ...baseTables,
       {
         match: "FROM stress_signal_history WHERE snapshot_date = ?",
         rows: [
@@ -1145,6 +1210,7 @@ describe("generateDailyDigest", () => {
           { stablecoin_id: "usdc-circle", score: 30, band: "WATCH" },
         ],
       },
+      ...baseTables,
     ]);
 
     try {
@@ -1166,7 +1232,7 @@ describe("generateDailyDigest", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);
 
-    const baseTables = makeBaseTables();
+    const baseTables = makeBaseTables({ stabilityIndexCount: 90 });
     const db = mockD1([
       ...baseTables,
       // PSI precedent: query previous digests for displayed PSI scores
@@ -1203,12 +1269,6 @@ describe("generateDailyDigest", () => {
         rows: [],
         first: { snapshot_date: todayTs - 45 * 86_400, abs_change: 8_000_000 },
       },
-      // History depth check (>30 rows means >30 days)
-      {
-        match: "COUNT(*) as cnt FROM stability_index",
-        rows: [],
-        first: { cnt: 90 },
-      },
     ]);
 
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -1226,9 +1286,7 @@ describe("generateDailyDigest", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const todayTs = nowSec - (nowSec % 86_400);
 
-    const baseTables = makeBaseTables();
     const db = mockD1([
-      ...baseTables,
       // Organic V2 methodology bump check (no bumps)
       {
         match: "GROUP BY recorded_at HAVING COUNT(*) > 15",
@@ -1258,6 +1316,7 @@ describe("generateDailyDigest", () => {
           },
         ],
       },
+      ...makeBaseTables(),
     ]);
 
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -2211,12 +2270,12 @@ describe("totalMcapAth enrichment", () => {
 
     const baseTables = makeBaseTables();
     const db = mockD1([
-      ...baseTables,
       {
         match: "ORDER BY CAST(json_extract(input_data, '$.totalMcapUsd') AS REAL) DESC",
         first: { ath_value: 330_000_000_000, ath_date: nowSec - 7 * 86_400 },
         rows: [],
       },
+      ...baseTables,
     ]);
 
     const result = await generateDailyDigest(db, "anthropic-key");
@@ -2356,7 +2415,12 @@ function makeCollectorCtx(db: D1Database): CollectorContext {
 describe("collectMintBurnFlows", () => {
   it("omits the block without degrading when no gauge has been published yet", async () => {
     const degradedReasons: string[] = [];
-    const db = mockD1([]);
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["mint-burn-flows:v3:aggregate:24"],
+      rows: [],
+      first: null,
+    }]);
 
     const result = await collectMintBurnFlows(makeCollectorCtx(db), degradedReasons);
 

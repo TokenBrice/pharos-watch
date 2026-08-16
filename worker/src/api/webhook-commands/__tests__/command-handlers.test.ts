@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
   lastSendMessageBody,
@@ -31,6 +31,29 @@ type TelegramSendBody = {
 };
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+): MockD1Database {
+  return baseMockD1([
+    ...tables,
+    { match: "FROM telegram_subscribers", rows: [], first: null },
+    { match: "FROM telegram_subscriptions", rows: [] },
+    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
+    { match: "FROM telegram_recap_preferences", rows: [], first: null },
+    { match: "FROM telegram_recap_targets", rows: [], first: null },
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "UPDATE telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+    { match: "INSERT INTO telegram_usage_daily", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  ], options);
+}
 
 function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
   return {

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  makeDb,
+  makeDb as createMakeDb,
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
   mockHealthyRiskFreeRateCache,
   resetSyncYieldDataTest,
   cleanupSyncYieldDataTest,
-  fixtureMockD1,
+  fixtureMockD1 as createFixtureMockD1,
   fixtureSyncYieldData,
   fixtureGetCache,
   fixtureShouldAttemptFetch,
@@ -16,6 +16,31 @@ import {
   fixtureEvmRpcModule,
   type ChainRpcConfig,
 } from "./sync-yield-data.test-support";
+
+function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
+  return createFixtureMockD1([
+    ...tables,
+    { match: "ranked_linked_generations", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "source_switch = 0", rows: [] },
+  ]);
+}
+
+function makeDb() {
+  return createFixtureMockD1([
+    { match: "cache", rows: [] },
+    { match: "yield_data", rows: [] },
+    { match: "yield_history", rows: [] },
+    { match: "supply_history", rows: [] },
+    { match: "depeg_events", rows: [] },
+    { match: "dex_liquidity", rows: [] },
+    { match: "ranked_linked_generations", rows: [] },
+    { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+    { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+    { match: "source_switch = 0", rows: [] },
+  ]);
+}
 
 describe("syncYieldData", () => {
   beforeEach(resetSyncYieldDataTest);

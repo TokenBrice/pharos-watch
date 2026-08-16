@@ -1,19 +1,9 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchFluidPools } from "../fetch-fluid";
-
-const mockFetch = vi.fn();
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 describe("fetchFluidPools", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", mockFetch);
-  });
-
   afterEach(() => {
-    mockFetch.mockReset();
     vi.unstubAllGlobals();
   });
 
@@ -33,13 +23,10 @@ describe("fetchFluidPools", () => {
     // fetchFluidPools iterates FLUID_CHAINS; stub responses per chain.
     // The first chain to see the row is Ethereum (chainId=1). Return the ticker row for
     // that URL and an empty array for every other chain so the loop completes quickly.
-    mockFetch.mockImplementation(async (input: unknown) => {
-      const url = typeof input === "string" ? input : (input as { url?: string }).url ?? String(input);
-      if (url.includes("/v2/1/dexes/stats/tickers")) {
-        return jsonResponse([tickerRow]);
-      }
-      return jsonResponse([]);
-    });
+    mockFetch([
+      { match: "/v2/1/dexes/stats/tickers", body: [tickerRow] },
+      { match: "api.fluid.instadapp.io", body: [] },
+    ], { requireMatch: true });
 
     const result = await fetchFluidPools(undefined, new Map());
     const ethPool = result.pools.find(

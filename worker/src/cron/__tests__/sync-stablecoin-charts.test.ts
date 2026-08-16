@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
@@ -7,6 +7,22 @@ vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncStablecoinCharts } from "../sync-stablecoin-charts";
 import { STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS } from "../../lib/stablecoin-charts-reconciliation";
+
+const DEFAULT_CHART_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "INSERT OR IGNORE INTO cache", rows: [], runMeta: { changes: 1 } },
+  { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+  {
+    match: "UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?",
+    rows: [],
+    runMeta: { changes: 1 },
+  },
+  { match: "FROM supply_history", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []): MockD1Database {
+  return createMockD1([...tables, ...DEFAULT_CHART_D1_TABLES]);
+}
 
 function makeRawChartPoints(
   count: number,

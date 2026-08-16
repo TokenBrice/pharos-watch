@@ -2,9 +2,22 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureFetchPrimaryPrices,
   fixtureApplyResolvedPrice,
-  fixtureMockD1,
+  fixtureMockD1 as createFixtureMockD1,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+
+function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
+  return createFixtureMockD1([
+    ...tables,
+    { match: "FROM dex_prices", rows: [] },
+    { match: "FROM dex_price_challenger_snapshots", rows: [] },
+    { match: "FROM dex_price_challengers", rows: [] },
+    { match: "FROM dex_liquidity", rows: [] },
+    { match: "FROM reserve_composition c", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ]);
+}
 
 // --- fetchPrimaryPrices tests ---
 

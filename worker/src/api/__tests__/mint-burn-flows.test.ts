@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
 import {
@@ -9,6 +9,16 @@ import {
 } from "../../test-helpers/report-cards-v9";
 import { handleMintBurnFlows } from "../mint-burn-flows";
 import { MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
+
+function mintBurnD1(tables: MockTableConfig[] = []) {
+  return mockD1([
+    ...tables,
+    { match: "FROM mint_burn_sync_state", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "SELECT MAX(started_at) as started_at FROM cron_runs", rows: [], first: { started_at: null } },
+    { match: "INSERT INTO cache (key, value, updated_at)", rows: [] },
+  ]);
+}
 
 // ---------------------------------------------------------------------------
 // Regression tests (shape assertions on literal objects)
@@ -105,7 +115,7 @@ describe("handleMintBurnFlows contract tests", () => {
     peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
   });
 
-  const db = mockD1([
+  const db = mintBurnD1([
     { match: "mint_burn_hourly", rows: [hourlyRow] },
     { match: "mint_burn_events", rows: [] },
     {
@@ -179,7 +189,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdai-usd-ai", symbol: "USDai", circulating: { peggedUSD: 250_000_000 } }],
     });
 
-    const scopedDb = mockD1([
+    const scopedDb = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -275,7 +285,7 @@ describe("handleMintBurnFlows contract tests", () => {
 
   it("excludes historical rows for quarantined mint/burn configs from the public aggregate", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const inactiveDb = mockD1([
+    const inactiveDb = mintBurnD1([
       {
         match: "mint_burn_hourly",
         rows: [{
@@ -339,7 +349,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100000000000 } }],
     });
 
-    const sparseDb = mockD1([
+    const sparseDb = mintBurnD1([
       {
         match: "SUM(net_flow_usd) as daily_net",
         rows: [
@@ -388,7 +398,7 @@ describe("handleMintBurnFlows contract tests", () => {
   });
 
   it("returns 503 when stablecoins cache is unavailable and no flow fallback cache exists", async () => {
-    const res = await handleMintBurnFlows(mockD1(), new URL("https://x/api/mint-burn-flows"));
+    const res = await handleMintBurnFlows(mintBurnD1(), new URL("https://x/api/mint-burn-flows"));
 
     expect(res.status).toBe(503);
     await expect(res.json()).resolves.toEqual({
@@ -436,7 +446,7 @@ describe("handleMintBurnFlows contract tests", () => {
       },
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -529,7 +539,7 @@ describe("handleMintBurnFlows contract tests", () => {
       ],
     });
 
-    const mixedDb = mockD1([
+    const mixedDb = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -636,7 +646,7 @@ describe("handleMintBurnFlows contract tests", () => {
       ],
     });
 
-    const multiChainDb = mockD1([
+    const multiChainDb = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -700,7 +710,7 @@ describe("handleMintBurnFlows contract tests", () => {
         { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 30_000_000_000 } },
       ],
     });
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -778,7 +788,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdf-falcon", symbol: "USDF", circulating: { peggedUSD: 600_000_000 } }],
     });
 
-    const regressionDb = mockD1([
+    const regressionDb = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -856,7 +866,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -911,7 +921,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -1025,7 +1035,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         matchBinds: ["ethereum", "arbitrum", sevenDayStart],
@@ -1120,7 +1130,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         matchBinds: ["ethereum", "arbitrum", twentyFourHourStart],
@@ -1226,7 +1236,7 @@ describe("handleMintBurnFlows contract tests", () => {
       updatedAt: now - 60,
       sync: { lastSuccessfulSyncAt: now - 120 },
     };
-    const cachedDb = mockD1([
+    const cachedDb = mintBurnD1([
       {
         match: "cache",
         rows: [
@@ -1268,7 +1278,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const now = Math.floor(Date.now() / 1000);
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreSource")
       .mockRejectedValueOnce(new Error("canonical V9 read failed"));
-    const db = mockD1([
+    const db = mintBurnD1([
       { match: "mint_burn_hourly", rows: [hourlyRow] },
       { match: "mint_burn_events", rows: [] },
       {
@@ -1317,7 +1327,7 @@ describe("handleMintBurnFlows contract tests", () => {
         criticalLaneHealthy: true,
       },
     };
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["mint-burn-flows:v3:aggregate:24"],
@@ -1402,7 +1412,7 @@ describe("handleMintBurnFlows contract tests", () => {
         criticalLaneHealthy: true,
       },
     };
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["mint-burn-flows:v3:aggregate:24"],
@@ -1471,7 +1481,7 @@ describe("handleMintBurnFlows contract tests", () => {
         criticalLaneHealthy: true,
       },
     };
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["mint-burn-flows:v3:aggregate:24"],
@@ -1617,7 +1627,7 @@ describe("handleMintBurnFlows contract tests", () => {
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -1685,7 +1695,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -1772,7 +1782,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [
@@ -1857,7 +1867,7 @@ describe("handleMintBurnFlows contract tests", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } }],
     });
 
-    const db = mockD1([
+    const db = mintBurnD1([
       {
         match: "SELECT stablecoin_id, chain_id, hour_ts, mint_count, burn_count",
         rows: [

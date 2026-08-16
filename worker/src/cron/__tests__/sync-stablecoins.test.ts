@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockCircuitBreaker, mockCircuitOutcomeRecord, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 
@@ -383,6 +383,14 @@ import { confirmPendingDepegs } from "../confirm-pending-depegs";
 import { fetchAuthoritativeLivePriceOverrides } from "../../lib/authoritative-price-sources";
 import * as apiUtils from "../../lib/api-utils";
 import * as evmRpcModule from "../../lib/evm-rpc";
+
+const DEFAULT_STABLECOINS_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_STABLECOINS_D1_TABLES]);
+}
 
 // --- Helpers ---
 

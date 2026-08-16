@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 
 // --- Module-level mocks ---
 
@@ -167,6 +167,7 @@ vi.mock("@shared/lib/chains", () => ({
     tron: { name: "Tron", evmChainId: null, explorerUrl: "https://tronscan.org", type: "tron" },
   },
   resolveChainId: (chain: string) => chain.trim().toLowerCase(),
+  normalizeChainId: (chain: string) => chain.trim().toLowerCase(),
 }));
 
 import { syncBlacklist, type SyncBlacklistOptions } from "../sync-blacklist";
@@ -176,6 +177,26 @@ import { batchExecute } from "../../lib/db";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "FROM blacklist_current_balances", rows: [] },
+    { match: "INSERT INTO blacklist_current_balances", rows: [] },
+    { match: "UPDATE blacklist_current_balances", rows: [] },
+    { match: "DELETE FROM blacklist_current_balances", rows: [] },
+    { match: "FROM blacklist_amount_repair_queue", rows: [] },
+    { match: "FROM blacklist_reconciliation_runs", rows: [], first: null },
+    { match: "blacklist-amount-repair-queue-", rows: [] },
+    { match: "blacklist-amount-recovery-evm-candidates", rows: [] },
+    { match: "UPDATE blacklist_events", rows: [] },
+    { match: "INSERT OR IGNORE INTO blacklist_events", rows: [] },
+    { match: "blacklist-summary-snapshot-write", rows: [] },
+    { match: "blacklist-gap-metrics-cache-write", rows: [] },
+  ]);
+}
 
 // --- Helpers ---
 
@@ -604,7 +625,15 @@ describe("syncBlacklist", () => {
   });
 
   it("returns zero events when all APIs return empty", async () => {
-    const db = makeDb();
+    const db = makeDb(
+      CONTRACT_CONFIGS.map((config) => ({
+        config_key: config.configKey,
+        last_block: 0,
+        cursor_value: 0,
+        attempt_generation: 1,
+        last_succeeded_at: Math.floor(Date.now() / 1000) - 60,
+      })),
+    );
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 

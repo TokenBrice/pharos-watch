@@ -37,6 +37,8 @@ describe("GET /api/backfill-dews?mode=backtest-metrics", () => {
           { snapshot_date: usdtAnchor.onsetAt - 5 * DAY, band: "ALERT" },
         ],
       },
+      // Negative controls use different binds but the same statement shape.
+      { match: "FROM stress_signal_history", rows: [] },
     ]);
 
     const request = makeApiRequest("/api/backfill-dews?mode=backtest-metrics", {

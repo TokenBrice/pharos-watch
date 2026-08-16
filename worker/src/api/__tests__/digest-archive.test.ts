@@ -5,7 +5,7 @@ import { handleDigestArchive } from "../digest-archive";
 
 describe("handleDigestArchive", () => {
   it("returns 200 with empty digests when no data", async () => {
-    const db = mockD1();
+    const db = mockD1([{ match: "FROM daily_digest", rows: [] }]);
     const res = await handleDigestArchive(db);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { digests: unknown[] };

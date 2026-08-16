@@ -93,12 +93,35 @@ describe("mockD1 helper", () => {
     ).rejects.toThrow("mockD1: no match for SQL: SELECT value FROM sample WHERE id = ? ORDER BY value");
   });
 
-  it("throws when requireMatch is enabled and no configured SQL matches", async () => {
-    const db = mockD1([], { requireMatch: true });
+  it.each([
+    ["all", (db: ReturnType<typeof mockD1>) => db.prepare("SELECT * FROM missing_all").all()],
+    ["first", (db: ReturnType<typeof mockD1>) => db.prepare("SELECT * FROM missing_first").first()],
+    ["run", (db: ReturnType<typeof mockD1>) => db.prepare("UPDATE missing_run SET value = 1").run()],
+  ])("fails closed by default for unmatched %s() SQL", async (_method, execute) => {
+    const db = mockD1();
 
-    await expect(
-      db.prepare("SELECT * FROM missing").all(),
-    ).rejects.toThrow("mockD1: no match for SQL: SELECT * FROM missing");
+    await expect(execute(db)).rejects.toThrow(/mockD1: no match for SQL: .*missing_/);
+  });
+
+  it("supports an explicit permissive mode for suites that do not exercise D1 contracts", async () => {
+    const db = mockD1([], { allowUnmatched: true });
+
+    await expect(db.prepare("SELECT * FROM optional_table").all()).resolves.toEqual({
+      results: [],
+      success: true,
+      meta: {},
+    });
+    await expect(db.prepare("SELECT * FROM optional_table").first()).resolves.toBeNull();
+    await expect(db.prepare("UPDATE optional_table SET value = 1").run()).resolves.toEqual({
+      success: true,
+      meta: { changes: 1 },
+    });
+  });
+
+  it("rejects contradictory strict and permissive options", () => {
+    expect(() => mockD1([], { requireMatch: true, allowUnmatched: true })).toThrow(
+      "mockD1: allowUnmatched cannot be combined with strict or requireMatch",
+    );
   });
 
   it("exposes a shared assertion helper for strict fixture usage", async () => {

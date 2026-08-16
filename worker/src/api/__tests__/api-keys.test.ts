@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../../index";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import {
   hmacSha256Hex,
   makeApiRequest,
@@ -20,12 +21,11 @@ import { resetRequestAttributionStateForTests } from "../../lib/request-source-a
 stubCryptoForAuth();
 
 function makeEnv(db: D1Database) {
-  return {
+  return createWorkerEnv({
     DB: db,
-    CORS_ORIGIN: "https://pharos.watch",
     API_KEY_HASH_PEPPER: "pepper",
     SITE_API_SHARED_SECRET: "site-secret",
-  } as const;
+  });
 }
 
 describe("api key handlers", () => {
@@ -396,7 +396,7 @@ describe("api key handlers", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": "ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF" },
       }),
-      makeEnv(db) as never,
+      makeEnv(db),
       ctx,
     );
 

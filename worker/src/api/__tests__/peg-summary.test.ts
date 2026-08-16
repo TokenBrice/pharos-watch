@@ -92,7 +92,9 @@ function makeDepegEventRow(overrides: Partial<{
 
 describe("handlePegSummary", () => {
   it("returns 503 when stablecoins cache is missing", async () => {
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: null },
+    ]);
     const res = await handlePegSummary(db);
     expect(res.status).toBe(503);
   });
@@ -757,6 +759,8 @@ describe("handlePegSummary", () => {
         // real 3-attempt backoff (~1s of sleeps) before falling back.
         throwError: new Error("cache read failed"),
       },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
       { match: "depeg_events", rows: [] },
       { match: "dex_prices", rows: [] },
       { match: "supply_history", rows: [] },

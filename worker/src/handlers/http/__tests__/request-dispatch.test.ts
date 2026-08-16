@@ -67,13 +67,10 @@ vi.mock("../telegram-ingress-abuse", () => ({
 }));
 
 import { handleHttpRequestImpl } from "../request-dispatch";
+import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 
-function makeEnv(overrides: Record<string, unknown> = {}) {
-  return {
-    DB: {} as D1Database,
-    CORS_ORIGIN: "https://pharos.watch",
-    ...overrides,
-  } as never;
+function makeEnv(overrides: Parameters<typeof createWorkerEnv>[0] = {}) {
+  return createWorkerEnv(overrides);
 }
 
 function makeCtx() {

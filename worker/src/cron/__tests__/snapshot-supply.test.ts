@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "FROM supply_history WHERE snapshot_date", rows: [] },
+    { match: "UPDATE supply_history SET price", rows: [] },
+    { match: "DELETE FROM supply_history", rows: [] },
+    { match: "INSERT OR REPLACE INTO supply_history", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  ]);
+}
 
 // Stub psi-eligible to avoid importing the full stablecoins list
 vi.mock("@shared/lib/psi-eligible", () => ({

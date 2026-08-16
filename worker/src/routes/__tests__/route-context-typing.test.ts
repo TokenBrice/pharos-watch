@@ -1,8 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type { ApiKeySelfServeEnv } from "../../api/api-key-requests/types";
 import type { FeedbackEnv } from "../../api/feedback";
-import type { Env } from "../../lib/env";
 import type { TelegramCreds } from "../../lib/telegram";
+import { createWorkerEnv } from "../../test-helpers/__shared/worker-env";
 import { buildRouteContext } from "../../handlers/http/context";
 import { DYNAMIC_ADMIN_ROUTE_HANDLER_KEYS, getDynamicRouteMatch } from "../dynamic-routes";
 import { getRouteDependencies } from "../registry";
@@ -67,7 +67,7 @@ describe("route context typing", () => {
   it("hydrates only the requested dependency fields at runtime", () => {
     const request = new Request("https://api.pharos.watch/api/status");
     const url = new URL(request.url);
-    const env = {
+    const env = createWorkerEnv({
       DB: {} as D1Database,
       COINGECKO_API_KEY: "cg-demo",
       GITHUB_PAT: "ghp_demo",
@@ -88,7 +88,7 @@ describe("route context typing", () => {
       API_KEY_SELF_SERVE_EMAIL_REPLY_TO: "api@mail.pharos.watch",
       API_KEY_SELF_SERVE_PUBLIC_BASE_URL: "https://pharos.watch/api",
       RESEND_API_KEY: "re_demo",
-    } as unknown as Env;
+    });
     const execCtx = {
       waitUntil: (_promise: Promise<unknown>) => {},
       passThroughOnException: () => {},

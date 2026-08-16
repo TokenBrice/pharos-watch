@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockRegistry } from "../../test-helpers/cron";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "DELETE FROM chain_supply_history", rows: [] },
+    { match: "INSERT OR REPLACE INTO chain_supply_history", rows: [] },
+  ]);
+}
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: [{ id: "usdt-tether" }, { id: "usdc-circle" }],

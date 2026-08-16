@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { mockFetchRetry } from "../../test-helpers/cron";
@@ -25,6 +25,18 @@ function resetFetchRetryMocks(): void {
 
 import { syncFxRates } from "../sync-fx-rates";
 import { loadExchangeRateApiPayload, loadSecondaryCurrencyCandidate } from "../sync-fx-rates-sources";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR IGNORE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "UPDATE cache", rows: [] },
+  ]);
+}
 
 type FxRoutes = NonNullable<Parameters<typeof mockFetch>[0]>;
 type FxRoute = FxRoutes[number];

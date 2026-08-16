@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import {
   CONFIGURED_COINS,
@@ -12,6 +12,31 @@ import {
   type ConfiguredCoin,
 } from "../sync-live-reserves-shared";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
+
+const DEFAULT_LIVE_RESERVE_ORCHESTRATOR_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "FROM reserve_sync_state", rows: [] },
+  { match: "FROM reserve_composition", rows: [] },
+  { match: "FROM reserve_sync_attempts", rows: [] },
+  { match: "INSERT INTO reserve_sync_state", rows: [] },
+  { match: "UPDATE reserve_sync_state", rows: [] },
+  { match: "INSERT INTO reserve_composition", rows: [] },
+  { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
+  { match: "INSERT INTO reserve_sync_attempts", rows: [] },
+  { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
+  { match: "SELECT key, value FROM cache WHERE key IN", rows: [] },
+  { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
+  { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+  { match: "DELETE FROM cache", rows: [] },
+  { match: "DELETE FROM reserve_composition_history", rows: [] },
+  { match: "DELETE FROM reserve_sync_attempt_history", rows: [] },
+  { match: "UPDATE worker_scheduled_checkpoints", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []): MockD1Database {
+  return createMockD1([...tables, ...DEFAULT_LIVE_RESERVE_ORCHESTRATOR_D1_TABLES]);
+}
 
 const getReserveAdapterMock = vi.fn();
 const shouldAttemptFetchMock = vi.fn();

@@ -102,6 +102,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH", "RUB"], "2025-06-14", "2025-06-15");
@@ -136,6 +137,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
           updated_at: Math.floor(Date.now() / 1000),
         },
       },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-15");
@@ -160,6 +162,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");
@@ -185,6 +188,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
         rows: [],
         first: null,
       },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
     ]);
 
     const series = await fetchHistoricalSecondaryFxRates(db, ["CNH"], "2025-06-14", "2025-06-14");

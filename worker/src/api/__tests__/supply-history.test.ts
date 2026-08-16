@@ -1,7 +1,20 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
 import { handleSupplyHistory } from "../supply-history";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  const hasCacheFixture = tables.some((table) => table.match.includes("FROM cache"));
+  return baseMockD1(
+    hasCacheFixture
+      ? tables
+      : [...tables, { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null }],
+    options,
+  );
+}
 
 describe("handleSupplyHistory", () => {
   const row = makeSupplyRow();

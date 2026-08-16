@@ -1,11 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 function nonOkStreamingResponse(status = 503): { response: Response; cancel: ReturnType<typeof vi.fn> } {
   const cancel = vi.fn(async () => undefined);
@@ -20,15 +14,19 @@ function nonOkStreamingResponse(status = 503): { response: Response; cancel: Ret
 
 describe("runPaginatedDirectApiFetch", () => {
   afterEach(() => {
-    mockFetch.mockReset();
+    vi.unstubAllGlobals();
     vi.resetModules();
   });
 
   it("collects rows from multiple pages and stops on short page", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({ items: ["a", "b"] }))
-      .mockResolvedValueOnce(jsonResponse({ items: ["c"] }));
+    mockFetch([{
+      match: "api.example.com",
+      outcomes: [
+        { body: { items: ["a", "b"] } },
+        { body: { items: ["c"] } },
+      ],
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -49,9 +47,13 @@ describe("runPaginatedDirectApiFetch", () => {
   it("returns first page rows and an error on HTTP failure mid-pagination", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
     const failure = nonOkStreamingResponse(503);
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({ items: ["a", "b"] }))
-      .mockResolvedValueOnce(failure.response);
+    mockFetch([{
+      match: "api.example.com",
+      outcomes: [
+        { body: { items: ["a", "b"] } },
+        { response: failure.response },
+      ],
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -73,7 +75,10 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("reports error and breaks on JSON parse failure", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch.mockResolvedValueOnce(new Response("{bad-json", { status: 200 }));
+    mockFetch([{
+      match: "api.example.com",
+      outcomes: [{ body: "{bad-json" }],
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -94,7 +99,10 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("skips malformed rows while preserving valid ones", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch.mockResolvedValueOnce(jsonResponse({ items: ["valid", 42, "also-valid"] }));
+    mockFetch([{
+      match: "api.example.com",
+      body: { items: ["valid", 42, "also-valid"] },
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -114,9 +122,10 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("stops at maxPages cap", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch.mockImplementation(() =>
-      Promise.resolve(jsonResponse({ items: ["a", "b"] })),
-    );
+    const fetchSpy = mockFetch([{
+      match: "api.example.com",
+      body: { items: ["a", "b"] },
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -135,12 +144,15 @@ describe("runPaginatedDirectApiFetch", () => {
     expect(result.completed).toBe(false);
     expect(result.nextPage).toBe(4);
     expect(result.errors).toEqual(["test pagination cap reached at page 3; resumeFromPage=4"]);
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
   it("reports error when parsePage returns null (invalid root shape)", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch.mockResolvedValueOnce(jsonResponse({ unexpected: "shape" }));
+    mockFetch([{
+      match: "api.example.com",
+      body: { unexpected: "shape" },
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -161,7 +173,10 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("reports error on network fetch failure", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch.mockRejectedValueOnce(new Error("network timeout"));
+    mockFetch([{
+      match: "api.example.com",
+      outcomes: [new Error("network timeout")],
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",
@@ -180,9 +195,13 @@ describe("runPaginatedDirectApiFetch", () => {
 
   it("stops on empty page without error", async () => {
     const { runPaginatedDirectApiFetch } = await import("../direct-api-paginated");
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({ items: ["a", "b"] }))
-      .mockResolvedValueOnce(jsonResponse({ items: [] }));
+    mockFetch([{
+      match: "api.example.com",
+      outcomes: [
+        { body: { items: ["a", "b"] } },
+        { body: { items: [] } },
+      ],
+    }], { requireMatch: true });
 
     const result = await runPaginatedDirectApiFetch<string>({
       source: "test",

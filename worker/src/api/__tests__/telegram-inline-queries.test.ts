@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
   makeTelegramUpdateRequest,
@@ -10,6 +10,25 @@ const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
 const { handleTelegramWebhook } = await import("../telegram-webhook");
 const { TELEGRAM_INLINE_STATUS_POLICY } = await import("../telegram-inline-queries");
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "FROM dex_liquidity", rows: [], first: null },
+    { match: "FROM yield_data", rows: [], first: null },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "INSERT INTO telegram_usage_daily", rows: [] },
+    { match: "FROM stress_signals_latest", rows: [], first: null },
+    { match: "FROM stress_signals s", rows: [], first: null },
+    { match: "FROM stress_signal_publication_rows", rows: [], first: null },
+    { match: "stress_signals", rows: [], first: null },
+  ], options);
+}
 
 function makeInlineQueryRequest(query: string, updateId?: number): Request {
   return makeTelegramUpdateRequest(

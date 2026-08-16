@@ -4,10 +4,43 @@ import {
   makeCacheRow,
   makeCronRow,
   cleanupStatusTest,
-  fixtureMockD1,
+  fixtureMockD1 as baseFixtureMockD1,
   fixtureMakeApiRequest,
   fixtureCRON_INTERVALS,
 } from "./status.test-support";
+
+function fixtureMockD1(tables: Parameters<typeof baseFixtureMockD1>[0] = []) {
+  return baseFixtureMockD1([
+    ...tables,
+    { match: "SELECT 1", rows: [], first: { value: 1 } },
+    { match: "pharos:status-derived:mint-burn-24h", rows: [] },
+    { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+    { match: "FROM reserve_sync_state", rows: [] },
+    { match: "FROM reserve_composition", rows: [] },
+    { match: "/* blacklist-gap-metrics-cache-read */", rows: [], first: null },
+    { match: "/* blacklist-gap-metrics-cache-write */", rows: [] },
+    { match: "FROM status_state", rows: [], first: null },
+    { match: "FROM status_probe_runs", rows: [], first: null },
+    { match: "FROM status_discrepancy_state", rows: [], first: null },
+    { match: "FROM status_transitions WHERE scope", rows: [], first: null },
+    { match: "FROM cron_leases", rows: [] },
+    { match: "FROM cron_run_progress", rows: [] },
+    { match: "FROM cron_slot_executions", rows: [] },
+    { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+    { match: "FROM worker_repair_tasks", rows: [] },
+    { match: "FROM onchain_supply", rows: [], first: null },
+    { match: "FROM supply_history", rows: [], first: null },
+    { match: "FROM daily_digest", rows: [], first: null },
+    { match: "FROM telegram_preset_subscriptions", rows: [] },
+    { match: "FROM telegram_watcher_lifecycle_daily", rows: [], first: null },
+    { match: "FROM telegram_alert_source_events", rows: [], first: null },
+    { match: "FROM telegram_alert_job_targets", rows: [], first: null },
+    { match: "FROM telegram_alert_jobs", rows: [], first: null },
+    { match: "FROM telegram_alert_job_target_items", rows: [], first: null },
+    { match: "FROM telegram_alert_dead_letters", rows: [], first: null },
+    { match: "FROM telegram_usage_daily", rows: [], first: null },
+  ]);
+}
 
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);

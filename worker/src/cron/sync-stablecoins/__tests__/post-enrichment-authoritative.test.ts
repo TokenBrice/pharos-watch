@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { createValidationContextResolver } from "../pricing";
 import { runSharedPriceCompletion } from "../post-enrichment";
 import type { PeggedAsset } from "../enrich-prices";
+
+const DEFAULT_POST_ENRICHMENT_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT asset_id, price, updated_at, source, confidence, observed_at, observed_at_mode, synced_at, agree_sources_json, consensus_sources_json FROM price_cache", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_POST_ENRICHMENT_D1_TABLES]);
+}
 
 const authoritativeMocks = vi.hoisted(() => ({
   fetch: vi.fn(),

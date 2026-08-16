@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { snapshotPsiDaily } from "../snapshot-psi";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "INSERT OR REPLACE INTO stability_index", rows: [] },
+  ]);
+}
 
 function yesterdayMidnightFrom(nowMs: number): number {
   const now = Math.floor(nowMs / 1000);

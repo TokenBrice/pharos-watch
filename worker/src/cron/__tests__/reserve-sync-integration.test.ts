@@ -19,6 +19,26 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 const configuredCoins = ACTIVE_STABLECOINS.filter((coin) => coin.liveReservesConfig);
 
+function reserveDb() {
+  return mockD1([
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'", rows: [] },
+    { match: "DELETE FROM cache WHERE key", rows: [] },
+    { match: "DELETE FROM reserve_sync_state WHERE stablecoin_id", rows: [] },
+    { match: "DELETE FROM reserve_composition WHERE stablecoin_id", rows: [] },
+    { match: "DELETE FROM reserve_composition_history WHERE rowid IN", rows: [] },
+    { match: "DELETE FROM reserve_sync_attempt_history WHERE rowid IN", rows: [] },
+    { match: "FROM reserve_sync_state", rows: [] },
+    { match: "FROM reserve_composition", rows: [] },
+    { match: "INSERT INTO reserve_sync_state", rows: [] },
+    { match: "UPDATE reserve_sync_state", rows: [] },
+    { match: "INSERT INTO reserve_composition", rows: [] },
+    { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
+    { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
+  ]);
+}
+
 function mockAdapterRegistry(
   fetchImpl: (
     coin?: (typeof ACTIVE_STABLECOINS)[number],
@@ -65,7 +85,7 @@ describe("reserve sync → API integration", () => {
       mockAdapterRegistry(async () => ({ slices }));
 
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = mockD1();
+      const db = reserveDb();
       const result = await syncLiveReserves(db, new AbortController().signal, {});
 
       // Sync completes successfully
@@ -98,7 +118,7 @@ describe("reserve sync → API integration", () => {
       });
 
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = mockD1();
+      const db = reserveDb();
       const result = await syncLiveReserves(db, new AbortController().signal, {});
 
       // All coins failed
@@ -136,7 +156,7 @@ describe("reserve sync → API integration", () => {
       }));
 
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = mockD1();
+      const db = reserveDb();
       const result = await syncLiveReserves(db, new AbortController().signal, {});
 
       expect(result?.status).toBe("error");
@@ -196,7 +216,7 @@ describe("reserve sync → API integration", () => {
       });
 
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      const db = mockD1();
+      const db = reserveDb();
       await syncLiveReserves(db, new AbortController().signal, {});
 
       // The adapter should have been called more than once — the cache eviction

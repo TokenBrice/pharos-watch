@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { attachDdrPublicRowHash, computeDdrPublicRowHash } from "@shared/lib/depeg-resolver/public-contract";
 import type { DdrRow } from "@shared/types/depeg-resolver";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import type { DdrCanonicalIncident, DdrSealedPublicPrediction } from "../depeg-resolver-v2-contracts";
 import { DDR_METHODOLOGY_VERSION, DDR_SNAPSHOT_CACHE_GENERATION } from "@shared/lib/methodology-versions/depeg-resolver";
 import { buildDdrResponse, normalizeErratumRecord } from "../depeg-resolver/public-projection";
@@ -172,6 +172,20 @@ describe("computeDepegResolver", () => {
     };
   }
 
+  function resolverDb(tables: MockTableConfig[]): MockD1Database {
+    return mockD1([
+      ...tables,
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+      { match: "FROM dex_liquidity", rows: [] },
+      { match: "FROM dex_liquidity_history", rows: [] },
+      { match: "FROM redemption_backstop_runs", rows: [] },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [] },
+    ]);
+  }
+
   function healthyDewsPublicationTables() {
     const computedAt = NOW_SEC - 300;
     const stressRows = [
@@ -288,7 +302,7 @@ describe("computeDepegResolver", () => {
   it("excludes terminal lifecycle events from the live DDR snapshot", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.UTC(2026, 4, 26, 12, 0, 0));
-    const db = mockD1([
+    const db = resolverDb([
       {
         match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL",
         rows: [
@@ -321,7 +335,7 @@ describe("computeDepegResolver", () => {
     const event = activeEvent();
     const { stores } = storesFor();
     stores.closeRecoveredPreLockIncidents = vi.fn(async () => 30);
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
     ]);
@@ -385,7 +399,7 @@ describe("computeDepegResolver", () => {
       stale: true,
       degradedReason: "previous-context-failure",
     };
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       {
@@ -433,7 +447,7 @@ describe("computeDepegResolver", () => {
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent();
     const { stores } = storesFor();
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       { match: "FROM cache WHERE key = ?", rows: [] },
@@ -467,7 +481,7 @@ describe("computeDepegResolver", () => {
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent();
     const { stores } = storesFor();
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       { match: "FROM cache WHERE key = ?", throwError: new Error("cache unavailable"), rows: [] },
@@ -495,7 +509,7 @@ describe("computeDepegResolver", () => {
     vi.setSystemTime(NOW_SEC * 1000);
     const event = activeEvent({ started_at: NOW_SEC - 72 * 3600 });
     const { stores, sealed } = storesFor();
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
@@ -568,7 +582,7 @@ describe("computeDepegResolver", () => {
         firstPublishedPublicPredictionIds: [7],
       };
     });
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
@@ -644,7 +658,7 @@ describe("computeDepegResolver", () => {
         firstPublishedPublicPredictionIds: [],
       };
     });
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       ...healthyDewsPublicationTables(),
@@ -696,7 +710,7 @@ describe("computeDepegResolver", () => {
     });
     const confirmationAt = NOW_SEC - 1_200;
     const { stores } = storesFor();
-    const db = mockD1([
+    const db = resolverDb([
       { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
       { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
       {
@@ -1030,7 +1044,7 @@ describe("computeDepegResolver", () => {
     };
 
     const quarantineDb = (markerValue: string | null) =>
-      mockD1([
+      resolverDb([
         { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [activeEvent()] },
         { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [activeEvent()] },
         {

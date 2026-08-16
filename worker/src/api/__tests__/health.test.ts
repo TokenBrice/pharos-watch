@@ -14,6 +14,28 @@ type HealthDbOptions = {
   extras?: MockTableConfig[];
 };
 
+function healthD1(tables: MockTableConfig[]) {
+  return mockD1([
+    ...tables,
+    { match: "job = 'sync-stablecoins' AND metadata IS NOT NULL", rows: [], first: null },
+    { match: "FROM dex_liquidity", rows: [], first: { age: 60 } },
+    { match: "FROM yield_data", rows: [], first: { age: 60 } },
+    { match: "key LIKE 'circuit:%'", rows: [] },
+    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+    { match: "blacklist-gap-metrics-cache-write", rows: [] },
+    {
+      match: "status IN ('ok', 'degraded')",
+      rows: [],
+      first: { item_count: 0, metadata: null },
+    },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "telegram_subscribers", rows: [], first: { n: 0 } },
+    { match: "telegram_pending_alerts", rows: [], first: null },
+    { match: "dispatch-telegram-alerts", rows: [], first: null },
+    { match: "SELECT 1", rows: [], first: { value: 1 } },
+  ]);
+}
+
 function completePublicationEntry(
   now: number,
   activePriceCoverage: Record<string, unknown> = {
@@ -85,7 +107,7 @@ function makeHealthyHealthDb(now: number, options: HealthDbOptions = {}) {
     extras = [],
   } = options;
 
-  return mockD1([
+  return healthD1([
     publicationEntry,
     dewsPublicationEntry(now),
     {
@@ -150,7 +172,7 @@ describe("handleHealth", () => {
   };
   it("returns 200 with health status", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       completePublicationEntry(now),
       dewsPublicationEntry(now),
       { match: "cache", rows: [] },
@@ -374,7 +396,7 @@ describe("handleHealth", () => {
 
   it("returns the bounded realtime Cache-Control profile", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
@@ -618,7 +640,7 @@ describe("handleHealth", () => {
 
   it("includes telegramSummary when telegram tables exist", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
@@ -683,7 +705,7 @@ describe("handleHealth", () => {
   it("keeps telegramSummary counts when the last dispatch metadata is malformed", async () => {
     const now = Math.floor(Date.now() / 1000);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
@@ -737,7 +759,7 @@ describe("handleHealth", () => {
 
   it("reports unknown lifecycle capacity without manufacturing an empty queue", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
@@ -772,7 +794,7 @@ describe("handleHealth", () => {
 
   it("adds a warning when safety alerts are suppressed", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },
@@ -808,7 +830,7 @@ describe("handleHealth", () => {
 
   it("returns null telegramSummary when telegram tables do not exist", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = mockD1([
+    const db = healthD1([
       { match: "cache", rows: [] },
       { match: "blacklist_events", rows: [], first: { total: 0, missing: 0 } },
       { match: "mint_burn_hourly", rows: [], first: { total: 0 } },

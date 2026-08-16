@@ -27,6 +27,16 @@ const SAMPLE_PAYLOAD = {
   },
 };
 
+function reserveDb() {
+  return mockD1([
+    { match: "INSERT INTO reserve_sync_state", rows: [] },
+    { match: "UPDATE reserve_sync_state", rows: [] },
+    { match: "INSERT INTO reserve_composition", rows: [] },
+    { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
+    { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
+  ]);
+}
+
 describe("reserve adapter real-registry smoke", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -62,7 +72,7 @@ describe("reserve adapter real-registry smoke", () => {
         }),
       );
 
-    const db = mockD1();
+    const db = reserveDb();
     const signal = AbortSignal.timeout(5_000);
     const result = await syncReserveCoin({
       db,

@@ -116,7 +116,9 @@ function activeV9(options: {
 
 describe("handleChains", () => {
   it("returns 503 when the stablecoins cache is missing", async () => {
-    const response = await handleChains(mockD1());
+    const response = await handleChains(mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [] },
+    ]));
     expect(response.status).toBe(503);
   });
 

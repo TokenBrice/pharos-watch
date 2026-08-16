@@ -1,15 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchMeteoraPools } from "../fetch-meteora";
-
-const mockFetch = vi.fn();
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
-
-function textResponse(body: string, status = 200): Response {
-  return new Response(body, { status });
-}
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 function validMeteoraPool(index: number) {
   return {
@@ -28,33 +19,34 @@ function validMeteoraPool(index: number) {
 }
 
 describe("fetchMeteoraPools", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", mockFetch);
-  });
-
   afterEach(() => {
-    mockFetch.mockReset();
     vi.unstubAllGlobals();
   });
 
   it("normalizes Meteora pools into direct-api pools", async () => {
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
-        data: [{
-          address: "Pool111",
-          token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-          token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-          token_x_amount: 100,
-          token_y_amount: 9000,
-          current_price: 90,
-          tvl: 18000,
-          volume: { "24h": 25000 },
-          pool_config: { base_fee_pct: 0.01 },
-          dynamic_fee_pct: 0.002,
-          is_blacklisted: false,
-        }],
-      }))
-      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+    mockFetch([{
+      match: "api.meteora.ag",
+      outcomes: [
+        {
+          body: {
+            data: [{
+              address: "Pool111",
+              token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
+              token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+              token_x_amount: 100,
+              token_y_amount: 9000,
+              current_price: 90,
+              tvl: 18000,
+              volume: { "24h": 25000 },
+              pool_config: { base_fee_pct: 0.01 },
+              dynamic_fee_pct: 0.002,
+              is_blacklisted: false,
+            }],
+          },
+        },
+        { body: { data: [] } },
+      ],
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 
@@ -72,7 +64,10 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("returns a degraded result when Meteora returns invalid JSON", async () => {
-    mockFetch.mockResolvedValueOnce(textResponse("{bad-json"));
+    mockFetch([{
+      match: "api.meteora.ag",
+      outcomes: [{ body: "{bad-json" }],
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 
@@ -83,7 +78,10 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("returns a degraded result when Meteora returns a null root", async () => {
-    mockFetch.mockResolvedValueOnce(textResponse("null"));
+    mockFetch([{
+      match: "api.meteora.ag",
+      outcomes: [{ body: "null" }],
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 
@@ -94,30 +92,33 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("skips malformed Meteora rows while preserving valid rows from the same page", async () => {
-    mockFetch.mockResolvedValueOnce(jsonResponse({
-      data: [
-        {
-          address: "BrokenPool",
-          token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-          token_x_amount: 100,
-          token_y_amount: 100,
-          tvl: 20_000,
-        },
-        {
-          address: "Pool111",
-          token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-          token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-          token_x_amount: 100,
-          token_y_amount: 9000,
-          current_price: 90,
-          tvl: 18_000,
-          volume: { "24h": 25_000 },
-          pool_config: { base_fee_pct: 0.01 },
-          dynamic_fee_pct: 0.002,
-          is_blacklisted: false,
-        },
-      ],
-    }));
+    mockFetch([{
+      match: "api.meteora.ag",
+      body: {
+        data: [
+          {
+            address: "BrokenPool",
+            token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+            token_x_amount: 100,
+            token_y_amount: 100,
+            tvl: 20_000,
+          },
+          {
+            address: "Pool111",
+            token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
+            token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
+            token_x_amount: 100,
+            token_y_amount: 9000,
+            current_price: 90,
+            tvl: 18_000,
+            volume: { "24h": 25_000 },
+            pool_config: { base_fee_pct: 0.01 },
+            dynamic_fee_pct: 0.002,
+            is_blacklisted: false,
+          },
+        ],
+      },
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 
@@ -130,8 +131,9 @@ describe("fetchMeteoraPools", () => {
   });
 
   it("keeps malformed-row notes as warnings but degrades when a later page fails", async () => {
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
+    mockFetch([{
+      match: "api.meteora.ag",
+      outcomes: [{ body: {
         data: [
           {
             address: "BrokenPool",
@@ -142,8 +144,8 @@ describe("fetchMeteoraPools", () => {
           },
           ...Array.from({ length: 499 }, (_, index) => validMeteoraPool(index)),
         ],
-      }))
-      .mockResolvedValueOnce(textResponse("upstream down", 503));
+      } }, { body: "upstream down", status: 503 }],
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 
@@ -156,8 +158,9 @@ describe("fetchMeteoraPools", () => {
 
   it("uses current_price and ignores imbalanced reserve ratio on DLMM pools", async () => {
     // Real fixture: SOL/USDC pool with reserve ratio 13.02 vs current_price 84.93
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({
+    mockFetch([{
+      match: "api.meteora.ag",
+      outcomes: [{ body: {
         data: [{
           address: "HTvjzsfX3yU6BUodCjZ5vZkUrAxMDTrBs3CJaq43ashR",
           token_x: { address: "So11111111111111111111111111111111111111112", symbol: "SOL", decimals: 9, price: 85 },
@@ -171,8 +174,8 @@ describe("fetchMeteoraPools", () => {
           dynamic_fee_pct: 0,
           is_blacklisted: false,
         }],
-      }))
-      .mockResolvedValueOnce(jsonResponse({ data: [] }));
+      } }, { body: { data: [] } }],
+    }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
 

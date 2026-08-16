@@ -12,6 +12,20 @@ import {
   fixtureCRON_INTERVALS,
 } from "./status.test-support";
 
+function statusLoadersD1(tables: Parameters<typeof fixtureMockD1>[0] = []) {
+  return fixtureMockD1([
+    ...tables,
+    { match: "SELECT 1", rows: [], first: { value: 1 } },
+    { match: "pharos:status-derived:mint-burn-24h", rows: [] },
+    { match: "pharos:status-derived:mint-burn-first-hour-seek", rows: [] },
+    { match: "FROM reserve_sync_state", rows: [] },
+    { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
+    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+    { match: "blacklist-gap-aggregate", rows: [], first: null },
+    { match: "FROM cache WHERE key = ?", rows: [], first: null },
+  ]);
+}
+
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
   it("surfaces tracked CoinGecko price mismatches above threshold", async () => {
@@ -74,7 +88,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -196,7 +210,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -258,7 +272,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -331,7 +345,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -398,7 +412,7 @@ describe("handleStatus", () => {
   it("surfaces partial admin D1 status config through sectionErrors", async () => {
     const now = Math.floor(Date.now() / 1000);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -496,7 +510,7 @@ describe("handleStatus", () => {
       },
     ]);
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -537,7 +551,7 @@ describe("handleStatus", () => {
 
   it("emits cache warnings alongside degraded FX-source warnings", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       {
         match: "cache WHERE key IN",
         rows: [
@@ -605,7 +619,7 @@ describe("handleStatus", () => {
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       {
         match: "cache WHERE key IN",
         rows: [
@@ -673,7 +687,7 @@ describe("handleStatus", () => {
     const mintBurnWriterAt = now - 8 * 60;
     const depegWriterAt = now - 12 * 60;
 
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -733,7 +747,7 @@ describe("handleStatus", () => {
 
   it("keeps status available when the shared stablecoins cache preload throws", async () => {
     const now = Math.floor(Date.now() / 1000);
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY],
@@ -762,7 +776,7 @@ describe("handleStatus", () => {
   });
 
   it("marks data quality stale when the stablecoins cache is malformed", async () => {
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -797,7 +811,7 @@ describe("handleStatus", () => {
     const stablecoinsCache = JSON.stringify({
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 300 } },
       { match: "yield_data", rows: [], first: { age: 300 } },
@@ -844,7 +858,7 @@ describe("handleStatus", () => {
       peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } }],
     });
     const cronRows = Object.keys(fixtureCRON_INTERVALS).map((job) => makeCronRow(job, "ok", 30));
-    const db = fixtureMockD1([
+    const db = statusLoadersD1([
       { match: "cache WHERE key IN", rows: [makeCacheRow("stablecoins")] },
       { match: "dex_liquidity", rows: [], first: { age: 60 } },
       { match: "yield_data", rows: [], first: { age: 60 } },

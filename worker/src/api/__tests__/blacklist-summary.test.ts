@@ -4,6 +4,42 @@ import { makeBlacklistRow } from "../../test-helpers/__shared/fixtures";
 import { CONTRACT_CONFIGS, type ContractEventConfig } from "../../lib/blacklist-contracts";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary";
 
+function makeBlacklistSummaryFallbackTables() {
+  return [
+    { match: "blacklist-summary-snapshot-read", rows: [], first: null },
+    { match: "blacklist-summary-per-coin-event-counts", rows: [] },
+    { match: "blacklist-summary-quarterly-event-counts", rows: [] },
+    { match: "blacklist-summary-per-coin-recent-7d", rows: [] },
+    {
+      match: "blacklist-summary-public-aggregate",
+      rows: [],
+      first: { total: 0, max_ts: null, recent_30d: 0, recent_24h: 0 },
+    },
+    { match: "FROM blacklist_current_balances", rows: [] },
+    { match: "blacklist-summary-latest-event-type-history", rows: [] },
+    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+    {
+      match: "blacklist-gap-aggregate",
+      rows: [],
+      first: {
+        total: 0,
+        missing: 0,
+        missing_recent: 0,
+        oldest_gap_age_sec: null,
+        never_attempted: 0,
+        repeated_failures: 0,
+        unrecoverable: 0,
+      },
+    },
+    { match: "blacklist-gap-status-distribution", rows: [] },
+    { match: "blacklist-gap-source-distribution", rows: [] },
+    { match: "blacklist-gap-metrics-cache-write", rows: [] },
+    { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+    { match: "cron_runs", rows: [], first: null },
+    { match: "blacklist-summary-snapshot-write", rows: [] },
+  ];
+}
+
 describe("handleBlacklistSummary", () => {
   it("serves a fresh producer snapshot without live blacklist_events scans", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -57,6 +93,7 @@ describe("handleBlacklistSummary", () => {
           updated_at: now,
         }],
       },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -204,6 +241,7 @@ describe("handleBlacklistSummary", () => {
             updated_at: now,
           }],
         },
+        ...makeBlacklistSummaryFallbackTables(),
       ]);
 
       const res = await handleBlacklistSummary(db);
@@ -220,7 +258,7 @@ describe("handleBlacklistSummary", () => {
 
   it("materializes a producer summary snapshot into the cache table", async () => {
     const now = 1_777_000_000;
-    const db = mockD1();
+    const db = mockD1(makeBlacklistSummaryFallbackTables());
 
     const result = await materializeBlacklistSummarySnapshot(db, now, now - 300);
 
@@ -320,6 +358,7 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       { match: "cron_runs", rows: [], first: { started_at: 1_777_000_200 } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -509,6 +548,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: observedAt } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -596,6 +636,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: observedAt } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -666,6 +707,7 @@ describe("handleBlacklistSummary", () => {
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -732,6 +774,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -761,6 +804,7 @@ describe("handleBlacklistSummary", () => {
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -816,6 +860,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: now } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -894,6 +939,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: now } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -933,6 +979,7 @@ describe("handleBlacklistSummary", () => {
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -1001,6 +1048,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -1084,6 +1132,7 @@ describe("handleBlacklistSummary", () => {
       { match: "FROM blacklist_current_balances", rows: [] },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -1165,6 +1214,7 @@ describe("handleBlacklistSummary", () => {
       },
       { match: "quarter_sort_key", rows: [] },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -1223,6 +1273,7 @@ describe("handleBlacklistSummary", () => {
         rows: [{ stablecoin: "USDT", quarter_sort_key: 8105, event_type: "destroy", n: 2 }],
       },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);
@@ -1267,6 +1318,7 @@ describe("handleBlacklistSummary", () => {
         ],
       },
       { match: "cron_runs", rows: [], first: { started_at: null } },
+      ...makeBlacklistSummaryFallbackTables(),
     ]);
 
     const res = await handleBlacklistSummary(db);

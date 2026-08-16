@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 import { recordOutcomeSafe } from "../../lib/circuit-breaker";
@@ -23,6 +23,14 @@ vi.mock("../../lib/circuit-breaker", async (importOriginal) => {
 });
 
 import { syncBluechip } from "../sync-bluechip";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT INTO cache", rows: [] },
+  ]);
+}
 
 function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db

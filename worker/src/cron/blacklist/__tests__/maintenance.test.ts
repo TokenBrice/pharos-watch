@@ -1,10 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../amount-repair-queue";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { migrateLegacyBlacklistIdentities } from "../legacy-identity-migration";
+
+const DEFAULT_BLACKLIST_MAINTENANCE_D1_TABLES: MockTableConfig[] = [
+  { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
+  { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
+  { match: "blacklist-amount-repair-queue-release-expired", rows: [] },
+  { match: "blacklist-legacy-event-identity-migrate", rows: [] },
+  { match: "blacklist-legacy-balance-identity-copy", rows: [] },
+  { match: "blacklist-legacy-balance-identity-delete", rows: [] },
+  { match: "blacklist-amount-repair-queue-finish", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_BLACKLIST_MAINTENANCE_D1_TABLES]);
+}
 
 const TRON_USDT_CONFIG = CONTRACT_CONFIGS.find(
   (config) => config.stablecoin === "USDT" && config.chain.chainId === "tron",

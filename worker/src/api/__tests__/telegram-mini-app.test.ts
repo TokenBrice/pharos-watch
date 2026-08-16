@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -17,6 +17,55 @@ const { mutationActionDetail } = await import("../telegram-mini-app-mutations");
 const BOT_TOKEN = "123456:test-token";
 const NOW_SEC = 1_800_000_000;
 const encoder = new TextEncoder();
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "WHERE cache.updated_at <= ?", rows: [] },
+    { match: "FROM telegram_subscribers", rows: [], first: null },
+    { match: "FROM telegram_subscriptions", rows: [] },
+    { match: "FROM telegram_preset_subscriptions", rows: [] },
+    { match: "FROM telegram_pending_alerts", rows: [], first: null },
+    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
+    { match: "FROM telegram_recap_preferences", rows: [], first: null },
+    { match: "FROM telegram_recap_targets", rows: [] },
+    { match: "INSERT OR IGNORE INTO telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "UPDATE telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    { match: "UPDATE telegram_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+    { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+    { match: "INSERT INTO telegram_recap_preferences", rows: [] },
+    { match: "UPDATE telegram_recap_preferences", rows: [] },
+    { match: "DELETE FROM telegram_recap_targets", rows: [] },
+    { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+    { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+    { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+    { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+    { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+    { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+    { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT INTO cache", rows: [] },
+    { match: "UPDATE cache", rows: [] },
+    { match: "DELETE FROM cache", rows: [] },
+    { match: "INSERT INTO telegram_usage_daily", rows: [] },
+    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "FROM cache", rows: [], first: null },
+  ], options);
+}
 
 async function hmacSha256(keyBytes: Uint8Array, value: string): Promise<Uint8Array> {
   const key = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);

@@ -7,15 +7,24 @@
  * with controlled inputs.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockDbCache, mockFetchRetry, mockRegistry } from "../../test-helpers/cron";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 let latestMockDb: MockD1Database | null = null;
 
-function mockD1(...args: Parameters<typeof createMockD1>): MockD1Database {
-  latestMockDb = createMockD1(...args);
+function mockD1(tables: MockTableConfig[] = [], options: Parameters<typeof createMockD1>[1] = {}): MockD1Database {
+  const configuredTables = options.requireMatch === true
+    ? tables
+    : [
+        ...tables,
+        { match: "ranked_linked_generations", rows: [] },
+        { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+        { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+        { match: "source_switch = 0", rows: [] },
+      ];
+  latestMockDb = createMockD1(configuredTables, options);
   return latestMockDb;
 }
 

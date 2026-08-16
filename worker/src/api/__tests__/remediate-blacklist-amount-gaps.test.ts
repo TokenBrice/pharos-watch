@@ -29,7 +29,7 @@ afterEach(() => {
 
 describe("handleRemediateBlacklistAmountGaps", () => {
   it("rejects malformed JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { requireMatch: false }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },
@@ -41,7 +41,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   });
 
   it("rejects non-object JSON bodies", async () => {
-    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { requireMatch: false }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+    const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",
         adminKey: "secret-key",
         headers: { "Content-Type": "application/json" },

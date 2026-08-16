@@ -1,12 +1,28 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
+const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
+  { match: "WHERE delivery_state = 'sending'", rows: [] },
+  { match: "delivery_state = 'sent'", rows: [] },
+  { match: "processing_owner = ?", rows: [] },
+  { match: "SET attempts = attempts + 1", rows: [] },
+  { match: "AND delivery_state = 'sending'", rows: [] },
+  { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+  { match: "WHERE chat_id = ?", rows: [] },
+  { match: "UPDATE telegram_recap_preferences", rows: [] },
+  { match: "UPDATE telegram_recap_targets", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_PENDING_D1_TABLES]);
+}
 
 const mockSendToChat = vi.fn();
 const mockMigrateTelegramChatId = vi.fn();

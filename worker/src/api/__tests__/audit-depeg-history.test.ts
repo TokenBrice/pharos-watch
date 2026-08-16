@@ -141,7 +141,7 @@ describe("handleAuditDepegHistory method safety", () => {
   });
 
   it("rejects malformed direct delete IDs instead of partially parsing them", async () => {
-    const db = mockD1([]);
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [], first: null }]);
     for (const deleteParam of ["1abc", "abc,1", ",1"]) {
       const req = makeApiRequest(`/api/audit-depeg-history?dry-run=true&delete=${encodeURIComponent(deleteParam)}`, {
         adminKey: "secret",
@@ -199,6 +199,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       {
         match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE",
         rows: [],
@@ -260,6 +261,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
         match: "FROM supply_history",
@@ -355,6 +357,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
       { match: "FROM depeg_events ORDER BY stablecoin_id, started_at", rows },
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows },
       {
         match: "FROM supply_history",
@@ -429,6 +432,7 @@ describe("handleAuditDepegHistory method safety", () => {
     const rows = makeContradictoryRecoveryRows();
     const db = mockD1([
       { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
       { match: "UPDATE depeg_events SET recovery_price = NULL WHERE id = ?", rows: [] },
     ]) as MockD1Database;
     const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
@@ -662,7 +666,7 @@ describe("handleAuditDepegHistory method safety", () => {
       pending_reason: null,
     };
 
-    const result = await auditEvents(mockD1(), {
+    const result = await auditEvents(mockD1([{ match: "FROM cache WHERE key = ?", rows: [], first: null }]), {
       events: [event],
       minSupply: 0,
       symbolFilter: null,
@@ -705,6 +709,9 @@ describe("handleAuditDepegHistory method safety", () => {
       pending_reason: null,
     };
     const db = mockD1([
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "FROM supply_history", rows: [] },
       { match: "INSERT INTO depeg_event_provenance", rows: [] },
       { match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE", rows: [event] },
     ]) as MockD1Database;
@@ -746,7 +753,7 @@ describe("handleAuditDepegHistory method safety", () => {
       confirmation_sources: null,
       pending_reason: null,
     });
-    const db = mockD1([]) as MockD1Database;
+    const db = mockD1([{ match: "FROM cache WHERE key = ?", rows: [], first: null }]) as MockD1Database;
 
     const result = await auditEvents(db, {
       events: [makeEvent(50), makeEvent(51)],

@@ -248,7 +248,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("returns 502 when upstream fails and no cache exists", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
@@ -477,7 +480,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("does not claim a detail cache generation before a fresh body is ready", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response("upstream unavailable", { status: 503 }));
 
@@ -490,7 +496,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("passes the CoinGecko API key through the commodity detail path", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockImplementation(async (url: RequestInfo | URL) => {
       const value = String(url);
@@ -554,7 +563,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("returns 502 for commodity branch upstream parse failure without stale cache", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
     fetchSpy
       .mockResolvedValueOnce(new Response("{", { status: 200 })) // DL coins chart invalid JSON
       .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }));

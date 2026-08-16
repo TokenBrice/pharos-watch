@@ -2,6 +2,8 @@ import { vi, type Mock } from "vitest";
 
 interface MockResponseRoute {
   match: string;
+  /** Optional request-body substring used to disambiguate requests to one URL. */
+  matchBody?: string;
   body: unknown;
   status?: number;
   headers?: Record<string, string>;
@@ -9,6 +11,8 @@ interface MockResponseRoute {
 
 interface MockReplayRoute {
   match: string;
+  /** Optional request-body substring used to disambiguate requests to one URL. */
+  matchBody?: string;
   /** Ordered results to replay for this route. */
   outcomes: MockFetchOutcome[];
   body?: never;
@@ -24,11 +28,17 @@ interface MockResponseOutcome {
   headers?: Record<string, string>;
 }
 
-type MockFetchOutcome = MockResponseOutcome | Error | { stall: true };
+interface MockRawResponseOutcome {
+  response: Response;
+}
+
+type MockFetchOutcome = MockResponseOutcome | MockRawResponseOutcome | Error | { stall: true };
 
 interface MockFetchOptions {
   /** Require every fetch URL to match a configured route. */
   requireMatch?: boolean;
+  /** Choose how unmatched URLs behave. Defaults to not-found, or throw with requireMatch. */
+  unmatched?: "throw" | "not-found" | "passthrough";
   /** Match the full request URL exactly instead of substring search. */
   strictUrl?: boolean;
   /** Do not install the spy as global fetch. */
@@ -74,7 +84,8 @@ async function normalizeRequest(input: RequestInfo | URL, init?: RequestInit): P
   };
 }
 
-function responseFromOutcome(outcome: MockResponseOutcome): Response {
+function responseFromOutcome(outcome: MockResponseOutcome | MockRawResponseOutcome): Response {
+  if ("response" in outcome) return outcome.response;
   const body = typeof outcome.body === "string" ? outcome.body : JSON.stringify(outcome.body);
   return new Response(body, {
     status: outcome.status ?? 200,
@@ -94,19 +105,31 @@ function stalledResponse(signal: AbortSignal | null): Promise<Response> {
 }
 
 export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = {}): MockFetchSpy {
+  if (options.requireMatch === true && options.unmatched && options.unmatched !== "throw") {
+    throw new Error("mockFetch: requireMatch cannot be combined with a non-throw unmatched policy");
+  }
+
   const history: MockFetchHistoryEntry[] = [];
   const routeHits = new Map<MockRoute, number>();
   const outcomeHits = new Map<MockRoute, number>();
+  const unmatchedPolicy = options.unmatched ?? (options.requireMatch ? "throw" : "not-found");
+  const passthroughFetch = globalThis.fetch.bind(globalThis);
 
   const spy = vi.fn<MockFetchFn>(async (input: RequestInfo | URL, init?: RequestInit) => {
     const normalized = await normalizeRequest(input, init);
     history.push(normalized.history);
-    const route = routes.find((r) => (
-      options.strictUrl === true ? normalized.history.url === r.match : normalized.history.url.includes(r.match)
-    ));
+    const route = routes.find((r) => {
+      const urlMatches = options.strictUrl === true
+        ? normalized.history.url === r.match
+        : normalized.history.url.includes(r.match);
+      return urlMatches && (r.matchBody == null || normalized.history.body?.includes(r.matchBody) === true);
+    });
     if (!route) {
-      if (options.requireMatch) {
+      if (unmatchedPolicy === "throw") {
         throw new Error(`mockFetch: no match for URL: ${normalized.history.url}`);
+      }
+      if (unmatchedPolicy === "passthrough") {
+        return passthroughFetch(normalized.request);
       }
       return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
     }
@@ -150,7 +173,7 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
 
 export function mockFetchStrict(
   routes: MockRoute[] = [],
-  options: Omit<MockFetchOptions, "requireMatch" | "strictUrl"> = {},
+  options: Omit<MockFetchOptions, "requireMatch" | "strictUrl" | "unmatched"> = {},
 ): MockFetchSpy {
   return mockFetch(routes, { ...options, requireMatch: true, strictUrl: true });
 }

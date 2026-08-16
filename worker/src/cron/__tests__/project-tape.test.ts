@@ -31,11 +31,20 @@ const MATCH_SAFETY = "FROM safety_grade_history";
 function baseTables(): MockTableConfig[] {
   return [
     { match: "FROM cache WHERE key", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+    { match: "FROM tape_events WHERE type = ?", rows: [] },
     { match: MATCH_DEPEG_OPEN_PEAK, rows: [] },
     { match: MATCH_DEPEG_OPENED, rows: [] },
     { match: MATCH_DEPEG_RESOLVED, rows: [] },
     { match: MATCH_BLACKLIST, rows: [] },
     { match: MATCH_SAFETY, rows: [] },
+    { match: "FROM stability_index_samples", rows: [] },
+    { match: "FROM stress_signals", rows: [] },
+    { match: "FROM mint_burn_events", rows: [] },
+    { match: "FROM mint_burn_flows", rows: [] },
+    { match: "FROM yield_history", rows: [] },
+    { match: "FROM yield_source_decisions", rows: [] },
   ];
 }
 
@@ -230,6 +239,7 @@ describe("projectTape", () => {
       { match: MATCH_DEPEG_RESOLVED, rows: [] },
       { match: MATCH_BLACKLIST, rows: [] },
       { match: MATCH_SAFETY, rows: [] },
+      ...baseTables(),
     ]) as MockD1Database;
     await projectTape(dbWorsened);
     const worsened = extractInsertBindsForType(dbWorsened, "depeg.peak_worsened");

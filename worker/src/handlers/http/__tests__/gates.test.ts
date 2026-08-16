@@ -41,6 +41,7 @@ import {
   evaluateCachedPublicApiReadFastGate,
   handleMaintenanceMode,
 } from "../gates";
+import { createWorkerEnv } from "../../../test-helpers/__shared/worker-env";
 
 const validKey = {
   id: 7,
@@ -56,12 +57,11 @@ function parseWarnEvents(warn: { mock: { calls: unknown[][] } }): Record<string,
 }
 
 function makeEnv() {
-  return {
-    CORS_ORIGIN: "https://pharos.watch",
+  return createWorkerEnv({
     SITE_API_SHARED_SECRET: "site-secret",
     CF_ACCESS_OPS_API_AUD: "ops-aud",
     CF_ACCESS_TEAM_DOMAIN: "pharos-watch",
-  };
+  });
 }
 
 describe("evaluateAccessGate", () => {
@@ -88,7 +88,7 @@ describe("evaluateAccessGate", () => {
       headers: { "Cf-Access-Jwt-Assertion": "valid-access-jwt" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
     expect(result.response).toBeNull();
     expect(result.isAdmin).toBe(true);
@@ -105,11 +105,11 @@ describe("evaluateAccessGate", () => {
 
     const blocked = handleMaintenanceMode(
       new Request("https://api.pharos.watch/api/stablecoins"),
-      env as never,
+      env,
     );
     const preflight = handleMaintenanceMode(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "OPTIONS" }),
-      env as never,
+      env,
     );
 
     expect(blocked?.status).toBe(503);
@@ -123,7 +123,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
     expect(result.response?.status).toBe(404);
     expect(result.requestLane).toBe("site-api");
@@ -136,7 +136,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
     expect(result.response?.status).toBe(404);
     expect(result.requestLane).toBe("site-api");
@@ -149,7 +149,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
     expect(result.response?.status).toBe(405);
     expect(result.response?.headers.get("Allow")).toBe("GET");
@@ -162,7 +162,7 @@ describe("evaluateAccessGate", () => {
       headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
     });
 
-    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv() as never);
+    const result = await evaluateAccessGate(request, new URL(request.url), makeEnv());
 
     expect(result.isSiteProxy).toBe(true);
     expect(result.requestLane).toBe("site-api");

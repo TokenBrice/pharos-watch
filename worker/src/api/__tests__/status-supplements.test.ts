@@ -52,6 +52,17 @@ describe("loadStatusSupplements", () => {
           },
         ],
       },
+      { match: "FROM cache\n       WHERE key IN ('yield-rankings'", rows: [] },
+      { match: "SELECT key, value FROM cache WHERE key IN (", rows: [] },
+      { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
+      { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },
+      { match: "FROM (VALUES", rows: [] },
+      { match: "FROM reserve_sync_state", rows: [] },
+      { match: "FROM reserve_composition", rows: [] },
+      { match: "JOIN reserve_sync_state", rows: [] },
+      { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
+      { match: "FROM surface_publication_generations", rows: [], first: null },
+      { match: "FROM stability_index_samples", rows: [], first: null },
     ]);
 
     const supplements = await loadStatusSupplements(db, NOW, {});

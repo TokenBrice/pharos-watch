@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {
@@ -20,6 +20,20 @@ import {
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
+
+const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
+  { match: "FROM supply_history", rows: [] },
+  { match: "FROM mint_burn_hourly", rows: [] },
+  { match: "FROM dex_liquidity", rows: [] },
+  { match: "FROM dex_liquidity_history", rows: [] },
+  { match: "FROM redemption_backstop_runs", rows: [] },
+  { match: "FROM redemption_backstop_run_rows", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_DDR_D1_TABLES]);
+}
 
 function publishedDewsConfigs(signalsJson = "{}") {
   const computedAt = NOW_SEC - 60;

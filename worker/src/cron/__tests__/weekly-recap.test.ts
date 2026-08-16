@@ -151,6 +151,11 @@ function makeTables(overrides: Partial<{
       rows: overrides.recentWeeklyRows ?? [],
     },
     {
+      match: "digest_meta, input_data",
+      rows: [],
+      first: null,
+    },
+    {
       match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
       rows: overrides.dailyRows ?? buildDailyRows(),
     },
@@ -680,7 +685,13 @@ describe("generateWeeklyRecap", () => {
         first: null,
         rows: [],
       },
+      {
+        match: "digest_meta, input_data",
+        first: null,
+        rows: [],
+      },
       { match: "SELECT digest_title, digest_text, digest_meta", rows: [] },
+      { match: "UPDATE daily_digest", rows: [] },
       {
         match: "WHERE generated_at >= ? AND (digest_meta IS NULL",
         rows: [...prior, ...current],

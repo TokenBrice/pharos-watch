@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
   createTelegramFetchSpy,
   telegramApiCalls,
@@ -19,6 +19,23 @@ const {
 } = await import("../telegram-webhook-settings");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "FROM telegram_subscribers", rows: [], first: null },
+    { match: "FROM telegram_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "UPDATE telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    { match: "UPDATE telegram_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_subscriptions", rows: [] },
+    { match: "FROM cache", rows: [], first: null },
+  ], options);
+}
 
 function jsonBody(call: unknown[]): Record<string, unknown> {
   return telegramCallBody(call);

@@ -1,12 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchBalancerPools } from "../fetch-balancer";
-
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 function cleanPool() {
   return {
@@ -45,15 +39,17 @@ function fantomJunkPool() {
 
 describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   afterEach(() => {
-    mockFetch.mockReset();
     vi.unstubAllGlobals();
-    vi.stubGlobal("fetch", mockFetch);
   });
 
   it("rejects pools with totalLiquidity above the per-source sanity cap", async () => {
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [fantomJunkPool(), cleanPool()] } }))
-      .mockResolvedValueOnce(jsonResponse({ data: { aggregatorPools: [] } }));
+    mockFetch([{
+      match: "api-v3.balancer.fi",
+      outcomes: [
+        { body: { data: { poolGetPools: [fantomJunkPool(), cleanPool()] } } },
+        { body: { data: { aggregatorPools: [] } } },
+      ],
+    }], { requireMatch: true });
     const result = await fetchBalancerPools();
     // Junk row must be dropped
     expect(result.pools.find((p) => p.tvlUsd > 2_000_000_000)).toBeUndefined();
@@ -65,9 +61,13 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
   });
 
   it("sets pool.price to null (per-token priceUsd is authoritative)", async () => {
-    mockFetch
-      .mockResolvedValueOnce(jsonResponse({ data: { poolGetPools: [cleanPool()] } }))
-      .mockResolvedValueOnce(jsonResponse({ data: { aggregatorPools: [] } }));
+    mockFetch([{
+      match: "api-v3.balancer.fi",
+      outcomes: [
+        { body: { data: { poolGetPools: [cleanPool()] } } },
+        { body: { data: { aggregatorPools: [] } } },
+      ],
+    }], { requireMatch: true });
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBeGreaterThanOrEqual(1);
     for (const pool of result.pools) {
@@ -78,19 +78,22 @@ describe("fetchBalancerPools sanity cap and pool.price footgun", () => {
 
 describe("fetchBalancerPools stable-math amp join", () => {
   afterEach(() => {
-    mockFetch.mockReset();
     vi.unstubAllGlobals();
-    vi.stubGlobal("fetch", mockFetch);
   });
 
   function dispatchByQuery(pools: unknown[], ampRows: unknown[]) {
-    mockFetch.mockImplementation((_url: unknown, init?: { body?: unknown }) => {
-      const body = typeof init?.body === "string" ? init.body : "";
-      if (body.includes("aggregatorPools")) {
-        return Promise.resolve(jsonResponse({ data: { aggregatorPools: ampRows } }));
-      }
-      return Promise.resolve(jsonResponse({ data: { poolGetPools: pools } }));
-    });
+    mockFetch([
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "aggregatorPools",
+        body: { data: { aggregatorPools: ampRows } },
+      },
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "poolGetPools",
+        body: { data: { poolGetPools: pools } },
+      },
+    ], { requireMatch: true });
   }
 
   function stablePool() {
@@ -317,13 +320,19 @@ describe("fetchBalancerPools stable-math amp join", () => {
   });
 
   it("degrades a failed capability sweep to an explicit incomplete-capture gate", async () => {
-    mockFetch.mockImplementation((_url: unknown, init?: { body?: unknown }) => {
-      const body = typeof init?.body === "string" ? init.body : "";
-      if (body.includes("aggregatorPools")) {
-        return Promise.resolve(jsonResponse({ errors: [{ message: "nope" }] }, 500));
-      }
-      return Promise.resolve(jsonResponse({ data: { poolGetPools: [stablePool()] } }));
-    });
+    mockFetch([
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "aggregatorPools",
+        body: { errors: [{ message: "nope" }] },
+        status: 500,
+      },
+      {
+        match: "api-v3.balancer.fi",
+        matchBody: "poolGetPools",
+        body: { data: { poolGetPools: [stablePool()] } },
+      },
+    ], { requireMatch: true });
     const result = await fetchBalancerPools();
     expect(result.pools.length).toBe(1);
     expect(result.pools[0]!.amp).toBeUndefined();

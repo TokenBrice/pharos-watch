@@ -155,9 +155,14 @@ function makeDb(): D1Database {
         { asset_id: "usdai-usd-ai", price: 1.0 },
       ],
     },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [] },
+    { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    { match: "DELETE FROM cache WHERE key >= ? AND key < ?", rows: [] },
     { match: "supply_history", rows: [] },
     { match: "mint_burn_hourly", rows: [] },
     { match: "mint_burn_events", rows: [] },
+    { match: "SELECT config_key, deferred_until FROM mint_burn_config_deferral", rows: [] },
+    { match: "INSERT OR REPLACE INTO mint_burn_config_deferral", rows: [] },
   ]);
 }
 

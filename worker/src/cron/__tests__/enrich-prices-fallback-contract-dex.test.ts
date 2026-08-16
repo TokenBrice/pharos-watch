@@ -8,11 +8,25 @@ import {
   fixtureEnrichMissingPrices,
   fixtureRunDexScreenerPass,
   fixtureRunDlContractPasses,
-  fixtureMockD1,
+  fixtureMockD1 as createFixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+
+function fixtureMockD1(
+  tables: Parameters<typeof createFixtureMockD1>[0] = [],
+  options?: Parameters<typeof createFixtureMockD1>[1],
+) {
+  return createFixtureMockD1(
+    [
+      ...tables,
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "INSERT OR REPLACE INTO cache", rows: [] },
+    ],
+    options,
+  );
+}
 
 describe("enrichMissingPrices", () => {
   afterEach(cleanupEnrichMissingPricesTest);

@@ -6,7 +6,10 @@ import type { ReservePresentationMode } from "@shared/types/live-reserves";
 
 describe("handleStablecoinReserves", () => {
   it("keeps USDAI on the reserve endpoint with the curated stablecoin fallback until a validated snapshot is synced", async () => {
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [] },
+      { match: "FROM reserve_sync_state", rows: [] },
+    ]);
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
 
     expect(res.status).toBe(200);
@@ -32,7 +35,10 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("returns a curated fallback payload when no live data exists in D1 yet", async () => {
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [] },
+      { match: "FROM reserve_sync_state", rows: [] },
+    ]);
     const res = await handleStablecoinReserves(db, "iusd-infinifi");
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("public, s-maxage=300, max-age=60");
@@ -221,7 +227,10 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("returns 404 for unknown stablecoin IDs", async () => {
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [] },
+      { match: "FROM reserve_sync_state", rows: [] },
+    ]);
     const res = await handleStablecoinReserves(db, "not-a-coin");
     expect(res.status).toBe(404);
   });
@@ -345,7 +354,10 @@ describe("handleStablecoinReserves", () => {
 
   it("keeps curated-fallback mode on the short fallback cache-control tier", async () => {
     // Existing behaviour: no live snapshot + curated reserves present -> curated-fallback.
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM reserve_composition", rows: [] },
+      { match: "FROM reserve_sync_state", rows: [] },
+    ]);
     const res = await handleStablecoinReserves(db, "usdai-usd-ai");
     expect(res.status).toBe(200);
     const body = StablecoinReservesResponseSchema.parse(await res.json());

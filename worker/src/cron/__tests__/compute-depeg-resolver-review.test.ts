@@ -106,7 +106,15 @@ function coverageIncidents(count: number) {
  * case shows only its event rows plus whatever extra tables it needs.
  */
 function reviewDb(eventRows: Record<string, unknown>[], extra: MockTableConfig[] = []) {
-  return mockD1([{ match: "FROM depeg_events", rows: eventRows }, ...extra]);
+  return mockD1([
+    { match: "FROM depeg_events", rows: eventRows },
+    ...extra,
+    {
+      match: "FROM tape_events",
+      rows: [],
+      first: null,
+    },
+  ]);
 }
 
 function incident(overrides: Record<string, unknown> = {}) {

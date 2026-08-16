@@ -1,8 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 stubCryptoForAuth();
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "FROM reserve_sync_state", rows: [] },
+    { match: "FROM reserve_composition", rows: [] },
+    { match: "JOIN reserve_sync_state", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  ], options);
+}
 
 const { handleStatusHistoryRoute } = await import("../status-history");
 

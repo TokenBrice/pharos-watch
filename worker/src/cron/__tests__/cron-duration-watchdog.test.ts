@@ -127,6 +127,14 @@ function durationSamplesMatcher(rows: Record<string, unknown>[]): MockTableConfi
   };
 }
 
+function watchdogDb(tables: MockTableConfig[]): ReturnType<typeof mockD1> {
+  return mockD1([
+    ...tables,
+    { match: "FROM cron_runs", rows: [] },
+    { match: "FROM cron_slot_executions", rows: [] },
+  ]);
+}
+
 describe("runCronDurationWatchdog", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -138,7 +146,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("stays ok while averages sit under the 80% ceiling ratio", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.7), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
@@ -148,7 +156,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("degrades when the 7d average crosses 80% of the ceiling", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({ n: 660, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.85), max_ms: SYNC_TIMEOUT_MS, cap_hits: 1 }),
     ]);
 
@@ -161,7 +169,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("degrades on repeated at-cap runs even with a healthy average", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -178,7 +186,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("degrades on repeated at-cap runs for low-cadence jobs below the trend sample floor", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 3,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -198,7 +206,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("does not degrade when repeated at-cap history has fewer than three hits in the recent window", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -226,7 +234,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("degrades on repeated budget truncations below the trend sample floor", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 3,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -247,7 +255,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("keeps recovered at-cap history visible without degrading", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -276,7 +284,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("includes stage diagnostics for cap-hit runtime breaches", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({
         n: 660,
         avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.5),
@@ -356,7 +364,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("ignores jobs with too few runs for a trend", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({ n: 5, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.95), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
@@ -366,7 +374,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("excludes stale-slot reconciled child rows from runtime averages", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       statsMatcher({ n: 20, avg_ms: Math.round(SYNC_TIMEOUT_MS * 0.2), max_ms: SYNC_TIMEOUT_MS, cap_hits: 0 }),
     ]);
 
@@ -381,7 +389,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("keeps live reserve run-budget truncations as runtime pressure", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       liveReservesStatsMatcher({
         n: 42,
         avg_ms: Math.round(LIVE_RESERVES_TIMEOUT_MS * 0.5),
@@ -403,7 +411,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("degrades on scheduled slot abandonment separately from runtime pressure", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       slotStatsMatcher([{
         slot_key: "hourlyYieldSync",
         slots: 168,
@@ -426,7 +434,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("separates publication failures, terminal-accounting gaps, and preserved child success", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       slotStatsMatcher([{
         slot_key: "halfHourlyOffset",
         slots: 142,
@@ -525,7 +533,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("keeps recovered slot abandonment history visible without degrading", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       slotStatsMatcher([{
         slot_key: "hourlyYieldSync",
         slots: 168,
@@ -552,7 +560,7 @@ describe("runCronDurationWatchdog", () => {
   });
 
   it("does not degrade on low-ratio slot abandonment noise", async () => {
-    const db = mockD1([
+    const db = watchdogDb([
       slotStatsMatcher([{
         slot_key: "quarterHourly",
         slots: 672,

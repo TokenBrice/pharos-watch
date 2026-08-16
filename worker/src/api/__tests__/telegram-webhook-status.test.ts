@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
@@ -16,6 +16,20 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../lib/safety-score-active-source", () => ({
   loadActiveSafetyScoreSource: mocks.loadActiveSafetyScoreSource,
 }));
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "FROM dex_liquidity", rows: [], first: null },
+    { match: "FROM depeg_events WHERE stablecoin_id = ?", rows: [], first: null },
+    { match: "FROM price_cache WHERE asset_id = ?", rows: [], first: null },
+    { match: "FROM yield_data", rows: [], first: null },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  ], options);
+}
 
 afterEach(() => {
   vi.useRealTimers();
