@@ -9,7 +9,7 @@ export function createExecutionUnit(commands, metadata = {}) {
   return { ...metadata, commands };
 }
 
-export function getCommandText(command) {
+function getCommandText(command) {
   if (typeof command === "string") {
     return command;
   }
@@ -20,7 +20,7 @@ export function getCommandText(command) {
   throw new Error("Expected command string or object with a cmd string.");
 }
 
-export function normalizeCommandResult(result) {
+function normalizeCommandResult(result) {
   if (typeof result === "number") {
     return { status: result, aborted: false };
   }
@@ -127,7 +127,7 @@ export async function runExecutionUnit(
   return { status: 0, failedCmd: null, aborted: false };
 }
 
-export function reportFailedCommand(result, label) {
+function reportFailedCommand(result, label) {
   if (result.aborted) {
     return;
   }

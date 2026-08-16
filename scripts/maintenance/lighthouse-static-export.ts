@@ -5,7 +5,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
-import { createStaticExportServer } from "./serve-static-export.mjs";
+import type { Server } from "node:http";
+import { createStaticExportServer } from "./serve-static-export";
 import { isDirectRun, resolveStaticExportPort } from "../lib/smoke-runtime.mjs";
 
 const OUT_DIR = path.resolve("out");
@@ -39,8 +40,23 @@ if (existsSync(ENV_FILE)) {
   process.loadEnvFile(ENV_FILE);
 }
 
-export function parseArgs(argv) {
-  const options = {
+interface LighthouseOptions {
+  formFactor: string;
+  help?: boolean;
+  outputDir: string;
+  route: string;
+  threshold: number;
+  throttlingMethod: string;
+  url: string;
+}
+
+interface LighthouseReport {
+  audits: Record<string, { displayValue?: string }>;
+  categories: { performance: { score?: number | null } };
+}
+
+export function parseArgs(argv: readonly string[]): LighthouseOptions {
+  const options: LighthouseOptions = {
     formFactor: process.env.LIGHTHOUSE_FORM_FACTOR?.trim() || DEFAULT_FORM_FACTOR,
     outputDir: process.env.LIGHTHOUSE_OUTPUT_DIR?.trim() || "agents/lighthouse",
     route: process.env.LIGHTHOUSE_ROUTE?.trim() || "/",
@@ -51,7 +67,7 @@ export function parseArgs(argv) {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    const readValue = (name) => {
+    const readValue = (name: string): string => {
       const inlinePrefix = `${name}=`;
       if (arg.startsWith(inlinePrefix)) return arg.slice(inlinePrefix.length);
       const value = argv[index + 1];
@@ -110,12 +126,12 @@ Options:
 `);
 }
 
-function normalizeRoute(route) {
+function normalizeRoute(route: string): string {
   if (!route || route === "/") return "/";
   return `/${route.replace(/^\/+/, "")}`;
 }
 
-function routeSlug(route) {
+function routeSlug(route: string): string {
   return (
     normalizeRoute(route)
       .replace(/^\/|\/$/g, "")
@@ -123,18 +139,18 @@ function routeSlug(route) {
   );
 }
 
-function timestampSlug(date = new Date()) {
+function timestampSlug(date = new Date()): string {
   return date
     .toISOString()
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}Z$/, "Z");
 }
 
-function buildBaseUrl(host, port) {
+function buildBaseUrl(host: string, port: number): string {
   return `http://${host}:${port}`;
 }
 
-async function waitForReady(url) {
+async function waitForReady(url: string): Promise<void> {
   for (let attempt = 1; attempt <= 30; attempt += 1) {
     try {
       const response = await fetch(url);
@@ -149,7 +165,7 @@ async function waitForReady(url) {
 
 /** @param {Readonly<Record<string, string | undefined>>} [sourceEnv] */
 export function createLighthouseChildEnv(sourceEnv = process.env) {
-  const env = {};
+  const env: NodeJS.ProcessEnv = {};
   for (const key of LIGHTHOUSE_CHILD_ENV_ALLOWLIST) {
     const value = sourceEnv[key];
     if (value) env[key] = value;
@@ -157,8 +173,8 @@ export function createLighthouseChildEnv(sourceEnv = process.env) {
   return env;
 }
 
-function runCommand(command, args) {
-  return new Promise((resolve) => {
+function runCommand(command: string, args: string[]): Promise<number> {
+  return new Promise<number>((resolve) => {
     const child = spawn(command, args, {
       env: createLighthouseChildEnv(),
       stdio: "inherit",
@@ -167,11 +183,11 @@ function runCommand(command, args) {
   });
 }
 
-function auditDisplayValue(audit) {
+function auditDisplayValue(audit: { displayValue?: string } | undefined): string {
   return audit?.displayValue ?? "n/a";
 }
 
-function buildScreenEmulationArgs(formFactor) {
+function buildScreenEmulationArgs(formFactor: string): string[] {
   if (formFactor === "desktop") {
     return [
       "--screenEmulation.mobile=false",
@@ -184,7 +200,17 @@ function buildScreenEmulationArgs(formFactor) {
   return ["--screenEmulation.mobile=true"];
 }
 
-export function buildLighthouseArgs({ formFactor, reportBase, targetUrl, throttlingMethod }) {
+export function buildLighthouseArgs({
+  formFactor,
+  reportBase,
+  targetUrl,
+  throttlingMethod,
+}: {
+  formFactor: string;
+  reportBase: string;
+  targetUrl: string;
+  throttlingMethod: string;
+}): string[] {
   const deviceArgs =
     formFactor === "desktop"
       ? ["--preset=desktop"]
@@ -205,7 +231,13 @@ export function buildLighthouseArgs({ formFactor, reportBase, targetUrl, throttl
   ];
 }
 
-function printScoreSummary(report, reportPath, threshold, throttlingMethod, formFactor) {
+function printScoreSummary(
+  report: LighthouseReport,
+  reportPath: string,
+  threshold: number,
+  throttlingMethod: string,
+  formFactor: string,
+): void {
   const score = Math.round((report.categories.performance.score ?? 0) * 100);
   const audits = report.audits;
   const summary = [
@@ -245,7 +277,7 @@ async function main() {
   await mkdir(outputDir, { recursive: true });
 
   const route = normalizeRoute(options.route);
-  let server = null;
+  let server: Server | null = null;
   let targetUrl = options.url;
 
   if (!targetUrl) {
@@ -277,11 +309,11 @@ async function main() {
     }
 
     const jsonPath = `${reportBase}.report.json`;
-    const report = JSON.parse(await readFile(jsonPath, "utf8"));
+    const report = JSON.parse(await readFile(jsonPath, "utf8")) as LighthouseReport;
     printScoreSummary(report, jsonPath, options.threshold, options.throttlingMethod, options.formFactor);
   } finally {
     if (server) {
-      await new Promise((resolve, reject) => {
+      await new Promise<void>((resolve, reject) => {
         server.close((error) => {
           if (error) reject(error);
           else resolve();

@@ -12,17 +12,29 @@ const EXCLUDED_DIRS = new Set([".git", ".next", "coverage", "dist", "node_module
 const DEFAULT_ROOTS = ["functions", "shared", "src", "worker/src", "scripts"];
 const SHARED_TYPES_ROOT = "shared/types";
 
-function isWithinPath(parentDir, candidatePath) {
+interface BroadSharedTypesViolation {
+  file: string;
+  line: number;
+  names: string[];
+}
+
+interface SharedTypesRuntimeViolation {
+  file: string;
+  line: number;
+  source: string;
+}
+
+function isWithinPath(parentDir: string, candidatePath: string): boolean {
   const relativePath = relative(parentDir, candidatePath);
   return relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath));
 }
 
-function shouldSkipSharedTypesBoundaryFile(file, cwd) {
+function shouldSkipSharedTypesBoundaryFile(file: string, cwd: string): boolean {
   const pathParts = relative(cwd, file).split(sep);
   return pathParts.includes("__tests__") || file.endsWith(".test.ts") || file.endsWith(".test.tsx");
 }
 
-function getModuleSpecifier(statement) {
+function getModuleSpecifier(statement: ts.Statement): string | null {
   if (ts.isImportDeclaration(statement) || ts.isExportDeclaration(statement)) {
     const moduleSpecifier = statement.moduleSpecifier;
     return moduleSpecifier && ts.isStringLiteral(moduleSpecifier) ? moduleSpecifier.text : null;
@@ -30,8 +42,11 @@ function getModuleSpecifier(statement) {
   return null;
 }
 
-export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = process.cwd()) {
-  const violations = [];
+export function findBroadSharedTypesValueImports(
+  roots: readonly string[] = DEFAULT_ROOTS,
+  cwd = process.cwd(),
+): BroadSharedTypesViolation[] {
+  const violations: BroadSharedTypesViolation[] = [];
   for (const root of roots) {
     const rootDir = resolveSourceRoot(root, cwd);
     for (const file of collectSourceFiles(rootDir, { extensions: SOURCE_EXTENSIONS, excludedDirs: EXCLUDED_DIRS })) {
@@ -63,8 +78,11 @@ export function findBroadSharedTypesValueImports(roots = DEFAULT_ROOTS, cwd = pr
   return violations;
 }
 
-export function findSharedTypesRuntimeImports(roots = [SHARED_TYPES_ROOT], cwd = process.cwd()) {
-  const violations = [];
+export function findSharedTypesRuntimeImports(
+  roots: readonly string[] = [SHARED_TYPES_ROOT],
+  cwd = process.cwd(),
+): SharedTypesRuntimeViolation[] {
+  const violations: SharedTypesRuntimeViolation[] = [];
   const sharedLibRoot = resolve(cwd, "shared/lib");
   for (const root of roots) {
     const rootDir = resolveSourceRoot(root, cwd);

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
@@ -17,7 +17,7 @@ import origins from "@shared/lib/runtime-origins.json" with { type: "json" };
 import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-const CONTENT_TYPES = {
+const CONTENT_TYPES: Record<string, string> = {
   ".css": "text/css; charset=utf-8",
   ".csv": "text/csv; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -50,23 +50,29 @@ const COMPRESSIBLE_CONTENT_TYPES = [
   "text/plain",
 ];
 
-function isCompressibleContentType(contentType) {
+function isCompressibleContentType(contentType: string): boolean {
   return COMPRESSIBLE_CONTENT_TYPES.some((candidate) => contentType.startsWith(candidate));
 }
 
-function pickAcceptedCompression(acceptEncoding = "") {
+function pickAcceptedCompression(acceptEncoding = ""): "br" | "gzip" | null {
   const accepted = acceptEncoding.toLowerCase();
   if (accepted.includes("br")) return "br";
   if (accepted.includes("gzip")) return "gzip";
   return null;
 }
 
-async function maybeCompressStaticBody(body, contentType, acceptEncoding) {
+async function maybeCompressStaticBody(
+  body: Buffer,
+  contentType: string,
+  acceptEncoding: string | string[] | undefined,
+): Promise<{ body: Buffer; encoding: "br" | "gzip" | null }> {
   if (body.byteLength < 1024 || !isCompressibleContentType(contentType)) {
     return { body, encoding: null };
   }
 
-  const encoding = pickAcceptedCompression(acceptEncoding);
+  const encoding = pickAcceptedCompression(
+    Array.isArray(acceptEncoding) ? acceptEncoding.join(", ") : acceptEncoding,
+  );
   if (encoding === "br") {
     return { body: await brotliCompressAsync(body), encoding };
   }
@@ -83,7 +89,7 @@ const EXCLUDED_PROXY_RESPONSE_HEADERS = new Set([
   "transfer-encoding",
 ]);
 
-export function resolveStaticFilePath(rootDir, requestPathname) {
+export function resolveStaticFilePath(rootDir: string, requestPathname: string): string {
   const decodedPath = decodeURIComponent(requestPathname);
   const relativePath = decodedPath.replace(/^\/+/, "");
   let candidate = path.resolve(rootDir, relativePath);
@@ -102,7 +108,10 @@ export function resolveStaticFilePath(rootDir, requestPathname) {
   return candidate;
 }
 
-export function resolveMissingYieldWorkbenchLocation(requestUrl, knownStablecoinIds = KNOWN_STABLECOIN_IDS) {
+export function resolveMissingYieldWorkbenchLocation(
+  requestUrl: URL,
+  knownStablecoinIds: ReadonlySet<string> = KNOWN_STABLECOIN_IDS,
+): string | null {
   const parts = requestUrl.pathname.split("/").filter(Boolean);
   if (parts.length !== 3 || parts[0] !== "stablecoin" || parts[2] !== "yield" || !knownStablecoinIds.has(parts[1])) {
     return null;
@@ -118,7 +127,7 @@ export function resolveMissingYieldWorkbenchLocation(requestUrl, knownStablecoin
   return `${target.pathname}${target.search}`;
 }
 
-function buildContentType(filePath, requestPathname = "") {
+function buildContentType(filePath: string, requestPathname = ""): string {
   if (requestPathname.startsWith("/feed/") && requestPathname.endsWith(".xml")) {
     return "application/rss+xml; charset=utf-8";
   }
@@ -135,7 +144,7 @@ function getSiteProxyBaseUrl() {
   return configured || getProxyBaseUrl();
 }
 
-let siteDataResolverPromise;
+let siteDataResolverPromise: Promise<(pathname: string) => string | null> | undefined;
 
 async function getSiteDataResolver() {
   if (!siteDataResolverPromise) {
@@ -150,20 +159,23 @@ function getProxyApiKey() {
   return (process.env.STATIC_EXPORT_API_KEY ?? "").trim();
 }
 
-async function readRequestBody(req, method) {
+async function readRequestBody(req: IncomingMessage, method: string): Promise<Buffer | undefined> {
   if (method === "GET" || method === "HEAD") {
     return undefined;
   }
 
-  const chunks = [];
+  const chunks: Buffer[] = [];
   for await (const chunk of req) {
     chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
   return chunks.length > 0 ? Buffer.concat(chunks) : undefined;
 }
 
-function buildForwardedRequestHeaders(req, extraHeaders = {}) {
-  const forwarded = {};
+function buildForwardedRequestHeaders(
+  req: IncomingMessage,
+  extraHeaders: Record<string, string> = {},
+): Record<string, string> {
+  const forwarded: Record<string, string> = {};
   for (const name of ["accept", "content-type", "idempotency-key", "x-pharos-admin"]) {
     const value = req.headers[name];
     if (Array.isArray(value)) {
@@ -180,7 +192,12 @@ function buildForwardedRequestHeaders(req, extraHeaders = {}) {
   };
 }
 
-async function proxyApiRequest(targetUrl, method, headers = {}, body) {
+async function proxyApiRequest(
+  targetUrl: string,
+  method: string,
+  headers: Record<string, string> = {},
+  body?: Buffer,
+): Promise<Response> {
   const apiKey = getProxyApiKey();
   return fetch(targetUrl, {
     method,
@@ -188,19 +205,25 @@ async function proxyApiRequest(targetUrl, method, headers = {}, body) {
       ...(apiKey ? { "X-API-Key": apiKey } : {}),
       ...headers,
     },
-    body,
+    body: body as BodyInit | undefined,
   });
 }
 
-async function readStaticExportFile(rootDir, requestPathname) {
+async function readStaticExportFile(rootDir: string, requestPathname: string) {
   const filePath = resolveStaticFilePath(rootDir, requestPathname);
   const file = await readFile(filePath);
   return { file, filePath };
 }
 
-async function sendStaticExportFile(req, res, method, { file, filePath }, requestPathname) {
+async function sendStaticExportFile(
+  req: IncomingMessage,
+  res: ServerResponse,
+  method: string,
+  { file, filePath }: { file: Buffer; filePath: string },
+  requestPathname: string,
+): Promise<void> {
   const contentType = buildContentType(filePath, requestPathname);
-  const headers = {
+  const headers: Record<string, string> = {
     "Content-Type": contentType,
     Vary: "Accept-Encoding",
   };
@@ -236,7 +259,7 @@ async function sendStaticExportFile(req, res, method, { file, filePath }, reques
   }
 }
 
-function isPathEscapeError(error) {
+function isPathEscapeError(error: unknown): boolean {
   return error instanceof Error && error.message.startsWith("Path escapes static export root:");
 }
 
@@ -246,6 +269,12 @@ export function createStaticExportServer({
   host = process.env.STATIC_EXPORT_HOST ?? "127.0.0.1",
   port = Number.parseInt(process.env.STATIC_EXPORT_PORT ?? "4173", 10),
   rootDir = path.resolve(process.cwd(), process.env.STATIC_EXPORT_ROOT ?? "out"),
+}: {
+  apiBaseUrl?: string;
+  siteApiBaseUrl?: string;
+  host?: string;
+  port?: number;
+  rootDir?: string;
 } = {}) {
   const normalizedRoot = path.resolve(rootDir);
   const server = createServer(async (req, res) => {
@@ -279,7 +308,9 @@ export function createStaticExportServer({
 
       try {
         const resolveSiteDataUpstreamPath = isSiteDataPath ? await getSiteDataResolver() : null;
-        const upstreamPath = isSiteDataPath ? resolveSiteDataUpstreamPath(requestUrl.pathname) : requestUrl.pathname;
+        const upstreamPath = isSiteDataPath
+          ? resolveSiteDataUpstreamPath!(requestUrl.pathname)
+          : requestUrl.pathname;
         if (!upstreamPath) {
           res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify({ error: "Not found" }));
@@ -299,7 +330,7 @@ export function createStaticExportServer({
           requestBody,
         );
         const body = method === "HEAD" ? null : Buffer.from(await upstream.arrayBuffer());
-        const headers = {};
+        const headers: Record<string, string> = {};
 
         for (const [key, value] of upstream.headers) {
           if (EXCLUDED_PROXY_RESPONSE_HEADERS.has(key.toLowerCase())) continue;
@@ -358,7 +389,7 @@ export function createStaticExportServer({
   return {
     host,
     listen() {
-      return new Promise((resolve, reject) => {
+      return new Promise<typeof server>((resolve, reject) => {
         server.once("error", reject);
         server.listen(port, host, () => {
           server.off("error", reject);
@@ -373,10 +404,17 @@ export function createStaticExportServer({
   };
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
+async function main(): Promise<void> {
   const app = createStaticExportServer();
   await app.listen();
   console.log(
     `[serve-static-export] Serving ${app.rootDir} on http://${app.host}:${app.port} with /api proxy ${getProxyBaseUrl()} and /_site-data proxy ${getSiteProxyBaseUrl()}`,
   );
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  main().catch((error: unknown) => {
+    console.error(`[serve-static-export] ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
 }

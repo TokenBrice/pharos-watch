@@ -184,7 +184,7 @@ describe("hasDeployImpact", () => {
 
     for (const file of [
       ".github/actions/setup-workspace/action.yml",
-      "scripts/ci/check-env-contract.mjs",
+      "scripts/ci/check-env-contract.ts",
       "scripts/maintenance/run-all-tests.mjs",
       "scripts/maintenance/run-pr-static-checks.mjs",
     ]) {

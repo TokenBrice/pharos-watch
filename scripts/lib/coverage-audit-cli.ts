@@ -7,7 +7,7 @@ import { isDirectRun } from "./smoke-runtime.mjs";
 export { isRecord, numberValue, stringValue };
 
 export const PROD_ORIGIN = "https://pharos.watch";
-export const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards/v9`;
+const PROD_REPORT_CARDS_URL = `${PROD_ORIGIN}/_site-data/report-cards/v9`;
 export const PROD_STABLECOINS_URL = `${PROD_ORIGIN}/_site-data/stablecoins`;
 
 export interface UnknownRecord {
@@ -24,7 +24,7 @@ export function extractStablecoinRows(payload: unknown): UnknownRecord[] {
   return rows.filter(isRecord);
 }
 
-export function marketCapForStablecoinRow(row: UnknownRecord): number {
+function marketCapForStablecoinRow(row: UnknownRecord): number {
   const direct = numberValue(row.marketCapUsd ?? row.marketCap ?? row.mcapUsd);
   if (direct != null) return direct;
   return getCirculatingRaw(row as { circulating?: Record<string, number> | null | undefined });
@@ -305,7 +305,7 @@ export function writeOutputFile(path: string, contents: string, cwd: string = pr
   return target;
 }
 
-export function assertAdvisoryReportPath(
+function assertAdvisoryReportPath(
   cwd: string,
   reportPath: string,
   protectedRoot: string,
@@ -325,7 +325,7 @@ export function assertAdvisoryReportPath(
   return target;
 }
 
-export function writeAdvisoryReport(
+function writeAdvisoryReport(
   cwd: string,
   reportPath: string,
   contents: string,

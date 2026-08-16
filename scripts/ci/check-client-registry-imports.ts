@@ -18,17 +18,24 @@ const FAT_REGISTRY_IMPORTS = new Set([
   "@shared/lib/stablecoins/registry",
 ]);
 
-function hasUseClientDirective(source) {
+interface ClientModuleInfo {
+  source: string;
+  imports: string[];
+  fatRegistryLines: number[];
+  isClientEntry: boolean;
+}
+
+function hasUseClientDirective(source: string): boolean {
   const withoutBom = source.charCodeAt(0) === 0xfeff ? source.slice(1) : source;
   return /^["']use client["'];/.test(withoutBom.trimStart());
 }
 
-function toRel(absPath) {
+function toRel(absPath: string): string {
   return relative(ROOT, absPath).replaceAll("\\", "/");
 }
 
-function resolveSourceImport(fromFile, specifier) {
-  let base;
+function resolveSourceImport(fromFile: string, specifier: string): string | null {
+  let base: string;
   if (specifier.startsWith("@/")) {
     base = resolve(ROOT, SOURCE_ROOT, specifier.slice(2));
   } else if (specifier.startsWith(".")) {
@@ -54,11 +61,11 @@ function resolveSourceImport(fromFile, specifier) {
   return null;
 }
 
-function collectImports(sourceFile) {
-  const imports = [];
-  const fatRegistryLines = [];
+function collectImports(sourceFile: ts.SourceFile) {
+  const imports: string[] = [];
+  const fatRegistryLines: number[] = [];
 
-  function visit(node) {
+  function visit(node: ts.Node): void {
     if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
       const specifier = node.moduleSpecifier.text;
       if (FAT_REGISTRY_IMPORTS.has(specifier) && node.importClause?.isTypeOnly !== true) {
@@ -88,7 +95,7 @@ const files =
     ? collectSourceFiles(sourceRoot, { extensions: SOURCE_EXTENSIONS, excludedDirs: SKIP_DIRS })
     : [];
 
-const moduleInfoByFile = new Map();
+const moduleInfoByFile = new Map<string, ClientModuleInfo>();
 for (const file of files) {
   const { source, sourceFile } = parseSourceFile(file);
   const { imports, fatRegistryLines } = collectImports(sourceFile);
@@ -102,13 +109,13 @@ for (const file of files) {
   });
 }
 
-const errors = [];
+const errors: string[] = [];
 for (const file of files) {
   const info = moduleInfoByFile.get(file);
   if (!info?.isClientEntry) continue;
 
-  const queue = [{ file, chain: [file] }];
-  const seen = new Set([file]);
+  const queue: { file: string; chain: string[] }[] = [{ file, chain: [file] }];
+  const seen = new Set<string>([file]);
 
   while (queue.length > 0) {
     const current = queue.shift();

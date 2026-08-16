@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createExecutionUnit,
-  normalizeCommandResult,
   runCommandBatches,
   runExecutionUnit,
   runParallelExecutionUnits,
@@ -13,12 +12,6 @@ afterEach(() => {
 });
 
 describe("command runner", () => {
-  it("normalizes command results from legacy number and object return values", () => {
-    expect(normalizeCommandResult(0)).toEqual({ status: 0, aborted: false });
-    expect(normalizeCommandResult({ status: 7, aborted: true })).toEqual({ status: 7, aborted: true });
-    expect(normalizeCommandResult(undefined)).toEqual({ status: 1, aborted: false });
-  });
-
   it("runs commands in order with label logging and per-command env", async () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const calls: Array<{ cmd: string; env: Record<string, string> }> = [];

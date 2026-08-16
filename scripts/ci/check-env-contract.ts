@@ -5,12 +5,12 @@ import { extname, relative, resolve } from "node:path";
 import { collectSourceFiles } from "../lib/source-files.mjs";
 import { splitLines } from "../lib/doc-files.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-const {
+import {
   getAllEnvBindingKeys,
   renderEnvExample,
   renderOperatorOriginAccessEnvBlock,
   renderWorkerInfrastructureEnvBlock,
-} = await import("@shared/lib/env-contract.ts");
+} from "@shared/lib/env-contract";
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
@@ -76,11 +76,26 @@ const WRANGLER_BINDING_SECTIONS = new Map([
   ["version_metadata", { property: "binding", type: "WorkerVersionMetadata" }],
 ]);
 
-function normalizeText(text) {
+interface EnvInterfaceBinding {
+  optional: boolean;
+  type: string;
+}
+
+interface WranglerBinding {
+  source: string;
+  type: string;
+}
+
+interface TomlSection {
+  label: string;
+  name: string;
+}
+
+function normalizeText(text: string): string {
   return text.replace(/\r\n/g, "\n");
 }
 
-function collectFiles(rootDir) {
+function collectFiles(rootDir: string): string[] {
   // Explicit empty excludedDirs: this scan intentionally recurses into __tests__
   // (the shared default excludes it, which would change behavior here).
   return collectSourceFiles(rootDir, {
@@ -89,9 +104,9 @@ function collectFiles(rootDir) {
   });
 }
 
-function parseEnvExampleKeys(filePath) {
-  const keys = new Set();
-  const duplicates = new Set();
+function parseEnvExampleKeys(filePath: string) {
+  const keys = new Set<string>();
+  const duplicates = new Set<string>();
 
   for (const rawLine of splitLines(readFileSync(filePath, "utf8"))) {
     const line = rawLine.trim();
@@ -110,7 +125,7 @@ function parseEnvExampleKeys(filePath) {
   return { duplicates, keys };
 }
 
-export function extractExportedEnvInterfaceBody(source) {
+export function extractExportedEnvInterfaceBody(source: string): string | null {
   const match = /\bexport\s+interface\s+Env\s*\{/u.exec(source);
   if (!match) {
     return null;
@@ -136,18 +151,18 @@ export function extractExportedEnvInterfaceBody(source) {
   return null;
 }
 
-export function parseWorkerEnvInterfaceKeys(filePath) {
+export function parseWorkerEnvInterfaceKeys(filePath: string): Set<string> {
   return new Set(parseWorkerEnvInterfaceBindings(filePath).keys());
 }
 
-export function parseWorkerEnvInterfaceBindings(filePath) {
+export function parseWorkerEnvInterfaceBindings(filePath: string): Map<string, EnvInterfaceBinding> {
   const source = readFileSync(filePath, "utf8");
   const body = extractExportedEnvInterfaceBody(source);
   if (!body) {
     throw new Error(`${relative(repoRoot, filePath)} is missing export interface Env`);
   }
 
-  const bindings = new Map();
+  const bindings = new Map<string, EnvInterfaceBinding>();
   let typeLiteralDepth = 0;
   for (const rawLine of splitLines(body)) {
     const line = rawLine.replace(/\/\/.*$/u, "").trim();
@@ -170,7 +185,7 @@ export function parseWorkerEnvInterfaceBindings(filePath) {
   return bindings;
 }
 
-function parseTomlSectionHeader(line) {
+function parseTomlSectionHeader(line: string): TomlSection | null {
   const content = line.trim().split("#", 1)[0].trim();
   const isArraySection = content.startsWith("[[") && content.endsWith("]]");
   const isTableSection = !isArraySection && content.startsWith("[") && content.endsWith("]");
@@ -188,7 +203,7 @@ function parseTomlSectionHeader(line) {
   };
 }
 
-function isTomlSectionName(name) {
+function isTomlSectionName(name: string): boolean {
   if (name.length === 0) {
     return false;
   }
@@ -203,7 +218,7 @@ function isTomlSectionName(name) {
   return true;
 }
 
-function parseTomlKey(line) {
+function parseTomlKey(line: string): string | null {
   let cursor = 0;
   while (cursor < line.length && /\s/u.test(line[cursor])) {
     cursor += 1;
@@ -231,7 +246,7 @@ function parseTomlKey(line) {
   return line[cursor] === "=" ? key : null;
 }
 
-function parseTomlStringValue(line, key) {
+function parseTomlStringValue(line: string, key: string): string | null {
   if (parseTomlKey(line) !== key) {
     return null;
   }
@@ -262,18 +277,23 @@ function parseTomlStringValue(line, key) {
   return null;
 }
 
-function addWranglerBinding(bindings, duplicates, key, binding) {
+function addWranglerBinding(
+  bindings: Map<string, WranglerBinding>,
+  duplicates: Set<string>,
+  key: string,
+  binding: WranglerBinding,
+): void {
   if (bindings.has(key)) {
     duplicates.add(key);
   }
   bindings.set(key, binding);
 }
 
-export function parseWranglerWorkerConfigBindings(source) {
-  const bindings = new Map();
-  const duplicates = new Set();
-  const unsupported = [];
-  let section = null;
+export function parseWranglerWorkerConfigBindings(source: string) {
+  const bindings = new Map<string, WranglerBinding>();
+  const duplicates = new Set<string>();
+  const unsupported: { key: string; source: string }[] = [];
+  let section: TomlSection | null = null;
 
   for (const rawLine of splitLines(source)) {
     const line = rawLine.trim();
@@ -324,17 +344,22 @@ export function parseWranglerWorkerConfigBindings(source) {
   return { bindings, duplicates, unsupported };
 }
 
-function addRegexMatches(set, source, pattern, captureIndex = 1) {
+function addRegexMatches(
+  set: Set<string>,
+  source: string,
+  pattern: RegExp,
+  captureIndex = 1,
+): void {
   for (const match of source.matchAll(pattern)) {
     const key = match[captureIndex];
-    if (isEnvKeyCandidate(key)) {
+    if (key && isEnvKeyCandidate(key)) {
       set.add(key);
     }
   }
 }
 
-function collectShellEnvKeys(source) {
-  const keys = new Set();
+function collectShellEnvKeys(source: string): Set<string> {
+  const keys = new Set<string>();
 
   for (let index = 0; index < source.length; index += 1) {
     if (source[index] !== "$") continue;
@@ -364,8 +389,8 @@ function collectShellEnvKeys(source) {
   return keys;
 }
 
-export function collectSourceEnvKeys(filePaths) {
-  const keys = new Set();
+export function collectSourceEnvKeys(filePaths: readonly string[]): Set<string> {
+  const keys = new Set<string>();
 
   for (const filePath of filePaths) {
     const source = readFileSync(filePath, "utf8");
@@ -399,8 +424,8 @@ export function collectSourceEnvKeys(filePaths) {
   return keys;
 }
 
-function extractInlineCodeTokens(line) {
-  const tokens = [];
+function extractInlineCodeTokens(line: string): string[] {
+  const tokens: string[] = [];
   let index = 0;
 
   while (index < line.length) {
@@ -419,7 +444,7 @@ function extractInlineCodeTokens(line) {
   return tokens;
 }
 
-function isEnvKeyCandidate(token) {
+function isEnvKeyCandidate(token: string): boolean {
   if (token !== "DB" && !token.includes("_")) return false;
   if (!/[A-Z]/.test(token[0])) return false;
 
@@ -434,8 +459,8 @@ function isEnvKeyCandidate(token) {
   return true;
 }
 
-function collectDocumentedEnvKeys(filePaths) {
-  const seen = new Map();
+function collectDocumentedEnvKeys(filePaths: readonly string[]): Map<string, Set<string>> {
+  const seen = new Map<string, Set<string>>();
 
   for (const filePath of filePaths) {
     let inFence = false;
@@ -462,11 +487,11 @@ function collectDocumentedEnvKeys(filePaths) {
   return seen;
 }
 
-function formatFileList(filePaths) {
+function formatFileList(filePaths: Iterable<string>): string {
   return [...filePaths].map((filePath) => relative(repoRoot, filePath)).sort().join(", ");
 }
 
-function findFirstDifferenceLine(expected, actual) {
+function findFirstDifferenceLine(expected: string, actual: string) {
   const expectedLines = splitLines(expected);
   const actualLines = splitLines(actual);
   const maxLines = Math.max(expectedLines.length, actualLines.length);
@@ -484,11 +509,11 @@ function findFirstDifferenceLine(expected, actual) {
   return null;
 }
 
-function buildGeneratedBlock(marker, content) {
+function buildGeneratedBlock(marker: string, content: string): string {
   return `<!-- ${marker}:BEGIN -->\n${content}\n<!-- ${marker}:END -->`;
 }
 
-function assertFileMatchesExpected(filePath, expected, errors) {
+function assertFileMatchesExpected(filePath: string, expected: string, errors: string[]): void {
   const actual = normalizeText(readFileSync(filePath, "utf8"));
   if (actual === expected) {
     return;
@@ -505,7 +530,12 @@ function assertFileMatchesExpected(filePath, expected, errors) {
   );
 }
 
-function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) {
+function assertGeneratedBlockMatches(
+  filePath: string,
+  marker: string,
+  expectedContent: string,
+  errors: string[],
+): void {
   const source = normalizeText(readFileSync(filePath, "utf8"));
   const startMarker = `<!-- ${marker}:BEGIN -->`;
   const endMarker = `<!-- ${marker}:END -->`;
@@ -534,7 +564,13 @@ function assertGeneratedBlockMatches(filePath, marker, expectedContent, errors) 
   );
 }
 
-export function runEnvContractCheck({ consoleImpl = console, exit = process.exit } = {}) {
+export function runEnvContractCheck({
+  consoleImpl = console,
+  exit = process.exit,
+}: {
+  consoleImpl?: Pick<Console, "error" | "log">;
+  exit?: (code?: number) => unknown;
+} = {}): boolean {
   const envExample = parseEnvExampleKeys(envExamplePath);
   const manifestEnvKeys = new Set(getAllEnvBindingKeys());
   const workerEnvInterfaceBindings = parseWorkerEnvInterfaceBindings(workerEnvPath);
@@ -547,7 +583,7 @@ export function runEnvContractCheck({ consoleImpl = console, exit = process.exit
     ...sourceEnvKeys,
   ]);
 
-  const errors = [];
+  const errors: string[] = [];
 
   if (envExample.duplicates.size > 0) {
     errors.push(`.env.example defines duplicate keys: ${[...envExample.duplicates].sort().join(", ")}`);
@@ -597,11 +633,11 @@ export function runEnvContractCheck({ consoleImpl = console, exit = process.exit
 
   const wranglerBindingTypeMismatches = [...wranglerConfigBindings.bindings]
     .filter(([key, binding]) => {
-      const envBinding = workerEnvInterfaceBindings.get(key);
+      const envBinding = workerEnvInterfaceBindings.get(key)!;
       return envBinding && envBinding.type !== binding.type;
     })
     .map(([key, binding]) => {
-      const envBinding = workerEnvInterfaceBindings.get(key);
+      const envBinding = workerEnvInterfaceBindings.get(key)!;
       return `${key} (${binding.source}) is ${binding.type}, Env declares ${envBinding.type}`;
     })
     .sort();
