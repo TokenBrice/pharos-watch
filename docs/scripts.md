@@ -201,7 +201,7 @@ The root, test, and Worker TypeScript lanes own duplicate-declaration diagnostic
 - `check:critical-coverage-completeness` via every non-doc PR static validation path
 - `coverage:critical` via PRs touching enrolled critical source plus the blocking weekly/manual Critical Coverage Ratchet workflow
 - `screenshot-og.mjs` via `npm run og:capture` in the weekly/manual OG refresh workflow
-- `classify-deploy-changes.ts` via the `plan` job in `.github/workflows/deploy-cloudflare.yml` and the change-detection job in `.github/workflows/pull-request-checks.yml`
+- `classify-deploy-changes.ts` via the `plan` job in `.github/workflows/deploy-cloudflare.yml` and the change-detection job in `.github/workflows/pull-request-checks.yml`; both jobs install the shared workspace before invoking the TypeScript entrypoint
 - `build-og-editorial.mjs --check` via `check:generated-artifacts` and `build-og-editorial.mjs` via the `prebuild` hook. CI provisions Playwright Firefox through `setup-workspace`; the generator fails with a setup error instead of installing browsers implicitly.
 - `check-worker-import-boundary.mjs` via `npm run check:worker-boundary`
 - `check-site-csp-sync.ts` via `npm run check:site-csp-sync`
