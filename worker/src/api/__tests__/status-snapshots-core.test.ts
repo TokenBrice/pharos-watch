@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { StatusResponseSchema } from "@shared/types/status";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -85,13 +86,10 @@ function fixtureMockD1(
 
 describe("handleStatus", () => {
   afterEach(cleanupStatusTest);
-  it("returns 401 when no ops-api access signal is provided", async () => {
-    const db = fixtureMockD1([]);
-    const res = await handleStatus({ db });
-
-    expect(res.status).toBe(401);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Unauthorized");
+  registerUnauthorizedEndpointContract({
+    name: "status",
+    invoke: () => handleStatus({ db: fixtureMockD1([]) }),
+    body: { error: "Unauthorized" },
   });
 
   it("serves raw status fields from a fresh cron snapshot", async () => {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 
 vi.mock("../../lib/mint-burn-historical-price-repair", () => ({
   DEFAULT_HISTORICAL_MINT_PRICE_REPAIR_LIMIT: 100,
@@ -106,10 +107,9 @@ describe("handleBackfillMintBurnPrices", () => {
     expect(repairHistoricalMintBurnPrices).not.toHaveBeenCalled();
   });
 
-  it("requires admin auth", async () => {
-    const response = await handleBackfillMintBurnPrices({ db, url: makeApiUrl("/api/backfill-mint-burn-prices"), request: makeApiRequest("/api/backfill-mint-burn-prices") });
-
-    expect(response.status).toBe(401);
-    expect(await response.json()).toEqual({ error: "Unauthorized" });
+  registerUnauthorizedEndpointContract({
+    name: "mint/burn price backfill",
+    invoke: () => handleBackfillMintBurnPrices({ db, url: makeApiUrl("/api/backfill-mint-burn-prices"), request: makeApiRequest("/api/backfill-mint-burn-prices") }),
+    body: { error: "Unauthorized" },
   });
 });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import * as flightToQualityClassification from "../../lib/flight-to-quality-classification";
 import {
@@ -162,13 +163,11 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).not.toHaveProperty("gauge");
   });
 
-  it("unknown stablecoin returns 404", async () => {
-    const url = new URL("https://x/api/mint-burn-flows?stablecoin=99999");
-    const res = await handleMintBurnFlows(db, url);
-
-    expect(res.status).toBe(404);
-    const body = await res.json();
-    expect(body).toHaveProperty("error");
+  registerStablecoinParameterContract({
+    name: "mint/burn flows",
+    path: "/api/mint-burn-flows",
+    invoke: handleMintBurnFlows,
+    cases: [{ kind: "unknown", stablecoin: "99999" }],
   });
 
   it("returns 404 for a valid stablecoin that is not tracked for mint/burn flows", async () => {

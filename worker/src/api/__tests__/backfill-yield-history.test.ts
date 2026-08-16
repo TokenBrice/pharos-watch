@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerStablecoinParameterContract, registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillYieldHistory } from "../backfill-yield-history";
 import type { ResolvedYield } from "../../cron/yield-sync/types";
 
@@ -56,17 +57,16 @@ describe("handleBackfillYieldHistory", () => {
     vi.clearAllMocks();
   });
 
-  it("requires admin auth", async () => {
-    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history"), request: makeApiRequest("/api/backfill-yield-history") });
-
-    expect(res.status).toBe(401);
+  registerUnauthorizedEndpointContract({
+    name: "yield history backfill",
+    invoke: () => handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history"), request: makeApiRequest("/api/backfill-yield-history") }),
   });
 
-  it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillYieldHistory({ db: makeDb(), url: makeApiUrl("/api/backfill-yield-history?stablecoin=not-a-real-id"), trustedAdmin: true, request: makeApiRequest("/api/backfill-yield-history?stablecoin=not-a-real-id", { adminKey: "secret" }) });
-
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Stablecoin not found" });
+  registerStablecoinParameterContract({
+    name: "yield history backfill",
+    path: "/api/backfill-yield-history",
+    invoke: (db, url) => handleBackfillYieldHistory({ db, url, trustedAdmin: true, request: makeApiRequest(url.toString(), { adminKey: "secret" }) }),
+    cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
   });
 
   it("returns no-op response for out-of-range batches", async () => {

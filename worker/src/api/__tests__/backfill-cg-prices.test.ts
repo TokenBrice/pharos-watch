@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillCgPricesTrusted } from "../backfill-cg-prices";
 
 stubCryptoForAuth();
@@ -55,10 +56,11 @@ describe("handleBackfillCgPrices", () => {
     vi.clearAllMocks();
   });
 
-  it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillCgPricesTrusted({ db: makeDb(), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=missing") });
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Stablecoin not found" });
+  registerStablecoinParameterContract({
+    name: "CoinGecko price backfill",
+    path: "/api/backfill-cg-prices",
+    invoke: (db, url) => handleBackfillCgPricesTrusted({ db, url }),
+    cases: [{ kind: "unknown", stablecoin: "missing", error: "Stablecoin not found" }],
   });
 
   it("returns no-op response for out-of-range batches", async () => {

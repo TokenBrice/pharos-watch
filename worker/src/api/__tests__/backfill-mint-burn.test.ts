@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 
 stubCryptoForAuth();
 
@@ -55,10 +56,9 @@ describe("handleBackfillMintBurn", () => {
     for (const id of originalActiveIds) mutableActiveIds.add(id);
   });
 
-  it("requires admin auth", async () => {
-    const response = await handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), request: makeApiRequest("/api/backfill-mint-burn"), alchemyApiKey: "alchemy-key" });
-
-    expect(response.status).toBe(401);
+  registerUnauthorizedEndpointContract({
+    name: "mint/burn backfill",
+    invoke: () => handleBackfillMintBurn({ db: makeDb(), url: makeApiUrl("/api/backfill-mint-burn?configKey=ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"), request: makeApiRequest("/api/backfill-mint-burn"), alchemyApiKey: "alchemy-key" }),
   });
 
   it("auto-selects a config when configKey is omitted", async () => {

@@ -2,6 +2,7 @@ import { DepegEventsResponseSchema } from "@shared/types/market";
 import { describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
 
 describe("handleDepegEvents", () => {
@@ -105,10 +106,11 @@ describe("handleDepegEvents", () => {
     expect(body.total).toBe(0);
   });
 
-  it("rejects unknown stablecoin ID with 404", async () => {
-    const db = mockD1([]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=<script>"));
-    expect(res.status).toBe(404);
+  registerStablecoinParameterContract({
+    name: "depeg events",
+    path: "/api/depeg-events",
+    invoke: handleDepegEvents,
+    cases: [{ kind: "unknown", stablecoin: "<script>" }],
   });
 
   it("filters active events", async () => {

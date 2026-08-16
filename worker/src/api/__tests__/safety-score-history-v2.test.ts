@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SafetyScoreHistoryV2ResponseSchema } from "@shared/types/safety-score-history";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSafetyScoreHistoryV2 } from "../safety-score-history-v2";
 
 const DIGEST = "a".repeat(64);
@@ -158,10 +159,10 @@ describe("handleSafetyScoreHistoryV2", () => {
     ]);
   });
 
-  it("requires a stablecoin selector", async () => {
-    const response = await handleSafetyScoreHistoryV2(mockD1([], { requireMatch: true }), new URL("https://x/api/safety-score-history-v2"));
-
-    expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Missing ?stablecoin= parameter" });
+  registerStablecoinParameterContract({
+    name: "safety score history v2",
+    path: "/api/safety-score-history-v2",
+    invoke: handleSafetyScoreHistoryV2,
+    cases: [{ kind: "missing" }],
   });
 });

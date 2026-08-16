@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleBackfillStabilityIndex } from "../backfill-stability-index";
 import { computeStabilityIndex } from "../../lib/stability-index";
 
@@ -210,9 +211,9 @@ describe("handleBackfillStabilityIndex", () => {
     vi.useRealTimers();
   });
 
-  it("requires admin auth", async () => {
-    const res = await callBackfillStabilityIndex({ db: makeDb(), request: makeApiRequest("/api/backfill-stability-index") });
-    expect(res.status).toBe(401);
+  registerUnauthorizedEndpointContract({
+    name: "stability index backfill",
+    invoke: () => callBackfillStabilityIndex({ db: makeDb(), request: makeApiRequest("/api/backfill-stability-index") }),
   });
 
   it("returns 404 when there are no depeg events", async () => {
