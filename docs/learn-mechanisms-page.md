@@ -19,7 +19,7 @@ Each configured `mechanismArchetype` gets a dedicated educational page covering 
 - **Body section renderer:** `src/app/learn/mechanisms/explainer-shell.tsx` (`ArchetypeExplainerBody`)
 - **Content registry:** `src/app/learn/mechanisms/content/index.ts` (`ARCHETYPE_CONTENT`)
 - **Per-archetype content modules:** `src/app/learn/mechanisms/content/{fiat-cash,tbill,cdp,synthetic-delta-neutral,algorithmic,rwa-credit-fund,commodity-claim}.ts`
-- **Content schema:** `src/app/learn/mechanisms/content/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
+- **Content schema:** `src/lib/mechanism-explainers/types.ts` (`ArchetypeContent` interface, `ARCHETYPE_VISUALS` map)
 - **Slug helpers (single source of truth):** `shared/lib/classification/mechanism-archetypes.ts`
   - `MECHANISM_ARCHETYPE_LABELS`, `MECHANISM_ARCHETYPE_ONE_LINERS`
   - `getMechanismArchetypeLabel(archetype)`
@@ -103,7 +103,7 @@ No footer entry. The hub is the only deep-link from `Mechanisms`-related surface
 
 1. Add the slug to `MECHANISM_ARCHETYPE_VALUES` in `shared/types/core.ts`.
 2. Add the label + one-liner entries to `MECHANISM_ARCHETYPE_LABELS` and `MECHANISM_ARCHETYPE_ONE_LINERS` in `shared/lib/classification/mechanism-archetypes.ts`. The typechecker enforces exhaustiveness.
-3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/app/learn/mechanisms/content/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
+3. Add the corresponding `ARCHETYPE_VISUALS` entry in `src/lib/mechanism-explainers/types.ts`, preserving the route's neutral shared chrome unless the design contract changes.
 4. Author a new content module under `src/app/learn/mechanisms/content/<slug>.ts` and register it in `src/app/learn/mechanisms/content/index.ts`.
 5. Add a `TITLE_BY_ARCHETYPE` and `DESCRIPTION_BY_ARCHETYPE` entry in `src/app/learn/mechanisms/[archetype]/page.tsx`.
 6. For a flow that fits the three-step pattern, add a `THREE_STEP_ARCHETYPE_CONFIG` entry and a branch in `renderArchetype` in `src/components/stablecoin-detail/mechanism-diagrams/` (reuse `ThreeStepArchetypeDiagram`). Only build a dedicated `<slug>-diagram.tsx` component if the flow needs a custom layout (as `synthetic-delta-neutral` does).

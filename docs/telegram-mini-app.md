@@ -36,7 +36,7 @@ Owned files:
 - `worker/src/api/telegram-mini-app-rate-limit.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/cron/telegram-recap-store.ts`
+- `worker/src/lib/telegram-recap-store.ts`
 - `worker/src/lib/telegram-mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-recap-policy.ts`
