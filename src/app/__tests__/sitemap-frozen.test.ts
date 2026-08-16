@@ -30,6 +30,13 @@ describe("sitemap", () => {
     expect(sitemapPaths).toEqual([...PUBLIC_ROUTE_PATHS].sort());
   });
 
+  it("emits a valid last-modified date for every URL", () => {
+    for (const entry of sitemap()) {
+      expect(entry.lastModified, entry.url).toBeInstanceOf(Date);
+      expect(Number.isFinite((entry.lastModified as Date).getTime()), entry.url).toBe(true);
+    }
+  });
+
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {
     const entries = sitemap();
     const urls = new Set(entries.map((entry) => entry.url));

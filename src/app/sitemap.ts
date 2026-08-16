@@ -234,7 +234,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const taxonomyPages: MetadataRoute.Sitemap = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => ({
     url: `${SITE_URL}${page.href}`,
-    lastModified: lastEdited(page.href),
+    lastModified: lastEdited(page.href, "/stablecoins/"),
     changeFrequency: "weekly" as const,
     priority: 0.7,
   }));
