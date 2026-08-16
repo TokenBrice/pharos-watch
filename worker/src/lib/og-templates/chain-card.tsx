@@ -11,7 +11,8 @@ export interface ChainCardTopStablecoin {
 export interface ChainCardData {
   name: string;
   totalUsd: number;
-  change7dPct: number;
+  /** 0-100 percentage, already converted from the 0-1 ratio the chain aggregate carries. */
+  change7dPercent: number;
   stablecoinCount: number;
   dominanceShare: number;
   healthScore: number | null;
@@ -36,8 +37,8 @@ function healthBandColor(band: string | null): string {
 export function ChainCard({ data }: { data: ChainCardData }) {
   const bandColor = healthBandColor(data.healthBand);
   const changeColor =
-    data.change7dPct > 0 ? SEMANTIC_COLORS.positive : data.change7dPct < 0 ? SEMANTIC_COLORS.negative : SEMANTIC_COLORS.neutral;
-  const changeSign = data.change7dPct > 0 ? "+" : "";
+    data.change7dPercent > 0 ? SEMANTIC_COLORS.positive : data.change7dPercent < 0 ? SEMANTIC_COLORS.negative : SEMANTIC_COLORS.neutral;
+  const changeSign = data.change7dPercent > 0 ? "+" : "";
   const maxShare = Math.max(...data.topStablecoins.map((coin) => coin.share), 0.01);
 
   return (
@@ -61,7 +62,7 @@ export function ChainCard({ data }: { data: ChainCardData }) {
           <span style={{ fontSize: 72, fontWeight: 700 }}>{formatCurrency(data.totalUsd, 1)}</span>
           <span style={{ fontSize: 28, fontWeight: 600, color: changeColor }}>
             {changeSign}
-            {data.change7dPct.toFixed(1)}% 7d
+            {data.change7dPercent.toFixed(1)}% 7d
           </span>
         </div>
       </div>

@@ -7,7 +7,7 @@ import {
   runFullLockfileDependencyAudit,
   verifyDependencyAuditReport,
 } from "../ci/verify-dependency-audit.ts";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.mjs";
+import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
 
 type AuditVulnerability = {
   effects: string[];

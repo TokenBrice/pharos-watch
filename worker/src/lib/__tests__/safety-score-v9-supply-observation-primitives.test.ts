@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
   decodeEvmAddress,
@@ -104,20 +105,13 @@ describe("Safety Score V9 supply observation primitives", () => {
   });
 
   it("preserves ordered Solana RPC failover without retrying one endpoint", async () => {
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({ error: { code: -32000, message: "unavailable" } }),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ result: { slot: 42 } }), {
-          status: 200,
-        }),
-      );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: { code: -32000, message: "unavailable" } } },
+        { body: { result: { slot: 42 } } },
+      ],
+    }]);
 
     await expect(
       fetchSafetyScoreV9SolanaRpc<{ slot: number }>(

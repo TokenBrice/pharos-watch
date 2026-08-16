@@ -9,6 +9,7 @@ import {
   installMatchMediaMock,
   resetBrowserStorage,
 } from "@/test-utils/frontend";
+import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
@@ -113,11 +114,12 @@ function mockSelectorOutput(
   };
 }
 
-function jsonResponse(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), {
+function installSnapshotFetch(body: unknown, status = 200): MockFetchSpy {
+  return mockFetch([{
+    match: "/selector-snapshot/",
+    body,
     status,
-    headers: { "Content-Type": "application/json" },
-  });
+  }], { requireMatch: true });
 }
 
 const { runSelectorMock } = vi.hoisted(() => ({
@@ -636,8 +638,7 @@ describe("SelectorClient — state machine", () => {
   });
 
   it("jumps directly to an answer step from result edit chips and clears snapshot state", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
-    vi.stubGlobal("fetch", fetchMock);
+    installSnapshotFetch(mockSelectorOutput());
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -731,8 +732,7 @@ describe("selector-state input adapter", () => {
 
 describe("SelectorClient — snapshot recall", () => {
   it("renders sid-only share links from the frozen snapshot output", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = installSnapshotFetch(mockSelectorOutput());
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -749,8 +749,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("renders server-recomputed replay output as Pharos-verified", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({
+    installSnapshotFetch({
         ...mockSelectorOutput(),
         provenance: "pharos-verified",
         snapshotSchemaVersion: 3,
@@ -759,9 +758,7 @@ describe("SelectorClient — snapshot recall", () => {
           datasetHash: "abc123",
           engineVersion: "selector-v1.2",
         },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    });
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -774,8 +771,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("shows a snapshot-miss banner when a missing snapshot is recomputed from current data", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({}, 404));
-    vi.stubGlobal("fetch", fetchMock);
+    installSnapshotFetch({}, 404);
 
     setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result&sid=ffffffffffffffffffffffffffffffff");
     render(<SelectorClient />);
@@ -793,8 +789,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("rejects structurally corrupt snapshot payloads returned with 200", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ input: { profile: "treasury" }, rows: "not-an-array" }));
-    vi.stubGlobal("fetch", fetchMock);
+    installSnapshotFetch({ input: { profile: "treasury" }, rows: "not-an-array" });
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -805,8 +800,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("does not fetch malformed snapshot ids and shows the invalid-link error", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     setUrlSearch("sid=not-a-valid-sid");
     render(<SelectorClient />);
@@ -822,8 +816,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("keeps a frozen snapshot visible and compares it to current data", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
-    vi.stubGlobal("fetch", fetchMock);
+    installSnapshotFetch(mockSelectorOutput());
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);
@@ -838,8 +831,7 @@ describe("SelectorClient — snapshot recall", () => {
   });
 
   it("clears the snapshot id when adjusting a frozen result", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(mockSelectorOutput()));
-    vi.stubGlobal("fetch", fetchMock);
+    installSnapshotFetch(mockSelectorOutput());
 
     setUrlSearch("sid=00112233445566778899aabbccddeeff");
     render(<SelectorClient />);

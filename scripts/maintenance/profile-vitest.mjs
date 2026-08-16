@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, extname, isAbsolute, relative, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
-import { localBin } from "../lib/local-bin.mjs";
+import { localBin } from "../lib/local-bin.mts";
 
 const DEFAULT_OUTPUT = resolve(tmpdir(), "pharos-vitest-profile.json");
 const DEFAULT_TOP_LIMIT = 20;

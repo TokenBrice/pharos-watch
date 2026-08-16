@@ -42,7 +42,7 @@ const baseConfig: NextConfig = {
 
 async function devRewrites() {
   // When SITE_API_SHARED_SECRET is configured in .env.local, route through
-  // the local dev proxy (scripts/maintenance/dev-api-proxy.mjs) which injects the secret
+  // the local dev proxy (scripts/maintenance/dev-api-proxy.ts) which injects the secret
   // header — mimicking the production Pages Functions site-data proxy.
   // Without the secret, fall back to the direct (unauthenticated) rewrite.
   const configuredProxyPort = Number.parseInt(process.env.DEV_PROXY_PORT ?? "3001", 10);

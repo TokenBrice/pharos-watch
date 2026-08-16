@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { compareText } from "./safety-score-v9-fact-primitives";
-
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
+import { CanonicalTextSchema } from "./safety-schema-primitives";
 
 function canonicalTextArray(minLength = 0) {
   return z

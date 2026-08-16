@@ -1,5 +1,4 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /**
  * Yield Pipeline — Pure Computation Functions
@@ -18,31 +17,22 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
  */
 export { buildOnChainSourceKey } from "../lib/yield-utils";
 
-const YIELD_STALE_THRESHOLD_SYNC_CYCLES = 3;
-export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STALE_THRESHOLD_SYNC_CYCLES * 1000;
-// Supplemental families refresh every four hours, so allow one full cycle plus a half-cycle buffer
-// before surfacing stale warnings on the hourly publisher.
-const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
-export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
-  CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
-// These protocol-native NAV sources publish less frequently and already reject
-// observations older than three days in their adapters.
-export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * 24 * 60 * 60 * 1000;
-const SLOW_NAV_SOURCE_KEYS = new Set([
-  "protocol-api:hashnote-usyc",
-  "protocol-api:midas-mmev-nav-oracle",
-  "protocol-api:re-protocol-reusd",
-]);
-// Price-derived rows are backed by daily supply-history snapshots, so allow one missed daily write plus buffer.
-export const PRICE_DERIVED_STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000;
-// Rate-derived rows inherit daily benchmark observations rather than the hourly
-// publisher cadence. Allow one missed daily benchmark refresh before warning.
-export const RATE_DERIVED_STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000;
 export const DETERMINISTIC_APY_SANITY_MAX = 300;
-export const COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 14 * 24 * 60 * 60 * 1000;
-// Price/NAV appreciation sources intentionally select an anchor from a 7-45d
-// window. Their anchor is only stale after the window itself has expired.
-export const LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS = 45 * 24 * 60 * 60 * 1000;
+
+export {
+  classifyYieldSourceFreshness,
+  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  derivePysNullReason,
+  getComparisonAnchorStaleThresholdMs,
+  getRankingStaleThresholdMs,
+  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
+  PRICE_DERIVED_STALE_THRESHOLD_MS,
+  RATE_DERIVED_STALE_THRESHOLD_MS,
+  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
+  STALE_THRESHOLD_MS,
+  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
+  type YieldSourceFreshness,
+} from "../lib/yield-ranking-helpers";
 
 export {
   computePYS,
@@ -52,9 +42,7 @@ export {
   PYS_MAX_SOURCE_RISK_PENALTY,
   resolvePysSourceRiskPenalty,
 } from "@shared/lib/yield-scoring";
-import { computePysComponents } from "@shared/lib/yield-scoring";
-import type { YieldPysNullReason } from "@shared/types/yield";
-import { resolveChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/lib/chains";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
@@ -72,32 +60,18 @@ const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
   /\b(?:usr|stusr|wstusr)\b/i,
 ];
 
-interface PysNullReasonInput {
-  apy30d: number;
-  safetyScore: number | null;
-  apyVarianceScore: number;
-  scalingFactor: number;
-  benchmarkRate?: number | null;
-  sourceRiskPenalty?: number | null;
+function normalizeChainFilter(filter: Set<string> | undefined): Set<string> | undefined {
+  if (!filter) return undefined;
+  return new Set(
+    [...filter]
+      .map((chain) => normalizeChainId(chain))
+      .filter((chain): chain is string => chain !== null),
+  );
 }
-
-/**
- * Mirrors the null/zero branches of `computePYS` so the UI can explain why a
- * row's score is null. Returns null when the inputs would yield a positive PYS.
- */
-export function derivePysNullReason(input: PysNullReasonInput): YieldPysNullReason | null {
-  if (!Number.isFinite(input.apy30d)) return "missing-inputs";
-  if (input.apy30d <= 0) return "apy-non-positive";
-  if (!Number.isFinite(input.scalingFactor) || input.scalingFactor <= 0) return "scaling-invalid";
-  const { effectiveYield } = computePysComponents({
-    apy30d: input.apy30d,
-    safetyScore: input.safetyScore,
-    apyVarianceScore: input.apyVarianceScore,
-    benchmarkRate: input.benchmarkRate,
-    sourceRiskPenalty: input.sourceRiskPenalty,
-  });
-  if (effectiveYield <= 0) return "effective-yield-non-positive";
-  return null;
+function isChainAllowed(filter: Set<string> | undefined, chain: string | undefined): boolean {
+  if (!filter || !chain) return true;
+  const chainId = normalizeChainId(chain);
+  return chainId !== null && filter.has(chainId);
 }
 
 export function computeApyFromRate(rateNow: number, ratePrev: number, days: number): number {
@@ -175,62 +149,6 @@ export function isBlockedYieldOpportunitySource(params: {
   return BLOCKED_YIELD_OPPORTUNITY_PATTERNS.some((pattern) => pattern.test(searchText));
 }
 
-function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {
-  return sourceKey?.startsWith("aave-v3-onchain:") === true || sourceKey?.startsWith("compound-v3:") === true;
-}
-
-export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: string | null): number {
-  if (dataSource === "price-derived") {
-    return PRICE_DERIVED_STALE_THRESHOLD_MS;
-  }
-  if (dataSource === "rate-derived") {
-    return RATE_DERIVED_STALE_THRESHOLD_MS;
-  }
-  if (dataSource === "protocol-api" && sourceKey != null && SLOW_NAV_SOURCE_KEYS.has(sourceKey)) {
-    return SLOW_NAV_SOURCE_STALE_THRESHOLD_MS;
-  }
-  if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
-    return SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS;
-  }
-  return STALE_THRESHOLD_MS;
-}
-
-export type YieldSourceFreshness = "fresh" | "stale" | "unknown";
-
-export function classifyYieldSourceFreshness(input: {
-  dataSource: string;
-  sourceKey?: string | null;
-  sourceAgeSeconds: number | null;
-  comparisonAnchorAgeSeconds?: number | null;
-}): YieldSourceFreshness {
-  const staleThresholdMs = getRankingStaleThresholdMs(input.dataSource, input.sourceKey);
-  if (
-    input.comparisonAnchorAgeSeconds != null &&
-    input.comparisonAnchorAgeSeconds * 1000 > getComparisonAnchorStaleThresholdMs(input.dataSource, input.sourceKey)
-  ) {
-    return "stale";
-  }
-  if (input.sourceAgeSeconds == null || !Number.isFinite(input.sourceAgeSeconds)) {
-    return "unknown";
-  }
-  return input.sourceAgeSeconds * 1000 > staleThresholdMs ? "stale" : "fresh";
-}
-
-function isLongHorizonNavAnchor(sourceKey: string | null | undefined): boolean {
-  return sourceKey?.includes("protocol-api:ondo-usdy-oracle") === true
-    || sourceKey?.includes("protocol-api:midas-mmev-nav-oracle") === true;
-}
-
-export function getComparisonAnchorStaleThresholdMs(
-  dataSource: string,
-  sourceKey?: string | null,
-): number {
-  if (dataSource === "price-derived" || isLongHorizonNavAnchor(sourceKey)) {
-    return LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
-  }
-  return COMPARISON_ANCHOR_STALE_THRESHOLD_MS;
-}
-
 /**
  * Returns ALL DL pools that are yield sources for the given coin.
  *
@@ -272,14 +190,10 @@ export function matchAllDlPools(
   const nativeId = poolMap[stablecoinId];
   const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
   const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
-  const normalizedChainFilter = options?.chainFilter
-    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
-    : undefined;
+  const normalizedChainFilter = normalizeChainFilter(options?.chainFilter);
 
   const isEligibleChain = (poolChain: string | undefined): boolean => {
-    if (!normalizedChainFilter || !poolChain) return true;
-    const chainId = resolveChainId(poolChain) ?? poolChain.toLowerCase();
-    return normalizedChainFilter.has(chainId);
+    return isChainAllowed(normalizedChainFilter, poolChain);
   };
   const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
   const addressMatches = (pool: { underlyingTokens?: string[] | null }): boolean =>
@@ -301,7 +215,7 @@ export function matchAllDlPools(
   const variant = variantMap[stablecoinId];
   if (variant) {
     const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
-    const variantChain = variant.variantChain ? resolveChainId(variant.variantChain) ?? variant.variantChain.toLowerCase() : null;
+    const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
     const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
     const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
 
@@ -310,7 +224,7 @@ export function matchAllDlPools(
         pool.exposure === "single" &&
         !seenUuids.has(pool.pool) &&
         !isReservedForAnotherCoin(pool.pool) &&
-        (!variantChain || (resolveChainId(pool.chain ?? "") ?? pool.chain?.toLowerCase()) === variantChain),
+        (!variantChain || normalizeChainId(pool.chain) === variantChain),
     );
 
     const addressCandidates = variantAddress
@@ -473,9 +387,7 @@ export function findBestLendingPool(
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
   const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
-  const chainFilter = options?.chainFilter
-    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
-    : undefined;
+  const chainFilter = normalizeChainFilter(options?.chainFilter);
   const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
 
   const baseCandidates = dlPools.filter((p) =>
@@ -483,7 +395,7 @@ export function findBestLendingPool(
     !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
     !reservedPoolIds.has(p.pool) &&
     !options?.isBlockedPool?.(p) &&
-    (!chainFilter || !p.chain || chainFilter.has(resolveChainId(p.chain) ?? p.chain.toLowerCase()))
+    isChainAllowed(chainFilter, p.chain)
   );
 
   // Primary match: underlying token address match.

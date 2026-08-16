@@ -4,7 +4,7 @@ import {
   collectUncommittedPaths,
   enforceCommittedArtifactSources,
   findUncommittedArtifactSources,
-} from "../lib/commit-derived-artifacts.mjs";
+} from "../lib/commit-derived-artifacts.mts";
 
 describe("commit-derived artifact guard", () => {
   it("collects staged, unstaged, and untracked paths without duplicates", () => {

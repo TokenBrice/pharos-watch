@@ -1,5 +1,6 @@
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+
+export { normalizeChainId as resolveCanonicalChain } from "@shared/lib/chains";
 
 /**
  * Build a deduped list of RPC URLs from a ChainRpcConfig.
@@ -41,21 +42,4 @@ export function createOptionalSourceBudget(
     budgetController,
     cleanup: () => clearTimeout(timer),
   };
-}
-
-export function resolveCanonicalChain(chain: string | number | null | undefined): string | null {
-  if (typeof chain === "number") {
-    for (const [chainId, meta] of Object.entries(CHAIN_META)) {
-      if (meta.evmChainId === chain) {
-        return chainId;
-      }
-    }
-    return null;
-  }
-
-  if (typeof chain === "string" && chain.length > 0) {
-    return resolveChainId(chain) ?? chain.toLowerCase();
-  }
-
-  return null;
 }

@@ -11,6 +11,7 @@ import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 describe("parseSupplyData", () => {
@@ -26,6 +27,12 @@ describe("parseSupplyData", () => {
       { ts: 100, supply: 40 },
       { ts: 200, supply: 20 },
     ]);
+  });
+
+  it("sums all circulating buckets without applying a price", () => {
+    expect(parseSupplyData([
+      { date: "100", circulating: { peggedUSD: 125, peggedEUR: 75 } },
+    ])).toEqual([{ ts: 100, supply: 200 }]);
   });
 });
 
@@ -150,10 +157,10 @@ describe("fetchHistoricalSecondaryFxRates", () => {
   it("drains non-OK secondary FX fallback responses", async () => {
     const primary = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
     const fallback = new Response(JSON.stringify({ error: "missing" }), { status: 404 });
-    vi.stubGlobal("fetch", vi.fn(async (input: string | Request) => {
-      const url = typeof input === "string" ? input : input.url;
-      return url.includes("cdn.jsdelivr.net") ? primary : fallback;
-    }));
+    mockFetch([
+      { match: "cdn.jsdelivr.net", outcomes: [{ response: primary }] },
+      { match: ".currency-api.pages.dev", outcomes: [{ response: fallback }] },
+    ], { requireMatch: true });
 
     const db = mockD1([
       {

@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { SECONDS } from "../../lib/time-constants";
 import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
@@ -22,7 +23,7 @@ export async function collectTotalMcapAth(
       )
       .first<{ ath_value: number | null; ath_date: number | null }>();
     if (!row || row.ath_value == null || row.ath_date == null || row.ath_value <= 0) return undefined;
-    const dayTs = row.ath_date - (row.ath_date % SECONDS.ONE_DAY);
+    const dayTs = bucketUnixSecondsToUtcDay(row.ath_date);
     return {
       value: row.ath_value,
       date: dayTs,
@@ -125,7 +126,7 @@ export async function collectHistoricalContext(
       } | null = null;
 
       if (digestPrecedent) {
-        const dayTs = digestPrecedent.generated_at - (digestPrecedent.generated_at % SECONDS.ONE_DAY);
+        const dayTs = bucketUnixSecondsToUtcDay(digestPrecedent.generated_at);
         psiPrecedent = {
           lastSeenDate: dayTs,
           lastSeenDaysAgo: Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY),

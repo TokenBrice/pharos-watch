@@ -1,11 +1,10 @@
+import type { Ratio } from "../types/ratio";
+
+export type { Ratio };
+
 function finiteSorted(values: readonly number[]): number[] {
   return values.filter(Number.isFinite).sort((left, right) => left - right);
 }
-
-declare const ratioUnit: unique symbol;
-
-/** A unit-explicit ratio where 1 represents 100%. Ratios may exceed the 0-1 fraction range. */
-export type Ratio = number & { readonly [ratioUnit]: "ratio" };
 
 /** Numerator divided by denominator on the ratio scale (1 = 100%). */
 export function ratio(numerator: number, denominator: number): Ratio | null {

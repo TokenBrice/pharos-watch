@@ -7,11 +7,11 @@ import {
 } from "./safety-score-v9";
 import { compareText } from "./safety-score-v9-fact-primitives";
 
+import { V9_GRADE_THRESHOLDS } from "./safety-score-v9-grade";
+
 // Canonical ordering is a determinism-digest input; it has one definition.
 export { compareText };
-
-export const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-export const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
+export { BaseInputGenerationIdSchema, Sha256Schema } from "./safety-schema-primitives";
 export const ScoreSchema = z.number().finite().min(0).max(100);
 export const V9PolicyVersionSchema = z.string().regex(/^\d+\.\d+$/);
 const AccessPostureFieldSchema = z.enum(["transfer", "freezeExposure", "primaryExit", "governance"]);
@@ -25,7 +25,17 @@ export const RESPONSIBILITIES = [
 export const SCORE_TOLERANCE = 0.0002;
 export const EXIT_SCORE_TOLERANCE = 0.03;
 export const PUBLIC_SCORE_ROUNDING_HEADROOM = 0.5;
-export const C_MINUS_MIN_SCORE = 50;
+// Validation-only mirrors of policy-owned values: these check published output rather than
+// computing it, so they are deliberately NOT admitted to the policy digest — that would rotate it
+// without changing any score. They should still be derived, because a validator that re-encodes a
+// threshold can reject a correct publication once the policy moves.
+export const C_MINUS_MIN_SCORE =
+  V9_GRADE_THRESHOLDS.find((threshold) => threshold.grade === "C-")?.min ?? 50;
+// Not derivable here. The score-bearing gates policy is a code constant in shared/lib, and
+// shared/types must not import shared/lib (see the note in api-key-requests.ts:73) — the whole
+// point of keeping the grade thresholds in this layer is to avoid that inversion. Deriving this
+// requires deciding where the gates policy lives, which belongs to the 9.23 provenance release
+// alongside the other outstanding score-bearing literals.
 export const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
 export const V9_BOUNDED_ATTRIBUTION_REASON_CODES = [
   "bounded-mechanism-review",

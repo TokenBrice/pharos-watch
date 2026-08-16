@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mjs";
+import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
 import {
   collectInputEntries,
   compareText,

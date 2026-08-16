@@ -4,7 +4,7 @@ import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
-import { jsonResponse } from "../../test-helpers/__shared/mock-fetch";
+import { jsonResponse, mockFetch as createFetchMock } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -15,8 +15,7 @@ vi.mock("../../lib/abort", async () => {
 });
 
 // Mock global fetch
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+let mockFetch = createFetchMock([], { requireMatch: true });
 
 function mockJsonFetch(body: unknown, status = 200): void {
   mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(body, status)));
@@ -36,7 +35,7 @@ function encodeRpcWords(words: Array<number | bigint>): string {
 describe("fetchFluidPools", () => {
   const FLUID_POOL_ADDRESS = "0x1111111111111111111111111111111111111111";
 
-  afterEach(() => { mockFetch.mockReset(); });
+  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
   it("fetches all chains and normalizes to DexApiPool[]", async () => {
     mockJsonFetch([
@@ -426,7 +425,7 @@ describe("fetchFluidPools", () => {
 // Balancer
 // ---------------------------------------------------------------------------
 describe("fetchBalancerPools", () => {
-  afterEach(() => { mockFetch.mockReset(); });
+  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
   it("fetches stable pools and classifies pool type", async () => {
     mockJsonFetch({
@@ -722,7 +721,7 @@ describe("fetchBalancerPools", () => {
 // Raydium
 // ---------------------------------------------------------------------------
 describe("fetchRaydiumPools", () => {
-  afterEach(() => { mockFetch.mockReset(); });
+  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
   it("fetches concentrated pools and maps to DexApiPool", async () => {
     mockFetch
@@ -957,7 +956,7 @@ describe("fetchRaydiumPools", () => {
 // Orca
 // ---------------------------------------------------------------------------
 describe("fetchOrcaPools", () => {
-  afterEach(() => { mockFetch.mockReset(); });
+  afterEach(() => { mockFetch = createFetchMock([], { requireMatch: true }); });
 
   it("fetches whirlpools and normalizes to DexApiPool", async () => {
     mockJsonFetch({

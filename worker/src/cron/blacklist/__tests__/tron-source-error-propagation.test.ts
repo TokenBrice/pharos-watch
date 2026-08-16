@@ -1,4 +1,5 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../../lib/abort", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/abort")>();
@@ -29,10 +30,6 @@ const configStub = {
 };
 
 describe("fetchTronEventsIncremental error propagation", () => {
-  beforeEach(() => {
-    global.fetch = vi.fn();
-  });
-
   function makeRunBudget(): BlacklistRunBudget {
     return {
       subrequestBudget: createBudget(100),
@@ -42,9 +39,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
   }
 
   it("returns apiError=true when TronGrid responds with HTTP 500", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response("server error", { status: 500 }),
-    );
+    mockFetch([{ match: "api.trongrid.io", body: "server error", status: 500 }]);
     const result = await fetchTronEventsIncremental(
       configStub,
       null,
@@ -58,9 +53,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
   });
 
   it("returns apiError=true when TronGrid returns success=false", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response(JSON.stringify({ success: false, data: [] }), { status: 200 }),
-    );
+    mockFetch([{ match: "api.trongrid.io", body: { success: false, data: [] }, status: 200 }]);
     const result = await fetchTronEventsIncremental(
       configStub,
       null,
@@ -73,9 +66,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
   });
 
   it("returns apiError=true when TronGrid payload fails Zod validation", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response(JSON.stringify({ data: "oops" }), { status: 200 }),
-    );
+    mockFetch([{ match: "api.trongrid.io", body: { data: "oops" }, status: 200 }]);
     const result = await fetchTronEventsIncremental(
       configStub,
       null,
@@ -89,9 +80,7 @@ describe("fetchTronEventsIncremental error propagation", () => {
   });
 
   it("returns apiError=false on success", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(
-      new Response(JSON.stringify({ success: true, data: [] }), { status: 200 }),
-    );
+    mockFetch([{ match: "api.trongrid.io", body: { success: true, data: [] }, status: 200 }]);
     const result = await fetchTronEventsIncremental(
       configStub,
       null,

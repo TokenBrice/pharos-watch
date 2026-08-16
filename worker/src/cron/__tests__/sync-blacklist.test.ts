@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
+
+function installFetch(implementation: (request: Request) => Response | Promise<Response>) {
+  return mockFetch([{ match: () => true, respond: implementation }]);
+}
 
 // --- Module-level mocks ---
 
@@ -310,16 +315,10 @@ describe("syncBlacklist", () => {
     );
 
     // Stub global fetch for Tron API (returns empty events)
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -358,16 +357,10 @@ describe("syncBlacklist", () => {
       ]),
     );
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -383,16 +376,10 @@ describe("syncBlacklist", () => {
     const db = makeDb();
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
@@ -409,7 +396,7 @@ describe("syncBlacklist", () => {
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(failedEtherscanLogs());
 
     // Tron fetch succeeds with one event for AddedBlackList only
-    const fetchMock = vi.fn(async (url: string | Request) => {
+    const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
         return new Response(
@@ -450,8 +437,6 @@ describe("syncBlacklist", () => {
         headers: { "Content-Type": "application/json" },
       });
     });
-    vi.stubGlobal("fetch", fetchMock);
-
     const result = await syncBlacklist(buildTestOpts({ db }));
 
     // Tron event should be processed despite EVM failure
@@ -484,7 +469,7 @@ describe("syncBlacklist", () => {
       { match: "blacklist_events", rows: [] },
     ]);
 
-    const fetchMock = vi.fn(async (url: string | Request) => {
+    const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
         return new Response(
@@ -510,8 +495,6 @@ describe("syncBlacklist", () => {
         headers: { "Content-Type": "application/json" },
       });
     });
-    vi.stubGlobal("fetch", fetchMock);
-
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
 
@@ -544,15 +527,13 @@ describe("syncBlacklist", () => {
       { match: "blacklist_sync_state", rows: [] },
       { match: "blacklist_events", rows: [] },
     ]);
-    const fetchMock = vi.fn(
+    const fetchMock = installFetch(
       async (_url: string | Request) =>
         new Response(JSON.stringify({ success: true, data: [] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
     );
-    vi.stubGlobal("fetch", fetchMock);
-
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
 
@@ -566,7 +547,7 @@ describe("syncBlacklist", () => {
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
-    const fetchMock = vi.fn(async (url: string | Request) => {
+    installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
         return new Response(
@@ -608,8 +589,6 @@ describe("syncBlacklist", () => {
         headers: { "Content-Type": "application/json" },
       });
     });
-    vi.stubGlobal("fetch", fetchMock);
-
     await syncBlacklist(buildTestOpts({ db }));
 
     const history = db.getHistory();
@@ -638,16 +617,10 @@ describe("syncBlacklist", () => {
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
     // Tron API returns empty
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -666,16 +639,13 @@ describe("syncBlacklist", () => {
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => {
+    installFetch(async () => {
         vi.setSystemTime(new Date("2025-06-15T12:09:30Z"));
         return new Response(JSON.stringify({ success: true, data: [] }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      });
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -724,16 +694,10 @@ describe("syncBlacklist", () => {
         maxDepth: 0,
       };
     });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ result: "0x0000000000000000000000000000000000000000000000000000000000989680" }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ result: "0x0000000000000000000000000000000000000000000000000000000000989680" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
     const meta = JSON.parse(result.metadata);
@@ -767,16 +731,10 @@ describe("syncBlacklist", () => {
       };
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -800,16 +758,10 @@ describe("syncBlacklist", () => {
     const onProgress = vi.fn();
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
 
@@ -837,16 +789,10 @@ describe("syncBlacklist", () => {
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
     vi.mocked(getEvmBlockNumber).mockResolvedValue(20000000);
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     await syncBlacklist(buildTestOpts({ db }));
 
@@ -883,16 +829,10 @@ describe("syncBlacklist", () => {
     });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -928,7 +868,7 @@ describe("syncBlacklist", () => {
       maxDepth: 0,
     });
     vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[20000000, 1718650752]]));
-    const fetchMock = vi.fn(async (url: string | Request) => {
+    const fetchMock = installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("lb.drpc.org")) {
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), {
@@ -954,8 +894,6 @@ describe("syncBlacklist", () => {
         headers: { "Content-Type": "application/json" },
       });
     });
-    vi.stubGlobal("fetch", fetchMock);
-
     const result = await syncBlacklist(buildTestOpts({ db, drpcApiKey: "drpc-key" }));
 
     expect(result.itemCount).toBe(1);
@@ -966,16 +904,10 @@ describe("syncBlacklist", () => {
   it("orders backfill work newest-first so recent gaps are not starved by old backlog", async () => {
     const db = makeDb();
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     await syncBlacklist(buildTestOpts({ db }));
 
@@ -1002,16 +934,10 @@ describe("syncBlacklist", () => {
       maxDepth: 3,
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     const result = await syncBlacklist(buildTestOpts({ db }));
 
@@ -1069,16 +995,10 @@ describe("syncBlacklist", () => {
       .mockResolvedValueOnce(failedEtherscanLogs())
       .mockResolvedValue(completeEtherscanLogs());
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     try {
       const result = await syncBlacklist(buildTestOpts({ db }));
@@ -1125,16 +1045,10 @@ describe("syncBlacklist", () => {
       },
     );
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     try {
       const result = await syncBlacklist(buildTestOpts({ db }));
@@ -1178,16 +1092,10 @@ describe("syncBlacklist", () => {
       maxDepth: 0,
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
 
     try {
       await syncBlacklist(buildTestOpts({ db }));

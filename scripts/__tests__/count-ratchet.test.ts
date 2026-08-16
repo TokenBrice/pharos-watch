@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   compareCountRatchetCounts,
   runCountRatchet,
-} from "../lib/count-ratchet.mjs";
+} from "../lib/count-ratchet.mts";
 
 const labels = {
   baselineUpdated: "Example baseline updated",

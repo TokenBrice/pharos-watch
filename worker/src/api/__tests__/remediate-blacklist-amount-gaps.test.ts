@@ -2,10 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { D1_BATCH_SIZE } from "../../lib/constants";
 
 stubCryptoForAuth();
 
-vi.mock("../blacklist-summary", () => ({}));
+vi.mock("../../lib/blacklist-summary-service", () => ({}));
 vi.mock("../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
 }));
@@ -28,6 +29,78 @@ afterEach(() => {
 });
 
 describe("handleRemediateBlacklistAmountGaps", () => {
+
+  it("rejects a write-mode limit that would not fit one atomic batch", async () => {
+    // This route is idempotency-wrapped, so a chunked write that failed partway would
+    // strand committed rows behind stale caches with no retry path: the wrapper records
+    // EXECUTION_UNKNOWN and answers same-key retries from it. The write set must therefore
+    // fit a single transaction, and an oversized request is refused before any write.
+    const db = mockD1([], { allowUnmatched: true });
+    const batchSizes: number[] = [];
+    const originalBatch = db.batch.bind(db);
+    db.batch = async (statements: D1PreparedStatement[]) => {
+      batchSizes.push(statements.length);
+      return originalBatch(statements);
+    };
+
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST",
+      adminKey: "secret-key",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: false, limit: D1_BATCH_SIZE + 1 }),
+    });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      request,
+      chainRpcs: testChainRpcs,
+    });
+
+    expect(response.status).toBe(400);
+    expect(batchSizes).toEqual([]);
+  });
+
+  it("still surveys the full window in dry-run mode", async () => {
+    const rows = Array.from({ length: D1_BATCH_SIZE + 1 }, (_value, index) => ({
+      id: `gap-${index}`,
+      stablecoin: "UNKNOWN",
+      chain_id: "unknown",
+      event_type: "blacklist",
+      address: "0xabc",
+      tx_hash: `0x${index}`,
+      block_number: index,
+      timestamp: index,
+      amount_status: "recoverable_pending",
+      amount_attempt_count: 0,
+      amount_last_attempted_at: null,
+      contract_address: null,
+      config_key: null,
+    }));
+    const db = mockD1([{ match: "FROM blacklist_events", rows }], { allowUnmatched: true });
+    const batchSizes: number[] = [];
+    const originalBatch = db.batch.bind(db);
+    db.batch = async (statements: D1PreparedStatement[]) => {
+      batchSizes.push(statements.length);
+      return originalBatch(statements);
+    };
+
+    const request = makeApiRequest("/api/remediate-blacklist-amount-gaps", {
+      method: "POST",
+      adminKey: "secret-key",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dryRun: true, limit: D1_BATCH_SIZE + 1 }),
+    });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl("/api/remediate-blacklist-amount-gaps"),
+      request,
+      chainRpcs: testChainRpcs,
+    });
+
+    expect(response.status).toBe(200);
+    expect(batchSizes).toEqual([]);
+  });
+
   it("rejects malformed JSON bodies", async () => {
     const response = await handleRemediateBlacklistAmountGapsTrusted({ db: mockD1([], { allowUnmatched: true }), url: makeApiUrl("/api/remediate-blacklist-amount-gaps"), request: makeApiRequest("/api/remediate-blacklist-amount-gaps", {
         method: "POST",

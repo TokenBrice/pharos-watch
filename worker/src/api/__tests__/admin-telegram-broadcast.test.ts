@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { handleAdminTelegramBroadcast } from "../admin-telegram-broadcast";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
-const fetchSpy = vi.fn();
-vi.stubGlobal("fetch", fetchSpy);
+let fetchSpy: ReturnType<typeof mockFetch>;
+let telegramOutcomes: Response[];
 const openSqlite: Array<import("node:sqlite").DatabaseSync> = [];
 
 function latestDb() {
@@ -48,12 +49,16 @@ function capacityRow(active: number) {
 }
 
 beforeEach(() => {
-  fetchSpy.mockReset();
-  fetchSpy.mockResolvedValue(new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 }));
+  telegramOutcomes = [new Response(JSON.stringify({ ok: true, result: { message_id: 1 } }), { status: 200 })];
+  fetchSpy = mockFetch([{
+    match: "https://api.telegram.org/bottoken/sendMessage",
+    respond: () => telegramOutcomes.shift() ?? new Error("unexpected Telegram request"),
+  }], { requireMatch: true });
 });
 
 afterEach(() => {
   while (openSqlite.length > 0) openSqlite.pop()?.close();
+  vi.unstubAllGlobals();
 });
 
 describe("handleAdminTelegramBroadcast canary gate", () => {
@@ -154,11 +159,11 @@ describe("handleAdminTelegramBroadcast canary gate", () => {
   });
 
   it("does not enqueue fleet work when Telegram rejects the private parse canary", async () => {
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+    telegramOutcomes = [new Response(JSON.stringify({
       ok: false,
       error_code: 400,
       description: "Bad Request: can't parse entities",
-    }), { status: 400 }));
+    }), { status: 400 })];
     const { sqlite, db } = latestDb();
     sqlite.prepare(
       "INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('20', 1, 1)",

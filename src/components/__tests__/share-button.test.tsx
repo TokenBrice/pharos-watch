@@ -5,6 +5,7 @@ import { act } from "react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ShareButton } from "@/components/share-button";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 vi.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -22,17 +23,10 @@ vi.mock("@/lib/api", () => ({
 describe("ShareButton", () => {
   const createObjectURL = vi.fn(() => "blob:pharos-png");
   const revokeObjectURL = vi.fn();
-  const fetchMock = vi.fn();
   let clickSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL,
-      revokeObjectURL,
-    });
-    vi.stubGlobal("fetch", fetchMock);
     clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   });
 
@@ -43,20 +37,26 @@ describe("ShareButton", () => {
     vi.unstubAllGlobals();
     createObjectURL.mockClear();
     revokeObjectURL.mockClear();
-    fetchMock.mockReset();
   });
 
   it("downloads the OG image and defers object URL revocation", async () => {
     const blob = new Blob(["png"], { type: "image/png" });
-    fetchMock.mockResolvedValue({
-      ok: true,
-      blob: () => Promise.resolve(blob),
-    });
+    const response = new Response();
+    vi.spyOn(response, "blob").mockResolvedValue(blob);
+    const fetchMock = mockFetch([{
+      match: "/api/og/stablecoin/usdc",
+      outcomes: [{ response }],
+    }], { requireMatch: true });
 
     render(<ShareButton ogPath="/api/og/stablecoin/usdc" />);
 
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Download PNG" }));
+      vi.stubGlobal("URL", {
+        ...URL,
+        createObjectURL,
+        revokeObjectURL,
+      });
       await Promise.resolve();
       await Promise.resolve();
     });

@@ -9,6 +9,7 @@ import type { WebhookCommandContext } from "../context";
 import { buildV2PreviewMessageForTest, persistImportPreviewForTest } from "../import";
 import { BULK_CONFIRM_REPLY_MARKUP } from "../action-runner";
 import { sendAuditedTelegramReply } from "../../telegram-webhook-replies";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 const payload: ConfirmBulkPayload = {
   kind: "subscribe",
@@ -99,11 +100,13 @@ describe("watchlist import preview effect fencing", () => {
 
   it("attaches the confirmation keyboard only to the final exact-preview chunk", async () => {
     const requests: Array<Record<string, unknown>> = [];
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return new Response("ok", { status: 200 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{
+      match: "https://api.telegram.org/bottoken/sendMessage",
+      respond: async (request) => {
+        requests.push(await request.clone().json() as Record<string, unknown>);
+        return { body: "ok" };
+      },
+    }], { requireMatch: true });
     try {
       const db = mockD1([]);
       await sendAuditedTelegramReply(db, "123", `first\n\n${"x".repeat(9_000)}`, "token", {

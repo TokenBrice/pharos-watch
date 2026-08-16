@@ -464,6 +464,36 @@ describe("chain OG route", () => {
     expect(renderToStaticMarkup(element)).toContain("No tracked stablecoin supply");
   });
 
+  it("converts the chain 7d ratio to a percentage before rendering", async () => {
+    // Regression: aggregateChains() emits change7dPct as a 0-1 Ratio, but the card
+    // renders a "%" suffix. Forwarding the ratio unconverted printed a +8% week as
+    // "0.1% 7d" on every chain OG image.
+    const db = makeChainOgDb([
+      makeAsset({
+        chainCirculating: {
+          Ethereum: {
+            current: 108_000_000,
+            circulatingPrevDay: 108_000_000,
+            circulatingPrevWeek: 100_000_000,
+            circulatingPrevMonth: 100_000_000,
+          },
+        },
+        chains: ["Ethereum"],
+      }),
+    ]);
+    const satoriMock = vi.mocked(satoriStandalone);
+    satoriMock.mockClear();
+
+    const res = await handleOg(db, "/api/og/chain/ethereum");
+    expect(res?.status).toBe(200);
+
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+      data: ChainCardData;
+    }>;
+    expect(element.props.data.change7dPercent).toBeCloseTo(8, 6);
+    expect(renderToStaticMarkup(element)).toContain("8.0% 7d");
+  });
+
   it("returns 404 for an id outside CHAIN_META", async () => {
     const res = await handleOg(mockD1([]), "/api/og/chain/not-a-chain");
     expect(res?.status).toBe(404);
@@ -787,7 +817,7 @@ describe("og cards render through satori", () => {
         data={{
           name: "Ethereum",
           totalUsd: 132_000_000_000,
-          change7dPct: 1.8,
+          change7dPercent: 1.8,
           stablecoinCount: 214,
           dominanceShare: 0.52,
           healthScore: 74,
@@ -810,7 +840,7 @@ describe("og cards render through satori", () => {
         data={{
           name: "Ethereum",
           totalUsd: 0,
-          change7dPct: 0,
+          change7dPercent: 0,
           stablecoinCount: 0,
           dominanceShare: 0,
           healthScore: null,
@@ -828,7 +858,7 @@ describe("og cards render through satori", () => {
         data={{
           name: "Obscure Chain",
           totalUsd: 1_200_000,
-          change7dPct: -12.4,
+          change7dPercent: -12.4,
           stablecoinCount: 1,
           dominanceShare: 0.000004,
           healthScore: null,

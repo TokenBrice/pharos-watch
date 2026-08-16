@@ -1,4 +1,4 @@
-import { pendingPrioritySql } from "../cron/telegram-pending/upsert-sql";
+import { pendingPrioritySql } from "./telegram-pending-queue";
 import type {
   TelegramDeliverySliBacklogBucket,
   TelegramDeliverySliEvidenceQuality,

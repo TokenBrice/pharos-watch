@@ -1,6 +1,6 @@
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { isGtProbeEligibleSingleSource } from "@shared/lib/pricing-source-policy";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { getReferencePriceForContext } from "../../lib/price-validation";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
@@ -36,7 +36,7 @@ export function buildGtProbeTargets(
       targets.push({
         id: asset.id,
         price: primary.price,
-        priorityUsd: sumPegBuckets(asset.circulating),
+        priorityUsd: getCirculatingRaw(asset),
       });
     }
   }

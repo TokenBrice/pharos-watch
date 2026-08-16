@@ -1697,30 +1697,14 @@ describe("optional source budgets", () => {
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    const fetchSpy = vi.fn((input: string | Request, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.url;
+    mockFetch([{ match: () => true, respond: (request) => {
+      const url = request.url;
       if (url.includes("api-v2.pendle.finance")) {
-        return new Promise<Response>((_resolve, reject) => {
-          const signal = init?.signal;
-          const rejectForAbort = () => {
-            reject(signal?.reason instanceof Error ? signal.reason : new Error(String(signal?.reason ?? "aborted")));
-          };
-          if (signal?.aborted) {
-            rejectForAbort();
-            return;
-          }
-          signal?.addEventListener("abort", rejectForAbort, { once: true });
-        });
+        return { stall: true };
       }
 
-      return Promise.resolve(
-        new Response(JSON.stringify({ error: "Not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        }),
-      );
-    });
-    vi.stubGlobal("fetch", fetchSpy);
+      return { body: { error: "Not found" }, status: 404, headers: { "Content-Type": "application/json" } };
+    } }], { requireMatch: true });
 
     const resultPromise = syncYieldData(db);
     await vi.advanceTimersByTimeAsync(30_000);

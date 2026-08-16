@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   findBareFetchCalls,
   scanProviderResilience,
-} from "../ci/check-provider-resilience.mjs";
+} from "../ci/check-provider-resilience.ts";
 
 function withTempRepo(files: Record<string, string>, run: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "pharos-provider-resilience-"));

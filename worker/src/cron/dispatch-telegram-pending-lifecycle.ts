@@ -5,12 +5,12 @@ import {
   assignSharedDispatchState,
   type TelegramDispatchSharedState,
 } from "./dispatch-telegram-state";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
 import {
   archiveAgedExecutionUnknownPendingAlerts,
   cleanupExpiredPendingAlerts,
   drainPendingQueue,
   emptyDrainResult,
-  readPendingCapacitySnapshot,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   type PendingCapacitySnapshot,
   type PendingDrainResult,
@@ -132,7 +132,7 @@ export async function runPendingQueueLifecycle(
     expiredCount > 0 ||
     changed;
   const pendingCapacityAfter = shouldRefresh
-    ? await readPendingCapacitySnapshot(db, nowSec)
+    ? await readTelegramPendingCapacitySnapshot(db, nowSec)
     : pendingCapacityBefore;
   assignSharedDispatchState(context.sharedState, { pendingCapacitySnapshot: pendingCapacityAfter });
 

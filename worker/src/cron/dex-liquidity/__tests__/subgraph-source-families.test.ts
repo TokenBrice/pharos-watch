@@ -17,6 +17,7 @@ import {
   buildUniswapV4ExecutionCandidateKey,
   buildUniV3ExecutionCandidateKey,
 } from "../../measured-execution/inventory";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 describe("subgraph source families", () => {
   afterEach(() => {
@@ -67,40 +68,35 @@ describe("subgraph source families", () => {
     const poolAddress = "0x3333333333333333333333333333333333333333";
     let inFlight = 0;
     let maxInFlight = 0;
-    const fetchMock = vi.fn(async (input: string | URL | Request) => {
-      inFlight++;
-      maxInFlight = Math.max(maxInFlight, inFlight);
-      await new Promise((resolve) => setTimeout(resolve, 5));
-      const url = String(input);
-      const matchedChain = configuredChains.find(([, subgraphId]) => url.endsWith(subgraphId))?.[0];
-      if (!matchedChain) {
-        throw new Error("Unexpected Uni V3 subgraph URL");
-      }
-      const response = new Response(
-        JSON.stringify({
-          data: {
-            pools: [
-              {
-                id: poolAddress,
-                token0: { id: token0, symbol: "USDC", decimals: "6" },
-                token1: { id: token1, symbol: "USDT", decimals: "18" },
-                feeTier: "3000",
-                totalValueLockedUSD: "1000000",
-                volumeUSD: "500000",
-                token0Price: "1",
-                token1Price: "1",
-                totalValueLockedToken0: "500000",
-                totalValueLockedToken1: "500000",
-              },
-            ],
+    const fetchMock = mockFetch([{
+      match: (request) => configuredChains.some(([, subgraphId]) => request.url.endsWith(subgraphId)),
+      respond: async () => {
+        inFlight++;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        inFlight--;
+        return {
+          body: {
+            data: {
+              pools: [
+                {
+                  id: poolAddress,
+                  token0: { id: token0, symbol: "USDC", decimals: "6" },
+                  token1: { id: token1, symbol: "USDT", decimals: "18" },
+                  feeTier: "3000",
+                  totalValueLockedUSD: "1000000",
+                  volumeUSD: "500000",
+                  token0Price: "1",
+                  token1Price: "1",
+                  totalValueLockedToken0: "500000",
+                  totalValueLockedToken1: "500000",
+                },
+              ],
+            },
           },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-      inFlight--;
-      return response;
-    });
-    vi.stubGlobal("fetch", fetchMock);
+        };
+      },
+    }], { requireMatch: true });
 
     const chainAddressToId = new Map(
       configuredChains.map(([chain]) => [`${chain}:${token0}`, "usdc-circle"]),
@@ -109,9 +105,7 @@ describe("subgraph source families", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
     expect(maxInFlight).toBe(5);
-    expect(fetchMock.mock.calls.some(([input]) =>
-      String(input).endsWith(UNIV3_SUBGRAPHS.bsc),
-    )).toBe(true);
+    expect(fetchMock.getHistory().some(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.bsc))).toBe(true);
     expect(result.uniV3ExecutionCandidates.size).toBe(configuredChains.length);
     const bscKey = buildUniV3ExecutionCandidateKey("bsc", [token0, token1], 3000);
     expect(bscKey).not.toBeNull();
@@ -150,44 +144,39 @@ describe("subgraph source families", () => {
 
     const token0 = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
     const token1 = "0xdac17f958d2ee523a2206206994597c13d831ec7";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            data: {
-              pools: [
-                {
-                  id: `0x${"1".repeat(64)}`,
-                  token0: { id: token0, symbol: "USDC", decimals: "6" },
-                  token1: { id: token1, symbol: "USDT", decimals: "6" },
-                  feeTier: "100",
-                  tickSpacing: "1",
-                  hooks: "0x0000000000000000000000000000000000000000",
-                  liquidity: "123456789",
-                  totalValueLockedUSD: "1000000",
-                  token0Price: "1",
-                  token1Price: "1",
-                },
-                {
-                  id: `0x${"2".repeat(64)}`,
-                  token0: { id: token0, symbol: "USDC", decimals: "6" },
-                  token1: { id: token1, symbol: "USDT", decimals: "6" },
-                  feeTier: "100",
-                  tickSpacing: "1",
-                  hooks: "0x0000000000000000000000000000000000000001",
-                  liquidity: "0",
-                  totalValueLockedUSD: "900000",
-                  token0Price: "1",
-                  token1Price: "1",
-                },
-              ],
+    mockFetch([{
+      match: "gateway.thegraph.com/api/graph-key/subgraphs/id/",
+      body: {
+        data: {
+          pools: [
+            {
+              id: `0x${"1".repeat(64)}`,
+              token0: { id: token0, symbol: "USDC", decimals: "6" },
+              token1: { id: token1, symbol: "USDT", decimals: "6" },
+              feeTier: "100",
+              tickSpacing: "1",
+              hooks: "0x0000000000000000000000000000000000000000",
+              liquidity: "123456789",
+              totalValueLockedUSD: "1000000",
+              token0Price: "1",
+              token1Price: "1",
             },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
+            {
+              id: `0x${"2".repeat(64)}`,
+              token0: { id: token0, symbol: "USDC", decimals: "6" },
+              token1: { id: token1, symbol: "USDT", decimals: "6" },
+              feeTier: "100",
+              tickSpacing: "1",
+              hooks: "0x0000000000000000000000000000000000000001",
+              liquidity: "0",
+              totalValueLockedUSD: "900000",
+              token0Price: "1",
+              token1Price: "1",
+            },
+          ],
+        },
+      },
+    }], { requireMatch: true });
 
     const result = await fetchUniswapV4Data("graph-key");
     const key = buildUniswapV4ExecutionCandidateKey(

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminMutationError, adminMutation } from "@/lib/admin-access";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 describe("adminMutation", () => {
   afterEach(() => {
@@ -8,19 +9,17 @@ describe("adminMutation", () => {
   });
 
   it("returns idempotency and execution metadata from response headers", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify({ accepted: true }), {
-        status: 202,
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": "intent-123",
-          "X-Idempotent-Replay": "true",
-          "X-Execution-Certainty": "accepted",
-          Warning: "199 - queued for background execution",
-        },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{
+      match: "/api/admin/trigger-digest",
+      body: { accepted: true },
+      status: 202,
+      headers: {
+        "Idempotency-Key": "intent-123",
+        "X-Idempotent-Replay": "true",
+        "X-Execution-Certainty": "accepted",
+        Warning: "199 - queued for background execution",
+      },
+    }], { requireMatch: true });
 
     const result = await adminMutation("/api/trigger-digest", {
       idempotencyKey: "intent-123",
@@ -36,17 +35,15 @@ describe("adminMutation", () => {
   });
 
   it("preserves raw response and replay metadata on HTTP failures", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify({ error: "execution_unknown", message: "Reconcile downstream state." }), {
-        status: 503,
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": "intent-unknown",
-          "X-Idempotent-Replay": "false",
-        },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{
+      match: "/api/admin/backfill-supply-history",
+      body: { error: "execution_unknown", message: "Reconcile downstream state." },
+      status: 503,
+      headers: {
+        "Idempotency-Key": "intent-unknown",
+        "X-Idempotent-Replay": "false",
+      },
+    }], { requireMatch: true });
 
     const error = await adminMutation("/api/backfill-supply-history", {
       idempotencyKey: "intent-unknown",

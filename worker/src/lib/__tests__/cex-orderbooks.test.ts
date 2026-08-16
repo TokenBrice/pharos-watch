@@ -6,6 +6,7 @@ import {
   fetchKrakenOrderbookDepths,
   summarizeCexOrderbookDepths,
 } from "../cex-orderbooks";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -56,10 +57,13 @@ describe("computeOrderbookDepth", () => {
 
 describe("direct CEX orderbook fetchers", () => {
   it("parses Binance orderbook depth for configured major pairs", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({
-      bids: [["0.999", "1000"]],
-      asks: [["1.001", "1000"]],
-    }), { status: 200 }))));
+    mockFetch([{
+      match: () => true,
+      body: {
+        bids: [["0.999", "1000"]],
+        asks: [["1.001", "1000"]],
+      },
+    }]);
 
     const rows = await fetchBinanceOrderbookDepths();
 
@@ -68,10 +72,13 @@ describe("direct CEX orderbook fetchers", () => {
   });
 
   it("parses Coinbase orderbook depth for configured major products", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      bids: [["0.999", "1000", 2]],
-      asks: [["1.001", "1000", 3]],
-    }), { status: 200 })));
+    mockFetch([{
+      match: () => true,
+      body: {
+        bids: [["0.999", "1000", 2]],
+        asks: [["1.001", "1000", 3]],
+      },
+    }]);
 
     const rows = await fetchCoinbaseOrderbookDepths();
 
@@ -80,18 +87,21 @@ describe("direct CEX orderbook fetchers", () => {
   });
 
   it("parses Kraken orderbook depth through response aliases", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation((url: string) => {
-      const key = url.includes("USDTUSD") ? "USDTZUSD" : "USDCUSD";
-      return Promise.resolve(new Response(JSON.stringify({
-        error: [],
-        result: {
-          [key]: {
-            bids: [["0.999", "1000", 1700000000]],
-            asks: [["1.001", "1000", 1700000000]],
+    mockFetch([{
+      match: () => true,
+      respond: (request) => {
+        const key = request.url.includes("USDTUSD") ? "USDTZUSD" : "USDCUSD";
+        return new Response(JSON.stringify({
+          error: [],
+          result: {
+            [key]: {
+              bids: [["0.999", "1000", 1700000000]],
+              asks: [["1.001", "1000", 1700000000]],
+            },
           },
-        },
-      }), { status: 200 }));
-    }));
+        }), { status: 200 });
+      },
+    }]);
 
     const rows = await fetchKrakenOrderbookDepths();
 

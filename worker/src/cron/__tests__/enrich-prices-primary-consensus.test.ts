@@ -2,9 +2,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureFetchPrimaryPrices,
   fixtureApplyResolvedPrice,
+  fixtureMockFetch,
   fixtureMockD1 as createFixtureMockD1,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
+
+function installFetch(implementation: (url: string) => Response | Promise<Response>) {
+  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
+}
 
 function fixtureMockD1(tables: Parameters<typeof createFixtureMockD1>[0] = []) {
   return createFixtureMockD1([
@@ -68,9 +73,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -80,8 +83,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -138,9 +140,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -150,8 +150,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -196,9 +195,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("binance")) {
           return new Response(
             JSON.stringify([
@@ -208,8 +205,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDexBridgeDb({
@@ -253,9 +249,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -265,8 +259,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0002]]);
@@ -297,9 +290,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -309,8 +300,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -336,7 +326,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = installFetch(async (url: string) => {
       if (typeof url === "string" && url.includes("coingecko.com")) {
         return new Response(
           JSON.stringify({
@@ -350,7 +340,6 @@ describe("fetchPrimaryPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     const db = makeTestDb();
     const dlListPrices = new Map([
@@ -389,9 +378,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -401,8 +388,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results } = await fixtureFetchPrimaryPrices(assets, db);
@@ -420,9 +406,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (url.includes("coingecko.com")) {
           return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
         }
@@ -442,8 +426,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results } = await fixtureFetchPrimaryPrices(assets, db);
@@ -459,9 +442,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -471,8 +452,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.05]]);
@@ -497,9 +477,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "eurc-circle", name: "EURC", symbol: "EURC", geckoId: "euro-coin", pegType: "peggedEUR", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -509,8 +487,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["eurc-circle", 1.8]]);
@@ -546,9 +523,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -558,8 +533,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["ousg-ondo-finance", 110]]);
@@ -586,16 +560,13 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           // CG returns empty — no price data
           return new Response(JSON.stringify({}), { status: 200 });
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const dlListPrices = makeFreshDlListPrices([["usdt-tether", 1.0]]);
@@ -621,10 +592,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "NoGecko", symbol: "NG", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(JSON.stringify({}), { status: 200 })),
-    );
+    installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -645,10 +613,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(JSON.stringify({}), { status: 200 })),
-    );
+    installFetch(async () => new Response(JSON.stringify({}), { status: 200 }));
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -662,9 +627,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "a", name: "A", symbol: "A", geckoId: "a-id", pegType: "peggedUSD", circulating: {} },
       { id: "b", name: "B", symbol: "B", geckoId: "b-id", pegType: "peggedUSD", circulating: {} },
     ];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(
             JSON.stringify({
@@ -675,8 +638,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
     const db = makeTestDb();
     const { stats } = await fixtureFetchPrimaryPrices(assets, db);
     expect(stats.cgOnly).toBe(2);
@@ -689,9 +651,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({}), { status: 200 });
         }
@@ -709,8 +669,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -729,9 +688,7 @@ describe("fetchPrimaryPrices", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("hermes.pyth.network")) {
           return new Response(
             JSON.stringify({
@@ -746,8 +703,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response(JSON.stringify({}), { status: 200 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -779,7 +735,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = installFetch(async (url: string) => {
       if (typeof url === "string" && url.includes("coins.llama.fi")) {
         return new Response(JSON.stringify({ coins: {} }), { status: 200 });
       }
@@ -817,7 +773,6 @@ describe("fetchPrimaryPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchMock);
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);
@@ -842,9 +797,7 @@ describe("fetchPrimaryPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({}), { status: 200 });
         }
@@ -864,8 +817,7 @@ describe("fetchPrimaryPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const db = makeTestDb();
     const { results, stats } = await fixtureFetchPrimaryPrices(assets, db);

@@ -2,14 +2,12 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import type { CronResult } from "../../lib/cron-logger";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
-
-export { sumPegBuckets };
 
 const INVALID_STABLECOINS_CACHE_KEY = "stablecoins:invalid-last";
 const VALIDATION_ISSUES_MAX_CHARS = 400;
@@ -252,7 +250,7 @@ function cloneCachedAsset(asset: PeggedAsset): PeggedAsset {
 
 function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: number | null): PeggedAsset {
   const cloned = cloneCachedAsset(asset);
-  if (sumPegBuckets(cloned.circulating) <= 0) {
+  if (getCirculatingRaw(cloned) <= 0) {
     return cloned;
   }
   cloned.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt) ?? cacheUpdatedAt;
@@ -306,12 +304,12 @@ export function replaceZeroSupplyPrimaryAssets(
 ): { assets: PeggedAsset[]; replacedIds: string[] } {
   const positiveSupplementalById = new Map(
     supplementalAssets
-      .filter((asset) => sumPegBuckets(asset.circulating) > 0)
+      .filter((asset) => getCirculatingRaw(asset) > 0)
       .map((asset) => [String(asset.id), asset] as const),
   );
   const replacedIds: string[] = [];
   const assets = primaryAssets.map((asset) => {
-    if (sumPegBuckets(asset.circulating) > 0) return asset;
+    if (getCirculatingRaw(asset) > 0) return asset;
     const replacement = positiveSupplementalById.get(String(asset.id));
     if (!replacement) return asset;
     replacedIds.push(String(asset.id));
@@ -347,13 +345,13 @@ export function mergeSupplementalLastKnownGood(
       continue;
     }
 
-    if (sumPegBuckets(asset.circulating) > 0) {
+    if (getCirculatingRaw(asset) > 0) {
       resolved.set(id, asset);
       continue;
     }
 
     const previous = previousAssetsById.get(id);
-    if (previous && sumPegBuckets(previous.circulating) > 0) {
+    if (previous && getCirculatingRaw(previous) > 0) {
       if (!isWithinRestoreCeiling(previous, nowSec)) {
         expiredRestoreIds.push(id);
         resolved.set(id, asset);
@@ -383,7 +381,7 @@ export function mergeSupplementalLastKnownGood(
   for (const id of SUPPLEMENTAL_TRACKED_IDS) {
     if (primaryAssetIds.has(id) || resolved.has(id)) continue;
     const previous = previousAssetsById.get(id);
-    if (!previous || sumPegBuckets(previous.circulating) <= 0) continue;
+    if (!previous || getCirculatingRaw(previous) <= 0) continue;
     if (!isWithinRestoreCeiling(previous, nowSec)) {
       expiredRestoreIds.push(id);
       continue;
@@ -431,7 +429,7 @@ export function restoreMissingTrackedAssets(
   for (const id of ACTIVE_TRACKED_IDS) {
     if (presentIds.has(id)) continue;
     const previous = previousAssetsById.get(id);
-    if (!previous || sumPegBuckets(previous.circulating) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
+    if (!previous || getCirculatingRaw(previous) <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
       droppedIds.push(id);
       continue;
     }

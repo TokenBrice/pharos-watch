@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { jsonResponse, mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
 import { adaptAccountableDashboard } from "../accountable";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { fetchAccountableReserves } from "../accountable";
@@ -524,25 +525,26 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("sends the Apyx dashboard Origin and Referer headers", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      expect(headers.get("Origin")).toBe("https://accountable.apyx.fi");
-      expect(headers.get("Referer")).toBe("https://accountable.apyx.fi/");
-      return new Response(JSON.stringify({
-        res: "ok",
-        data: {
-          collateralization: 1,
-          ts: "1784376607058",
-          reserves: {
-            total_reserves: 100,
-            reserves_split: [
-              { value: 100, name: "Cash & Equivalents" },
-            ],
+    const fetchMock = mockFetchStrict([{
+      match: "https://api.accountable.apyx.fi/dashboard",
+      respond: (request) => {
+        expect(request.headers.get("origin")).toBe("https://accountable.apyx.fi");
+        expect(request.headers.get("referer")).toBe("https://accountable.apyx.fi/");
+        return jsonResponse({
+          res: "ok",
+          data: {
+            collateralization: 1,
+            ts: "1784376607058",
+            reserves: {
+              total_reserves: 100,
+              reserves_split: [
+                { value: 100, name: "Cash & Equivalents" },
+              ],
+            },
           },
-        },
-      }), { status: 200, headers: { "content-type": "application/json" } });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+        });
+      },
+    }]);
 
     await fetchAccountableReserves(
       apxusd as never,

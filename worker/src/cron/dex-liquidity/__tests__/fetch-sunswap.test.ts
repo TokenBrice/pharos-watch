@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchSunSwapPools, parseSunSwapV2Pool } from "../fetch-sunswap";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 const POOL = "TFGDbUyP8xez44C76fin3bn3Ss6jugoUwJ";
 const WTRX = "TNUC9Qb1rRpS5CbWLmNMxXBjyFoydXjWFR";
@@ -48,40 +49,52 @@ describe("parseSunSwapV2Pool", () => {
 
 describe("fetchSunSwapPools", () => {
   it("scans by monotonically increasing contract index until hasMore is false", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        code: 0,
-        msg: "SUCCESS",
-        data: { list: [row({ contractIndex: 7 })], meta: { hasMore: true, returnSize: 1 } },
-      })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
-        code: 0,
-        msg: "SUCCESS",
-        data: { list: [row({ contractIndex: 9, poolAddress: "TRaQussyGeM6rhRGM3wfEj3B8vofTJj3EB" })], meta: { hasMore: false, returnSize: 1 } },
-      })));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "open.sun.io/apiv2/pools/scan",
+      outcomes: [
+        {
+          body: {
+            code: 0,
+            msg: "SUCCESS",
+            data: { list: [row({ contractIndex: 7 })], meta: { hasMore: true, returnSize: 1 } },
+          },
+        },
+        {
+          body: {
+            code: 0,
+            msg: "SUCCESS",
+            data: { list: [row({ contractIndex: 9, poolAddress: "TRaQussyGeM6rhRGM3wfEj3B8vofTJj3EB" })], meta: { hasMore: false, returnSize: 1 } },
+          },
+        },
+      ],
+    }], { requireMatch: true });
 
     const result = await fetchSunSwapPools();
 
     expect(result).toMatchObject({ ok: true, degraded: false, pagination: { state: "complete", pagesFetched: 2 } });
     expect(result.pools).toHaveLength(2);
-    expect(fetchMock.mock.calls[0]![0]).toContain("pageSize=100");
-    expect(fetchMock.mock.calls[1]![0]).toContain("contractIndex=7");
+    expect(fetchMock.getHistory()[0]?.url).toContain("pageSize=100");
+    expect(fetchMock.getHistory()[1]?.url).toContain("contractIndex=7");
+    fetchMock.assertAllOutcomesUsed();
   });
 
   it("stops at the 60-page census cap with a resumable degraded result", async () => {
-    const fetchMock = vi.fn(async (url: string) => {
-      const contractIndex = Number(new URL(url).searchParams.get("contractIndex"));
-      return new Response(JSON.stringify({
-        code: 0,
-        msg: "SUCCESS",
-        data: {
-          list: [row({ contractIndex: contractIndex + 1 })],
-          meta: { hasMore: true, returnSize: 1 },
-        },
-      }));
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "open.sun.io/apiv2/pools/scan",
+      respond: (request) => {
+        const contractIndex = Number(new URL(request.url).searchParams.get("contractIndex"));
+        return {
+          body: {
+            code: 0,
+            msg: "SUCCESS",
+            data: {
+              list: [row({ contractIndex: contractIndex + 1 })],
+              meta: { hasMore: true, returnSize: 1 },
+            },
+          },
+        };
+      },
+    }], { requireMatch: true });
 
     const result = await fetchSunSwapPools();
 
@@ -91,11 +104,14 @@ describe("fetchSunSwapPools", () => {
   });
 
   it("fails closed when the scan cursor does not advance", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      code: 0,
-      msg: "SUCCESS",
-      data: { list: [row({ contractIndex: 0 })], meta: { hasMore: true, returnSize: 1 } },
-    }))));
+    mockFetch([{
+      match: "open.sun.io/apiv2/pools/scan",
+      body: {
+        code: 0,
+        msg: "SUCCESS",
+        data: { list: [row({ contractIndex: 0 })], meta: { hasMore: true, returnSize: 1 } },
+      },
+    }], { requireMatch: true });
 
     const result = await fetchSunSwapPools();
     expect(result.ok).toBe(true);

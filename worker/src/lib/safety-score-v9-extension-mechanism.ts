@@ -6,6 +6,7 @@ import {
   type V9MechanismProfileComponentProjection,
 } from "@shared/lib/safety-score-v9/mechanism-profiles";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
+import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ProofOfReservesLatestReport, StablecoinMeta } from "@shared/types/core";
@@ -530,7 +531,8 @@ const MECHANISM_REVIEW_OVERLAYS: ReadonlyMap<string, MechanismReviewOverlay> = n
 // elapsed, preventing evidence published later that day from entering an earlier
 // point-in-time capture. Invalid or expired reviews fall back to the conservative
 // bounded-unknown evidence path (VER2-004).
-const MECHANISM_OVERLAY_MAX_AGE_SEC = 31_536_000;
+const MECHANISM_OVERLAY_MAX_AGE_SEC =
+  V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry.mechanismOverlayMaxAgeSec;
 const DAY_SEC = 86_400;
 
 function isMechanismOverlayCurrent(overlay: MechanismReviewOverlay, clockSec: number): boolean {

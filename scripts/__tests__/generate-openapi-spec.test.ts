@@ -71,13 +71,17 @@ describe("OpenAPI runtime response contracts", () => {
       "mint-burn-flows": "MintBurnFlowsResponse",
       "telegram-pulse": "TelegramPulseResponse",
     });
-    expect([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort()).toEqual([
-      "non-usd-share",
-      "snapshot-coin",
-      "snapshot-day",
-      "snapshots-index",
-      "stablecoin-detail",
-      "stablecoin-summary",
-    ]);
+    // Five of the six former generic endpoints now carry real schemas. `snapshot-day` is the
+    // sole remaining entry by decision, not by omission: its producer envelope spans the
+    // historical V8 shape and a large inline V9 union. This list is a debt ledger, so it may
+    // shrink but must never silently grow.
+    expect([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort()).toEqual(["snapshot-day"]);
+    expect(responseSchemas).toMatchObject({
+      "stablecoin-detail": "StablecoinDetailResponse",
+      "stablecoin-summary": "StablecoinSummaryResponse",
+      "non-usd-share": "NonUsdShareResponse",
+      "snapshots-index": "SnapshotsIndexResponse",
+      "snapshot-coin": "SnapshotCoinResponse",
+    });
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mjs";
+import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
 
 describe("GSC report helpers", () => {
   it("renders a shared report preamble with optional detail lines and empty sections", () => {

@@ -30,9 +30,11 @@ function fixtureMockD1(
     { match: "UPDATE telegram_preset_subscriptions", rows: [] },
     { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
     { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+    { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
     { match: "UPDATE telegram_pending_disambiguation", rows: [] },
     { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
     { match: "INSERT INTO telegram_pending_alerts", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
     { match: "UPDATE telegram_pending_alerts", rows: [] },
     { match: "DELETE FROM telegram_pending_alerts", rows: [] },
     { match: "INSERT INTO telegram_recap_preferences", rows: [] },
@@ -40,23 +42,31 @@ function fixtureMockD1(
     { match: "DELETE FROM telegram_recap_preferences", rows: [] },
     { match: "DELETE FROM telegram_recap_targets", rows: [] },
     { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
     { match: "UPDATE telegram_freeze_alert_targets", rows: [] },
     { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
     { match: "UPDATE telegram_alert_source_resolution_targets", rows: [] },
     { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
     { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
     { match: "UPDATE telegram_alert_job_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
     { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
     { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
     { match: "UPDATE telegram_alert_target_plans", rows: [] },
     { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
     { match: "UPDATE telegram_alert_planning_subscribers", rows: [] },
     { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
     { match: "UPDATE telegram_transport_failure_observations", rows: [] },
     { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
     { match: "UPDATE telegram_alert_dead_letters", rows: [] },
     { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+    { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
     { match: "UPDATE telegram_chat_delivery_diagnostics", rows: [] },
+    { match: "INSERT INTO telegram_webhook_operation_mutations", rows: [] },
     { match: "FROM cache", rows: [], first: null },
     { match: "INSERT INTO cache", rows: [] },
     { match: "INSERT OR REPLACE INTO cache", rows: [] },
@@ -435,6 +445,7 @@ describe("handleTelegramWebhook", () => {
 
   it("migrates stored chat state on migrate_to_chat_id service messages", async () => {
     const db = fixtureMockD1();
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const res = await handleTelegramWebhook(
       db,
@@ -512,6 +523,13 @@ describe("handleTelegramWebhook", () => {
           entry.sql.includes("DELETE FROM telegram_subscribers WHERE chat_id = ?") && entry.binds[0] === "-123",
       ),
     ).toBe(true);
+    expect(info).toHaveBeenCalledWith(
+      expect.stringContaining('"action":"chat-migration"'),
+    );
+    expect(info).toHaveBeenCalledWith(
+      expect.stringContaining('"message":"telegram chat id migrated"'),
+    );
+    info.mockRestore();
   });
 
   it("migrates stored chat state on migrate_from_chat_id service messages", async () => {

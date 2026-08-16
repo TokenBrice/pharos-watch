@@ -1,18 +1,13 @@
 import { z } from "zod";
 import { compareText } from "./safety-score-v9-fact-primitives";
-
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-const NonEmptyCanonicalStringSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
+import { CanonicalTextSchema, Sha256Schema } from "./safety-schema-primitives";
 
 const CanonicalStringSetSchema = z
-  .array(NonEmptyCanonicalStringSchema)
+  .array(CanonicalTextSchema)
   .transform((values) => [...new Set(values)].sort(compareText));
 
 const ProducerMethodologyVersionSetSchema = CanonicalStringSetSchema.pipe(
-  z.array(NonEmptyCanonicalStringSchema).min(1, "At least one producer methodology version is required"),
+  z.array(CanonicalTextSchema).min(1, "At least one producer methodology version is required"),
 );
 
 const ProducerMethodologyVersionsSchema = z
@@ -25,7 +20,7 @@ const ProducerMethodologyVersionsSchema = z
 
 const ProducerIdentitySchema = z
   .object({
-    generationId: NonEmptyCanonicalStringSchema,
+    generationId: CanonicalTextSchema,
     payloadSha256: Sha256Schema,
   })
   .strict();
@@ -39,7 +34,7 @@ export const ReportCardsBaseInputIdentityV1Schema = z
     sourceUpdatedAtSec: z.number().int().nonnegative(),
     registry: z
       .object({
-        activeAssetIds: CanonicalStringSetSchema.pipe(z.array(NonEmptyCanonicalStringSchema).min(1)),
+        activeAssetIds: CanonicalStringSetSchema.pipe(z.array(CanonicalTextSchema).min(1)),
         fingerprintSha256: Sha256Schema,
       })
       .strict(),

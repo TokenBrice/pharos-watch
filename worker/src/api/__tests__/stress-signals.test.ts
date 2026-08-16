@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleStressSignals } from "../stress-signals";
 import {
   StressSignalsAllResponseSchema,
@@ -458,24 +459,14 @@ describe("handleStressSignals contract tests", () => {
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 
-  it("rejects unknown stablecoin ID with 404", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const url = new URL("https://x/api/stress-signals?stablecoin=../etc/passwd");
-    const res = await handleStressSignals(db, url);
-
-    expect(res.status).toBe(404);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toContain("Unknown");
-  });
-
-  it("rejects pre-launch stablecoin ID with 404", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const url = new URL(`https://x/api/stress-signals?stablecoin=${preLaunchStablecoinId}&days=7`);
-    const res = await handleStressSignals(db, url);
-
-    expect(res.status).toBe(404);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe("Unknown stablecoin");
+  registerStablecoinParameterContract({
+    name: "stress signals",
+    path: "/api/stress-signals",
+    invoke: handleStressSignals,
+    cases: [
+      { kind: "unknown", name: "rejects an invalid stablecoin ID with 404", stablecoin: "../etc/passwd" },
+      { kind: "unknown", name: "rejects a pre-launch stablecoin ID with 404", stablecoin: preLaunchStablecoinId, query: "days=7" },
+    ],
   });
 
   it("skips malformed rows instead of failing the whole response", async () => {

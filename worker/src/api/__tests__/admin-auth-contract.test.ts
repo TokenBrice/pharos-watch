@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   DYNAMIC_ENDPOINT_DESCRIPTORS,
   ENDPOINT_DEFINITIONS,
@@ -8,8 +8,9 @@ import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation"
 import { route } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
-vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
+mockFetch([], { requireMatch: true });
 
 const db = mockD1([
   {

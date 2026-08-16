@@ -181,7 +181,7 @@ jobs:
         env:
           DEPLOYMENT_URL: ${{ steps.pages-deployment.outputs.deployment_url }}
         run: |
-          node scripts/maintenance/wait-pages-release-marker.mjs \
+          node --import tsx scripts/maintenance/wait-pages-release-marker.ts \
             --url "${DEPLOYMENT_URL}/__pharos_release.json" \
             --attempts 24 \
             --delay-ms 5000

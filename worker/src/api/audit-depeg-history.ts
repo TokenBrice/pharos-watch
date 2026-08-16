@@ -1,8 +1,8 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { jsonResponse, errorResponse } from "../lib/api-utils";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
-import { getDepegThresholdBps } from "../lib/constants";
-import { buildInClause } from "../lib/db";
+import { D1_BATCH_SIZE, getDepegThresholdBps } from "../lib/constants";
+import { buildInClause, executeAtomicBatch } from "../lib/db";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
 import type { PsiDepegEventRow } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -36,6 +36,13 @@ class AuditMutationCommitError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "AuditMutationCommitError";
+  }
+}
+
+class AuditMutationRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuditMutationRequestError";
   }
 }
 
@@ -113,6 +120,11 @@ interface ContradictoryRecoveryRepairResult {
 interface AuditMutationPlan {
   statements: D1PreparedStatement[];
   affectedDays: Set<number>;
+}
+
+interface AuditMutationBatchBound {
+  requestedMutationCount: number;
+  operation: string;
 }
 
 function getDeviationSignal(price: number | null | undefined, pegReference: number) {
@@ -322,11 +334,30 @@ async function commitAuditMutation(
   mutationStatements: D1PreparedStatement[],
   failureMessage: string,
   recomputePlan?: { affectedDays: Set<number>; remainingDepegEvents: PsiDepegEventRow[] },
+  batchBound?: AuditMutationBatchBound,
 ): Promise<number> {
+  // The mutation and stability recompute form one logical unit. Build the
+  // recompute first so the full atomic statement count can be bounded before
+  // executeAtomicBatch sends the transaction.
   const recompute = recomputePlan
     ? await buildRecomputeStabilityStatements(db, recomputePlan.affectedDays, recomputePlan.remainingDepegEvents)
     : { statements: [], daysRecomputed: 0 };
   const statements = [...mutationStatements, ...recompute.statements];
+  const requestedMutationCount = batchBound?.requestedMutationCount ?? mutationStatements.length;
+  const availableMutationStatements = Math.max(0, D1_BATCH_SIZE - recompute.statements.length);
+  if (
+    recompute.statements.length > D1_BATCH_SIZE
+    || requestedMutationCount > availableMutationStatements
+    || mutationStatements.length > availableMutationStatements
+    || statements.length > D1_BATCH_SIZE
+  ) {
+    throw new AuditMutationRequestError(
+      `${batchBound?.operation ?? "Audit mutation"} exceeds the ${D1_BATCH_SIZE}-statement atomic batch limit: `
+      + `${requestedMutationCount} requested mutation statements, ${mutationStatements.length} prepared mutation statements, `
+      + `and ${recompute.statements.length} stability recompute statements `
+      + `(maximum ${availableMutationStatements} mutation statements).`,
+    );
+  }
   if (statements.length === 0) {
     return recompute.daysRecomputed;
   }
@@ -334,7 +365,7 @@ async function commitAuditMutation(
   try {
     // D1 batches execute as a single SQL transaction; keep the mutation and
     // any downstream PSI repairs in the same commit boundary for admin runs.
-    await db.batch(statements);
+    await executeAtomicBatch(db, statements);
   } catch (error) {
     logWorkerEventArgs("api", "error", `[audit] ${failureMessage}:`, error);
     throw new AuditMutationCommitError(`${failureMessage}; no changes were committed.`);
@@ -386,6 +417,7 @@ async function executeDirectDelete(
     mutationPlan.statements,
     "Direct delete failed before the stability-index repair could finish",
     { affectedDays: mutationPlan.affectedDays, remainingDepegEvents },
+    { requestedMutationCount: deleteIds.length, operation: "Direct delete" },
   );
 
   return jsonResponse({
@@ -438,6 +470,7 @@ async function executeSyntheticSplitRepair(
       affectedDays: mutationPlan.affectedDays,
       remainingDepegEvents: projectSyntheticSplitDepegEvents(allRows, paginatedGroups),
     },
+    { requestedMutationCount: mutationPlan.statements.length, operation: "Synthetic split repair" },
   );
   return jsonResponse(result);
 }
@@ -533,6 +566,9 @@ export async function handleAuditDepegHistoryTrusted({
     } catch (error) {
       if (error instanceof Ddrv2SealedRepairRequiredError) {
         return ddrv2SealedRepairResponse(error.operation, error.conflicts);
+      }
+      if (error instanceof AuditMutationRequestError) {
+        return errorResponse(400, error.message);
       }
       if (error instanceof AuditMutationCommitError) {
         return errorResponse(500, error.message);
@@ -655,6 +691,7 @@ export async function auditEvents(
       provenanceStatements,
       "False-positive audit persistence failed before the stability-index repair could finish",
       { affectedDays, remainingDepegEvents },
+      { requestedMutationCount: provenanceStatements.length, operation: "Audit provenance persistence" },
     );
   }
 

@@ -19,7 +19,7 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { numberValue as finiteNumber } from "@shared/lib/type-guards";
 import { resolveYieldRowSafety } from "@shared/lib/yield-opportunity-risk";
-import { classifyYieldSourceFreshness, derivePysNullReason } from "../cron/yield-helpers";
+import { classifyYieldSourceFreshness, derivePysNullReason } from "../lib/yield-ranking-helpers";
 import {
   YIELD_METHODOLOGY_CHANGELOG_PATH,
   YIELD_METHODOLOGY_VERSION,

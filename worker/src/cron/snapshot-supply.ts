@@ -9,7 +9,7 @@ import {
 import { SUPPLY_HISTORY_UPSERT_PREFIX } from "../lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
@@ -137,7 +137,7 @@ export async function snapshotSupply(
 
     const circ = asset.circulating;
     if (!circ) continue;
-    const circulatingUsd = sumPegBuckets(circ);
+    const circulatingUsd = getCirculatingRaw(asset);
     if (circulatingUsd <= 0) continue;
     validSnapshotIds.add(asset.id);
 

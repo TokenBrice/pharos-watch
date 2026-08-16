@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../structured-log";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
@@ -80,7 +80,7 @@ export const capCusdProvider: PriceSourceProvider = {
     _context: LivePriceContext,
     signal?: AbortSignal,
   ): Promise<CurrentPriceOverride | null> {
-    const sampleNotionalUsd = clampSampleNotionalUsd(sumPegBuckets(asset.circulating));
+    const sampleNotionalUsd = clampSampleNotionalUsd(getCirculatingRaw(asset));
     const price = await fetchCapRedeemQuote(sampleNotionalUsd, "latest", signal);
     if (price == null) return null;
 

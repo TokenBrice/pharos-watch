@@ -12,10 +12,8 @@ import {
   assignSharedDispatchState,
   type DispatchSnapshotState,
 } from "./dispatch-telegram-state";
-import {
-  readPendingCapacitySnapshot,
-  type PendingCapacitySnapshot,
-} from "./telegram-pending";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
+import type { PendingCapacitySnapshot } from "./telegram-pending";
 import {
   buildTelegramDispatchEvents,
   countSuppressedSafetyChangesAtSeed,
@@ -163,7 +161,7 @@ async function dispatchTelegramAlertsImpl(
     assignSharedDispatchState(sharedState, { safetySourceAssessment });
 
     const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
-    const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
+    const pendingCapacityBefore = await readTelegramPendingCapacitySnapshot(db, nowSec);
     assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
     await reportCronProgress(reportProgress, {
       stage: "source-loaded",

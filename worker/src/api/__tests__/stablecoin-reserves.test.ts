@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleStablecoinReserves, reserveCacheControlForMode } from "../stablecoin-reserves";
 import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import type { ReservePresentationMode } from "@shared/types/live-reserves";
@@ -226,13 +227,11 @@ describe("handleStablecoinReserves", () => {
     expect(body.metadata?.redemption).toEqual({});
   });
 
-  it("returns 404 for unknown stablecoin IDs", async () => {
-    const db = mockD1([
-      { match: "FROM reserve_composition", rows: [] },
-      { match: "FROM reserve_sync_state", rows: [] },
-    ]);
-    const res = await handleStablecoinReserves(db, "not-a-coin");
-    expect(res.status).toBe(404);
+  registerStablecoinParameterContract({
+    name: "stablecoin reserves",
+    path: "/api/stablecoin-reserves",
+    invoke: (db, url) => handleStablecoinReserves(db, url.searchParams.get("stablecoin") ?? ""),
+    cases: [{ kind: "unknown", stablecoin: "not-a-coin", error: "Not found" }],
   });
 
   it("surfaces lastError from sync state in the API response", async () => {

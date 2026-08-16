@@ -8,17 +8,21 @@ import { parseRequestJsonWithSchema } from "../lib/api-utils";
 import { logAdminAction } from "../lib/admin-action-audit";
 import {
   enqueuePendingAlerts,
+} from "../lib/telegram-pending-queue";
+import {
   estimateTelegramDrainTimeSec,
-  readPendingCapacitySnapshot,
+  readTelegramPendingCapacitySnapshot,
+} from "../lib/telegram-pending-capacity";
+import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../cron/telegram-pending";
+} from "../lib/telegram-constants";
 import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   TELEGRAM_ALERT_TTL_SEC,
 } from "../lib/telegram-constants";
 import { splitMessage } from "../lib/telegram-alerts";
-import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../cron/dispatch-telegram-subscribers";
+import { loadBroadcastTargetChatIds, type TelegramBroadcastScope } from "../lib/telegram-broadcast-targets";
 import { sendToChat, type BatchMessage } from "../lib/telegram";
 import { z } from "zod";
 import {
@@ -218,7 +222,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
     const fleetChatIds = canaryChatId == null ? chatIds : chatIds.filter((chatId) => chatId !== canaryChatId);
     const targetMessageCount = fleetChatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);
-    const pendingCapacity = await readPendingCapacitySnapshot(db, nowSec);
+    const pendingCapacity = await readTelegramPendingCapacitySnapshot(db, nowSec);
     const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
 
     if (dryRun) {

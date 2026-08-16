@@ -8,6 +8,7 @@ import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "../../lib/stability-index";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { SECONDS } from "../../lib/time-constants";
@@ -193,7 +194,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   }
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const todayTs = bucketUnixSecondsToUtcDay(nowSec);
   const yesterdayTs = todayTs - SECONDS.ONE_DAY;
 
   const ctx: CollectorContext = {

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import {
   buildAddressPriceTargetsByProvider,
   collectAddressPriceProviderQuotes,
@@ -408,8 +409,8 @@ describe("address price providers", () => {
       address: "So11111111111111111111111111111111111111112",
     });
     let requestedUrl: string | null = null;
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
-      requestedUrl = String(input);
+    const fetchMock = mockFetch([{ match: () => true, respond: (request) => {
+      requestedUrl = request.url;
       return new Response(JSON.stringify({
         success: true,
         data: {
@@ -423,8 +424,7 @@ describe("address price providers", () => {
         status: 200,
         headers: { "content-type": "application/json" },
       });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    } }]);
 
     const result = await runBirdeyeAddressProvider(
       [target],
@@ -477,13 +477,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: "So11111111111111111111111111111111111111112",
     });
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ success: true, data: null }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      })
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{ match: () => true, body: { success: true, data: null } }]);
 
     const result = await runBirdeyeAddressProvider(
       [target],
@@ -516,13 +510,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: "So11111111111111111111111111111111111111112",
     });
-    const fetchMock = vi.fn(async () =>
-      new Response(JSON.stringify({ success: false, message: "Invalid API key", data: null }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{ match: () => true, body: { success: false, message: "Invalid API key", data: null } }]);
 
     const result = await runBirdeyeAddressProvider(
       [target],
@@ -554,10 +542,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: `So1111111111111111111111111111111111111111${index}`,
     }));
-    const fetchMock = vi.fn(async () =>
-      new Response("Compute units usage limit exceeded", { status: 400 })
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "Compute units usage limit exceeded", status: 400 }]);
 
     const result = await runBirdeyeAddressProvider(
       targets,
@@ -590,13 +575,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: `So1111111111111111111111111111111111111111${index}`,
     }));
-    const fetchMock = vi.fn(async () =>
-      new Response("Too many requests", {
-        status: 429,
-        headers: { "Retry-After": "60" },
-      })
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "Too many requests", status: 429, headers: { "Retry-After": "60" } }]);
 
     const result = await runBirdeyeAddressProvider(
       targets,
@@ -623,20 +602,14 @@ describe("address price providers", () => {
   it("reports Birdeye targets skipped by the request cap", async () => {
     vi.useFakeTimers();
     try {
-      const fetchMock = vi.fn(async () =>
-        new Response(JSON.stringify({
+      const fetchMock = mockFetch([{ match: () => true, body: {
           success: true,
           data: {
             value: "1.001",
             liquidity: "75000",
             updateUnixTime: 1_700_000_000,
           },
-        }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      );
-      vi.stubGlobal("fetch", fetchMock);
+        } }]);
 
       const resultPromise = runBirdeyeAddressProvider(
         Array.from({ length: 11 }, (_, index) => makeDexScreenerTarget(index, {
@@ -667,9 +640,8 @@ describe("address price providers", () => {
     const target = makeDexScreenerTarget(0);
     const secret = "ALCH_SECRET_123/plus+space value";
     const encodedSecret = encodeURIComponent(secret);
-    const fetchMock = vi.fn(async () => new Response("upstream error", { status: 520 }));
+    const fetchMock = mockFetch([{ match: () => true, body: "upstream error", status: 520 }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     const result = await runAlchemyAddressProvider(
       [target],
@@ -696,11 +668,7 @@ describe("address price providers", () => {
   });
 
   it("reports Alchemy targets skipped by the request cap", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), {
-      status: 200,
-      headers: { "content-type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
 
     const result = await runAlchemyAddressProvider(
       Array.from({ length: 501 }, (_, index) => makeDexScreenerTarget(index)),
@@ -721,11 +689,7 @@ describe("address price providers", () => {
   it("reports CoinGecko onchain targets skipped by the request cap", async () => {
     vi.useFakeTimers();
     try {
-      const fetchMock = vi.fn(async () => new Response(JSON.stringify({ data: [] }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, body: { data: [] } }]);
 
       const resultPromise = runCoingeckoOnchainAddressProvider(
         Array.from({ length: 151 }, (_, index) => makeDexScreenerTarget(index)),
@@ -750,8 +714,7 @@ describe("address price providers", () => {
   });
 
   it("limits DexScreener address augmentation to one batch per run", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify([]), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: [] }]);
 
     const result = await runDexScreenerAddressProvider(
       Array.from({ length: 60 }, (_, index) => makeDexScreenerTarget(index)),
@@ -783,11 +746,10 @@ describe("address price providers", () => {
       liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
       pairCreatedAt: null,
     });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify([
+    mockFetch([{ match: () => true, body: [
       pair("0.99", "0xpair1"),
       pair("1.01", "0xpair2"),
-    ]), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    ] }]);
 
     const result = await runDexScreenerAddressProvider(
       [target],
@@ -812,7 +774,7 @@ describe("address price providers", () => {
       symbol: "USDV",
       address: "0x0000000000000000000000000000000000000003",
     });
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify([
+    mockFetch([{ match: () => true, body: [
       {
         chainId: "base",
         dexId: "uniswap",
@@ -825,8 +787,7 @@ describe("address price providers", () => {
         liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
         pairCreatedAt: null,
       },
-    ]), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    ] }]);
 
     const result = await runDexScreenerAddressProvider(
       [matchedTarget, missingTarget],
@@ -845,8 +806,7 @@ describe("address price providers", () => {
   });
 
   it("does not continue DexScreener address batches after an upstream refusal", async () => {
-    const fetchMock = vi.fn(async () => new Response("forbidden", { status: 403 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "forbidden", status: 403 }]);
 
     const result = await runDexScreenerAddressProvider(
       Array.from({ length: 60 }, (_, index) => makeDexScreenerTarget(index)),
@@ -873,11 +833,10 @@ describe("address price providers", () => {
   });
 
   it("reports DexPaprika request-cap skips without raising the cap", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+    const fetchMock = mockFetch([{ match: () => true, body: {
       address: "0x0000000000000000000000000000000000000000",
       summary: { price_usd: 1, liquidity_usd: 100_000 },
-    }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    } }]);
 
     const result = await runDexPaprikaAddressProvider(
       Array.from({ length: 61 }, (_, index) => makeDexScreenerTarget(index, {
@@ -897,8 +856,7 @@ describe("address price providers", () => {
   });
 
   it("marks malformed DexPaprika token details as invalid shape diagnostics", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify(["not", "a", "token"]), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetch([{ match: () => true, body: ["not", "a", "token"] }]);
 
     const result = await runDexPaprikaAddressProvider(
       [makeDexScreenerTarget(1)],
@@ -922,8 +880,7 @@ describe("address price providers", () => {
   it("skips durable DexPaprika 404 negatives without opening a request", async () => {
     const target = makeDexScreenerTarget(1);
     const targetKey = `${target.providerChainId}:${target.address.toLowerCase()}`;
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
     const db = {
       prepare: vi.fn((sql: string) => ({
         bind: vi.fn(() => ({
@@ -953,11 +910,7 @@ describe("address price providers", () => {
   });
 
   it("honors Retry-After by stopping a DexPaprika run after the first 429", async () => {
-    const fetchMock = vi.fn(async () => new Response("slow down", {
-      status: 429,
-      headers: { "Retry-After": "120" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "slow down", status: 429, headers: { "Retry-After": "120" } }]);
     const writes: unknown[][] = [];
     const db = {
       prepare: vi.fn((sql: string) => ({
@@ -986,8 +939,7 @@ describe("address price providers", () => {
   });
 
   it("keeps blocked address providers neutral for circuit-breaker accounting", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     const result = await collectAddressPriceProviderQuotes({
       targetsByProvider: new Map([[

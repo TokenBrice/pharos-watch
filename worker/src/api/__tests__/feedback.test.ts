@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import {
   mockD1 as createMockD1,
@@ -10,10 +10,23 @@ import { stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import type { FeedbackEnv } from "../feedback";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 // Stub fetch and crypto.subtle before importing the handler
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+let fetchSpy: ReturnType<typeof mockFetch>;
+let fetchOutcomes: Array<Response | Error | Promise<Response>> = [];
+
+function queueFetch(...outcomes: Array<Response | Error | Promise<Response>>): void {
+  fetchOutcomes = outcomes;
+}
+
+function installFetchMock(): ReturnType<typeof mockFetch> {
+  fetchOutcomes = [];
+  return mockFetch([{
+    match: "https://api.github.com/repos/TokenBrice/pharos-watch/issues",
+    respond: () => fetchOutcomes.shift() ?? new Error("unexpected GitHub request"),
+  }], { requireMatch: true });
+}
 
 stubCryptoForAuth();
 
@@ -135,9 +148,13 @@ function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
 
 describe("handleFeedback", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = installFetchMock();
     logWorkerEventMock.mockReset();
     logWorkerEventArgsMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("returns 400 for invalid JSON body", async () => {
@@ -288,7 +305,12 @@ describe("handleFeedback", () => {
 
   it("retries the same key after a 429 without persisting or consuming the rejected attempt", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
-    fetchSpy.mockResolvedValue(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+    queueFetch(
+      new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
+      new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
+      new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
+      new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }),
+    );
 
     for (const key of ["feedback-quota-1", "feedback-quota-2", "feedback-quota-3"]) {
       const response = await handleFeedback(db, makeRequest(makeFeedbackBody(), key), makeEnv());
@@ -349,7 +371,7 @@ describe("handleFeedback", () => {
 
   it("retries the same key after pre-execution configuration recovers", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
 
     const unavailable = await handleFeedback(db, makeRequest(makeFeedbackBody()), { FEEDBACK_IP_SALT: "test-salt" });
     expect(unavailable.status).toBe(503);
@@ -369,7 +391,7 @@ describe("handleFeedback", () => {
 
     // Mock successful GitHub Issues API response
     const response = new Response(JSON.stringify({ id: 1, number: 42 }), { status: 201 });
-    fetchSpy.mockResolvedValueOnce(response);
+    queueFetch(response);
 
     const res = await handleFeedback(
       db,
@@ -396,7 +418,7 @@ describe("handleFeedback", () => {
       { match: "cache", rows: [], first: null },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 2, number: 43 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 2, number: 43 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -442,7 +464,7 @@ describe("handleFeedback", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 5, number: 46 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -489,7 +511,7 @@ describe("handleFeedback", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -514,7 +536,7 @@ describe("handleFeedback", () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
     const issueResponse = new Response(JSON.stringify({ id: 3, number: 44 }), { status: 201 });
-    fetchSpy.mockResolvedValueOnce(issueResponse);
+    queueFetch(issueResponse);
 
     const res = await handleFeedback(
       db,
@@ -541,7 +563,7 @@ describe("handleFeedback", () => {
   it("releases quota and terminally replays a confirmed GitHub rejection", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
 
-    fetchSpy.mockResolvedValueOnce(new Response("Forbidden", { status: 403 }));
+    queueFetch(new Response("Forbidden", { status: 403 }));
 
     const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
     const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
@@ -562,7 +584,7 @@ describe("handleFeedback", () => {
 
   it("keeps quota reserved and suppresses retry after an ambiguous GitHub transport failure", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
-    fetchSpy.mockRejectedValueOnce(new TypeError("network reset"));
+    queueFetch(new TypeError("network reset"));
 
     const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
     const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
@@ -582,7 +604,7 @@ describe("handleFeedback", () => {
 
   it("replays a successful submission without consuming quota or posting twice", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
 
     const first = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
     const replay = await handleFeedback(db, makeRequest(makeFeedbackBody()), makeEnv());
@@ -600,7 +622,7 @@ describe("handleFeedback", () => {
       { match: "cache", rows: [], first: null },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 4, number: 45 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 4, number: 45 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -620,7 +642,7 @@ describe("handleFeedback", () => {
   it("neutralizes markdown mentions and code fences in GitHub issue bodies", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 8, number: 49 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 8, number: 49 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,
@@ -646,7 +668,7 @@ describe("handleFeedback", () => {
   it("includes optional contact handle in GitHub body", async () => {
     const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ id: 10, number: 51 }), { status: 201 }));
+    queueFetch(new Response(JSON.stringify({ id: 10, number: 51 }), { status: 201 }));
 
     const res = await handleFeedback(
       db,

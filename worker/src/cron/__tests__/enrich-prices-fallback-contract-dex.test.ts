@@ -14,6 +14,10 @@ import {
   type PeggedAsset,
 } from "./enrich-prices.test-support";
 
+function installFetch(implementation: (url: string) => Response | Promise<Response>) {
+  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
+}
+
 function fixtureMockD1(
   tables: Parameters<typeof createFixtureMockD1>[0] = [],
   options?: Parameters<typeof createFixtureMockD1>[1],
@@ -421,9 +425,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (url.includes("coins.llama.fi")) {
           return new Response(JSON.stringify({ coins: {} }), { status: 200 });
         }
@@ -439,8 +441,7 @@ describe("enrichMissingPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const stats = await fixtureEnrichMissingPrices(assets);
 
@@ -473,9 +474,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (url.includes("coins.llama.fi")) {
           return new Response(JSON.stringify({ coins: {} }), { status: 200 });
         }
@@ -491,8 +490,7 @@ describe("enrichMissingPrices", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const stats = await fixtureEnrichMissingPrices(assets);
 
@@ -577,7 +575,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("coins.llama.fi")) {
         return new Response(JSON.stringify({ coins: {} }), { status: 200 });
       }
@@ -605,7 +603,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const stats = await fixtureEnrichMissingPrices(assets);
 
@@ -628,13 +625,12 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("dexscreener.com")) {
         return new Response("upstream error", { status: 500 });
       }
       return new Response(JSON.stringify({}), { status: 200 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const stats = await fixtureEnrichMissingPrices(assets);
 
@@ -655,7 +651,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0xaf6186b3521b60e27396b5d23b48abc34bf585c5")) {
         return new Response(
           JSON.stringify([
@@ -677,7 +673,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
@@ -702,9 +697,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (url.includes("api.dexscreener.com/tokens/v1/ethereum/0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe")) {
           return new Response(
             JSON.stringify([
@@ -729,8 +722,7 @@ describe("enrichMissingPrices", () => {
           );
         }
         return new Response(JSON.stringify([]), { status: 200 });
-      }),
-    );
+      });
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
@@ -776,7 +768,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
         return new Response(
           JSON.stringify([
@@ -801,7 +793,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, db);
 
@@ -911,7 +902,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
         return new Response(
           JSON.stringify([
@@ -936,7 +927,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, db);
 
@@ -959,7 +949,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (url.includes("api.dexscreener.com/tokens/v1/base/0xabc")) {
         return new Response(JSON.stringify([]), { status: 200 });
       }
@@ -981,7 +971,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
@@ -1055,7 +1044,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = installFetch(async (url: string) => {
       if (
         url.includes("q=USDN") ||
         url.includes("q=CTUSD") ||
@@ -1085,7 +1074,6 @@ describe("enrichMissingPrices", () => {
       }
       return new Response("Not found", { status: 404 });
     });
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fixtureRunDexScreenerPass(assets, { peggedCHF: 1.12 }, undefined);
 

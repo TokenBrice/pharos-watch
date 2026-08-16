@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { SafetyScorePublicationIdentitySchema } from "./safety-score-publication";
+import { RatioSchema } from "./ratio";
 
 export const ChainsFreshnessMetaSchema = z.object({
   updatedAt: z.number(),
@@ -98,11 +99,11 @@ export const ChainSummarySchema = z.object({
   type: z.enum(["evm", "tron", "other"]),
   totalUsd: z.number(),
   change24h: z.number(),
-  change24hPct: z.number(),
+  change24hPct: RatioSchema,
   change7d: z.number(),
-  change7dPct: z.number(),
+  change7dPct: RatioSchema,
   change30d: z.number(),
-  change30dPct: z.number(),
+  change30dPct: RatioSchema,
   stablecoinCount: z.number(),
   dominantStablecoin: ChainDominantStablecoinSchema,
   topStablecoins: z.array(ChainTopStablecoinSchema).optional(),
@@ -120,9 +121,9 @@ export const ChainsResponseSchema = z.object({
   globalTotalUsd: z.number(),
   chainAttributedTotalUsd: z.number(),
   unattributedTotalUsd: z.number(),
-  globalChange24hPct: z.number(),
-  globalChange7dPct: z.number(),
-  globalChange30dPct: z.number(),
+  globalChange24hPct: RatioSchema,
+  globalChange7dPct: RatioSchema,
+  globalChange30dPct: RatioSchema,
   updatedAt: z.number(),
   healthMethodologyVersion: z.string(),
   safetyScoreIdentity: SafetyScorePublicationIdentitySchema.nullable().optional(),

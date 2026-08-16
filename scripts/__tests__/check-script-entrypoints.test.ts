@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectScriptEntrypointErrors,
   collectScriptEntrypoints,
-} from "../ci/check-script-entrypoints.mjs";
+} from "../ci/check-script-entrypoints.ts";
 
 function fixtureRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "pharos-script-entrypoints-"));

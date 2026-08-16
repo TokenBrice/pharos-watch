@@ -8,14 +8,13 @@ import {
   V9ReasonOwnerDomainSchema,
   V9ReasonReleaseSeveritySchema,
 } from "./safety-score-v9";
+import {
+  BaseInputGenerationIdSchema,
+  CanonicalTextSchema,
+  Sha256Schema,
+  UnixSecondsSchema,
+} from "./safety-schema-primitives";
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
-const UnixSecondsSchema = z.number().int().nonnegative();
 const NonNegativeUsdSchema = z.number().finite().nonnegative();
 
 function addCanonicalStringArrayIssues(values: readonly string[], ctx: z.RefinementCtx, path: PropertyKey[]): void {

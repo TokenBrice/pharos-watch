@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { encodeBalanceOfCallData, TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { fetchHistoricalFxRates } from "../../lib/backfill-fx";
@@ -136,11 +137,11 @@ describe("handleBackfillSupplyHistory", () => {
     });
   });
 
-  it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillSupplyHistoryTrusted({ db: makeDb(), url: makeApiUrl("/api/backfill-supply-history?stablecoin=not-a-real-id"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=not-a-real-id", { adminKey: "secret" }) });
-
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Stablecoin not found" });
+  registerStablecoinParameterContract({
+    name: "supply history backfill",
+    path: "/api/backfill-supply-history",
+    invoke: (db, url) => handleBackfillSupplyHistoryTrusted({ db, url, request: makeApiRequest(url.toString(), { adminKey: "secret" }) }),
+    cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
   });
 
   it("returns no-op response for out-of-range batches", async () => {

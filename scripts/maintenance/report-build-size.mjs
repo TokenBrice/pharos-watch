@@ -4,12 +4,12 @@ import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
-import { formatBytes } from "../lib/format-bytes.mjs";
+import { formatBytes } from "../lib/format-bytes.mts";
 import {
   countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
-} from "../lib/static-export-capacity.mjs";
+} from "../lib/static-export-capacity.mts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const args = new Set(process.argv.slice(2));

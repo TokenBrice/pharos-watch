@@ -6,6 +6,7 @@ import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
 import { computeReportCardsRegistryFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "@shared/lib/safety-score-v9/score-bearing-gates-policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -1205,7 +1206,7 @@ export function buildSafetyScoreV9BaselineExtensionFromNormalizedInput(
       // consistent with the D1 overlay standard and the mechanism-overlay
       // expiry gate (VER2-004). Registry-observed overlays stay current well
       // inside this window, so the current cohort is unaffected.
-      maxAgeSec: 31_536_000,
+      maxAgeSec: V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry.researchOverlayMaxAgeSec,
     },
   } satisfies SafetyScoreV9FactSetExtensionV2["sources"];
   const liveToFallbackAssetIds = new Set(fixedInput.liveToFallbackCoins);

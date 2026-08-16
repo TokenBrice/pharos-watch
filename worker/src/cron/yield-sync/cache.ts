@@ -7,7 +7,6 @@
 //   - supplemental-cache-keys.ts  supplemental keying + supplemental cache
 //                                 (build/parse) + candidate validation
 export {
-  parseYieldRankingsPublishedCutoff,
   buildRiskFreeRateCachePayload,
   serializeRiskFreeRateCache,
   buildRiskFreeRatesCachePayload,
@@ -17,7 +16,6 @@ export {
   getDefaultDeterministicOnChainHealthState,
   serializeDeterministicOnChainHealthState,
   parseDeterministicOnChainHealthState,
-  type YieldRankingsPublishedCutoffResult,
   type DeterministicOnChainHealthState,
 } from "./cache/normalization";
 

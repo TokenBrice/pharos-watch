@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
 
@@ -21,13 +22,6 @@ async function makeRoot() {
   const root = await mkdtemp(path.join(os.tmpdir(), "pharos-public-datasets-"));
   tempRoots.push(root);
   return root;
-}
-
-function jsonResponse(body: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(body), {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
 }
 
 function makeEnvelope(snapshotDate: string) {
@@ -129,23 +123,15 @@ describe("generate-public-datasets", () => {
   });
 
   it("uses the effective snapshot date after falling back to the latest snapshot", async () => {
-    const fetchMock = vi.fn(async (url: string | URL | Request) => {
-      const href = String(url);
-      if (href.endsWith("/api/snapshots/2026-05-16.json")) {
-        return jsonResponse({ error: "not found" }, { status: 404 });
-      }
-      if (href.endsWith("/api/snapshots/index")) {
-        return jsonResponse({ snapshots: [{ snapshotDate: "2026-05-15" }] });
-      }
-      if (href.endsWith("/api/snapshots/2026-05-15.json")) {
-        return jsonResponse(makeEnvelope("2026-05-15"));
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-15")] });
-      }
-      return jsonResponse({ error: "unexpected" }, { status: 500 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: { error: "not found" }, status: 404 },
+      { match: "https://api.example.test/api/snapshots/index", body: { snapshots: [{ snapshotDate: "2026-05-15" }] } },
+      { match: "https://api.example.test/api/snapshots/2026-05-15.json", body: makeEnvelope("2026-05-15") },
+      {
+        match: "https://api.example.test/api/depeg-events?limit=1000",
+        body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-15")] },
+      },
+    ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const specs = testExports.buildTopicSpecs(inputs.envelope, inputs.depegEvents, inputs.effectiveSnapshotDate);
@@ -159,16 +145,13 @@ describe("generate-public-datasets", () => {
   it("can build real mirrors from current live endpoints before snapshot routes exist", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-18T12:30:00.000Z"));
-    const fetchMock = vi.fn(async (url: string | URL | Request) => {
-      const href = String(url);
-      if (href.endsWith("/api/snapshots/2026-05-16.json") || href.endsWith("/api/snapshots/index")) {
-        return jsonResponse({ error: "not found" }, { status: 404 });
-      }
-      if (href.endsWith("/api/stablecoins")) {
-        return jsonResponse({ peggedAssets: makeEnvelope("2026-05-16").stablecoins });
-      }
-      if (href.endsWith("/api/report-cards/v9")) {
-        return jsonResponse({
+    mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: { error: "not found" }, status: 404 },
+      { match: "https://api.example.test/api/snapshots/index", body: { error: "not found" }, status: 404 },
+      { match: "https://api.example.test/api/stablecoins", body: { peggedAssets: makeEnvelope("2026-05-16").stablecoins } },
+      {
+        match: "https://api.example.test/api/report-cards/v9",
+        body: {
           cards: [
             {
               id: "usdc-circle",
@@ -177,23 +160,21 @@ describe("generate-public-datasets", () => {
             },
           ],
           updatedAt: 1_779_000_001,
-        });
-      }
-      if (href.endsWith("/api/stress-signals")) {
-        return jsonResponse({
+        },
+      },
+      {
+        match: "https://api.example.test/api/stress-signals",
+        body: {
           signals: { "usdc-circle": { score: 4, band: "CALM" } },
           updatedAt: 1_779_000_002,
-        });
-      }
-      if (href.endsWith("/api/dex-liquidity")) {
-        return jsonResponse({ "usdc-circle": { liquidityScore: 95, coverageClass: "deep" } });
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("low-confidence"), makeCoverageSentinel("2026-05-16")] });
-      }
-      return jsonResponse({ error: "unexpected" }, { status: 500 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+        },
+      },
+      { match: "https://api.example.test/api/dex-liquidity", body: { "usdc-circle": { liquidityScore: 95, coverageClass: "deep" } } },
+      {
+        match: "https://api.example.test/api/depeg-events?limit=1000",
+        body: { events: [makeEvent("low-confidence"), makeCoverageSentinel("2026-05-16")] },
+      },
+    ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const specs = testExports.buildTopicSpecs(inputs.envelope, inputs.depegEvents, inputs.effectiveSnapshotDate);
@@ -211,22 +192,21 @@ describe("generate-public-datasets", () => {
   it("can fetch release inputs through the site-data lane without exposing service credentials", async () => {
     vi.stubEnv("PUBLIC_DATASETS_API_KEY", "public-key");
     vi.stubEnv("SITE_API_SHARED_SECRET", "site-secret");
-    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      const href = String(url);
-      const headers = new Headers(init?.headers);
-      expect(headers.get("Origin")).toBe("https://pharos.watch");
-      expect(headers.has("X-API-Key")).toBe(false);
-      expect(headers.has("X-Pharos-Site-Proxy-Secret")).toBe(false);
-
-      if (href.endsWith("/_site-data/snapshots/2026-05-16.json")) {
-        return jsonResponse(makeEnvelope("2026-05-16"));
-      }
-      if (href.endsWith("/_site-data/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] });
-      }
-      return jsonResponse({ error: "unexpected" }, { status: 500 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: (request) => {
+        const headers = request.headers;
+        expect(headers.get("Origin")).toBe("https://pharos.watch");
+        expect(headers.has("X-API-Key")).toBe(false);
+        expect(headers.has("X-Pharos-Site-Proxy-Secret")).toBe(false);
+        return [
+          "https://stablecoin-dashboard.pages.dev/_site-data/snapshots/2026-05-16.json",
+          "https://stablecoin-dashboard.pages.dev/_site-data/depeg-events?limit=1000",
+        ].includes(request.url);
+      },
+      respond: (request) => request.url.endsWith("/_site-data/snapshots/2026-05-16.json")
+        ? { body: makeEnvelope("2026-05-16") }
+        : { body: { events: [makeEvent("large-cap"), makeCoverageSentinel("2026-05-16")] } },
+    }], { requireMatch: true });
 
     const inputs = await loadPublicDatasetLiveInputs("https://stablecoin-dashboard.pages.dev/_site-data", "2026-05-16");
 
@@ -259,23 +239,12 @@ describe("generate-public-datasets", () => {
       id: 2,
       startedAt: testExports.cutoffSecForSnapshotDate("2026-05-16") - 60,
     };
-    const fetchMock = vi.fn(async (url: string | URL | Request) => {
-      const href = String(url);
-      if (href.endsWith("/api/snapshots/2026-05-16.json")) {
-        return jsonResponse(makeEnvelope("2026-05-16"));
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeEvent(null)], nextCursor: "page-2" });
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-2")) {
-        return jsonResponse({ events: [oldEvent], nextCursor: "page-3" });
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-3")) {
-        return jsonResponse({ events: [] });
-      }
-      return jsonResponse({ error: "unexpected" }, { status: 500 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
+      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { events: [makeEvent(null)], nextCursor: "page-2" } },
+      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2", body: { events: [oldEvent], nextCursor: "page-3" } },
+      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-3", body: { events: [] } },
+    ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
@@ -294,20 +263,14 @@ describe("generate-public-datasets", () => {
   });
 
   it("does not treat an old projected timestamp as the raw-order pagination boundary", async () => {
-    const fetchMock = vi.fn(async (url: string | URL | Request) => {
-      const href = String(url);
-      if (href.endsWith("/api/snapshots/2026-05-16.json")) {
-        return jsonResponse(makeEnvelope("2026-05-16"));
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000")) {
-        return jsonResponse({ events: [makeCoverageSentinel("2026-05-16")], nextCursor: "page-2" });
-      }
-      if (href.endsWith("/api/depeg-events?limit=1000&cursor=page-2")) {
-        return jsonResponse({ events: [makeEvent(null)] });
-      }
-      return jsonResponse({ error: "unexpected" }, { status: 500 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
+      {
+        match: "https://api.example.test/api/depeg-events?limit=1000",
+        body: { events: [makeCoverageSentinel("2026-05-16")], nextCursor: "page-2" },
+      },
+      { match: "https://api.example.test/api/depeg-events?limit=1000&cursor=page-2", body: { events: [makeEvent(null)] } },
+    ]);
 
     const inputs = await loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16");
     const rows = testExports.projectDepegHistory(inputs.depegEvents, inputs.effectiveSnapshotDate);
@@ -321,19 +284,10 @@ describe("generate-public-datasets", () => {
   });
 
   it("fails live generation when a required source fetch fails", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL | Request) => {
-        const href = String(url);
-        if (href.endsWith("/api/snapshots/2026-05-16.json")) {
-          return jsonResponse(makeEnvelope("2026-05-16"));
-        }
-        if (href.endsWith("/api/depeg-events?limit=1000")) {
-          return jsonResponse({ error: "unavailable" }, { status: 503 });
-        }
-        return jsonResponse({ error: "unexpected" }, { status: 500 });
-      }),
-    );
+    mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
+      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { error: "unavailable" }, status: 503 },
+    ]);
 
     await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
       "Unable to fetch depeg events",
@@ -341,19 +295,10 @@ describe("generate-public-datasets", () => {
   });
 
   it("rejects a depeg event response that does not cover the rolling export window", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string | URL | Request) => {
-        const href = String(url);
-        if (href.endsWith("/api/snapshots/2026-05-16.json")) {
-          return jsonResponse(makeEnvelope("2026-05-16"));
-        }
-        if (href.endsWith("/api/depeg-events?limit=1000")) {
-          return jsonResponse({ events: [makeEvent(null)] });
-        }
-        return jsonResponse({ error: "unexpected" }, { status: 500 });
-      }),
-    );
+    mockFetchStrict([
+      { match: "https://api.example.test/api/snapshots/2026-05-16.json", body: makeEnvelope("2026-05-16") },
+      { match: "https://api.example.test/api/depeg-events?limit=1000", body: { events: [makeEvent(null)] } },
+    ]);
 
     await expect(loadPublicDatasetLiveInputs("https://api.example.test", "2026-05-16")).rejects.toThrow(
       "does not cover the 90-day export window",

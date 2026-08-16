@@ -5,6 +5,7 @@ import {
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "./telegram-constants";
+import { logTelegramEvent } from "./telegram-log";
 
 export const TELEGRAM_EXECUTION_UNKNOWN_SAMPLE_LIMIT = 5_001;
 
@@ -31,6 +32,10 @@ export interface TelegramPendingCapacitySnapshot {
   drainBudgetPerRun: number;
   dispatchIntervalSec: number;
 }
+
+export type TelegramPendingCapacityReadResult =
+  | { status: "available"; value: TelegramPendingCapacitySnapshot }
+  | { status: "unknown"; errorClass: "query_failed" };
 
 interface TelegramPendingCapacityRow {
   total: number | string | null;
@@ -251,4 +256,38 @@ export async function loadTelegramPendingCapacity(
     )
     .first<TelegramPendingCapacityRow>();
   return mapTelegramPendingCapacity(row, nowSec, drainBudgetPerRun);
+}
+
+export async function readTelegramPendingCapacity(
+  db: D1Database,
+  nowSec: number,
+  drainBudgetPerRun?: number,
+): Promise<TelegramPendingCapacityReadResult> {
+  try {
+    return {
+      status: "available",
+      value: await loadTelegramPendingCapacity(db, nowSec, drainBudgetPerRun),
+    };
+  } catch {
+    logTelegramEvent({
+      level: "warn",
+      message: "Failed to read pending capacity snapshot",
+      action: "read-pending-capacity",
+      module: "telegram-pending-capacity",
+      errorClass: "d1",
+    });
+    return { status: "unknown", errorClass: "query_failed" };
+  }
+}
+
+export async function readTelegramPendingCapacitySnapshot(
+  db: D1Database,
+  nowSec: number,
+  drainBudgetPerRun?: number,
+): Promise<TelegramPendingCapacitySnapshot> {
+  const result = await readTelegramPendingCapacity(db, nowSec, drainBudgetPerRun);
+  if (result.status === "unknown") {
+    throw new Error(`Pending capacity unavailable: ${result.errorClass}`);
+  }
+  return result.value;
 }

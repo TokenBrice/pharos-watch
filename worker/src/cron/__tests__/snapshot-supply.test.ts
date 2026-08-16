@@ -25,7 +25,8 @@ vi.mock("@shared/lib/psi-eligible", () => ({
 
 // Stub supply helper
 vi.mock("@shared/lib/supply", () => ({
-  sumPegBuckets: (c: Record<string, number> | undefined) => {
+  getCirculatingRaw: (asset: { circulating?: Record<string, number> }) => {
+    const c = asset.circulating;
     if (!c) return 0;
     return Object.values(c).reduce((a, b) => a + b, 0);
   },

@@ -5,6 +5,7 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   apiRequest,
   apiFetch,
@@ -562,7 +563,7 @@ describe("api contract validation policy", () => {
   });
 
   it("returns null for 404 when nullOn404 is true", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    mockFetch([{ match: "/api/stablecoin-reserves/test", body: "Not found", status: 404 }], { requireMatch: true });
     const result = await apiFetch("/api/stablecoin-reserves/test", undefined, undefined, undefined, {
       nullOn404: true,
     });
@@ -570,7 +571,7 @@ describe("api contract validation policy", () => {
   });
 
   it("fetchStablecoinReserves inherits the shared null-on-404 behavior", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    mockFetch([{ match: "/api/stablecoin-reserves/usdc-circle", body: "Not found", status: 404 }], { requireMatch: true });
     const result = await fetchStablecoinReserves("usdc-circle");
     expect(result).toBeNull();
   });
@@ -617,37 +618,27 @@ describe("api contract validation policy", () => {
         scoringEligible: true,
       },
     };
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(body), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    mockFetch([{ match: "/api/stablecoin-reserves/iusd-infinifi", body }], { requireMatch: true });
 
     await expect(fetchStablecoinReserves("iusd-infinifi")).resolves.toEqual(body);
   });
 
   it("fetchStablecoinReserves throws SchemaValidationError on malformed 200 payloads", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    mockFetch([{
+      match: "/api/stablecoin-reserves/iusd-infinifi",
+      body: {
           stablecoinId: "iusd-infinifi",
           mode: "live",
           reserves: [{ name: "Test Farm", pct: "100", risk: "low" }],
           estimated: false,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
-    );
+      },
+    }], { requireMatch: true });
 
     await expect(fetchStablecoinReserves("iusd-infinifi")).rejects.toBeInstanceOf(SchemaValidationError);
   });
 
   it("still throws on 404 when nullOn404 is not set", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(new Response("Not found", { status: 404 }));
+    mockFetch([{ match: "/api/stablecoin-reserves/test", body: "Not found", status: 404 }], { requireMatch: true });
     await expect(apiFetch("/api/stablecoin-reserves/test")).rejects.toThrow(ApiFetchError);
   });
 

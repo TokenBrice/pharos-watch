@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { selectLintableFiles } from "../ci/run-changed-eslint.mjs";
+import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
-import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mjs";
-import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.mjs";
+import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
+import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
 
 describe("adaptive PR checks", () => {
   it("parses diff arguments without swallowing downstream options", () => {
@@ -109,7 +109,7 @@ describe("adaptive PR checks", () => {
     for (const path of [
       "src/lib/feature-flags.ts",
       "worker/src/cron/sync-stablecoins.ts",
-      "scripts/ci/check-provider-resilience.mjs",
+      "scripts/ci/check-provider-resilience.ts",
       ".github/workflows/nightly-validation.yml",
     ]) {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");

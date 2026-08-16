@@ -68,41 +68,6 @@ export function summarizeInvalidRows(
 }
 
 // ---------------------------------------------------------------------------
-// Yield rankings published cutoff — small JSON-with-updatedAt cache payload.
-// ---------------------------------------------------------------------------
-
-export type YieldRankingsPublishedCutoffResult =
-  | { status: "ok"; updatedAt: number }
-  | { status: "missing"; updatedAt: null }
-  | { status: "parse-error"; updatedAt: null }
-  | { status: "invalid-shape"; updatedAt: null };
-
-export function parseYieldRankingsPublishedCutoff(
-  cached: { value: string; updatedAt: number } | null,
-): YieldRankingsPublishedCutoffResult {
-  if (!cached) {
-    return { status: "missing", updatedAt: null };
-  }
-
-  try {
-    const parsed = JSON.parse(cached.value) as unknown;
-    if (!isRecord(parsed)) {
-      return { status: "invalid-shape", updatedAt: null };
-    }
-
-    const updatedAt = toFiniteNumber(parsed.updatedAt);
-    if (updatedAt == null || updatedAt <= 0) {
-      return { status: "invalid-shape", updatedAt: null };
-    }
-
-    return { status: "ok", updatedAt };
-  } catch {
-    // Expected when a stale cache row was written before the current shape.
-    return { status: "parse-error", updatedAt: null };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Risk-free rate (benchmark) payload normalization — single benchmark.
 // ---------------------------------------------------------------------------
 

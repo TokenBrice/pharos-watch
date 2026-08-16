@@ -16,7 +16,7 @@ import {
 } from "../lib/telegram-pending-provenance";
 import { expandSubscriberChunks, type RoutedSubscriberAlert } from "./dispatch-telegram-routing";
 import { listTelegramAlertItemKeys } from "./telegram-alert-event-lineage";
-import { buildDedupeKey } from "./telegram-pending";
+import { buildDedupeKey } from "../lib/telegram-pending-queue";
 
 const TELEGRAM_TARGET_PLAN_SCHEMA_VERSION = 1;
 const TELEGRAM_TARGET_PLAN_MAX_JSON_CHARS = 262_144;

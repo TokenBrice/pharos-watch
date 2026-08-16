@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const checkerPath = resolve(process.cwd(), "scripts/ci/check-worker-import-boundary.mjs");
+const checkerPath = resolve(process.cwd(), "scripts/ci/check-worker-import-boundary.ts");
 const docPath = resolve(process.cwd(), "docs/process/boundary-waivers.md");
 const frozenInvariantPath = resolve(process.cwd(), "scripts/ci/check-frozen-invariants.ts");
 

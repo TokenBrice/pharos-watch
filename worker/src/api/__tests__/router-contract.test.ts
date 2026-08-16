@@ -5,18 +5,17 @@ import { isMutatingAdminGetAllowed } from "@shared/lib/api-endpoints/validation"
 import { route, ROUTER_STATIC_PATHS } from "../../router";
 import type { FullRouteContext } from "../../routes/shared";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
-vi.stubGlobal("fetch", vi.fn(async () => (
-  new Response(JSON.stringify({
+mockFetch([{
+  match: () => true,
+  body: {
     tokens: [],
     prices: [],
     market_caps: [],
     tvl: [],
-  }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  })
-)));
+  },
+}], { requireMatch: true });
 
 // This suite verifies route registration and method/auth behavior. Handler-level
 // D1 contracts are covered by the dedicated endpoint suites, so D1 is incidental

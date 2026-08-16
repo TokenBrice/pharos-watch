@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import { runCoingeckoLowVolumePass } from "../enrich-prices-coingecko-low-volume-pass";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">): PeggedAsset {
   return {
@@ -10,6 +11,13 @@ function asset(input: Partial<PeggedAsset> & Pick<PeggedAsset, "id" | "symbol">)
   } as PeggedAsset;
 }
 
+function stubCoingeckoResponse(body: unknown): void {
+  mockFetch([{
+    match: "coingecko.com",
+    body,
+  }], { requireMatch: true });
+}
+
 describe("runCoingeckoLowVolumePass", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -17,14 +25,9 @@ describe("runCoingeckoLowVolumePass", () => {
 
   it("patches selected missing prices from relaxed CoinGecko rows", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 3600;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("coingecko.com")) {
-        return new Response(JSON.stringify({
-          "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
-        }), { status: 200 });
-      }
-      return new Response("Not found", { status: 404 });
-    }));
+    stubCoingeckoResponse({
+      "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
+    });
 
     const primary = asset({
       id: "dllr-sovryn",
@@ -56,15 +59,10 @@ describe("runCoingeckoLowVolumePass", () => {
 
   it("includes audited dEURO and DLLR production gaps in the relaxed fallback allowlist", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 6 * 3600;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("coingecko.com")) {
-        return new Response(JSON.stringify({
-          "decentralized-euro": { usd: 1.14, last_updated_at: observedAt },
-          "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
-        }), { status: 200 });
-      }
-      return new Response("Not found", { status: 404 });
-    }));
+    stubCoingeckoResponse({
+      "decentralized-euro": { usd: 1.14, last_updated_at: observedAt },
+      "sovryn-dollar": { usd: 0.998, last_updated_at: observedAt },
+    });
 
     const dllr = asset({
       id: "dllr-sovryn",
@@ -103,15 +101,10 @@ describe("runCoingeckoLowVolumePass", () => {
 
   it("includes audited near-peg SMARDEX USDN and CADm gaps in the relaxed fallback allowlist", async () => {
     const observedAt = Math.floor(Date.now() / 1000) - 3 * 24 * 3600;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (url.includes("coingecko.com")) {
-        return new Response(JSON.stringify({
-          "smardex-usdn": { usd: 1.006, last_updated_at: observedAt },
-          "celo-canadian-dollar": { usd: 0.697285, last_updated_at: observedAt },
-        }), { status: 200 });
-      }
-      return new Response("Not found", { status: 404 });
-    }));
+    stubCoingeckoResponse({
+      "smardex-usdn": { usd: 1.006, last_updated_at: observedAt },
+      "celo-canadian-dollar": { usd: 0.697285, last_updated_at: observedAt },
+    });
 
     const usdn = asset({
       id: "usdn-smardex",
@@ -158,12 +151,9 @@ describe("runCoingeckoLowVolumePass", () => {
       ccop: 0.00029996,
       cchf: 1.24,
     } as const;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      if (!url.includes("coingecko.com")) return new Response("Not found", { status: 404 });
-      return new Response(JSON.stringify(Object.fromEntries(
-        Object.entries(quotes).map(([id, usd]) => [id, { usd, last_updated_at: observedAt }]),
-      )), { status: 200 });
-    }));
+    stubCoingeckoResponse(Object.fromEntries(
+      Object.entries(quotes).map(([id, usd]) => [id, { usd, last_updated_at: observedAt }]),
+    ));
 
     const assets = [
       asset({ id: "btcusd-btcfi", symbol: "BtcUSD", price: null, pegType: "peggedUSD" }),
@@ -187,11 +177,9 @@ describe("runCoingeckoLowVolumePass", () => {
   });
 
   it("does not overwrite prices that are already present", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({
-        bilira: { usd: 0.023, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
-      }), { status: 200 })
-    ));
+    stubCoingeckoResponse({
+      bilira: { usd: 0.023, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
+    });
 
     const primary = asset({
       id: "tryb-bilira",
@@ -214,11 +202,9 @@ describe("runCoingeckoLowVolumePass", () => {
   });
 
   it("ignores unallowlisted stale CoinGecko rows", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({
-        "token-dforce-usd": { usd: 0.414, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
-      }), { status: 200 })
-    ));
+    stubCoingeckoResponse({
+      "token-dforce-usd": { usd: 0.414, last_updated_at: Math.floor(Date.now() / 1000) - 3600 },
+    });
 
     const primary = asset({
       id: "usx-dforce",
@@ -239,11 +225,9 @@ describe("runCoingeckoLowVolumePass", () => {
   });
 
   it("ignores malformed CoinGecko simple-price payloads", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({
-        "sovryn-dollar": { usd: "0.998" },
-      }), { status: 200 })
-    ));
+    stubCoingeckoResponse({
+      "sovryn-dollar": { usd: "0.998" },
+    });
 
     const primary = asset({
       id: "dllr-sovryn",

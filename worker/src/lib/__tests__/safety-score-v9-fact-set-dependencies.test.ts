@@ -216,6 +216,100 @@ describe("Safety Score v9 exact base fact-set adapter — dependencies, roles an
     );
   });
 
+  it("rejects wrapper relationships that use a non-serial economic role", () => {
+    const fixed = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          dependencies: [{ id: "beta", weight: 1, type: "wrapper" }],
+          dependencyReview: {
+            reviewedAt: "1970-01-01",
+            reviewer: "Fixture reviewer",
+            confidence: "verified",
+            sources: [{ label: "Role review", url: "https://example.com/dependencies/alpha" }],
+            rationale: "The wrapper relationship is deliberately assigned an incompatible role.",
+            relationships: [
+              {
+                id: "beta",
+                weight: 1,
+                type: "wrapper",
+                economicRole: "control-operator",
+                reason: "Invalid wrapper role for this fixture.",
+              },
+            ],
+          },
+        },
+      ],
+      ["beta", { id: "beta", mechanismArchetype: "fiat-cash", launchDate: "1970-01-01" }],
+    ]);
+
+    const alpha = buildSafetyScoreV9BaselineExtension(fixed, { metaById }).assets.find(
+      (asset) => asset.assetId === "alpha",
+    )!;
+
+    expect(alpha.dependencies).toMatchObject({
+      diagnostics: { graphState: "invalid", issueCodes: ["invalid-role-type:beta"] },
+      edges: [],
+    });
+  });
+
+  it("marks mutual serial claims as a dependency cycle", () => {
+    const fixed = exactTwoAssetFixedInput({ omitAlphaReserve: true });
+    const dependencyReview = (upstreamAssetId: string) => ({
+      reviewedAt: "1970-01-01",
+      reviewer: "Fixture reviewer",
+      confidence: "verified" as const,
+      sources: [{ label: "Cycle review", url: "https://example.com/dependencies/cycle" }],
+      rationale: "The fixture deliberately creates a mutual serial claim.",
+      relationships: [
+        {
+          id: upstreamAssetId,
+          weight: 1,
+          type: "wrapper" as const,
+          economicRole: "serial-claim" as const,
+          reason: "Mutual serial claim for cycle handling.",
+        },
+      ],
+    });
+    const metaById = new Map<string, V9ExtensionRegistryMeta>([
+      [
+        "alpha",
+        {
+          id: "alpha",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          dependencies: [{ id: "beta", weight: 1, type: "wrapper" }],
+          dependencyReview: dependencyReview("beta"),
+        },
+      ],
+      [
+        "beta",
+        {
+          id: "beta",
+          mechanismArchetype: "fiat-cash",
+          launchDate: "1970-01-01",
+          dependencies: [{ id: "alpha", weight: 1, type: "wrapper" }],
+          dependencyReview: dependencyReview("alpha"),
+        },
+      ],
+    ]);
+
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
+
+    expect(baseline.assets.find((asset) => asset.assetId === "alpha")!.dependencies).toMatchObject({
+      diagnostics: { graphState: "cycle", issueCodes: ["dependency-cycle"], sccMemberAssetIds: ["alpha", "beta"] },
+      edges: [expect.objectContaining({ economicRole: "serial-claim", upstreamAssetId: "beta" })],
+    });
+    expect(baseline.assets.find((asset) => asset.assetId === "beta")!.dependencies).toMatchObject({
+      diagnostics: { graphState: "cycle", issueCodes: ["dependency-cycle"], sccMemberAssetIds: ["alpha", "beta"] },
+      edges: [expect.objectContaining({ economicRole: "serial-claim", upstreamAssetId: "alpha" })],
+    });
+  });
+
   it("loads every economic role from reviewed production metadata and preserves the Frax WTGXX non-link", () => {
     const productionMeta = [
       {

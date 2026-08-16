@@ -47,7 +47,7 @@ gh pr create --base main --head "$BRANCH_NAME"
 
 ## Repo Pre-Push Hook
 
-In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.mjs` via the `prepare` script. Local installs materialize bootstrap-safe generated projections and run `git config core.hooksPath .githooks`, so the repo pre-push hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`. If hooks were disabled or overridden locally, re-enable them with:
+In the standard local npm setup, `package.json` runs `scripts/maintenance/prepare-workspace.ts` via the `prepare` script. Local installs materialize bootstrap-safe generated projections and run `git config core.hooksPath .githooks`, so the repo pre-push hook is configured automatically after install. GitHub Actions skips that implicit prepare work and runs `npm run bootstrap:generated` explicitly through `.github/actions/setup-workspace/action.yml`. If hooks were disabled or overridden locally, re-enable them with:
 
 ```bash
 git config core.hooksPath .githooks

@@ -85,4 +85,22 @@ describe("ChainsResponseSchema", () => {
       chains: [{ ...validChainsPayload.chains[0], healthBand: "excellent" }],
     }).success).toBe(false);
   });
+
+  it("keeps the ratio fields as plain JSON numbers on the wire", () => {
+    // The six change fields are branded `Ratio` so a 0-1 value cannot be passed where a
+    // 0-100 percentage is expected (chain OG images once printed a ratio with a "%"
+    // suffix). The brand is type-only: it must not alter the published contract, because
+    // `/api/chains` is documented and OpenAPI-specified for external consumers.
+    const parsed = ChainsResponseSchema.parse(validChainsPayload);
+    for (const key of ["globalChange24hPct", "globalChange7dPct", "globalChange30dPct"] as const) {
+      expect(typeof parsed[key]).toBe("number");
+      expect(parsed[key]).toBe(validChainsPayload[key]);
+    }
+    for (const key of ["change24hPct", "change7dPct", "change30dPct"] as const) {
+      expect(typeof parsed.chains[0][key]).toBe("number");
+      expect(parsed.chains[0][key]).toBe(validChainsPayload.chains[0][key]);
+    }
+    // Round-trips through JSON unchanged — no wrapper object, no string coercion.
+    expect(JSON.parse(JSON.stringify(parsed))).toEqual(JSON.parse(JSON.stringify(validChainsPayload)));
+  });
 });

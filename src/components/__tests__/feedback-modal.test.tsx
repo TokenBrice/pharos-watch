@@ -3,8 +3,20 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FeedbackModal } from "@/components/feedback-modal";
+import {
+  mockFetch,
+  type MockFetchOutcome,
+  type MockFetchSpy,
+} from "@shared/test-utils/mock-fetch";
 
-const fetchMock = vi.fn();
+let fetchMock: MockFetchSpy;
+
+function installFetch(outcomes: MockFetchOutcome[] = [{ body: { ok: true } }]): void {
+  fetchMock = mockFetch([{
+    match: "/api/feedback",
+    outcomes,
+  }], { requireMatch: true });
+}
 
 vi.mock("@/lib/api", () => ({
   buildApiUrl: (path: string) => `https://api.example.test${path}`,
@@ -12,14 +24,12 @@ vi.mock("@/lib/api", () => ({
 
 describe("FeedbackModal", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockResolvedValue(Response.json({ ok: true }));
+    installFetch();
   });
 
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
-    fetchMock.mockReset();
     window.history.replaceState(null, "", "/");
   });
 
@@ -65,7 +75,7 @@ describe("FeedbackModal", () => {
   });
 
   it("reuses the idempotency key when an unchanged submission is retried", async () => {
-    fetchMock.mockRejectedValueOnce(new TypeError("network down")).mockResolvedValueOnce(Response.json({ ok: true }));
+    installFetch([new TypeError("network down"), { body: { ok: true } }]);
     render(<FeedbackModal open onOpenChange={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Chart broken" } });
@@ -87,9 +97,7 @@ describe("FeedbackModal", () => {
     [429, "Too many submissions. Please wait a few minutes."],
     [503, "Feedback service temporarily unavailable. Please try again."],
   ])("reuses the idempotency key after a retryable HTTP %i", async (status, message) => {
-    fetchMock
-      .mockResolvedValueOnce(Response.json({ error: message }, { status }))
-      .mockResolvedValueOnce(Response.json({ ok: true }));
+    installFetch([{ body: { error: message }, status }, { body: { ok: true } }]);
     render(<FeedbackModal open onOpenChange={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Chart broken" } });
@@ -108,9 +116,10 @@ describe("FeedbackModal", () => {
   });
 
   it("starts a new attempt after a confirmed terminal upstream rejection", async () => {
-    fetchMock
-      .mockResolvedValueOnce(Response.json({ error: "Failed to submit feedback. Please try again." }, { status: 500 }))
-      .mockResolvedValueOnce(Response.json({ ok: true }));
+    installFetch([
+      { body: { error: "Failed to submit feedback. Please try again." }, status: 500 },
+      { body: { ok: true } },
+    ]);
     render(<FeedbackModal open onOpenChange={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Chart broken" } });
@@ -129,7 +138,7 @@ describe("FeedbackModal", () => {
   });
 
   it("regenerates the idempotency key after the payload changes", async () => {
-    fetchMock.mockRejectedValue(new TypeError("network down"));
+    installFetch([new TypeError("network down"), new TypeError("network down")]);
     render(<FeedbackModal open onOpenChange={vi.fn()} />);
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Chart broken" } });
@@ -151,7 +160,7 @@ describe("FeedbackModal", () => {
   });
 
   it("regenerates the idempotency key after the form resets", async () => {
-    fetchMock.mockRejectedValue(new TypeError("network down"));
+    installFetch([new TypeError("network down"), new TypeError("network down")]);
     const onOpenChange = vi.fn();
     const { rerender } = render(<FeedbackModal open onOpenChange={onOpenChange} />);
 

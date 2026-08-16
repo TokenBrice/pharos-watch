@@ -10,7 +10,7 @@ import {
   DEBT_MODULES,
   SCANNER_BLIND_SPOT_EXPORTS,
   SCANNER_BLIND_SPOT_MODULES,
-} from "../lib/unused-code-allowlist.mjs";
+} from "../lib/unused-code-allowlist.mts";
 
 type DependencyKind = "default" | "named" | "namespace" | "side-effect";
 type AllowlistSection = "SCANNER_BLIND_SPOTS" | "DEBT";

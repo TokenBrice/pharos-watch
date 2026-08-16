@@ -3,22 +3,22 @@
 import { useState } from "react";
 import { useStabilityIndexLight } from "@/hooks/use-stability-index-light";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/psi-colors";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getDisplayedPsi, getDisplayedPsiBasis, getPsiBandStreak } from "@shared/lib/psi-view-model";
 import { cn } from "@/lib/utils";
 
-const DAY_SECONDS = 86_400;
 const BAND_STRIP_WINDOW_DAYS = 30;
 type StabilityIndexLightData = {
   current?: Parameters<typeof getDisplayedPsi>[0];
   history?: Array<{ date: number; band: string; score: number }>;
 };
 
-function buildBandStripCells(
+export function buildBandStripCells(
   history: ReadonlyArray<{ date: number; band: string }> | undefined,
   computedAt: number,
 ): Array<{ date: number; band: string } | null> {
   if (!history?.length) return Array.from({ length: BAND_STRIP_WINDOW_DAYS }, () => null);
-  const todayMidnight = computedAt - (computedAt % DAY_SECONDS);
+  const todayMidnight = bucketUnixSecondsToUtcDay(computedAt);
   const completedOldestFirst = history
     .filter((p) => p.date < todayMidnight)
     .slice(0, BAND_STRIP_WINDOW_DAYS)

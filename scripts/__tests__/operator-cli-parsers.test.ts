@@ -14,7 +14,7 @@ import { parseDigestSyncArgs } from "../maintenance/sync-digests";
 import {
   parseReleaseMarkerArgs,
   run as waitForReleaseMarker,
-} from "../maintenance/wait-pages-release-marker.mjs";
+} from "../maintenance/wait-pages-release-marker.ts";
 
 const tempDirs: string[] = [];
 

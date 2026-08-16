@@ -12,7 +12,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { getOgCaptureValidationError } from "../lib/og-capture-validation.mjs";
+import { getOgCaptureValidationError } from "../lib/og-capture-validation.mts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT = path.join(__dirname, "../../public");

@@ -210,13 +210,8 @@ describe("syncBluechip", () => {
     const usdcResponse = new Response(JSON.stringify({ error: "down" }), { status: 500 });
     const tetherCancel = vi.spyOn(tetherResponse.body!, "cancel");
     const usdcCancel = vi.spyOn(usdcResponse.body!, "cancel");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request) => {
-        const url = typeof input === "string" ? input : input.url;
-        return url.includes("/coin-data/tether") ? tetherResponse : usdcResponse;
-      }),
-    );
+    mockFetch([{ match: () => true, respond: (request) =>
+      request.url.includes("/coin-data/tether") ? tetherResponse : usdcResponse }]);
 
     const db = mockD1();
     const result = await syncBluechip(db);

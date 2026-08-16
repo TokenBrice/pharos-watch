@@ -8,8 +8,10 @@ import {
   splitMessage,
 } from "../lib/telegram-alerts";
 import { buildPendingAlertScope } from "../lib/telegram-pending-provenance";
-import { buildDedupeKey } from "./telegram-pending";
-import { buildPendingAlertEnqueueStatement } from "./telegram-pending/enqueue";
+import {
+  buildDedupeKey,
+  buildPendingAlertEnqueueStatement,
+} from "../lib/telegram-pending-queue";
 import { emptyAlerts } from "./dispatch-telegram-routing";
 import { loadFreshFreezeAlerts, type FreezeAlert } from "./telegram-alert-freeze";
 import { isQuietHoursActive } from "../lib/telegram-quiet-hours";

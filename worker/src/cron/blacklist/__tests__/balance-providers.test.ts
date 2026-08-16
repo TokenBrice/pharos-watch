@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 import {
   fetchEvmTokenBalance,
   fetchEvmTokenCurrentBalance,
@@ -45,23 +46,19 @@ describe("fetchTronTokenCurrentBalance", () => {
   });
 
   it("extracts the configured token balance from the Tron account payload", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            data: [
-              {
-                trc20: [
-                  { TXYZ: "1" },
-                  { [tronConfig.contractAddress]: "50000003770001" },
-                ],
-              },
+    mockFetch([{
+      match: "api.trongrid.io",
+      body: {
+        data: [
+          {
+            trc20: [
+              { TXYZ: "1" },
+              { [tronConfig.contractAddress]: "50000003770001" },
             ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )),
-    );
+          },
+        ],
+      },
+    }]);
 
     const amount = await fetchTronTokenCurrentBalance(
       tronConfig,
@@ -75,20 +72,10 @@ describe("fetchTronTokenCurrentBalance", () => {
   });
 
   it("returns null when the account has no tracked token balance entry", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            data: [
-              {
-                trc20: [{ TXYZ: "1" }],
-              },
-            ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )),
-    );
+    mockFetch([{
+      match: "api.trongrid.io",
+      body: { data: [{ trc20: [{ TXYZ: "1" }] }] },
+    }]);
 
     const amount = await fetchTronTokenCurrentBalance(
       tronConfig,
@@ -108,18 +95,14 @@ describe("fetchEvmTokenCurrentBalance", () => {
   });
 
   it("reads the latest balance via the Etherscan proxy path", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
-            status: "1",
-            message: "OK",
-            result: "0x0000000000000000000000000000000000000000000000000000000002faf080",
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        )),
-    );
+    mockFetch([{
+      match: "etherscan.io",
+      body: {
+        status: "1",
+        message: "OK",
+        result: "0x0000000000000000000000000000000000000000000000000000000002faf080",
+      },
+    }]);
 
     const amount = await fetchEvmTokenCurrentBalance(
       ethereumConfig,
@@ -134,12 +117,7 @@ describe("fetchEvmTokenCurrentBalance", () => {
   });
 
   it("tries dRPC before Etherscan for the current-balance snapshot when configured", async () => {
-    const calls: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      calls.push(url);
-      // All providers fail so the full fallback chain is exercised.
-      return new Response(JSON.stringify({ result: null }), { status: 200 });
-    }));
+    const fetchMock = mockFetch([{ match: () => true, body: { result: null } }]);
 
     await fetchEvmTokenCurrentBalance(
       ethereumConfig,
@@ -150,7 +128,7 @@ describe("fetchEvmTokenCurrentBalance", () => {
       createBudget(10),
     );
 
-    expect(calls.some((url) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
+    expect(fetchMock.getHistory().some(({ url }) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
   });
 });
 
@@ -160,12 +138,7 @@ describe("fetchEvmTokenBalance", () => {
   });
 
   it("tries dRPC and chain-RPC before Etherscan for Ethereum mainnet", async () => {
-    const calls: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-      calls.push(url);
-      // All providers fail
-      return new Response(JSON.stringify({ result: null }), { status: 200 });
-    }));
+    const fetchMock = mockFetch([{ match: () => true, body: { result: null } }]);
 
     await fetchEvmTokenBalance(
       ethereumConfig,
@@ -178,13 +151,14 @@ describe("fetchEvmTokenBalance", () => {
     );
 
     // dRPC should have been tried for Ethereum mainnet
-    expect(calls.some((url) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
+    expect(fetchMock.getHistory().some(({ url }) => url.includes("drpc.org") && url.includes("ethereum"))).toBe(true);
   });
 
   it("returns null when block number produces an invalid hex tag", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ status: "1", message: "OK", result: "0x02faf080" }), { status: 200 }),
-    ));
+    mockFetch([{
+      match: () => true,
+      body: { status: "1", message: "OK", result: "0x02faf080" },
+    }]);
 
     const amount = await fetchEvmTokenBalance(
       ethereumConfig,

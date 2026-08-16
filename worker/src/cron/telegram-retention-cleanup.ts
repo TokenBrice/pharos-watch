@@ -9,7 +9,7 @@ import {
   countTelegramProcessedUpdateBacklog,
   pruneTelegramProcessedUpdates,
   type TelegramProcessedUpdateBacklog,
-} from "../api/telegram-webhook-store";
+} from "../lib/telegram-processed-updates";
 import { reconcileExpiredTelegramAlertJobTargets } from "./telegram-alert-target-status";
 import { pruneTelegramRecapTargets } from "../lib/telegram-recap-store";
 import {

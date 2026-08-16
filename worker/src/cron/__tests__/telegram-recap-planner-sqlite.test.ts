@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
 import { planTelegramPersonalizedRecaps } from "../telegram-recap-planner";
@@ -70,8 +71,7 @@ describe("telegram personalized recap planner", () => {
     markTapeFresh(sqlite);
     insertTape(sqlite, "recap-depeg-1", NOW - 60);
 
-    const originalFetch = globalThis.fetch;
-    Object.defineProperty(globalThis, "fetch", { configurable: true, value: () => { throw new Error("planner must not fetch"); } });
+    const fetchMock = mockFetch([], { requireMatch: true });
     try {
       const result = await planTelegramPersonalizedRecaps(db, undefined, { nowSec: NOW });
       expect(result.status).toBe("ok");
@@ -85,8 +85,9 @@ describe("telegram personalized recap planner", () => {
         aiCalls: 0,
         externalPlanningFetches: 0,
       });
+      expect(fetchMock).not.toHaveBeenCalled();
     } finally {
-      Object.defineProperty(globalThis, "fetch", { configurable: true, value: originalFetch });
+      vi.unstubAllGlobals();
     }
 
     expect(sqlite.prepare("SELECT chat_id, source_type, priority FROM telegram_pending_alerts ORDER BY chat_id").all()).toEqual([

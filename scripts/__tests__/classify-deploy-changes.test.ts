@@ -81,7 +81,7 @@ describe("hasPagesDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-markdown-exports.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-openapi-spec.ts"])).toBe(true);
     expect(hasPagesDeployImpact(["scripts/maintenance/generate-postman-collection.ts"])).toBe(true);
-    expect(hasPagesDeployImpact(["scripts/maintenance/wait-pages-release-marker.mjs"])).toBe(true);
+    expect(hasPagesDeployImpact(["scripts/maintenance/wait-pages-release-marker.ts"])).toBe(true);
   });
 
   it("validates tests without treating them as publishable Pages changes", () => {
@@ -119,7 +119,7 @@ describe("hasPagesUiImpact", () => {
       hasPagesUiImpact([
         ".github/workflows/pages-release.yml",
         "scripts/maintenance/generate-markdown-exports.ts",
-        "scripts/ci/run-changed-eslint.mjs",
+        "scripts/ci/run-changed-eslint.ts",
       ]),
     ).toBe(false);
   });
@@ -144,7 +144,7 @@ describe("hasWorkerReleaseImpact", () => {
   });
 
   it("returns false for validation, tests, and known Pages-only shared changes", () => {
-    expect(hasWorkerReleaseImpact(["scripts/maintenance/run-pr-static-checks.mjs"])).toBe(false);
+    expect(hasWorkerReleaseImpact(["scripts/maintenance/run-pr-static-checks.ts"])).toBe(false);
     expect(hasWorkerReleaseImpact(["scripts/maintenance/smoke-ui.mjs"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/migrations/MANIFEST.md"])).toBe(false);
     expect(hasWorkerReleaseImpact(["worker/src/api/__tests__/health.test.ts"])).toBe(false);
@@ -169,7 +169,7 @@ describe("hasDeployImpact", () => {
 
   it("deploys for deploy-classifier infrastructure but not validation-only tooling", () => {
     const deploySupportFiles = [
-      "scripts/lib/deploy-impact.mjs",
+      "scripts/lib/deploy-impact.mts",
       "scripts/lib/automation-registry.mjs",
       "scripts/ci/classify-deploy-changes.ts",
       ".github/workflows/deploy-cloudflare.yml",
@@ -185,15 +185,15 @@ describe("hasDeployImpact", () => {
     for (const file of [
       ".github/actions/setup-workspace/action.yml",
       "scripts/ci/check-env-contract.ts",
-      "scripts/maintenance/run-all-tests.mjs",
-      "scripts/maintenance/run-pr-static-checks.mjs",
+      "scripts/maintenance/run-all-tests.ts",
+      "scripts/maintenance/run-pr-static-checks.ts",
     ]) {
       expect(hasDeployImpact([file]), file).toBe(false);
     }
   });
 
   it("keeps scheduled coverage ratchet infrastructure out of deploy impact", () => {
-    const files = ["scripts/maintenance/run-critical-coverage.mjs"];
+    const files = ["scripts/maintenance/run-critical-coverage.ts"];
 
     expect(hasDeployImpact(files)).toBe(false);
     expect(hasWorkerDeployImpact(files)).toBe(false);
@@ -205,7 +205,7 @@ describe("hasDeployImpact", () => {
     expect(hasPagesDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(true);
     expect(hasWorkerDeployImpact(["scripts/maintenance/build-world-map-svg.ts"])).toBe(false);
 
-    for (const file of ["scripts/maintenance/report-build-size.mjs", "scripts/ci/check-phishing-signatures.mjs"]) {
+    for (const file of ["scripts/maintenance/report-build-size.mjs", "scripts/ci/check-phishing-signatures.ts"]) {
       expect(hasDeployImpact([file]), file).toBe(false);
     }
   });
@@ -310,7 +310,7 @@ describe("classifyDeployChanges", () => {
         "package.json",
         "package-lock.json",
         "public/_redirects",
-        "scripts/maintenance/run-pr-static-checks.mjs",
+      "scripts/maintenance/run-pr-static-checks.ts",
         "scripts/maintenance/smoke-ui.mjs",
         "shared/lib/public-docs.ts",
         "src/app/pharosville/page.tsx",

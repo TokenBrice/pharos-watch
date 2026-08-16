@@ -247,6 +247,7 @@ function fixtureMockD1(
     [
       ...(hasPublicationFixture ? [] : [publicationFixture]),
       ...(hasDewsPointerFixture ? [] : [dewsPointerFixture]),
+      { match: "FROM worker_producer_heads", rows: [] },
       ...tables,
     ],
     options,

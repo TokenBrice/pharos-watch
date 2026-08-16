@@ -12,11 +12,8 @@ export {
 
 export * from "./types";
 export * from "./backoff";
-export * from "./capacity";
-export * from "./dedupe";
 export * from "./lifecycle";
 export * from "./dead-letter";
 export * from "./cleanup";
-export * from "./enqueue";
 export * from "./drain";
 export * from "./recap-terminal";

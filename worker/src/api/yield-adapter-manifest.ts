@@ -3,10 +3,6 @@ import {
   } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { YIELD_ADAPTER_MANIFEST } from "../cron/yield-config";
-import {
-  type YieldAdapterManifestEntry,
-  type YieldStrategyDescriptor,
-} from "../cron/yield-config-registry";
 import { YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   YIELD_METHODOLOGY_CHANGELOG,
@@ -18,6 +14,9 @@ import type {
   YieldAdapterManifestPublicEntry,
   YieldAdapterManifestResponse,
 } from "@shared/types/yield";
+
+type YieldAdapterManifestEntry = (typeof YIELD_ADAPTER_MANIFEST)[number];
+type YieldStrategyDescriptor = YieldAdapterManifestEntry["strategies"][number];
 
 const SYMBOL_BY_STABLECOIN_ID = new Map<string, string>(
   YIELD_BEARING_STABLECOINS.map((meta) => [meta.id, meta.symbol]),

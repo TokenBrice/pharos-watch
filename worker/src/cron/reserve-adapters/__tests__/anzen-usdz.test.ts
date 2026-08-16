@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters } from "viem/utils";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
 
 const EXPECTED_HASHES: Record<string, string> = {
   "0x6000": "0x362165471d41a934b39e4b4ae9f54b35faa8835087f182881c2ba79756183ebd",
@@ -159,7 +160,10 @@ const config: LiveReservesConfig = {
 beforeEach(() => {
   vi.clearAllMocks();
   primeRpcMocks();
-  vi.stubGlobal("fetch", vi.fn(async () => metadataResponse()));
+  mockFetchStrict([{
+    match: "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=USDz",
+    respond: async () => metadataResponse(),
+  }]);
 });
 
 afterEach(() => vi.unstubAllGlobals());

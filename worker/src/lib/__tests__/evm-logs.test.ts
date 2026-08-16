@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import {
   buildTopicParams,
   decodeAddress,
@@ -253,7 +254,7 @@ describe("createRateLimiter", () => {
 
 describe("getEvmBlockNumber", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+    mockFetch([], { requireMatch: true });
   });
 
   afterEach(() => {
@@ -263,9 +264,7 @@ describe("getEvmBlockNumber", () => {
   const noopLimiter = <T>(fn: () => Promise<T>) => fn();
 
   it("returns null for malformed hex block numbers", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ result: "0x" }), { status: 200 }),
-    );
+    mockFetch([{ match: () => true, body: { result: "0x" } }]);
 
     const budget = createBudget(10);
     await expect(getEvmBlockNumber(1, null, noopLimiter, budget)).resolves.toBeNull();
@@ -273,9 +272,7 @@ describe("getEvmBlockNumber", () => {
   });
 
   it("parses valid hex block numbers", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ result: "0x1312d00" }), { status: 200 }),
-    );
+    mockFetch([{ match: () => true, body: { result: "0x1312d00" } }]);
 
     await expect(getEvmBlockNumber(1, null, noopLimiter, createBudget(10))).resolves.toBe(20_000_000);
   });
@@ -285,7 +282,7 @@ describe("getEvmBlockNumber", () => {
 
 describe("fetchEvmLogsForTopicsWithCompleteness", () => {
   beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+    mockFetch([], { requireMatch: true });
   });
 
   afterEach(() => {
@@ -298,9 +295,7 @@ describe("fetchEvmLogsForTopicsWithCompleteness", () => {
     const mockLogs = [
       { address: "0x123", topics: ["0xabc"], data: "0x", blockNumber: "0x1", timeStamp: "1000", transactionHash: "0xhash", logIndex: "0x0" },
     ];
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: "1", message: "OK", result: mockLogs }), { status: 200 })
-    );
+    mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: mockLogs } }]);
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
@@ -312,9 +307,7 @@ describe("fetchEvmLogsForTopicsWithCompleteness", () => {
   });
 
   it("marks the scan incomplete on HTTP error", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response("Server Error", { status: 500 })
-    );
+    mockFetch([{ match: () => true, body: "Server Error", status: 500 }]);
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
@@ -325,9 +318,7 @@ describe("fetchEvmLogsForTopicsWithCompleteness", () => {
   });
 
   it("returns a complete empty result on 'No records found'", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: "0", message: "No records found", result: [] }), { status: 200 })
-    );
+    mockFetch([{ match: () => true, body: { status: "0", message: "No records found", result: [] } }]);
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];
@@ -376,16 +367,16 @@ describe("fetchEvmLogsForTopicsWithCompleteness", () => {
     const firstHalf = lotsOfLogs.slice(0, 5);
     const secondHalf = lotsOfLogs.slice(0, 3);
 
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: "1", message: "OK", result: lotsOfLogs }), { status: 200 })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: "1", message: "OK", result: firstHalf }), { status: 200 })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: "1", message: "OK", result: secondHalf }), { status: 200 })
-      );
+    mockFetch([
+      {
+        match: () => true,
+        outcomes: [
+          { body: { status: "1", message: "OK", result: lotsOfLogs } },
+          { body: { status: "1", message: "OK", result: firstHalf } },
+          { body: { status: "1", message: "OK", result: secondHalf } },
+        ],
+      },
+    ]);
 
     const budget = createBudget(10);
     const topics = [{ index: 0, value: "0xabc" }];

@@ -8,8 +8,8 @@ export {
   fetchHashnoteUsycSource,
   fetchOndoUsdyOracleSource,
   fetchReProtocolReusdSource,
-  fetchZephyrZysSource,
 } from "./sources-optional-protocols-protocol-api";
+export { fetchZephyrZysSource } from "../../lib/yield-source-adapters/zephyr";
 export {
   fetchRoycoDawnSources,
 } from "./royco-dawn";

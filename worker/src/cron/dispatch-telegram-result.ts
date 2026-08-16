@@ -2,8 +2,8 @@ import type { TelegramDispatchCronResult } from "@shared/types";
 import { TELEGRAM_DISPATCH_INTERVAL_SEC, TELEGRAM_PENDING_DRAIN_BUDGET } from "./telegram-pending";
 import { emptyPerAlertTypeDelivery } from "./dispatch-telegram-routing";
 import type { TelegramAlertType } from "@shared/types/status";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
 import type {
-  readPendingCapacitySnapshot,
   PendingCapacitySnapshot,
   PendingDrainResult,
 } from "./telegram-pending";
@@ -27,8 +27,8 @@ export interface DispatchCapacityMetadata {
   oldestDuePendingAgeSec: number | null;
   estimatedDrainTimeSec: number;
   pendingDrainBudgetPerRun: number;
-  pendingCapacityBefore: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
-  pendingCapacityAfter: Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  pendingCapacityBefore: Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
+  pendingCapacityAfter: Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
   perAlertTypeTargets: PerAlertTypeTargets;
   fanoutQueryMs: number;
   fanoutBuildMs: number;
@@ -213,7 +213,7 @@ function emptyPendingCapacity() {
     estimatedDrainTimeSec: 0,
     drainBudgetPerRun: TELEGRAM_PENDING_DRAIN_BUDGET,
     dispatchIntervalSec: TELEGRAM_DISPATCH_INTERVAL_SEC,
-  } satisfies Awaited<ReturnType<typeof readPendingCapacitySnapshot>>;
+  } satisfies Awaited<ReturnType<typeof readTelegramPendingCapacitySnapshot>>;
 }
 
 export function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {

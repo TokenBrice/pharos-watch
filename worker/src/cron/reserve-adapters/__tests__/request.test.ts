@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { jsonResponse, mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
 import {
   buildBrowserHeaders,
   fetchJsonAdapterInput,
@@ -51,10 +52,9 @@ describe("adapter request cache", () => {
   });
 
   it("dedupes identical JSON GETs within an adapter context", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([
+      { match: "https://issuer.example/reserves", body: { ok: true } },
+    ]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -68,13 +68,10 @@ describe("adapter request cache", () => {
   });
 
   it("keeps same-URL JSON GETs separate when headers differ", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = init?.headers as Record<string, string> | undefined;
-      return new Response(JSON.stringify({ origin: headers?.Origin ?? null }), {
-        headers: { "content-type": "application/json" },
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/reserves",
+      respond: (request) => jsonResponse({ origin: request.headers.get("origin") }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -100,13 +97,10 @@ describe("adapter request cache", () => {
   });
 
   it("keeps same-URL JSON GETs separate when Headers instances differ", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      return new Response(JSON.stringify({ origin: headers.get("origin") }), {
-        headers: { "content-type": "application/json" },
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/reserves",
+      respond: (request) => jsonResponse({ origin: request.headers.get("origin") }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -132,10 +126,9 @@ describe("adapter request cache", () => {
   });
 
   it("does not share JSON and text reads for the same URL", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ ok: true }), {
-      headers: { "content-type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([
+      { match: "https://issuer.example/reserves", body: { ok: true } },
+    ]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -148,13 +141,12 @@ describe("adapter request cache", () => {
   });
 
   it("keeps same-URL text GETs separate when headers differ", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = init?.headers as Record<string, string> | undefined;
-      return new Response(headers?.Referer ?? "none", {
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/reserves",
+      respond: (request) => new Response(request.headers.get("referer") ?? "none", {
         headers: { "content-type": "text/plain" },
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+      }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -180,13 +172,12 @@ describe("adapter request cache", () => {
   });
 
   it("dedupes entry-array text headers after deterministic normalization", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      return new Response(`${headers.get("origin")}:${headers.get("referer")}`, {
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/reserves",
+      respond: (request) => new Response(`${request.headers.get("origin")}:${request.headers.get("referer")}`, {
         headers: { "content-type": "text/plain" },
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+      }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -213,11 +204,10 @@ describe("adapter request cache", () => {
   });
 
   it("keys JSON POST cache entries by serialized body", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => new Response(
-      JSON.stringify({ body: init?.body ?? null }),
-      { headers: { "content-type": "application/json" } },
-    ));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/graphql",
+      respond: async (request) => jsonResponse({ body: await request.clone().text() }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -230,13 +220,10 @@ describe("adapter request cache", () => {
   });
 
   it("keeps JSON POST cache entries separate when Headers instances differ", async () => {
-    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
-      const headers = new Headers(init?.headers);
-      return new Response(JSON.stringify({ origin: headers.get("origin") }), {
-        headers: { "content-type": "application/json" },
-      });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/graphql",
+      respond: (request) => jsonResponse({ origin: request.headers.get("origin") }),
+    }]);
 
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const signal = new AbortController().signal;
@@ -264,10 +251,9 @@ describe("adapter request cache", () => {
   });
 
   it("fetches the primary JSON input from a live-reserve config", async () => {
-    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ reserves: "ok" }), {
-      headers: { "content-type": "application/json" },
-    }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([
+      { match: "https://issuer.example/reserves", body: { reserves: "ok" } },
+    ]);
 
     const config = {
       adapter: "ethena",

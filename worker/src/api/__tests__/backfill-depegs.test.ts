@@ -2,17 +2,18 @@ import { describe, expect, it } from "vitest";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { applyBackfillEvents, buildBackfillEventsFingerprint, handleBackfillDepegsTrusted } from "../backfill-depegs";
 import type { BackfillReplayWindow } from "../backfill-depegs-window";
 
 stubCryptoForAuth();
 
 describe("handleBackfillDepegs", () => {
-  it("returns 404 for unknown stablecoin", async () => {
-    const res = await handleBackfillDepegsTrusted({ db: mockD1(), url: makeApiUrl("/api/backfill-depegs?stablecoin=not-a-real-id") });
-
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Stablecoin not found" });
+  registerStablecoinParameterContract({
+    name: "depeg backfill",
+    path: "/api/backfill-depegs",
+    invoke: (db, url) => handleBackfillDepegsTrusted({ db, url }),
+    cases: [{ kind: "unknown", stablecoin: "not-a-real-id", error: "Stablecoin not found" }],
   });
 
   it("returns no-op response for out-of-range batches", async () => {

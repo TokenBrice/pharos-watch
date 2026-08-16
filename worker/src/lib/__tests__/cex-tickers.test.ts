@@ -23,24 +23,21 @@ import {
 } from "../cex-tickers";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import coinbaseTickerFixture from "./fixtures/coinbase-ticker.json";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 beforeEach(() => sleepWithSignalMock.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("fetchBinancePricesDetailed", () => {
   it("returns stablecoin/USD prices from ticker endpoint", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { symbol: "USDTUSD", price: "0.9999" },
             { symbol: "USDCUSD", price: "1.0001" },
             { symbol: "BTCUSD", price: "65000" },
-          ]),
-      }),
-    );
+      ],
+    }]);
     const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.get("USDT")).toBeCloseTo(0.9999, 4);
     expect(results.get("USDC")).toBeCloseTo(1.0001, 4);
@@ -48,27 +45,22 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("ignores stable-quoted Binance markets that are no longer configured", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { symbol: "USDTUSD", price: "0.9999" },
             { symbol: "USDCUSD", price: "1.0001" },
             { symbol: "BFUSDUSDT", price: "0.9995" },
             { symbol: "BFUSDUSDC", price: "0.9993" },
-          ]),
-      }),
-    );
+      ],
+    }]);
 
     const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.has("BFUSD")).toBe(false);
   });
 
   it("returns empty map on failure", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("upstream unavailable", { status: 503 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "upstream unavailable", status: 503 }]);
     const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.size).toBe(0);
     // One fetch per host (2 hosts). 5xx short-circuits to the next host
@@ -77,34 +69,25 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("returns empty map when Binance returns no stablecoin pairs", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { symbol: "BTCUSD", price: "65000" },
             { symbol: "ETHUSDT", price: "3500" },
-          ]),
-      }),
-    );
+      ],
+    }]);
     const results = (await fetchBinancePricesDetailed()).value.prices;
     expect(results.size).toBe(0);
   });
 
   it("reports Binance response and match counts for diagnostics", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { symbol: "BTCUSD", price: "65000" },
             { symbol: "ETHUSDT", price: "3500" },
-          ]),
-      }),
-    );
+      ],
+    }]);
 
     const {
       value: { prices, diagnostics },
@@ -123,15 +106,7 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("captures Binance non-OK snippets for diagnostics", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 403,
-        headers: new Headers(),
-        text: () => Promise.resolve("blocked by upstream"),
-      }),
-    );
+    mockFetch([{ match: () => true, body: "blocked by upstream", status: 403 }]);
 
     const {
       value: { prices, diagnostics },
@@ -148,26 +123,15 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("falls back to the main Binance API host when data-api is blocked", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("data-api.binance.vision")) {
-          return Promise.resolve(new Response("blocked", { status: 403 }));
-        }
-        return Promise.resolve(
-          new Response(
-            JSON.stringify([
-              { symbol: "USDTUSD", price: "1.0002" },
-              { symbol: "USDCUSD", price: "0.9999" },
-            ]),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-        );
-      }),
-    );
+    mockFetch([{
+      match: () => true,
+      respond: (request) => request.url.includes("data-api.binance.vision")
+        ? new Response("blocked", { status: 403 })
+        : new Response(JSON.stringify([
+          { symbol: "USDTUSD", price: "1.0002" },
+          { symbol: "USDCUSD", price: "0.9999" },
+        ]), { status: 200, headers: { "Content-Type": "application/json" } }),
+    }]);
 
     const {
       value: { prices, diagnostics },
@@ -186,9 +150,7 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("returns blocked outcome when every Binance host returns 403/451", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockImplementation(
-      async () => new Response("blocked", { status: 451 }),
-    ));
+    mockFetch([{ match: () => true, body: "blocked", status: 451 }]);
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("blocked");
     expect(outcome.value.prices.size).toBe(0);
@@ -196,57 +158,35 @@ describe("fetchBinancePricesDetailed", () => {
   });
 
   it("returns upstream-error outcome when every Binance host throws", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("upstream-error");
   });
 
   it("returns ok outcome when any host returns tracked prices", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([{ symbol: "USDTUSD", price: "1.0001" }]),
-      }),
-    );
+    mockFetch([{ match: () => true, body: [{ symbol: "USDTUSD", price: "1.0001" }] }]);
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0001, 4);
   });
 
   it("returns no-data outcome when hosts return 200 but no tracked pairs", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve([{ symbol: "BTCUSD", price: "65000" }]),
-      }),
-    );
+    mockFetch([{ match: () => true, body: [{ symbol: "BTCUSD", price: "65000" }] }]);
     const outcome = await fetchBinancePricesDetailed();
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("jumps to the next host on 5xx without sleeping or retrying the same host", async () => {
-    const fetchMock = vi.fn().mockImplementation((url: string) => {
-      if (url.includes("data-api.binance.vision")) {
-        return Promise.resolve(
-          new Response("upstream down", {
-            status: 503,
-            headers: { "Retry-After": "30" },
-          }),
-        );
-      }
-      return Promise.resolve(
-        new Response(JSON.stringify([{ symbol: "USDTUSD", price: "1.0003" }]), {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: (request) => request.url.includes("data-api.binance.vision")
+        ? new Response("upstream down", { status: 503, headers: { "Retry-After": "30" } })
+        : new Response(JSON.stringify([{ symbol: "USDTUSD", price: "1.0003" }]), {
           status: 200,
           headers: { "Content-Type": "application/json" },
         }),
-      );
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    }]);
 
     const {
       value: { prices, diagnostics },
@@ -278,11 +218,10 @@ describe("fetchBinancePricesForRun", () => {
   }
 
   it("reuses one Binance result across primary and confirmation consumers", async () => {
-    const fetchMock = vi.fn(async () => new Response(
-      JSON.stringify([{ symbol: "USDTUSD", price: "1.0001" }]),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    ));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: [{ symbol: "USDTUSD", price: "1.0001" }],
+    }]);
     const { db } = makeAvailabilityDb(null);
     const session = createBinanceFetchSession();
 
@@ -296,8 +235,7 @@ describe("fetchBinancePricesForRun", () => {
   });
 
   it("uses a zero-request synthetic outcome during the environment block TTL", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
     const { db } = makeAvailabilityDb({
       availability: "blocked",
       blocked_status: 451,
@@ -315,8 +253,7 @@ describe("fetchBinancePricesForRun", () => {
   });
 
   it("limits an expired environment block to one probe host", async () => {
-    const fetchMock = vi.fn(async () => new Response("blocked", { status: 451 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: "blocked", status: 451 }]);
     const { db, run } = makeAvailabilityDb({
       availability: "blocked",
       blocked_status: 451,
@@ -332,16 +269,11 @@ describe("fetchBinancePricesForRun", () => {
 
 describe("fetchCoinbasePrices", () => {
   it("returns ok outcome with prices for listed stablecoin products", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker"))
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
-        if (url.includes("/products/USDS-USD/ticker"))
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "1.0000" }) });
-        return Promise.resolve({ ok: false, status: 404 });
-      }),
-    );
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
+      { match: "/products/USDS-USD/ticker", body: { price: "1.0000" } },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT", "USDS", "XYZFAKE"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
@@ -350,24 +282,18 @@ describe("fetchCoinbasePrices", () => {
   });
 
   it("exposes per-pair upstream observed-at derived from Coinbase `time` ISO string", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                bid: "0.9997",
-                ask: "0.9999",
-                price: "0.9998",
-                time: "2026-04-17T15:05:04.183Z",
-              }),
-          });
-        }
-        return Promise.resolve({ ok: false, status: 404 });
-      }),
-    );
+    mockFetch([
+      {
+        match: "/products/USDT-USD/ticker",
+        body: {
+          bid: "0.9997",
+          ask: "0.9999",
+          price: "0.9998",
+          time: "2026-04-17T15:05:04.183Z",
+        },
+      },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
     const expectedSec = Math.floor(Date.parse("2026-04-17T15:05:04.183Z") / 1000);
@@ -375,8 +301,12 @@ describe("fetchCoinbasePrices", () => {
   });
 
   it("cancels failed product responses and returns upstream-error outcome", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, body: { cancel } }));
+    const cancel = vi.fn(async () => undefined);
+    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 404 });
+    mockFetch([{
+      match: () => true,
+      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
+    }]);
 
     const outcome = await fetchCoinbasePrices(["USDT"]);
 
@@ -389,21 +319,17 @@ describe("fetchCoinbasePrices", () => {
   });
 
   it("returns upstream-error outcome when every product request throws", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
     const outcome = await fetchCoinbasePrices(["USDT"]);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.prices.size).toBe(0);
   });
 
   it("returns ok outcome when some products fail and others succeed", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker"))
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ price: "0.9998" }) });
-        return Promise.reject(new Error("network down"));
-      }),
-    );
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
+      { match: () => true, outcomes: [new Error("network down")] },
+    ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT", "DAI"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
@@ -411,18 +337,10 @@ describe("fetchCoinbasePrices", () => {
   });
 
   it("rejects ticker prices with trailing non-numeric text", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ bid: "0.9997 USD", ask: "0.9999 USD", price: "0.9998 USD" }),
-          });
-        }
-        return Promise.resolve({ ok: false, status: 404 });
-      }),
-    );
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: { bid: "0.9997 USD", ask: "0.9999 USD", price: "0.9998 USD" } },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
 
     const outcome = await fetchCoinbasePrices(["USDT"]);
 
@@ -431,18 +349,10 @@ describe("fetchCoinbasePrices", () => {
   });
 
   it("rejects non-decimal JavaScript numeric literal price strings", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ bid: "0x10", ask: "0b10", price: "0o10" }),
-          });
-        }
-        return Promise.resolve({ ok: false, status: 404 });
-      }),
-    );
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: { bid: "0x10", ask: "0b10", price: "0o10" } },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
 
     const outcome = await fetchCoinbasePrices(["USDT"]);
 
@@ -453,7 +363,9 @@ describe("fetchCoinbasePrices", () => {
   it("keeps Coinbase product fetches serial inside the primary-provider budget", async () => {
     let inFlight = 0;
     let maxInFlight = 0;
-    const fetchMock = vi.fn(async () => {
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: async () => {
       inFlight++;
       maxInFlight = Math.max(maxInFlight, inFlight);
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -462,8 +374,8 @@ describe("fetchCoinbasePrices", () => {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+      },
+    }]);
 
     const outcome = await fetchCoinbasePrices(["USDT", "PAXG", "USDS", "USD1", "HONEY"]);
 
@@ -476,18 +388,10 @@ describe("fetchCoinbasePrices", () => {
     // Fixture captured from https://api.exchange.coinbase.com/products/USDT-USD/ticker
     // Verifies our parser survives the live response shape (bid/ask present;
     // midpoint preferred over last-trade price).
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation((url: string) => {
-        if (url.includes("/products/USDT-USD/ticker")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(coinbaseTickerFixture),
-          });
-        }
-        return Promise.resolve({ ok: false, status: 404 });
-      }),
-    );
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: coinbaseTickerFixture },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
     const outcome = await fetchCoinbasePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
     const bid = Number(coinbaseTickerFixture.bid);
@@ -498,12 +402,9 @@ describe("fetchCoinbasePrices", () => {
 
 describe("fetchKrakenPrices", () => {
   it("returns ok outcome mapping pair keys to tracked symbols", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve({
+    mockFetch([{
+      match: () => true,
+      body: {
             error: [],
             result: {
               USDTZUSD: { c: ["1.0002"] },
@@ -512,9 +413,8 @@ describe("fetchKrakenPrices", () => {
               TGBPUSD: { a: ["1.3538"], b: ["1.3535"], c: ["1.3531"] },
               BTCUSD: { c: ["65000"] },
             },
-          }),
-      }),
-    );
+      },
+    }]);
 
     const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP"]);
     expect(outcome.kind).toBe("ok");
@@ -526,13 +426,7 @@ describe("fetchKrakenPrices", () => {
   });
 
   it("returns no-data outcome when Kraken returns an API error", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ error: ["EGeneral:Temporary lockout"], result: {} }),
-      }),
-    );
+    mockFetch([{ match: () => true, body: { error: ["EGeneral:Temporary lockout"], result: {} } }]);
 
     const outcome = await fetchKrakenPrices(["USDT"]);
     expect(outcome.kind).toBe("no-data");
@@ -540,8 +434,12 @@ describe("fetchKrakenPrices", () => {
   });
 
   it("returns upstream-error when HTTP request fails", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
+    const cancel = vi.fn(async () => undefined);
+    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 503 });
+    mockFetch([{
+      match: () => true,
+      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
+    }]);
 
     const outcome = await fetchKrakenPrices(["USDT"]);
 
@@ -551,7 +449,7 @@ describe("fetchKrakenPrices", () => {
   });
 
   it("returns upstream-error when the fetch throws", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
     const outcome = await fetchKrakenPrices(["USDT"]);
     expect(outcome.kind).toBe("upstream-error");
   });
@@ -559,18 +457,14 @@ describe("fetchKrakenPrices", () => {
 
 describe("fetchBitstampPrices", () => {
   it("returns ok outcome parsing tracked stablecoin/USD pairs", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { pair: "USDT/USD", market: "USDT/USD", last: "1.0001" },
             { pair: "USDC/USD", market: "USDC/USD", last: "0.9999" },
             { pair: "BTC/USD", market: "BTC/USD", last: "65000" },
-          ]),
-      }),
-    );
+      ],
+    }]);
 
     const outcome = await fetchBitstampPrices();
     expect(outcome.kind).toBe("ok");
@@ -580,17 +474,13 @@ describe("fetchBitstampPrices", () => {
   });
 
   it("exposes per-pair upstream observed-at derived from Bitstamp `timestamp` field", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () =>
-          Promise.resolve([
+    mockFetch([{
+      match: () => true,
+      body: [
             { pair: "USDT/USD", market: "USDT/USD", last: "1.0001", timestamp: "1776439395" },
             { pair: "USDC/USD", market: "USDC/USD", last: "0.9999", timestamp: "1776439400" },
-          ]),
-      }),
-    );
+      ],
+    }]);
 
     const outcome = await fetchBitstampPrices();
     expect(outcome.kind).toBe("ok");
@@ -599,8 +489,12 @@ describe("fetchBitstampPrices", () => {
   });
 
   it("returns upstream-error when HTTP request fails", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, body: { cancel } }));
+    const cancel = vi.fn(async () => undefined);
+    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 500 });
+    mockFetch([{
+      match: () => true,
+      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
+    }]);
 
     const outcome = await fetchBitstampPrices();
 
@@ -610,13 +504,7 @@ describe("fetchBitstampPrices", () => {
   });
 
   it("returns no-data outcome when response has no tracked pairs", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve([{ pair: "BTC/USD", market: "BTC/USD", last: "65000" }]),
-      }),
-    );
+    mockFetch([{ match: () => true, body: [{ pair: "BTC/USD", market: "BTC/USD", last: "65000" }] }]);
     const outcome = await fetchBitstampPrices();
     expect(outcome.kind).toBe("no-data");
   });

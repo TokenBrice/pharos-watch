@@ -10,6 +10,8 @@ import {
   readBodyOrQueryParam,
   readBodyOrQueryStringParam,
 } from "../lib/api-utils";
+import { executeAtomicBatch } from "../lib/db";
+import { D1_BATCH_SIZE } from "../lib/constants";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -103,6 +105,15 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     const limit = typeof body.limit === "number" ? Math.trunc(body.limit) : limitParam;
     if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
       return errorResponse(400, "Invalid limit parameter");
+    }
+
+    // Dry-run only inspects, so it keeps the full 200 survey window. Write mode commits one
+    // atomic batch (see below), so its candidate set must fit inside D1_BATCH_SIZE.
+    if (!dryRun && limit > D1_BATCH_SIZE) {
+      return errorResponse(
+        400,
+        `Write-mode limit must not exceed ${D1_BATCH_SIZE} so updates commit in one atomic batch (requested ${limit})`,
+      );
     }
 
     // Clamp the body override to the same 0..10000 bounds the query path enforces
@@ -300,7 +311,14 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     }
 
     if (updates.length > 0) {
-      await db.batch(updates);
+      // One atomic batch, never chunked. This route is wrapped by
+      // makeIdempotentAdminRoute (worker/src/routes/admin-routes.ts:87), which persists
+      // EXECUTION_UNKNOWN when the handler throws mid-flight and answers same-key retries
+      // from that record. A chunked write that failed after an earlier chunk committed
+      // would therefore strand partial status/attempt mutations behind stale derived
+      // caches, with no retry path to finish the job. Write-mode candidates are capped at
+      // D1_BATCH_SIZE above so the whole set always fits one transaction.
+      await executeAtomicBatch(db, updates);
     }
     const cacheInvalidation = updates.length > 0
       ? await invalidateBlacklistDerivedCaches(db)

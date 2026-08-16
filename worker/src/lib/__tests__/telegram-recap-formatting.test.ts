@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { splitMessage } from "../telegram-alerts-formatting";
 import { formatTelegramRecap } from "../telegram-recap-formatting";
 import type { TelegramRecapScopedFact } from "../telegram-recap-ranking";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 function fact(overrides: Partial<TelegramRecapScopedFact> = {}): TelegramRecapScopedFact {
   return {
@@ -26,9 +27,7 @@ describe("Telegram recap formatter", () => {
   });
 
   it("renders escaped deterministic HTML with Mini App controls and an optional digest link", () => {
-    const originalFetch = globalThis.fetch;
-    const fetchSpy = vi.fn(() => { throw new Error("recap formatter must not fetch"); });
-    globalThis.fetch = fetchSpy;
+    const fetchSpy = mockFetch([], { requireMatch: true });
     const rendered = formatTelegramRecap({
       facts: [fact({ payload: { prevBand: "WATCH<unsafe", newBand: "ALERT&urgent" } })],
       windowStartAtMs: Date.UTC(2026, 6, 10, 8),
@@ -45,7 +44,6 @@ describe("Telegram recap formatter", () => {
       "https://pharos.watch/pharoswatchbot/app/?startapp=recap_settings",
     ]);
     expect(fetchSpy).not.toHaveBeenCalled();
-    globalThis.fetch = originalFetch;
   });
 
   it("keeps maximum fixtures in exactly one Telegram message", () => {

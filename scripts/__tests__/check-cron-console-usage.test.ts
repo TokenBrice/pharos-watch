@@ -7,7 +7,7 @@ import {
   collectWorkerConsoleFindings,
   collectWorkerConsoleUsage,
   checkCronConsoleUsage,
-} from "../ci/check-cron-console-usage.mjs";
+} from "../ci/check-cron-console-usage.ts";
 
 let tempRoot: string | null = null;
 

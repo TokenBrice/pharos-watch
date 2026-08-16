@@ -8,7 +8,7 @@ import {
 } from "@shared/lib/peg-score";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { getDepegDewsMethodologyVersionAt } from "@shared/lib/methodology-versions/depeg-dews";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { DepegEvent, PegSummaryCoin, StablecoinData } from "@shared/types/market";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "./constants";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
@@ -147,7 +147,7 @@ export async function derivePegAnalyticsSnapshot(
 
     const asset = priceById.get(meta.id);
     const events = eventsByCoin.get(meta.id) ?? [];
-    const supply = asset?.circulating ? sumPegBuckets(asset.circulating) : 0;
+    const supply = asset ? getCirculatingRaw(asset) : 0;
     const depegEventCoverageLimited =
       !meta.flags.navToken &&
       supply > 0 &&

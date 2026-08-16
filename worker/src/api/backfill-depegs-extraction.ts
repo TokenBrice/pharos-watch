@@ -1,5 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { binarySearchNearest } from "../lib/binary-search";
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_EVENT_MIN_SUPPLY_USD } from "../lib/constants";
 import { deriveDepegSignal } from "../lib/depeg-signals";
@@ -49,7 +49,7 @@ export function parseSupplyData(tokens: SupplyPoint[]): SupplySnapshot[] {
   for (const point of tokens) {
     const ts = Number.parseInt(point.date, 10);
     if (Number.isNaN(ts)) continue;
-    map.set(ts, sumPegBuckets(point.circulating));
+    map.set(ts, getCirculatingRaw(point));
   }
   return Array.from(map.entries())
     .map(([ts, supply]) => ({ ts, supply }))

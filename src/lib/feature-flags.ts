@@ -18,7 +18,7 @@
  * bracket access (`process.env[name]`) leaves the lookup intact at runtime,
  * resolving against an empty polyfill object in the browser so the flag is
  * silently always-false. Verified at build time by
- * `scripts/ci/check-feature-flag-inlining.mjs`.
+ * `scripts/ci/check-feature-flag-inlining.ts`.
  */
 
 export const FEATURE_FLAGS = {

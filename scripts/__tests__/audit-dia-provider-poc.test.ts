@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import {
   parseDiaQuotation,
   runDiaProviderPocAudit,
@@ -94,13 +95,6 @@ function makeAudit(): Pick<PriceSourceDepthAudit, "rows"> {
       },
     ],
   };
-}
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
 }
 
 describe("audit-dia-provider-poc", () => {

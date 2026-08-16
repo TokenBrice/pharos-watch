@@ -10,6 +10,7 @@ import { redactProviderBody } from "../api-key-requests/email";
 import type { ApiKeySelfServeEnv } from "../api-key-requests/types";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 function setupSqlite(): DatabaseSync {
   return createLatestSchemaSqlite().sqlite;
@@ -98,13 +99,13 @@ describe("api key self-serve request handlers", () => {
     sqlite = setupSqlite();
     db = createSqliteD1(sqlite);
     sentEmails = [];
-    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
-      sentEmails.push(JSON.parse(String(init?.body)));
-      return new Response(JSON.stringify({ id: "email_123" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }));
+    mockFetch([{
+      match: "https://api.resend.com/emails",
+      respond: async (request) => {
+        sentEmails.push(await request.clone().json());
+        return { body: { id: "email_123" } };
+      },
+    }], { requireMatch: true });
   });
 
   afterEach(() => {

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fixtureFetchPrimaryPrices,
+  fixtureMockFetch,
   fixtureApplyPoolChallenge,
   fixtureApplyListAggregatorDowngrade,
   fixtureMockD1 as createFixtureMockD1,
@@ -10,6 +11,10 @@ import {
   type PriceValidationContext,
   type PriceValidationReferences,
 } from "./enrich-prices.test-support";
+
+function installFetch(implementation: (url: string) => Response | Promise<Response>) {
+  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
+}
 import { selectDexPriceChallengerRowsFromPools } from "../dex-liquidity/challenger-publish";
 import type { PoolEntry } from "../dex-liquidity/types";
 
@@ -53,15 +58,12 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -113,15 +115,12 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -160,9 +159,7 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       { id: "usdt-tether", name: "Tether", symbol: "USDT", geckoId: "tether", pegType: "peggedUSD", circulating: {} },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({ tether: { usd: 1.0001 } }), { status: 200 });
         }
@@ -180,8 +177,7 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
           );
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([
@@ -212,15 +208,12 @@ describe("pool challenge — soft-only high confidence downgrade", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url: string) => {
+    installFetch(async (url: string) => {
         if (typeof url === "string" && url.includes("coingecko.com")) {
           return new Response(JSON.stringify({ "dtrinity-usd": { usd: 0.995 } }), { status: 200 });
         }
         return new Response("Not found", { status: 404 });
-      }),
-    );
+      });
 
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makePoolChallengeDb([

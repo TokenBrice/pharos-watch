@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { DECIMALS_SELECTOR, LATEST_ROUND_DATA_SELECTOR } from "../../lib/evm-selectors";
 import { fetchMidasMmevNavOracleSource } from "../yield-sync/midas-mmev-nav-oracle";
@@ -37,16 +38,14 @@ function mockMidasRpc(params: {
   decimals?: bigint;
   answer: bigint;
   updatedAt: number;
-}): ReturnType<typeof vi.fn> {
-  const fetchSpy = vi.fn(async (input: string | Request | URL, init?: RequestInit) => {
-    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-    if (url !== "https://rpc.ethereum.test") {
-      return new Response("not found", { status: 404 });
-    }
-
-    const body = JSON.parse(String(init?.body ?? "{}")) as {
+}): ReturnType<typeof mockFetch> {
+  const fetchSpy = mockFetch([
+    {
+      match: "https://rpc.ethereum.test",
+      respond: async (request) => {
+        const body = await request.clone().json() as {
       params?: Array<{ to?: string; data?: string }>;
-    };
+        };
     const call = body.params?.[0];
     if (call?.to !== MIDAS_MMEV_NAV_ORACLE) {
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), { status: 200 });
@@ -66,8 +65,9 @@ function mockMidasRpc(params: {
       }), { status: 200 });
     }
     return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }), { status: 200 });
-  });
-  vi.stubGlobal("fetch", fetchSpy);
+      },
+    },
+  ], { requireMatch: true });
   return fetchSpy;
 }
 

@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { SelectorInput } from "@shared/lib/selector/types";
 import { makeReportCardsV9Response } from "../../src/test/fixtures/safety-score-v9";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
 
 const input = {
@@ -86,30 +87,20 @@ function canonicalPayloads(reportCardsPayload: unknown = makeReportCardsV9Respon
   ]);
 }
 
-function installFetchMock(payloads: ReadonlyMap<string, unknown>) {
-  const fetchMock = vi.fn((url: string | URL | Request, _init?: RequestInit) => {
-    const href = typeof url === "string" || url instanceof URL ? String(url) : url.url;
-    const parsed = new URL(href);
-    const payload = payloads.get(parsed.pathname);
-    if (payload === undefined) {
-      return Promise.resolve(jsonResponse({ error: "not found" }, 404));
-    }
-    return Promise.resolve(jsonResponse(payload));
-  });
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
-}
-
-function jsonResponse(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
 describe("canonical selector snapshot recomputation", () => {
+  afterEach(() => {
+    // The shared helper installs a global fetch spy by default.
+    vi.unstubAllGlobals();
+  });
+
   it("recomputes a verified selector snapshot from canonical V9 sources", async () => {
-    const fetchMock = installFetchMock(canonicalPayloads());
+    const fetchMock = mockFetch(
+      [...canonicalPayloads()].map(([path, body]) => ({
+        match: `https://site-api.pharos.watch${path}`,
+        body,
+      })),
+      { requireMatch: true, strictUrl: true },
+    );
 
     const output = await recomputeVerifiedSelectorSnapshot(
       input,
@@ -128,21 +119,22 @@ describe("canonical selector snapshot recomputation", () => {
       datasetHash: output.datasetHash,
       engineVersion: output.engineVersion,
     });
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://site-api.pharos.watch/api/report-cards/v9",
-      expect.objectContaining({
-        method: "GET",
-        headers: expect.any(Headers),
-      }),
-    );
-    const reportCardsFetch = fetchMock.mock.calls.find(([url]) => String(url).endsWith(API_PATHS.reportCardsV9()));
-    expect((reportCardsFetch?.[1]?.headers as Headers).get(SITE_DATA_PROXY_SECRET_HEADER)).toBe("test-secret");
-
-    vi.unstubAllGlobals();
+    const reportCardsFetch = fetchMock.getHistory().find(({ url }) => url.endsWith(API_PATHS.reportCardsV9()));
+    expect(reportCardsFetch).toMatchObject({
+      url: "https://site-api.pharos.watch/api/report-cards/v9",
+      method: "GET",
+    });
+    expect(reportCardsFetch?.headers[SITE_DATA_PROXY_SECRET_HEADER.toLowerCase()]).toBe("test-secret");
   });
 
   it("rejects a canonical source that does not satisfy the V9 report-card contract", async () => {
-    installFetchMock(canonicalPayloads({ cards: [] }));
+    mockFetch(
+      [...canonicalPayloads({ cards: [] })].map(([path, body]) => ({
+        match: `https://site-api.pharos.watch${path}`,
+        body,
+      })),
+      { requireMatch: true, strictUrl: true },
+    );
 
     await expect(
       recomputeVerifiedSelectorSnapshot(
@@ -156,6 +148,5 @@ describe("canonical selector snapshot recomputation", () => {
       ),
     ).rejects.toThrow("Canonical selector source contract failed: /api/report-cards/v9");
 
-    vi.unstubAllGlobals();
   });
 });

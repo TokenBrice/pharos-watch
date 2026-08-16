@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 
 stubCryptoForAuth();
 
@@ -20,11 +21,13 @@ function mockD1(
 const { handleStatusHistoryRoute } = await import("../status-history");
 
 describe("handleStatusHistoryRoute", () => {
-  it("returns 401 when request is unauthorized", async () => {
-    const db = mockD1([]);
-    const request = makeApiRequest("/api/status-history");
-    const res = await handleStatusHistoryRoute({ db, trustedAdmin: false, request });
-    expect(res.status).toBe(401);
+  registerUnauthorizedEndpointContract({
+    name: "status history",
+    invoke: () => handleStatusHistoryRoute({
+      db: mockD1([]),
+      trustedAdmin: false,
+      request: makeApiRequest("/api/status-history"),
+    }),
   });
 
   it("returns machine-readable history payload when authorized", async () => {

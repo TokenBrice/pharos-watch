@@ -190,6 +190,19 @@ describe("forgetSubscriber", () => {
     expect([...deletedTables].sort()).toEqual(chatTables.filter((table) => !retainedOnForget.has(table)));
   });
 
+  it("rolls back lifecycle deletes when an appended operation statement fails", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const chatId = "atomic-forget";
+    sqlite.prepare("INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES (?, ?, ?)")
+      .run(chatId, 100, 100);
+
+    const failingOperation = db.prepare("INSERT INTO telegram_operation_batch_failure DEFAULT VALUES");
+    await expect(forgetSubscriber(db, chatId, { operationStatements: [failingOperation] })).rejects.toThrow();
+
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers WHERE chat_id = ?").get(chatId))
+      .toEqual({ count: 1 });
+  });
+
   it("clears chat-owned cache residue while preserving neighboring chat keys", async () => {
     const { sqlite, db } = setupChatMigrationSqlite();
     const chatId = "42";

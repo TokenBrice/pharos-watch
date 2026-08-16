@@ -1,13 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleApiKeyAuditLog } from "../api-key-audit-log";
 
 describe("api-key-audit-log handler", () => {
-  it("requires admin auth", async () => {
-    const db = mockD1([]);
-    const request = new Request("https://api.pharos.watch/api/api-keys/audit-log");
-    const response = await handleApiKeyAuditLog({ db, trustedAdmin: false, request });
-    expect(response.status).toBe(401);
+  registerUnauthorizedEndpointContract({
+    name: "API key audit log",
+    invoke: () => handleApiKeyAuditLog({
+      db: mockD1([]),
+      trustedAdmin: false,
+      request: new Request("https://api.pharos.watch/api/api-keys/audit-log"),
+    }),
   });
 
   it("returns recent audit entries", async () => {

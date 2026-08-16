@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import {
   apiFetchHeaders,
   fetchWithRetry,
@@ -83,11 +84,13 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries caller-declared transient statuses", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(null, { status: 403 }))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://api.pharos.watch/api/health",
+      outcomes: [
+        { body: "", status: 403 },
+        { body: "ok", status: 200 },
+      ],
+    }]);
 
     const response = await fetchWithRetry(
       "https://api.pharos.watch/api/health",
@@ -100,8 +103,11 @@ describe("fetchWithRetry", () => {
   });
 
   it("does not retry undeclared client errors", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 401 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://api.pharos.watch/api/health",
+      body: "",
+      status: 401,
+    }]);
 
     const response = await fetchWithRetry(
       "https://api.pharos.watch/api/health",

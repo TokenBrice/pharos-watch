@@ -1,3 +1,4 @@
+import { D1_BATCH_SIZE } from "../../lib/constants";
 import type { ResolvedCoin } from "../../lib/telegram-alerts";
 import type {
   ConfirmBulkPayload,
@@ -114,8 +115,16 @@ export async function persistPendingDisambiguationRow(
       nowSec,
     );
   if ((input.operationStatements?.length ?? 0) > 0 || (input.beforePendingStatements?.length ?? 0) > 0) {
+    const statements: D1PreparedStatement[] = [
+      ...(input.beforePendingStatements ?? []),
+      statement,
+      ...(input.operationStatements ?? []),
+    ];
+    if (statements.length > D1_BATCH_SIZE) {
+      throw new RangeError(`Pending disambiguation requires too many atomic statements (${statements.length})`);
+    }
     const results = await runWithOverloadRetry(
-      () => db.batch([...(input.beforePendingStatements ?? []), statement, ...(input.operationStatements ?? [])]),
+      () => db.batch(statements),
       3,
     );
     const pendingResultIndex = input.beforePendingStatements?.length ?? 0;

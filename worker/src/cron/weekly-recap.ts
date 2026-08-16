@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { createNeutralSkippedCronResult } from "../lib/cron-result";
@@ -422,7 +423,7 @@ export async function generateWeeklyRecap(
   // the Monday 08:05 cron slot). Day-level snap removes sub-second drift
   // ambiguity between weekly runs, unlike a rolling `now - 7d` window.
   const nowSec = Math.floor(Date.now() / 1000);
-  const todayTs = nowSec - (nowSec % SECONDS.ONE_DAY);
+  const todayTs = bucketUnixSecondsToUtcDay(nowSec);
   const weekBoundary = todayTs - 6 * SECONDS.ONE_DAY;
   const currentRows = allRows.filter((r) => r.generated_at >= weekBoundary);
   const priorRows = allRows.filter((r) => r.generated_at < weekBoundary);

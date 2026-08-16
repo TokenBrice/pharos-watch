@@ -1,5 +1,5 @@
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { CHAIN_META, resolveChainId } from "@shared/lib/chains";
+import { CHAIN_META, normalizeChainId } from "@shared/lib/chains";
 import type { StablecoinMeta } from "@shared/types/core";
 import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { buildChainAddressKey, normalizeTokenAddress } from "../dex-liquidity/token-resolution";
@@ -58,7 +58,8 @@ export function buildYieldIdentityLookups(
     }
 
     for (const contract of getTrackedContracts(meta)) {
-      const chainId = resolveChainId(contract.chain) ?? contract.chain.toLowerCase();
+      const chainId = normalizeChainId(contract.chain);
+      if (!chainId) continue;
       const scopedIdsByChain = symbolToChainScopedIds.get(symbolKey) ?? new Map<string, string[]>();
       const scopedIds = scopedIdsByChain.get(chainId) ?? [];
       if (!scopedIds.includes(meta.id)) {
@@ -82,7 +83,7 @@ export function resolveYieldCandidateStablecoinId(
   candidate: YieldCandidateIdentityInput,
   lookups: YieldIdentityLookups,
 ): YieldIdentityResolution {
-  const normalizedChain = candidate.chain ? (resolveChainId(candidate.chain) ?? candidate.chain.toLowerCase()) : null;
+  const normalizedChain = candidate.chain ? normalizeChainId(candidate.chain) : null;
   const candidateAddress = candidate.address?.trim() ?? "";
   if (normalizedChain && candidateAddress) {
     const byChainAddress = lookups.chainAddressToId.get(buildChainAddressKey(normalizedChain, candidateAddress));
@@ -138,7 +139,8 @@ export function canUseSymbolOnlyYieldMatch(
   if (!symbolKey) return false;
 
   if (chain) {
-    const chainId = resolveChainId(chain) ?? chain.toLowerCase();
+    const chainId = normalizeChainId(chain);
+    if (!chainId) return false;
     const scopedIds = lookups.symbolToChainScopedIds.get(symbolKey)?.get(chainId) ?? [];
     return scopedIds.length === 1 && scopedIds[0] === meta.id;
   }
@@ -152,7 +154,7 @@ export function buildDlChainFilter(
 ): Set<string> | undefined {
   const chainIds = new Set<string>();
   for (const contract of getTrackedContracts(meta)) {
-    const chainId = resolveChainId(contract.chain);
+    const chainId = normalizeChainId(contract.chain);
     if (!chainId) continue;
     if (CHAIN_META[chainId]) {
       chainIds.add(chainId);
@@ -166,12 +168,12 @@ export function getTrackedContractAddresses(
   meta: Pick<StablecoinMeta, "contracts" | "tradedContracts">,
   chain?: string | null,
 ): string[] {
-  const normalizedChain = chain ? (resolveChainId(chain) ?? chain.toLowerCase()) : null;
+  const normalizedChain = chain ? normalizeChainId(chain) : null;
 
   return getTrackedContracts(meta)
     .filter(
       (contract) =>
-        !normalizedChain || (resolveChainId(contract.chain) ?? contract.chain.toLowerCase()) === normalizedChain,
+        !normalizedChain || normalizeChainId(contract.chain) === normalizedChain,
     )
     .map((contract) => normalizeTokenAddress(contract.address))
     .filter(Boolean);

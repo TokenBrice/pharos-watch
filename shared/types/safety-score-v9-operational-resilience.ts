@@ -1,19 +1,9 @@
 import { z } from "zod";
 import { canonicalArrayBy } from "./safety-score-v9-fact-primitives";
+import { CanonicalTextSchema, StrictIsoDateSchema, UnixSecondsSchema } from "./safety-schema-primitives";
 
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
-const UnixSecondsSchema = z.number().int().nonnegative();
 const NonNegativeFiniteSchema = z.number().finite().nonnegative();
-const IsoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00.000Z`);
-    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  }, "Value must be a valid ISO calendar date");
+const IsoDateSchema = StrictIsoDateSchema;
 
 const EvidenceRefIdsSchema = canonicalArrayBy(CanonicalTextSchema, (value) => value).refine(
   (values) => values.length > 0,

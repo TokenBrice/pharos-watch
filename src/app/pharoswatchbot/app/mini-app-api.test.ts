@@ -13,6 +13,7 @@ import {
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
 import { SchemaValidationError } from "@/lib/api";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   postMiniAppBulkWatchlistPreview,
   postMiniAppPortability,
@@ -75,11 +76,10 @@ afterEach(() => {
 
 describe("Mini App versioned API client", () => {
   it("sends version capabilities and hydrates a compact snapshot from the bundled catalog", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => createTelegramMiniAppSnapshot(mutableState),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      body: createTelegramMiniAppSnapshot(mutableState),
+    }], { requireMatch: true });
 
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
 
@@ -95,7 +95,7 @@ describe("Mini App versioned API client", () => {
   });
 
   it("keeps a new client compatible with an old Worker's full-catalog response", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => legacyState }));
+    mockFetch([{ match: "/api/telegram-mini-app/session", body: legacyState }], { requireMatch: true });
 
     const snapshot = await postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" });
 
@@ -108,33 +108,36 @@ describe("Mini App versioned API client", () => {
     ["contractVersion", "worker-contract-next", "contract-version-mismatch"],
     ["catalogVersion", "worker-catalog-next", "catalog-version-mismatch"],
   ] as const)("rejects a compact snapshot with an incompatible %s", async (field, value, code) => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ ...createTelegramMiniAppSnapshot(mutableState), [field]: value }),
-    }));
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      body: { ...createTelegramMiniAppSnapshot(mutableState), [field]: value },
+    }], { requireMatch: true });
 
     await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
       .rejects.toMatchObject({ status: 409, code });
   });
 
   it("rejects malformed success payloads before they reach Mini App state", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ state: "invalid" }) }));
+    mockFetch([{
+      match: "/api/telegram-mini-app/session",
+      body: { state: "invalid" },
+    }], { requireMatch: true });
 
     await expect(postMiniAppSnapshot("/api/telegram-mini-app/session", { initData: "signed" }))
       .rejects.toBeInstanceOf(SchemaValidationError);
   });
 
   it("keeps the state-only compatibility wrapper for callers that do not need revision metadata", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => legacyState }));
+    mockFetch([{ match: "/api/telegram-mini-app/session", body: legacyState }], { requireMatch: true });
 
     await expect(postMiniAppState("/api/telegram-mini-app/session", { initData: "signed" }))
       .resolves.toEqual(normalizedLegacyState.state);
   });
 
   it("validates a versioned portable watchlist preview without hydrating state", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockFetch([{
+      match: "/api/telegram-mini-app/mutate",
+      body: {
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
         result: {
@@ -148,8 +151,8 @@ describe("Mini App versioned API client", () => {
             presetBroadenedCoverage: [], presetRemovedCoverage: [],
           },
         },
-      }),
-    }));
+      },
+    }], { requireMatch: true });
 
     await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
       initData: "signed",
@@ -161,15 +164,15 @@ describe("Mini App versioned API client", () => {
     ["contractVersion", "worker-contract-next", "contract-version-mismatch"],
     ["catalogVersion", "worker-catalog-next", "catalog-version-mismatch"],
   ] as const)("rejects a portable watchlist response with an incompatible %s", async (field, value, code) => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    mockFetch([{
+      match: "/api/telegram-mini-app/mutate",
+      body: {
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
         [field]: value,
         result: { kind: "watchlist-export", token: "signed-export", directCount: 1, presetCount: 0 },
-      }),
-    }));
+      },
+    }], { requireMatch: true });
 
     await expect(postMiniAppPortability("/api/telegram-mini-app/mutate", {
       initData: "signed",
@@ -178,9 +181,9 @@ describe("Mini App versioned API client", () => {
   });
 
   it("uses the versioned signed transport for bulk watchlist previews", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
+    const fetchMock = mockFetch([{
+      match: "/api/telegram-mini-app/mutate",
+      body: {
         contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION,
         catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
         result: {
@@ -198,9 +201,8 @@ describe("Mini App versioned API client", () => {
             removeStablecoinIds: ["usdc-circle"],
           },
         },
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+      },
+    }], { requireMatch: true });
 
     await expect(postMiniAppBulkWatchlistPreview("/api/telegram-mini-app/mutate", {
       initData: "signed",

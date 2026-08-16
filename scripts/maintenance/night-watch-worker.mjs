@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mjs";
+import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 
 const DEFAULT_API_URL = "https://api.pharos.watch";
 const DEFAULT_ADMIN_API_URL = "https://ops-api.pharos.watch";
