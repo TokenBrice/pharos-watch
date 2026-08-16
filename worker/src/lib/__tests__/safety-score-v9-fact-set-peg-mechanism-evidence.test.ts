@@ -450,6 +450,40 @@ describe("Safety Score v9 exact base fact-set adapter — peg and mechanism evid
     });
   });
 
+  it.each(["VAR", "OTHER"] as const)("publishes an explicit unreviewed reference for %s peg metadata", (pegCurrency) => {
+    const fixed = exactFixedInput({ omitPegRow: true });
+    const baseline = buildSafetyScoreV9BaselineExtension(fixed, {
+      metaById: new Map([
+        [
+          "alpha",
+          {
+            id: "alpha",
+            mechanismArchetype: "fiat-cash",
+            launchDate: "2020-01-01",
+            flags: {
+              backing: "rwa-backed",
+              pegCurrency,
+              governance: "centralized",
+              yieldBearing: false,
+              rwa: false,
+              navToken: false,
+            },
+          },
+        ],
+      ]),
+    });
+
+    expect(baseline.assets[0]!.pegReference).toEqual({
+      referenceKind: "other",
+      referenceKey: `unreviewed:${pegCurrency.toLowerCase()}`,
+      failureDomains: [],
+    });
+    expect(compileSafetyScoreV9FactSetFromFixedInput(fixed, baseline).assets[0]!.peg).toMatchObject({
+      referenceKind: "other",
+      referenceKey: `unreviewed:${pegCurrency.toLowerCase()}`,
+    });
+  });
+
   it("keeps reviewed fallback collateral bounded until an exact reserve exposure maps it", () => {
     const fixed = exactTwoAssetFixedInput();
     const dependencyReview = {

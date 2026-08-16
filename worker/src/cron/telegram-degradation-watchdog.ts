@@ -12,7 +12,11 @@ import {
   PENDING_NEAR_TTL_WINDOW_SEC,
   PENDING_OLD_AGE_ALERT_SEC,
 } from "../lib/telegram-constants";
-import { readPendingCapacity, type PendingCapacityReadResult, type PendingCapacitySnapshot } from "./telegram-pending";
+import {
+  readTelegramPendingCapacity,
+  type TelegramPendingCapacityReadResult,
+  type TelegramPendingCapacitySnapshot,
+} from "../lib/telegram-pending-capacity";
 import { throwIfAborted } from "../lib/abort";
 import { parseJson } from "../lib/json-parse";
 
@@ -63,7 +67,7 @@ interface WatchdogResult {
 }
 
 export interface TelegramDegradationWatchdogOptions {
-  pendingCapacitySnapshot?: PendingCapacitySnapshot | null;
+  pendingCapacitySnapshot?: TelegramPendingCapacitySnapshot | null;
   safetySourceAssessment?: AlertSafetySourceAssessment | null;
 }
 
@@ -154,11 +158,11 @@ async function writeZeroSendState(db: D1Database, state: ZeroSendState): Promise
 async function evaluatePendingBacklog(
   db: D1Database,
   nowSec: number,
-  preloadedCapacity?: PendingCapacitySnapshot | null,
+  preloadedCapacity?: TelegramPendingCapacitySnapshot | null,
 ): Promise<WatchdogResult["pendingBacklog"]> {
-  const capacityRead: PendingCapacityReadResult = preloadedCapacity
+  const capacityRead: TelegramPendingCapacityReadResult = preloadedCapacity
     ? { status: "available", value: preloadedCapacity }
-    : await readPendingCapacity(db, nowSec);
+    : await readTelegramPendingCapacity(db, nowSec);
   const capacity = capacityRead.status === "available" ? capacityRead.value : null;
   const count = capacity?.active ?? null;
   const flagSince = await readCachedTimestamp(db, WATCHDOG_KEYS.pendingSince);

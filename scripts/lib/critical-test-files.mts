@@ -172,6 +172,8 @@ export const CRITICAL_TEST_FILES: string[] = [
   "worker/src/cron/__tests__/enrich-prices-validation.test.ts",
   "worker/src/cron/__tests__/enrich-prices-fallback-contract-dex.test.ts",
   "worker/src/cron/__tests__/enrich-prices-fallback-cmc-jupiter.test.ts",
+  "worker/src/cron/__tests__/enrich-prices-fallback-cmc.test.ts",
+  "worker/src/cron/__tests__/enrich-prices-fallback-dexscreener-defillama.test.ts",
   "worker/src/cron/__tests__/enrich-prices-primary-consensus.test.ts",
   "worker/src/cron/__tests__/enrich-prices-pool-challenges.test.ts",
   "worker/src/cron/__tests__/detect-depegs.test.ts",

@@ -4,7 +4,7 @@ import { parseTelegramDispatchCronMetadata } from "@shared/lib/status-metadata";
 import { assessPublicHealth } from "../lib/public-health-assessment";
 import { CACHE_PROFILES } from "../lib/constants";
 import { logWorkerEvent } from "../lib/structured-log";
-import { readTelegramPendingCapacity as readPendingCapacity } from "../lib/telegram-pending-capacity";
+import { readTelegramPendingCapacity } from "../lib/telegram-pending-capacity";
 
 export const handleHealth = async (db: D1Database): Promise<Response> => {
   const now = Math.floor(Date.now() / 1000);
@@ -16,7 +16,7 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
     try {
       const [chatCount, pendingCapacity, lastDispatch] = await Promise.all([
         db.prepare("SELECT COUNT(*) AS n FROM telegram_subscribers").first<{ n: number }>(),
-        readPendingCapacity(db, now),
+        readTelegramPendingCapacity(db, now),
         db
           .prepare(
             "SELECT started_at, status, metadata FROM cron_runs WHERE job = 'dispatch-telegram-alerts' ORDER BY started_at DESC LIMIT 1",

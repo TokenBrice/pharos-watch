@@ -6,7 +6,7 @@ import { D1_BATCH_SIZE } from "../../lib/constants";
 
 stubCryptoForAuth();
 
-vi.mock("../blacklist-summary", () => ({}));
+vi.mock("../../lib/blacklist-summary-service", () => ({}));
 vi.mock("../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
 }));

@@ -23,7 +23,7 @@ export const PUBLIC_STATIC_ROUTES = [
     ),
   ),
   defineLazyStaticRoute("blacklist-summary", () =>
-    import("../api/blacklist-summary").then(
+    import("../lib/blacklist-summary-service").then(
       ({ handleBlacklistSummary }) =>
         ({ db }) =>
           handleBlacklistSummary(db),

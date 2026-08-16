@@ -2,7 +2,7 @@ import { throwIfAborted } from "../lib/abort";
 import { executeAtomicBatch } from "../lib/db";
 import { D1_BATCH_SIZE } from "../lib/constants";
 import type { BatchMessage } from "../lib/telegram";
-import { buildPendingAlertEnqueueStatement } from "./telegram-pending/enqueue";
+import { buildPendingAlertEnqueueStatement } from "../lib/telegram-pending-queue";
 import type { PendingEnqueueOptions } from "../lib/telegram-pending-queue";
 
 export const TELEGRAM_FRESH_TARGET_CLAIM_TTL_SEC = 120;

@@ -12,9 +12,9 @@ import {
 import { logTelegramEvent } from "../lib/telegram-log";
 import {
   buildDedupeKey,
-  estimateTelegramDrainTimeSec,
   hashDedupePart,
-} from "./telegram-pending";
+} from "../lib/telegram-pending-queue";
+import { estimateTelegramDrainTimeSec } from "../lib/telegram-pending-capacity";
 import {
   expandSubscriberChunks,
   type RoutedSubscriberAlert,

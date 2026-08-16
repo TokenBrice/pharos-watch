@@ -248,14 +248,11 @@ vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
 const {
   disableBlockedSubscriber,
   drainPendingQueue,
-  enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
   archiveAgedExecutionUnknownPendingAlerts,
   countPendingAlertsForAdmin,
   clearPendingAlertsForAdmin,
   loadChatsInBackoff,
-  readPendingCapacitySnapshot,
-  estimateTelegramDrainTimeSec,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
   pendingBackoffSec,
@@ -267,11 +264,11 @@ const {
   TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
-  buildDedupeKey,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
   PENDING_CLAIM_TTL_SEC,
   reconcileStalePendingSending,
 } = await import("../telegram-pending");
+const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
@@ -2916,4 +2913,3 @@ describe("drainPendingQueue", () => {
     ]);
   });
 });
-

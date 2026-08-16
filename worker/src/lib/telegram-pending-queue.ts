@@ -50,7 +50,7 @@ export function buildDedupeKey(message: BatchMessage, splitVersion: number = TEL
  * The single definition of the `telegram_pending_alerts` upsert.
  *
  * Two producers write the same row shape with the same conflict resolution:
- * `telegram-pending/enqueue.ts` (one row per bound `VALUES` tuple) and
+ * `telegram-pending-queue.ts` (one row per bound `VALUES` tuple) and
  * `telegram-alert-target-plans/delivery.ts` (a set-based
  * `SELECT ... FROM telegram_alert_job_targets`). Only the value source differs,
  * so it is the builder's one parameter — the column list, the TTL refresh
@@ -377,4 +377,3 @@ export async function enqueuePendingAlerts(
   const stmts = messages.map((message) => buildPendingAlertEnqueueStatement(db, message, nowSec, options));
   await batchExecute(db, stmts);
 }
-

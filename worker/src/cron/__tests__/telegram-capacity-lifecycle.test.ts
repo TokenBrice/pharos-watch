@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { readPendingCapacity } from "../telegram-pending";
+import { readTelegramPendingCapacity } from "../../lib/telegram-pending-capacity";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 function setup(): { sqlite: DatabaseSync; db: D1Database } {
@@ -36,7 +36,7 @@ describe("Telegram delivery lifecycle capacity SQL", () => {
       insertFresh.run("fresh-sending-aged", "fresh-sending-aged", now - 1_300, "sending", now - 1_000);
       insertFresh.run("fresh-explicit-unknown", "fresh-explicit-unknown", now - 180, "execution_unknown", now - 120);
 
-      const result = await readPendingCapacity(db, now);
+      const result = await readTelegramPendingCapacity(db, now);
 
       expect(result.status).toBe("available");
       if (result.status !== "available") throw new Error("capacity unexpectedly unavailable");
@@ -77,7 +77,7 @@ describe("Telegram delivery lifecycle capacity SQL", () => {
           FROM sequence;
       `);
 
-      const result = await readPendingCapacity(db, now);
+      const result = await readTelegramPendingCapacity(db, now);
 
       expect(result.status).toBe("available");
       if (result.status !== "available") throw new Error("capacity unexpectedly unavailable");

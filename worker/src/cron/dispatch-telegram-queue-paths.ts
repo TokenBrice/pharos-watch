@@ -19,8 +19,8 @@ import {
 } from "./dispatch-telegram-state";
 import { writeSnapshots } from "./telegram-alert-snapshots";
 import { runPendingQueueLifecycle } from "./dispatch-telegram-pending-lifecycle";
+import { readTelegramPendingCapacitySnapshot } from "../lib/telegram-pending-capacity";
 import {
-  readPendingCapacitySnapshot,
   type PendingDrainResult,
   type PendingCapacitySnapshot,
 } from "./telegram-pending";
@@ -79,7 +79,7 @@ export async function executeCircuitOpenQueuePath({
   sharedState,
   reportProgress,
 }: CircuitOpenQueuePathContext): Promise<DispatchResult & { skipped: "circuit-open" }> {
-  const pendingCapacityBefore = await readPendingCapacitySnapshot(db, nowSec);
+  const pendingCapacityBefore = await readTelegramPendingCapacitySnapshot(db, nowSec);
   assignSharedDispatchState(sharedState, { pendingCapacitySnapshot: pendingCapacityBefore });
   await reportCronProgress(reportProgress, {
     stage: "pending-drain",

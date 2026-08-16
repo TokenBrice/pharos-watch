@@ -677,6 +677,11 @@ describe("handleStatus", () => {
       canaries: Record<string, unknown> | null;
       mintBurnReconciliation: Record<string, unknown> | null;
       reserveComposition: Record<string, unknown>;
+      producerHeads: Array<{
+        observed: boolean;
+        invocationCount: number;
+        productiveCount: number;
+      }>;
     };
 
     expect(body).toHaveProperty("timestamp");
@@ -700,6 +705,11 @@ describe("handleStatus", () => {
     expect(body).toHaveProperty("canaries");
     expect(body).toHaveProperty("mintBurnReconciliation");
     expect(body).toHaveProperty("reserveComposition");
+    expect(body.producerHeads.length).toBeGreaterThan(0);
+    expect(body.producerHeads.every((head) =>
+      !head.observed && head.invocationCount === 0 && head.productiveCount === 0,
+    )).toBe(true);
+    expect(body.sectionErrors).not.toHaveProperty("producerHistory");
     expect(body.reserveComposition).toMatchObject({
       cursorTailState: null,
       cursorTailError: null,

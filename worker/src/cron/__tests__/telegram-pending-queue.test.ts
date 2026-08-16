@@ -248,14 +248,11 @@ vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
 const {
   disableBlockedSubscriber,
   drainPendingQueue,
-  enqueuePendingAlerts,
   cleanupExpiredPendingAlerts,
   archiveAgedExecutionUnknownPendingAlerts,
   countPendingAlertsForAdmin,
   clearPendingAlertsForAdmin,
   loadChatsInBackoff,
-  readPendingCapacitySnapshot,
-  estimateTelegramDrainTimeSec,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
   pendingBackoffSec,
@@ -267,11 +264,15 @@ const {
   TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
-  buildDedupeKey,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
   PENDING_CLAIM_TTL_SEC,
   reconcileStalePendingSending,
 } = await import("../telegram-pending");
+const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
+const {
+  readTelegramPendingCapacitySnapshot,
+  estimateTelegramDrainTimeSec,
+} = await import("../../lib/telegram-pending-capacity");
 const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
@@ -629,6 +630,20 @@ describe("enqueuePendingAlerts", () => {
     expect(db.getHistory()).toHaveLength(0);
   });
 
+  it("rejects safety alerts without a Safety Score identity", async () => {
+    const db = mockD1([{ match: "INSERT INTO telegram_pending_alerts", rows: [] }]);
+    await expect(enqueuePendingAlerts(db, [{
+      chatId: "missing-safety-identity",
+      html: "<b>Safety alert</b>",
+      disableNotification: false,
+      alertType: "safety",
+      sourceEventId: "source-safety",
+      preferenceGeneration: 1,
+      alertScope: [{ stablecoinId: "usdc-circle", family: "safety" }],
+    }], 1_000)).rejects.toThrow("Safety Score identity");
+    expect(db.getHistory()).toHaveLength(0);
+  });
+
   it("marks admin broadcasts as low-priority pending rows", async () => {
     const db = mockD1([
       { match: "INSERT INTO telegram_pending_alerts", rows: [] },
@@ -746,7 +761,7 @@ describe("enqueuePendingAlerts", () => {
   });
 });
 
-describe("readPendingCapacitySnapshot", () => {
+describe("readTelegramPendingCapacitySnapshot", () => {
   it("normalizes pending capacity metrics and estimates drain time", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
@@ -765,7 +780,7 @@ describe("readPendingCapacitySnapshot", () => {
       },
     ]);
 
-    const snapshot = await readPendingCapacitySnapshot(db, now, TELEGRAM_PENDING_DRAIN_BUDGET);
+    const snapshot = await readTelegramPendingCapacitySnapshot(db, now, TELEGRAM_PENDING_DRAIN_BUDGET);
 
     expect(snapshot).toMatchObject({
       total: 80,
@@ -808,7 +823,7 @@ describe("readPendingCapacitySnapshot", () => {
          WHERE id IN (9101, 9102)
       `).run();
 
-      const snapshot = await readPendingCapacitySnapshot(db, now);
+      const snapshot = await readTelegramPendingCapacitySnapshot(db, now);
 
       expect(snapshot.pendingExecutionUnknown).toBe(1);
       expect(snapshot.executionUnknown).toBe(1);

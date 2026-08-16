@@ -11,7 +11,7 @@ import {
 } from "../lib/telegram-pending-queue";
 import {
   estimateTelegramDrainTimeSec,
-  readTelegramPendingCapacitySnapshot as readPendingCapacitySnapshot,
+  readTelegramPendingCapacitySnapshot,
 } from "../lib/telegram-pending-capacity";
 import {
   TELEGRAM_PENDING_DRAIN_BUDGET,
@@ -222,7 +222,7 @@ export const handleAdminTelegramBroadcast = makeIdempotentAdminRoute<BroadcastCo
     const fleetChatIds = canaryChatId == null ? chatIds : chatIds.filter((chatId) => chatId !== canaryChatId);
     const targetMessageCount = fleetChatIds.length * chunks.length;
     const nowSec = Math.floor(Date.now() / 1000);
-    const pendingCapacity = await readPendingCapacitySnapshot(db, nowSec);
+    const pendingCapacity = await readTelegramPendingCapacitySnapshot(db, nowSec);
     const deliveryEstimate = buildDeliveryEstimate(pendingCapacity.active, targetMessageCount);
 
     if (dryRun) {
