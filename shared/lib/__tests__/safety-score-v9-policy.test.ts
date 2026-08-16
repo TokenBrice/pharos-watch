@@ -16,7 +16,7 @@ import {
   loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
-import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "../safety-score-v9/score-bearing-gates-policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "../safety-score-v9/score-bearing-gates-policy";
 import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
 
 function candidateClone(): V9MethodologyPolicy {
@@ -72,7 +72,7 @@ describe("Safety Score v9 methodology policy", () => {
       "ade82a02e49a24484ecdb4b6f668794420e1c4b25bf0a80ba5f2130a3ebe64cf",
     );
     expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
-      V9_SCORE_BEARING_GATES_POLICY_V921,
+      V9_SCORE_BEARING_GATES_POLICY_V922,
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -86,8 +86,8 @@ describe("Safety Score v9 methodology policy", () => {
   });
 
   it("changes the semantic digest for every formerly external score-bearing gate family", () => {
-    const loadChangedGates = (change: (gates: typeof V9_SCORE_BEARING_GATES_POLICY_V921) => void) => {
-      const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V921);
+    const loadChangedGates = (change: (gates: typeof V9_SCORE_BEARING_GATES_POLICY_V922) => void) => {
+      const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
       change(gates);
       return loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest;
     };
@@ -101,15 +101,15 @@ describe("Safety Score v9 methodology policy", () => {
     expect(loadChangedGates((gates) => { gates.control.materialBridgeHighShareThreshold = 0.24; }))
       .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
 
-    for (const field of Object.keys(V9_SCORE_BEARING_GATES_POLICY_V921.evidenceExpiry) as
-      (keyof typeof V9_SCORE_BEARING_GATES_POLICY_V921.evidenceExpiry)[]) {
+    for (const field of Object.keys(V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry) as
+      (keyof typeof V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry)[]) {
       expect(loadChangedGates((gates) => { gates.evidenceExpiry[field] += 1; }), field)
         .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
     }
   });
 
   it("lets policy-only replay change a danger gate without editing production scoring", () => {
-    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V921);
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
     gates.danger.withholdPegMultiplierFloor = 0.84;
     const policy = loadV9MethodologyPolicy(candidateClone(), gates);
     expect(getV9ScoreBearingGatesPolicy(policy).danger.withholdPegMultiplierFloor).toBe(0.84);
@@ -117,7 +117,7 @@ describe("Safety Score v9 methodology policy", () => {
   });
 
   it("keeps a gate policy version relabel digest-neutral", () => {
-    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V921);
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
     gates.methodologyVersion = "9.22";
     expect(loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest)
       .toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);

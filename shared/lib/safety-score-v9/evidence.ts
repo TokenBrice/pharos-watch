@@ -6,7 +6,7 @@ import {
   type V9FactStatusV2,
   type V9ObservationState,
 } from "../../types/safety-score-v9-facts";
-import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "./score-bearing-gates-policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "./score-bearing-gates-policy";
 
 /**
  * Reviewed research evidence (bridge-route, mint-authority, and oracle
@@ -15,7 +15,7 @@ import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "./score-bearing-gates-policy
  * documentedTermsMaxAgeSec precedent.
  */
 export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC =
-  V9_SCORE_BEARING_GATES_POLICY_V921.evidenceExpiry.reviewedResearchMaxAgeSec;
+  V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry.reviewedResearchMaxAgeSec;
 
 export interface CreateV9EvidenceReferenceArgs {
   evidenceId: string;

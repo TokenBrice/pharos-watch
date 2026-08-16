@@ -53,7 +53,7 @@ const V9ScoreBearingGatesPolicySchema = z
 export type V9ScoreBearingGatesPolicy = z.infer<typeof V9ScoreBearingGatesPolicySchema>;
 
 /** Safety Score methodology 9.22: digest-bound gates formerly held as code literals. */
-export const V9_SCORE_BEARING_GATES_POLICY_V921 = V9ScoreBearingGatesPolicySchema.parse({
+export const V9_SCORE_BEARING_GATES_POLICY_V922 = V9ScoreBearingGatesPolicySchema.parse({
   methodologyVersion: "9.22",
   withhold: {
     maxScoreExclusive: 55,
