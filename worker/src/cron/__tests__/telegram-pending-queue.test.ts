@@ -2,10 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
-  serializePendingAlertScope,
   serializePendingMarkupPolicy,
 } from "../../lib/telegram-pending-provenance";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 const DEFAULT_TELEGRAM_PENDING_D1_TABLES: MockTableConfig[] = [
@@ -44,68 +42,10 @@ function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } 
  * Seeds the source event a `telegram_alert_job_targets` row with a
  * `plan_generation` needs to satisfy `trg_tajt_source_generation_guard`.
  */
-function insertSourceEventSqlite(
-  sqlite: DatabaseSync,
-  row: { sourceEventId: string; planGeneration: number; detectedAt: number; expiresAt: number },
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_alert_source_events (
-         source_event_id, status, detected_at, expires_at, event_payload, baseline_payload,
-         target_plan_state, target_plan_generation
-       ) VALUES (?, 'planned', ?, ?, '{}', '{}', 'materializing', ?)`,
-    )
-    .run(row.sourceEventId, row.detectedAt, row.expiresAt, row.planGeneration);
-}
+
 
 /** Seeds a subscriber row satisfying the production NOT NULL columns. */
-function insertSubscriberSqlite(
-  sqlite: DatabaseSync,
-  row: {
-    chatId: string;
-    createdAt?: number;
-    lastActiveAt?: number;
-    preferenceGeneration?: number;
-    alertSnoozeUntilTs?: number | null;
-    quietHoursEnabled?: number;
-    quietHoursStartUtc?: number | null;
-    quietHoursEndUtc?: number | null;
-    timezone?: string | null;
-    globalAlertDews?: number;
-    globalAlertDepeg?: number;
-    globalAlertSafety?: number;
-    globalAlertLaunch?: number;
-    globalAlertReserve?: number;
-    globalAlertFreeze?: number;
-  },
-): void {
-  sqlite
-    .prepare(
-      `INSERT INTO telegram_subscribers (
-         chat_id, created_at, last_active_at, preference_generation, alert_snooze_until_ts,
-         quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc, timezone,
-         global_alert_dews, global_alert_depeg, global_alert_safety,
-         global_alert_launch, global_alert_reserve, global_alert_freeze
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    )
-    .run(
-      row.chatId,
-      row.createdAt ?? 0,
-      row.lastActiveAt ?? 0,
-      row.preferenceGeneration ?? 0,
-      row.alertSnoozeUntilTs ?? null,
-      row.quietHoursEnabled ?? 0,
-      row.quietHoursStartUtc ?? null,
-      row.quietHoursEndUtc ?? null,
-      row.timezone ?? null,
-      row.globalAlertDews ?? 0,
-      row.globalAlertDepeg ?? 0,
-      row.globalAlertSafety ?? 0,
-      row.globalAlertLaunch ?? 0,
-      row.globalAlertReserve ?? 0,
-      row.globalAlertFreeze ?? 0,
-    );
-}
+
 
 function insertPendingSqlite(
   sqlite: DatabaseSync,
@@ -165,68 +105,7 @@ function insertPendingSqlite(
  * statement — including the optimistic claim UPDATE that decides the winner —
  * runs against real SQLite.
  */
-function createClaimContentionD1(sqlite: DatabaseSync): D1Database & {
-  getHistory(): Array<{ sql: string; binds: unknown[] }>;
-  getOwner(): string | null;
-} {
-  const inner = createSqliteD1(sqlite);
-  const history: Array<{ sql: string; binds: unknown[] }> = [];
-  let winningOwner: string | null = null;
-  let candidateReads = 0;
-  let releaseCandidateReads: (() => void) | null = null;
-  const bothOwnersReadCandidate = new Promise<void>((resolve) => {
-    releaseCandidateReads = resolve;
-  });
 
-  function makeStatement(sql: string, values: unknown[] = []): D1PreparedStatement {
-    const bound = values.length > 0 ? inner.prepare(sql).bind(...values) : inner.prepare(sql);
-    return {
-      bind: (...nextValues: unknown[]) => makeStatement(sql, nextValues),
-      first: async <T>() => {
-        history.push({ sql, binds: [...values] });
-        return bound.first<T>();
-      },
-      all: async <T>() => {
-        history.push({ sql, binds: [...values] });
-        const result = await bound.all<T>();
-        if (sql.includes("SELECT p.id") && sql.includes("processing_owner IS NULL")) {
-          candidateReads += 1;
-          if (candidateReads === 2) releaseCandidateReads?.();
-          await bothOwnersReadCandidate;
-        }
-        return result;
-      },
-      run: async () => {
-        history.push({ sql, binds: [...values] });
-        const result = await bound.run();
-        if (
-          sql.includes("UPDATE telegram_pending_alerts") &&
-          sql.includes("SET processing_owner = ?") &&
-          Number(result.meta?.changes ?? 0) > 0
-        ) {
-          winningOwner = String(values[0]);
-        }
-        return result;
-      },
-    } as unknown as D1PreparedStatement;
-  }
-
-  return {
-    prepare: (sql: string) => makeStatement(sql),
-    batch: async (statements: D1PreparedStatement[]) =>
-      Promise.all(statements.map((statement) => statement.run())),
-    exec: async (sql: string) => {
-      sqlite.exec(sql);
-      return { count: 0, duration: 0 };
-    },
-    dump: async () => new ArrayBuffer(0),
-    getHistory: () => history.map((entry) => ({ sql: entry.sql, binds: [...entry.binds] })),
-    getOwner: () => winningOwner,
-  } as unknown as D1Database & {
-    getHistory(): Array<{ sql: string; binds: unknown[] }>;
-    getOwner(): string | null;
-  };
-}
 
 vi.mock("../../lib/telegram", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/telegram")>();
@@ -246,27 +125,20 @@ vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
 }));
 
 const {
-  disableBlockedSubscriber,
-  drainPendingQueue,
   cleanupExpiredPendingAlerts,
   archiveAgedExecutionUnknownPendingAlerts,
   countPendingAlertsForAdmin,
   clearPendingAlertsForAdmin,
+  disableBlockedSubscriber,
   loadChatsInBackoff,
   registerSubscriberBlockAndShouldDisable,
   resetSubscriberBlockCount,
-  pendingBackoffSec,
   PENDING_TTL_SEC,
-  PENDING_MAX_ATTEMPTS,
-  PENDING_BACKOFF_SCHEDULE_SEC,
   BLOCK_STRIKE_WINDOW_SEC,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-  TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
   EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
-  PENDING_CLAIM_TTL_SEC,
-  reconcileStalePendingSending,
 } = await import("../telegram-pending");
 const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
 const {

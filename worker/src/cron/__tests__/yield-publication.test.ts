@@ -1,10 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import {
-  buildSourceRiskGoldenFixture,
-  getSourceRiskGoldenRow,
-} from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
+
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
@@ -12,14 +9,7 @@ import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
-import {
-  PRICE_DERIVED_STALE_THRESHOLD_MS,
-  STALE_THRESHOLD_MS,
-  SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS,
-  SLOW_NAV_SOURCE_STALE_THRESHOLD_MS,
-  COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-  LONG_HORIZON_COMPARISON_ANCHOR_STALE_THRESHOLD_MS,
-} from "../yield-helpers";
+
 import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evaluation";
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import {
@@ -27,7 +17,6 @@ import {
   cleanupFalseLinkedVariantSourceSwitches,
   materializeYieldHistoryDaily,
   pruneYieldTables,
-  validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
 import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
 import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";

@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { jsonResponse as makeJsonResponse } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { jsonResponse as makeJsonResponse } from "@shared/test-utils/mock-fetch";
 
 // Stub modules that are not relevant to what we're testing here.
 vi.mock("@shared/lib/site-data-lane", () => ({

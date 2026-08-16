@@ -14,7 +14,7 @@ import { refreshMiniAppBundleOnce } from "./mini-app-api";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import type { TelegramMiniAppState } from "./types";
 import { installMatchMediaMock } from "@/test-utils/frontend";
-import { mockFetch } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const baseState: TelegramMiniAppState = {
   viewer: { userId: "42", username: "watcher", chatId: "42", chatType: "private", canMutate: true, mutationBlockReason: null },

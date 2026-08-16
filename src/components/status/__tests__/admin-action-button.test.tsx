@@ -6,7 +6,7 @@ import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
-import { mockFetch, type MockFetchSpy } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 
 const ASSET_SCOPE: StatusPageAction["scope"] = {
   type: "asset-or-batch",

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
-import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 describe("TelegramAdoptionLink", () => {
   beforeEach(() => {

@@ -32,9 +32,7 @@ const transportMocks = vi.hoisted(() => ({
   record: vi.fn(),
 }));
 
-function parseLogRecords(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
-  return spy.mock.calls.map((call) => JSON.parse(String(call[0])) as Record<string, unknown>);
-}
+
 
 function setupTelegramPendingSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -246,30 +244,21 @@ vi.mock("../../lib/telegram-subscriber-lifecycle", () => ({
 }));
 
 const {
-  disableBlockedSubscriber,
   drainPendingQueue,
   cleanupExpiredPendingAlerts,
-  archiveAgedExecutionUnknownPendingAlerts,
-  countPendingAlertsForAdmin,
-  clearPendingAlertsForAdmin,
-  loadChatsInBackoff,
-  registerSubscriberBlockAndShouldDisable,
-  resetSubscriberBlockCount,
   pendingBackoffSec,
   PENDING_TTL_SEC,
   PENDING_MAX_ATTEMPTS,
   PENDING_BACKOFF_SCHEDULE_SEC,
   BLOCK_STRIKE_WINDOW_SEC,
-  TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
   TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY,
   SEND_BATCH_SIZE,
-  EXPIRED_PENDING_CLEANUP_BATCH_LIMIT,
   PENDING_CLAIM_TTL_SEC,
   reconcileStalePendingSending,
 } = await import("../telegram-pending");
 const { enqueuePendingAlerts, buildDedupeKey } = await import("../../lib/telegram-pending-queue");
-const { TELEGRAM_SPLIT_VERSION } = await import("../../lib/telegram-alerts");
+await import("../../lib/telegram-alerts");
 
 beforeEach(() => {
   mockSendToChat.mockReset();

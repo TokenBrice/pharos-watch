@@ -1,8 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 as baseMockD1, type MockD1Database, type MockPreparedStatement, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { PAUSE_SENTINEL_TS } from "../../lib/telegram-constants";
-import { encodeWatchlistTokenV3 } from "../../lib/telegram-watchlist-token";
-import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import {
+  mockD1 as baseMockD1,
+  type MockD1Database,
+  type MockTableConfig,
+} from "../../test-helpers/__shared/mock-d1";
+
+
+
 import {
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM,
@@ -173,44 +177,9 @@ function stateReadTables(overrides: {
   ];
 }
 
-function recapPreferenceTable(overrides: Partial<Record<string, unknown>> = {}): MockTableConfig {
-  const row = {
-    chat_id: "42",
-    enabled: 1,
-    cadence: "daily",
-    delivery_hour_local: 14,
-    next_due_at: NOW_SEC + 18_000,
-    last_window_end_at: null,
-    last_delivered_local_date: null,
-    created_at: NOW_SEC,
-    updated_at: NOW_SEC,
-    preference_generation: 1,
-    ...overrides,
-  };
-  return {
-    match: "FROM telegram_recap_preferences p",
-    first: row,
-    rows: [row],
-  };
-}
 
-function stablecoinsCacheTable(): MockTableConfig {
-  return {
-    match: "SELECT value, updated_at FROM cache WHERE key = ?",
-    matchBinds: ["stablecoins"],
-    rows: [{
-      key: "stablecoins",
-      value: JSON.stringify({
-        peggedAssets: [
-          { id: "usdt-tether", symbol: "USDT", name: "Tether", circulating: { peggedUSD: 1_000_000_000 } },
-          { id: "usdc-circle", symbol: "USDC", name: "USD Coin", circulating: { peggedUSD: 900_000_000 } },
-          { id: "eurc-circle", symbol: "EURC", name: "Euro Coin", circulating: { peggedUSD: 800_000_000 } },
-        ],
-      }),
-      updated_at: NOW_SEC,
-    }],
-  };
-}
+
+
 
 function historyHas(db: MockD1Database, sqlNeedle: string, bindNeedles: unknown[] = []): boolean {
   return db.getHistory().some((entry) =>

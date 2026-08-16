@@ -249,7 +249,7 @@ describe("fetchWithRetry", () => {
   });
 
   it("redacts known provider URLs in retry logs by default", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
+    mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await fetchWithRetry(
@@ -373,7 +373,7 @@ describe("fetchWithRetry", () => {
 
   it("preserves raw response behavior when a body exceeds the configured wrapper limit", async () => {
     const response = new Response("raw response", { headers: { "Content-Length": "12" } });
-    const fetchMock = mockFetch([{ match: () => true, respond: () => response }]);
+    mockFetch([{ match: () => true, respond: () => response }]);
 
     const result = await fetchWithRetry(
       "https://example.com/raw",

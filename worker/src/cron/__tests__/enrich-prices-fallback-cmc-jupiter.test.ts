@@ -1,29 +1,18 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import {
-  staleObservedAtSec,
-  staleIsoTimestamp,
-  maturePairCreatedAt,
-  dlQuote,
-  cmcUsdQuote,
-  cmcCategory,
   solanaSlotResponse,
   cleanupEnrichMissingPricesTest,
   fixtureEnrichMissingPrices,
-  fixtureRunCmcPass,
-  fixtureRunDexScreenerPass,
-  fixtureRunDlContractPasses,
   fixtureRunJupiterPass,
   fixtureMockD1 as createFixtureMockD1,
   fixtureMockFetch,
   fixtureCIRCUIT_SOURCE,
   type PeggedAsset,
 } from "./enrich-prices.test-support";
-import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
-import { DEXSCREENER_ROTATION_INTERVAL_MS } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
 
-function installFetch(implementation: (url: string) => Response | Promise<Response>) {
-  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
-}
+
+
+
 
 function fixtureMockD1(
   tables: Parameters<typeof createFixtureMockD1>[0] = [],

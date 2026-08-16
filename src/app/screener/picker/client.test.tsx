@@ -9,7 +9,7 @@ import {
   installMatchMediaMock,
   resetBrowserStorage,
 } from "@/test-utils/frontend";
-import { mockFetch, type MockFetchSpy } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine

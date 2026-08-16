@@ -5,8 +5,8 @@ import {
   finalizeReserveSyncSuccess,
   pruneLiveReserveHistory,
 } from "../live-reserves-store";
-import { buildReserveSyncRecordDeferredStatement } from "../live-reserves-store-statements";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
+
 
 const LIVE_SLICES = [{ name: "Test Farm", pct: 100, risk: "low" as const }];
 
@@ -30,51 +30,12 @@ function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables, ...RESERVE_DEFAULT_TABLES]);
 }
 
-type MockRow = Record<string, unknown>;
-
-const COMPOSITION_ROW: MockRow = {
-  stablecoin_id: "iusd-infinifi",
-  slices: JSON.stringify(LIVE_SLICES),
-  fetched_at: 1_000,
-  source: "infinifi",
-};
-
-const SYNC_STATE_ROW: MockRow = {
-  stablecoin_id: "iusd-infinifi",
-  adapter_key: "infinifi",
-  breaker_key: "live-reserves:infinifi",
-  last_attempted_at: 1_000,
-  last_success_at: 1_000,
-  last_status: "ok",
-  warning_count: 0,
-  warnings: null,
-  last_error: null,
-  metadata: "{}",
-};
-
 /**
  * mockD1 wired for the reserve_composition + reserve_sync_state pair every store
  * read issues. `null` models a missing row; an object is merged over the default
  * row so each case shows only the columns it actually varies.
  */
-function makeReservesDb(
-  overrides: { composition?: MockRow | null; syncState?: MockRow | null } = {},
-) {
-  const composition = overrides.composition === undefined ? {} : overrides.composition;
-  const syncState = overrides.syncState === undefined ? {} : overrides.syncState;
-  return mockD1([
-    {
-      match: "reserve_composition",
-      rows: [],
-      first: composition && { ...COMPOSITION_ROW, ...composition },
-    },
-    {
-      match: "reserve_sync_state",
-      rows: [],
-      first: syncState && { ...SYNC_STATE_ROW, ...syncState },
-    },
-  ]);
-}
+
 
 describe("live-reserves-store", () => {
   it("persists reserve composition and sync state together for successful snapshots", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { jsonResponse } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import {
   auditBinance,
   auditBitstamp,

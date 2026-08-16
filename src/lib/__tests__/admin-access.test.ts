@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AdminMutationError, adminMutation } from "@/lib/admin-access";
-import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 describe("adminMutation", () => {
   afterEach(() => {

@@ -1,17 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
 import {
   buildSourceRiskGoldenFixture,
   getSourceRiskGoldenRow,
 } from "@shared/lib/__tests__/yield-source-risk-golden-fixtures";
-import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+
+
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
 import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
-import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
+
+
+
 import {
   PRICE_DERIVED_STALE_THRESHOLD_MS,
   STALE_THRESHOLD_MS,
@@ -24,23 +22,13 @@ import { buildHistoryKey, type EvaluatedYieldSource } from "../yield-sync/evalua
 import type { ParsedYieldBenchmarkMeta, ParsedYieldBenchmarkRegistry } from "../yield-sync/benchmarks";
 import {
   buildYieldRankingsPayloadFromEvaluatedSources,
-  cleanupFalseLinkedVariantSourceSwitches,
-  materializeYieldHistoryDaily,
-  pruneYieldTables,
   validateYieldRankingsPayloadForPublish,
 } from "../yield-sync/publication";
-import { publishYieldCoordinatorResults } from "../yield-sync/coordinator-persist";
-import { publishYieldRowsAtomically } from "../yield-sync/publication-atomic-batch";
 
-const MIGRATIONS_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
-const FIXTURES_DIR = path.resolve(__dirname, "../../test-helpers/migration-fixtures");
+
 
 // Migrations absorbed by the 2026-07-30 baseline squash live on as frozen test fixtures.
-function resolveMigrationPath(file: string): string {
-  const fixture = path.join(FIXTURES_DIR, file);
-  // eslint-disable-next-line security/detect-non-literal-fs-filename -- repo-controlled test fixture path
-  return existsSync(fixture) ? fixture : path.join(MIGRATIONS_DIR, file);
-}
+
 
 const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
 

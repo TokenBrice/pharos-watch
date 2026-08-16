@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSitemap, checkSitemapUrls, isMainEntrypoint } from "../ci/check-seo-live-smoke.mjs";
-import { mockFetchStrict } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 function responseWithBody(status: number, contentType = "text/plain") {
   const response = new Response("<html><head></head><body>ok</body></html>", {

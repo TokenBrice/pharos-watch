@@ -451,7 +451,7 @@ describe("fetchGoldTokens", () => {
       date.setUTCHours(0, 0, 0, 0);
       return Math.floor(date.getTime() / 1000);
     };
-    const fetchMock = mockFetch([
+    mockFetch([
       {
         match: "/prices/current/",
         body: {

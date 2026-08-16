@@ -5,7 +5,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { buildChainRpcs } from "../../lib/chain-registry";
 import { LIVE_RESERVE_RUN_CURSOR_CACHE_KEY } from "../../lib/operational-cache-keys";
 import { LIVE_RESERVE_QUEUE_HASH, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
-import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
+
 
 const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },

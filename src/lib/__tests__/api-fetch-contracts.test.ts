@@ -5,7 +5,7 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import { DdrResponseSchema } from "@shared/types/depeg-resolver";
 import { PHAROS_WEB_ACCEPT_MARKER } from "@shared/lib/request-source-marker";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
-import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   apiRequest,
   apiFetch,

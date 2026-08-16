@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeRequestAdminSummary } from "@shared/types";
 import { buildAdminMutationReceiptMetadata } from "../admin-mutation-feedback";
 import type { AdminMutationIntentExecution } from "../admin-mutation-intent";
-import { mockFetch } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const { useApiKeyRequestsMock } = vi.hoisted(() => ({
   useApiKeyRequestsMock: vi.fn(),

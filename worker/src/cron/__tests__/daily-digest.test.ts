@@ -1,10 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
-import type { CronProgressUpdate } from "../../lib/cron-logger";
+
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
@@ -114,14 +113,14 @@ vi.mock("../telegram-digest-transport", () => ({
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
-import { generateDailyDigest, classifyRegime } from "../daily-digest";
+import { classifyRegime } from "../daily-digest";
 import { buildUserPrompt } from "../daily-digest/prompt";
 import {
   parseDigestModelResponse,
   validateDigestModelOutput,
   type ParsedDigestResponse,
 } from "../daily-digest/response";
-import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
+
 import {
   collectPsiContributors,
   collectYieldAnomalies,
@@ -136,17 +135,17 @@ import {
 } from "../daily-digest/collectors";
 import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
 import type { DigestInputData } from "@shared/types/digest";
-import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+
 import {
   loadActiveSafetyScoreSource,
   type ActiveSafetyScoreSource,
 } from "../../lib/safety-score-active-source";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { postDigestTweet } from "../../lib/twitter";
-import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
-import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram-digest-outbox";
-import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
-import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+
+
+
+
+
+
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeWorkerReportCardsV9Response,
@@ -211,7 +210,7 @@ const VALID_DAILY_EXTENDED = [
   "Safety scores stayed A for USDT and USDC, leaving the daily note with a dry but restrained read. Nothing in the fixture should force panic, but the digest still has enough numbers to produce a publishable editorial paragraph set today. Next session will decide whether the USDT deviation widens; if it crosses 200 bps, the impact score moves the depeg from supporting context to lead.",
 ].join("\n\n");
 
-const ANTHROPIC_OK_TEXT = JSON.stringify({
+JSON.stringify({
   title: "Calm Drift",
   extended: VALID_DAILY_EXTENDED,
   text: "USDT's fixture depeg outranked supply noise while PSI stayed at 91.2 BEDROCK.",
@@ -224,7 +223,7 @@ const ANTHROPIC_OK_TEXT = JSON.stringify({
   },
 });
 
-const ANTHROPIC_SOFT_WARNING_TEXT = JSON.stringify({
+JSON.stringify({
   title: "Drift",
   extended: VALID_DAILY_EXTENDED,
   text: "USDT's fixture depeg led the queue while PSI stayed at 91.2 BEDROCK.",
@@ -244,39 +243,9 @@ const ANTHROPIC_SOFT_WARNING_TEXT = JSON.stringify({
  * responses in tests, since the production path now calls
  * `accumulateAnthropicStream` on the response body rather than `response.json()`.
  */
-function mockAnthropicStreamResponse(text: string): Response {
-  const events: Array<{ event: string; data: unknown }> = [
-    {
-      event: "message_start",
-      data: { type: "message_start", message: { id: "msg_test", role: "assistant", content: [] } },
-    },
-    {
-      event: "content_block_start",
-      data: { type: "content_block_start", index: 0, content_block: { type: "text", text: "" } },
-    },
-    {
-      event: "content_block_delta",
-      data: { type: "content_block_delta", index: 0, delta: { type: "text_delta", text } },
-    },
-    { event: "content_block_stop", data: { type: "content_block_stop", index: 0 } },
-    {
-      event: "message_delta",
-      data: { type: "message_delta", delta: { stop_reason: "end_turn", stop_sequence: null } },
-    },
-    { event: "message_stop", data: { type: "message_stop" } },
-  ];
-  const encoded = events.map((ev) => `event: ${ev.event}\ndata: ${JSON.stringify(ev.data)}\n\n`).join("");
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(encoder.encode(encoded));
-      controller.close();
-    },
-  });
-  return new Response(stream, { status: 200, headers: { "Content-Type": "text/event-stream" } });
-}
 
-const commitTelegramAppendices = vi.fn(async () => undefined);
+
+vi.fn(async () => undefined);
 
 interface TestDewsRow {
   stablecoin_id: string;
@@ -376,187 +345,9 @@ function publishedGaugeTable(
   };
 }
 
-function makeBaseTables(
-  options: {
-    dewsRows?: TestDewsRow[];
-    stabilityIndexCount?: number;
-  } = {},
-): MockTableConfig[] {
-  const nowSec = Math.floor(Date.now() / 1000);
-  const todayTs = nowSec - (nowSec % 86_400);
-  const weekAgoTs = todayTs - 7 * 86_400;
-  const dewsRows = options.dewsRows ?? [
-    {
-      stablecoin_id: "usdt-tether",
-      score: 8,
-      band: "CALM",
-      signals_json: '{"supply":{"value":5,"available":true}}',
-      computed_at: nowSec - 600,
-    },
-    {
-      stablecoin_id: "usdc-circle",
-      score: 12,
-      band: "CALM",
-      signals_json: '{"pool":{"value":10,"available":true}}',
-      computed_at: nowSec - 600,
-    },
-  ];
-  return [
-    ...makePublishedDewsTables(dewsRows),
-    {
-      match: "SELECT generated_at, digest_text FROM daily_digest ORDER BY generated_at DESC LIMIT 1",
-      rows: [],
-      first: null,
-    },
-    {
-      match:
-        "SELECT digest_title, digest_text, digest_extended, digest_meta FROM daily_digest ORDER BY generated_at DESC LIMIT 5",
-      rows: [],
-    },
-    {
-      match: "SELECT digest_title, digest_text, digest_extended, digest_meta, input_data\n       FROM daily_digest",
-      rows: [],
-    },
-    {
-      match: "SELECT digest_meta FROM daily_digest",
-      rows: [],
-    },
-    {
-      match: "SELECT digest_title FROM daily_digest",
-      rows: [],
-    },
-    { match: "SELECT generated_at, input_data FROM daily_digest\n         WHERE generated_at", rows: [] },
-    { match: "SELECT MIN(generated_at) as oldest FROM daily_digest", rows: [], first: null },
-    {
-      match: "as ath_date\n         FROM daily_digest\n         WHERE (",
-      rows: [],
-      first: null,
-    },
-    {
-      match: "SELECT COUNT(*) as cnt FROM stability_index",
-      rows: [],
-      first: { cnt: options.stabilityIndexCount ?? 1 },
-    },
-    {
-      match: "SELECT score, band, components, computed_at as stored_at FROM stability_index",
-      rows: [],
-      first: {
-        score: 89.5,
-        band: "STEADY",
-        components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
-        stored_at: todayTs,
-      },
-    },
-    {
-      match: "SELECT stablecoin_id, symbol, current_apy, apy_7d, apy_30d, warning_signals",
-      rows: [],
-    },
-    {
-      match: "SELECT h.stablecoin_id, h.liquidity_score, h.total_tvl_usd, h.snapshot_date",
-      rows: [],
-    },
-    { match: "SELECT circulating_usd AS ath_mcap, snapshot_date FROM supply_history", rows: [], first: null },
-    { match: "SELECT stablecoin_id, score, band FROM stress_signal_history", rows: [] },
-    { match: "GROUP BY recorded_at HAVING COUNT(*) > 15", rows: [] },
-    { match: "SELECT history_id, stablecoin_id, recorded_at, model, identity_schema_version", rows: [] },
-    { match: "INSERT INTO daily_digest", rows: [] },
-    { match: "INSERT OR IGNORE INTO cache", rows: [] },
-    { match: "INSERT OR REPLACE INTO cache", rows: [] },
-    { match: "DELETE FROM cache", rows: [] },
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      rows: [],
-      first: null,
-    },
-    {
-      match: "SELECT COUNT(*) as cnt FROM daily_digest WHERE",
-      rows: [{ cnt: 1 }],
-      first: { cnt: 1 },
-    },
-    {
-      match: "FROM depeg_events WHERE ended_at IS NULL",
-      rows: [
-        {
-          stablecoin_id: "usdt-tether",
-          symbol: "USDT",
-          direction: "below",
-          peak_deviation_bps: 150,
-          started_at: nowSec - 3600,
-        },
-      ],
-    },
-    {
-      match: "FROM stability_index_samples ORDER BY stored_at DESC LIMIT 1",
-      rows: [],
-      first: {
-        score: 91.2,
-        band: "BEDROCK",
-        components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
-      },
-    },
-    {
-      match: "SELECT AVG(score) as avg FROM stability_index_samples WHERE stored_at > ?",
-      rows: [],
-      first: { avg: 90.6 },
-    },
-    {
-      match: "FROM stability_index WHERE computed_at = ?",
-      rows: [],
-      first: { score: 89.5, band: "STEADY" },
-    },
-    {
-      match: "SELECT score, band, components, computed_at as stored_at FROM stability_index",
-      rows: [],
-      first: {
-        score: 89.5,
-        band: "STEADY",
-        components: JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 }),
-        stored_at: todayTs,
-      },
-    },
-    {
-      match: "FROM blacklist_events",
-      rows: [],
-    },
-    {
-      match: "FROM supply_history WHERE stablecoin_id IN",
-      rows: [
-        { stablecoin_id: "usdt-tether", snapshot_date: todayTs, circulating_usd: 100_000_000 },
-        { stablecoin_id: "usdt-tether", snapshot_date: todayTs - 86_400, circulating_usd: 99_000_000 },
-        { stablecoin_id: "usdt-tether", snapshot_date: weekAgoTs, circulating_usd: 95_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: todayTs, circulating_usd: 60_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: todayTs - 86_400, circulating_usd: 61_000_000 },
-        { stablecoin_id: "usdc-circle", snapshot_date: weekAgoTs, circulating_usd: 62_000_000 },
-      ],
-    },
-    {
-      match: "WHERE ended_at IS NOT NULL AND ended_at >= ?",
-      rows: [],
-    },
-    {
-      match: "SELECT value, updated_at FROM cache WHERE key = ?",
-      matchBinds: ["report_card_cache"],
-      rows: [],
-      first: {
-        value: JSON.stringify({
-          methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION,
-          scores: {
-            "usdt-tether": { score: 80, grade: "A" },
-            "usdc-circle": { score: 78, grade: "A" },
-            "paxg-paxos": { score: 45, grade: "D" },
-            "xaut-tether": { score: 48, grade: "D" },
-          },
-          updatedAt: nowSec,
-        }),
-        updated_at: nowSec,
-      },
-    },
-  ];
-}
 
-function getInsertDigestBinds(db: MockD1Database): unknown[] | undefined {
-  return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"))?.binds;
-}
+
+
 
 
 describe("parseDigestModelResponse meta normalization", () => {

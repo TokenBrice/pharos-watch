@@ -3,7 +3,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { SelectorInput } from "@shared/lib/selector/types";
 import { makeReportCardsV9Response } from "../../src/test/fixtures/safety-score-v9";
-import { mockFetch } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
 
 const input = {

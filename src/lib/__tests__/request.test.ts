@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse } from "@/lib/request";
-import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 afterEach(() => {
   vi.unstubAllGlobals();

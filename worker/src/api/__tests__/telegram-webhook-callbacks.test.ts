@@ -92,60 +92,13 @@ function lastSentMessageBody(): {
   return lastSendMessageBody(fetchSpy);
 }
 
-function firstSentMessageBody(): {
-  text: string;
-  reply_markup?: {
-    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-  };
-} {
-  return telegramApiCallBody(fetchSpy, "sendMessage", { last: false });
-}
 
-function pendingRowFromSetup(
-  payload: {
-    step: string;
-    alertTypes?: string[];
-    target?: unknown;
-  },
-  options: { initiator_user_id?: string | null } = {},
-): Record<string, unknown> {
-  return {
-    action_type: "setup-step",
-    action_payload: JSON.stringify(payload),
-    expires_at: Math.floor(Date.now() / 1000) + 60,
-    initiator_user_id: options.initiator_user_id ?? null,
-  };
-}
 
-function pendingRowFromForget(
-  options: {
-    initiator_user_id?: string | null;
-    expires_at?: number;
-    action_type?: string;
-  } = {},
-): Record<string, unknown> {
-  return {
-    action_type: options.action_type ?? "forget-confirm",
-    action_payload: "{}",
-    alert_types: JSON.stringify([]),
-    resolved_ids: JSON.stringify([]),
-    ambiguous_ticker: "",
-    candidates: JSON.stringify([]),
-    remaining_tickers: JSON.stringify([]),
-    expires_at: options.expires_at ?? Math.floor(Date.now() / 1000) + 60,
-    initiator_user_id: options.initiator_user_id ?? null,
-  };
-}
 
-function makeCacheStablecoins(): string {
-  return JSON.stringify({
-    peggedAssets: [
-      { id: "usdt-tether", symbol: "USDT", circulating: { usd: 100_000_000_000 } },
-      { id: "usdc-circle", symbol: "USDC", circulating: { usd: 90_000_000_000 } },
-      { id: "dai-makerdao", symbol: "DAI", circulating: { usd: 5_000_000_000 } },
-    ],
-  });
-}
+
+
+
+
 
 function lastAckBody(): { text?: string } {
   return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
@@ -155,9 +108,7 @@ function firstAckBody(): { text?: string } {
   return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
 }
 
-function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
-  return telegramApiCallBody(fetchSpy, "editMessageText");
-}
+
 
 beforeEach(() => {
   resetTelegramFetchSpy();

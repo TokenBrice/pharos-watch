@@ -368,7 +368,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("runs a cheap audit-only inventory probe when enabled without rankable vaults", async () => {
-    const fetchSpy = mockFetch([{ match: () => true, respond: (request) => {
+    mockFetch([{ match: () => true, respond: (request) => {
       const url = request.url;
       expect(url).toContain("/v2/detailed-vaults?");
       expect(url).toContain("page=0");

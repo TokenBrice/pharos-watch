@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetchStrict } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import {
   apiFetchHeaders,
   fetchWithRetry,

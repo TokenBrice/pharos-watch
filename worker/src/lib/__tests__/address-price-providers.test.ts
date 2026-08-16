@@ -477,7 +477,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: "So11111111111111111111111111111111111111112",
     });
-    const fetchMock = mockFetch([{ match: () => true, body: { success: true, data: null } }]);
+    mockFetch([{ match: () => true, body: { success: true, data: null } }]);
 
     const result = await runBirdeyeAddressProvider(
       [target],
@@ -510,7 +510,7 @@ describe("address price providers", () => {
       providerChainId: "solana",
       address: "So11111111111111111111111111111111111111112",
     });
-    const fetchMock = mockFetch([{ match: () => true, body: { success: false, message: "Invalid API key", data: null } }]);
+    mockFetch([{ match: () => true, body: { success: false, message: "Invalid API key", data: null } }]);
 
     const result = await runBirdeyeAddressProvider(
       [target],
@@ -746,7 +746,7 @@ describe("address price providers", () => {
       liquidity: { usd: 100_000, base: 50_000, quote: 50_000 },
       pairCreatedAt: null,
     });
-    const fetchMock = mockFetch([{ match: () => true, body: [
+    mockFetch([{ match: () => true, body: [
       pair("0.99", "0xpair1"),
       pair("1.01", "0xpair2"),
     ] }]);
@@ -774,7 +774,7 @@ describe("address price providers", () => {
       symbol: "USDV",
       address: "0x0000000000000000000000000000000000000003",
     });
-    const fetchMock = mockFetch([{ match: () => true, body: [
+    mockFetch([{ match: () => true, body: [
       {
         chainId: "base",
         dexId: "uniswap",
@@ -856,7 +856,7 @@ describe("address price providers", () => {
   });
 
   it("marks malformed DexPaprika token details as invalid shape diagnostics", async () => {
-    const fetchMock = mockFetch([{ match: () => true, body: ["not", "a", "token"] }]);
+    mockFetch([{ match: () => true, body: ["not", "a", "token"] }]);
 
     const result = await runDexPaprikaAddressProvider(
       [makeDexScreenerTarget(1)],

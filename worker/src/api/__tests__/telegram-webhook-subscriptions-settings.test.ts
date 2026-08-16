@@ -10,7 +10,6 @@ import {
   makeWebhookRequest,
   makeCallbackRequest,
   sentMessageBody,
-  expectMiniAppButton,
   makeStablecoinsCacheValue,
   resetTelegramWebhookTest,
   fixtureMockD1 as baseFixtureMockD1,

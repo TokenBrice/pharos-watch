@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockFetch, mockFetchStrict } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
 

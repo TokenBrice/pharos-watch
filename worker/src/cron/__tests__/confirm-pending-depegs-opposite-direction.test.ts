@@ -48,7 +48,7 @@ vi.mock("../../lib/native-peg-quotes", () => ({
 
 import { batchExecute } from "../../lib/db";
 import { fetchBinancePricesDetailed } from "../../lib/cex-tickers";
-import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { fetchWithRetry } from "../../lib/fetch-retry";
 import { fetchCurrentNativePegQuotes } from "../../lib/native-peg-quotes";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "../../lib/constants";

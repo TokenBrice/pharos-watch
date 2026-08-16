@@ -2,10 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
-import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+
 import { mockCircuitBreaker, mockRegistry } from "../../test-helpers/cron";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
-import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -114,28 +114,12 @@ vi.mock("../telegram-digest-transport", () => ({
 
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
-import { generateDailyDigest, classifyRegime } from "../daily-digest";
-import { buildUserPrompt } from "../daily-digest/prompt";
-import {
-  parseDigestModelResponse,
-  validateDigestModelOutput,
-  type ParsedDigestResponse,
-} from "../daily-digest/response";
+import { generateDailyDigest } from "../daily-digest";
+
 import { ANTHROPIC_TIMEOUT_MS, CIRCUIT_SOURCE, DIGEST_MODEL } from "../../lib/constants";
-import {
-  collectPsiContributors,
-  collectYieldAnomalies,
-  collectLiquidityShifts,
-  collectCrossDayTrends,
-  collectDewsStress,
-  collectActiveDepegs,
-  collectResolvedDepegs,
-  collectSupplyVelocity,
-  collectMintBurnFlows,
-  type CollectorContext,
-} from "../daily-digest/collectors";
-import { buildDigestIntelligence } from "../daily-digest/digest-intelligence";
-import type { DigestInputData } from "@shared/types/digest";
+
+
+
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import {
   loadActiveSafetyScoreSource,
@@ -152,8 +136,6 @@ import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
 } from "../../test-helpers/report-cards-v9";
-
-const DEFAULT_PARSED_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 
 function canonicalSafetySource(
   cards: unknown[],
@@ -180,30 +162,7 @@ function canonicalSafetySource(
   };
 }
 
-function makeParsedFixture(
-  opts: {
-    extended?: string;
-    text?: string;
-    lead?: string;
-    leadSignalId?: string;
-    tone?: string;
-  } = {},
-): ParsedDigestResponse {
-  return {
-    digestTitle: "T",
-    digestText: opts.text ?? "T.",
-    digestExtended: opts.extended ?? DEFAULT_PARSED_EXTENDED,
-    digestMeta: JSON.stringify({
-      ...(opts.leadSignalId ? { leadSignalId: opts.leadSignalId } : {}),
-      lead: opts.lead ?? "depeg",
-      tone: opts.tone ?? "dry",
-      coins: ["USDT"],
-    }),
-    strippedDashCount: 0,
-    forbiddenPhraseHits: [],
-    usedRawTextFallback: false,
-  };
-}
+
 
 const VALID_DAILY_EXTENDED = [
   "PSI held at 91.2 BEDROCK with severity 2 and breadth 1, so the headline market still looks calm. USDT sat 150 bps off peg on a $100M float in the fixture, which gives the model a real candidate but not a systemic alarm. The point is selection, not volume.",

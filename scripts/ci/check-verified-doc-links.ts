@@ -37,7 +37,7 @@ function collapseRepeatedChar(text: string, char: string): string {
 }
 
 function slugifyHeading(text: string): string {
-  let normalized = stripMarkdownLinks(text.trim().toLowerCase()).replace(/[`*~]/g, "");
+  const normalized = stripMarkdownLinks(text.trim().toLowerCase()).replace(/[`*~]/g, "");
   let result = "";
 
   for (const char of normalized) {

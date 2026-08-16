@@ -32,7 +32,7 @@ vi.mock("../telegram-webhook-replies", async (importOriginal) => {
 
 const { handleCallbackQuery } = await import("../telegram-webhook-callbacks");
 const { sendAuditedTelegramReply } = await import("../telegram-webhook-replies");
-const { resolveTicker } = await import("../../lib/telegram-alerts");
+await import("../../lib/telegram-alerts");
 
 const { fetchSpy, reset: resetTelegramFetchSpy } = createTelegramFetchSpy();
 
@@ -92,14 +92,7 @@ function lastSentMessageBody(): {
   return lastSendMessageBody(fetchSpy);
 }
 
-function firstSentMessageBody(): {
-  text: string;
-  reply_markup?: {
-    inline_keyboard?: Array<Array<{ text: string; callback_data?: string; web_app?: { url: string } }>>;
-  };
-} {
-  return telegramApiCallBody(fetchSpy, "sendMessage", { last: false });
-}
+
 
 function pendingRowFromSetup(
   payload: {
@@ -151,13 +144,9 @@ function lastAckBody(): { text?: string } {
   return telegramApiCallBody(fetchSpy, "answerCallbackQuery");
 }
 
-function firstAckBody(): { text?: string } {
-  return telegramApiCallBody(fetchSpy, "answerCallbackQuery", { last: false });
-}
 
-function lastEditedMessageBody(): { text: string; reply_markup?: unknown } {
-  return telegramApiCallBody(fetchSpy, "editMessageText");
-}
+
+
 
 beforeEach(() => {
   resetTelegramFetchSpy();
@@ -524,4 +513,3 @@ describe("handleCallbackQuery", () => {
   });
 
 });
-

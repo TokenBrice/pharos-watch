@@ -26,21 +26,8 @@ vi.mock("../../lib/circuit-breaker", () => ({
 
 import {
   fetchTbillRate,
-  parseBanxicoSeries,
-  parseBcbSelicSeries,
-  parseBoeSoniaCsv,
-  parseBoeSoniaCompoundedIndexCsv,
-  parseBojCallRateJson,
-  parseBocValetSeries,
-  parseCbrKeyRateXml,
-  parseCbrtEvdsSeries,
-  parseEcbCompoundedEstrCsv,
-  parseNyFedEffrJson,
-  parseRbaF1MoneyMarketCsv,
-  parseSixSar3mcCsv,
-  parseTreasuryYieldXml,
 } from "../fetch-tbill-rate";
-import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
+
 import {
   buildHardcodedUsdBenchmark,
   getBenchmarkKeyForPegCurrency,
@@ -110,33 +97,7 @@ const CBR_KEY_RATE_XML_SNIPPET = `<?xml version="1.0" encoding="utf-8"?>
   </soap:Body>
 </soap:Envelope>`;
 
-const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
-  props: {
-    pageProps: {
-      cachedStablebondsLookup: {
-        calculatedAt: "2026-05-19T14:24:43.661467807+00:00",
-      },
-      cachedBonds: [
-        {
-          issuanceNumber: 110,
-          currentIssuance: {
-            address: "2p3sFHSkC7f8WoxenAgcpGbKjDYHtAScMuJPft47o5cS",
-            startingTokenAmount: "1.162263",
-            endingTokenAmount: "1.163506",
-            startDate: 1778798112000,
-            endDate: 1779402912000,
-            interestRateBps: 558,
-            status: 1,
-          },
-          mint: {
-            symbol: "CETES",
-            currentTokenAmount: "1.163091",
-          },
-        },
-      ],
-    },
-  },
-})}</script></body></html>`;
+
 
 type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
 

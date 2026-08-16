@@ -547,7 +547,7 @@ describe("syncBlacklist", () => {
 
     vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValue(completeEtherscanLogs());
 
-    const fetchMock = installFetch(async (url: string | Request) => {
+    installFetch(async (url: string | Request) => {
       const urlStr = typeof url === "string" ? url : url.url;
       if (urlStr.includes("trongrid.io/v1/contracts") && urlStr.includes("event_name=AddedBlackList")) {
         return new Response(

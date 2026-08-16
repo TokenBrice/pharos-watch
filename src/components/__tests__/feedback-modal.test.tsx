@@ -7,7 +7,7 @@ import {
   mockFetch,
   type MockFetchOutcome,
   type MockFetchSpy,
-} from "../../../worker/src/test-helpers/__shared/mock-fetch";
+} from "@shared/test-utils/mock-fetch";
 
 let fetchMock: MockFetchSpy;
 

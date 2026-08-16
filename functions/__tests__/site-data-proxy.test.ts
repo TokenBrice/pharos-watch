@@ -8,7 +8,7 @@ import {
   observeHttpResponse,
   type HttpResponseObservation,
 } from "../../scripts/test-utils/http-response-contract";
-import { mockFetch } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makePagesProxyContext } from "./helpers/pages-context";
 
 function makeEnv(db = makeTestD1Database(), overrides: Record<string, unknown> = {}) {
@@ -175,7 +175,7 @@ describe("site-data proxy", () => {
 
   it("never grants an upstream response a second Pages cache lifetime", async () => {
     cacheMatch.mockRejectedValueOnce(new Error("Pages cache unavailable"));
-    const fetchSpy = installSiteDataFetch("/api/stablecoins", { ok: true }, 200, {
+    installSiteDataFetch("/api/stablecoins", { ok: true }, 200, {
       Age: "299",
       "Cache-Control": "public, max-age=300",
       Date: "Mon, 15 Jun 2026 09:55:01 GMT",

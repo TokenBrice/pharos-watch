@@ -8,7 +8,7 @@ import {
 import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
-import { jsonResponse } from "../../../worker/src/test-helpers/__shared/mock-fetch";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,

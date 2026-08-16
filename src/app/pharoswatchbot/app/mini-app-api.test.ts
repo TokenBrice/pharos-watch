@@ -13,7 +13,7 @@ import {
   type TelegramMiniAppState,
 } from "@shared/lib/telegram-mini-app-contract";
 import { SchemaValidationError } from "@/lib/api";
-import { mockFetch } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   postMiniAppBulkWatchlistPreview,
   postMiniAppPortability,

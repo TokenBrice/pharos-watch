@@ -33,28 +33,7 @@ type BuildStablecoinDetailViewModelOverrides = {
   };
 };
 
-function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummaryCoin {
-  return {
-    id: "usdc-circle",
-    symbol: "USDC",
-    name: "USD Coin",
-    pegType: "peggedUSD",
-    pegCurrency: "USD",
-    governance: "centralized",
-    currentDeviationBps: 0,
-    pegScore: 95,
-    pegPct: 99.9,
-    severityScore: 0,
-    spreadPenalty: 0,
-    eventCount: 0,
-    worstDeviationBps: null,
-    activeDepeg: false,
-    lastEventAt: null,
-    trackingSpanDays: 365,
-    methodologyVersion: "test",
-    ...overrides,
-  };
-}
+
 
 function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
   return makeStablecoin({

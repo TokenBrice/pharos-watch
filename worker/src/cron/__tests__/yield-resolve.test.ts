@@ -1697,7 +1697,7 @@ describe("optional source budgets", () => {
     });
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
 
-    const fetchSpy = mockFetch([{ match: () => true, respond: (request) => {
+    mockFetch([{ match: () => true, respond: (request) => {
       const url = request.url;
       if (url.includes("api-v2.pendle.finance")) {
         return { stall: true };

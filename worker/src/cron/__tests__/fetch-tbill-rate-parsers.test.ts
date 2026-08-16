@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { CIRCUIT_SOURCE, RISK_FREE_RATE_FALLBACK } from "../../lib/constants";
-import { mockCircuitOutcomeRecord, mockFetchRetry } from "../../test-helpers/cron";
+import { describe, expect, it, vi } from "vitest";
+
+import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
 
@@ -25,7 +25,6 @@ vi.mock("../../lib/circuit-breaker", () => ({
 }));
 
 import {
-  fetchTbillRate,
   parseBanxicoSeries,
   parseBcbSelicSeries,
   parseBoeSoniaCsv,
@@ -41,16 +40,6 @@ import {
   parseTreasuryYieldXml,
 } from "../fetch-tbill-rate";
 import { parseEtherfuseCetesStablebondPage } from "../yield-sync/etherfuse-cetes";
-import {
-  buildHardcodedUsdBenchmark,
-  getBenchmarkKeyForPegCurrency,
-  resolveBenchmarkForStablecoin,
-  withYieldBenchmarkStaticMeta,
-} from "../yield-sync/benchmarks";
-import { fetchWithRetry } from "../../lib/fetch-retry";
-import { getCache, setCache } from "../../lib/db-cache";
-import { logCronEvent } from "../../lib/cron-logger";
-import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
 const TREASURY_XML_SNIPPET = `<QR_BC_CM><LIST_G_WEEK_OF_MONTH>
 <G_WEEK_OF_MONTH><LIST_G_NEW_DATE>
@@ -68,29 +57,13 @@ EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-25,1.93576,A,F,,,,,P1D,,,,"ESA 2
 EST.B.EU000A2QQF32.CR,B,EU000A2QQF32,CR,2026-03-26,1.9358,A,F,,,,,P1D,,,,"ESA 2010 Sectors: S.121, S.122, S.123, S.124, S.125, S.126, S.127, S.128, S.129",,5,,,,,V,"Compounded euro short-term average rate, 3 months tenor","Compounded euro short-term average rate, 3 months tenor",,PC,0
 `;
 
-const SIX_GUEST_TOKEN_RESPONSE = JSON.stringify({
-  token_type: "Bearer",
-  expires_in: 3000,
-  access_token: "guest-token",
-});
-
 const SIX_SAR3MC_CSV_SNIPPET = `date;end_date;start_date;symbol;value;day_count;dcc
 25.03.2026;26.03.2026;24.12.2025;SAR3MC;-0.0539;92;360
 24.03.2026;25.03.2026;24.12.2025;SAR3MC;-0.0539;91;360
 23.03.2026;24.03.2026;24.12.2025;SAR3MC;-0.0540;90;360
 `;
 
-const FRED_DFF_CSV_SNIPPET = "DATE,DFF\n2026-03-02,4.33\n";
-const NYFED_EFFR_JSON_SNIPPET = JSON.stringify({
-  refRates: [
-    { effectiveDate: "2026-03-02", type: "EFFR", percentRate: 4.33 },
-  ],
-});
 const BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "DATE,IUDZOS2\n01 Jan 2026,100\n01 Apr 2026,101\n";
-// FRED mirror of the same IUDZOS2 series, ISO dates — derives to the same rate.
-const FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2\n2026-01-01,100\n2026-04-01,101\n";
-// ALFRED graph CSV uses the same observation shape with a date-stamped series column.
-const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
 const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
   totalCount: 2,
   items: [
@@ -98,18 +71,6 @@ const CBRT_TLREF_JSON_SNIPPET = JSON.stringify({
     { Tarih: "06-08-2026", TP_BISTTLREF_ORAN: "40.00" },
   ],
 });
-const CBR_KEY_RATE_XML_SNIPPET = `<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <KeyRateXMLResponse xmlns="http://web.cbr.ru/">
-      <KeyRateXMLResult>
-        <KR><DT>2026-06-09T00:00:00+03:00</DT><Rate>18.00</Rate></KR>
-        <KR><DT>2026-06-11T00:00:00+03:00</DT><Rate>14.50</Rate></KR>
-      </KeyRateXMLResult>
-    </KeyRateXMLResponse>
-  </soap:Body>
-</soap:Envelope>`;
-
 const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="application/json">${JSON.stringify({
   props: {
     pageProps: {
@@ -137,71 +98,6 @@ const ETHERFUSE_CETES_HTML = `<html><body><script id="__NEXT_DATA__" type="appli
     },
   },
 })}</script></body></html>`;
-
-type MockUrlResponse = Response | null | ((url: string, opts?: RequestInit) => Response | null);
-
-function cloneResponse(response: Response | null): Response | null {
-  if (!response) return null;
-  return response.clone();
-}
-
-function mockByUrl(mapping: Record<string, MockUrlResponse>, calls?: string[]) {
-  vi.mocked(fetchWithRetry).mockImplementation(async (url: string, opts?: RequestInit) => {
-    calls?.push(url);
-    for (const [pattern, response] of Object.entries(mapping)) {
-      if (url.includes(pattern)) {
-        const resolved = typeof response === "function" ? response(url, opts) : response;
-        return cloneResponse(resolved);
-      }
-    }
-    return null;
-  });
-}
-
-/** Mocks every extended benchmark endpoint with a successful response. Used to
- *  isolate provider-specific test cases from added benchmark coverage. */
-function okExtendedBenchmarkMocks(): Record<string, MockUrlResponse> {
-  return {
-    "markets.newyorkfed.org": new Response(NYFED_EFFR_JSON_SNIPPET, { status: 200 }),
-    "id=DFF": new Response(FRED_DFF_CSV_SNIPPET, { status: 200 }),
-    "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": (_url, opts) => {
-      expect((opts?.headers as Record<string, string> | undefined)?.["User-Agent"])
-        .toBe("Pharos/1.0 (+https://pharos.watch)");
-      return new Response(FRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 });
-    },
-    "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),
-    "stat-search.boj.or.jp": new Response(JSON.stringify({
-      RESULTSET: [{
-        SERIES_CODE: "STRDCLUCON",
-        VALUES: { SURVEY_DATES: [20260302], VALUES: [0.1] },
-      }],
-    }), { status: 200 }),
-    "rba.gov.au/statistics/tables/csv/f1-data.csv": new Response(
-      "Title,Cash Rate Target,Change in the Cash Rate Target,Interbank Overnight Cash Rate\n"
-      + "02-Mar-2026,4.30,,4.31\n",
-      { status: 200 },
-    ),
-    "banxico.org.mx": new Response(
-      JSON.stringify({
-        bmx: { series: [{ datos: [{ fecha: "26/03/2026", dato: "10.45" }] }] },
-      }),
-      { status: 200 },
-    ),
-    "api.bcb.gov.br": new Response(JSON.stringify([{ data: "26/03/2026", valor: "0.050747" }]), { status: 200 }),
-    "bankofcanada.ca/valet": new Response(
-      JSON.stringify({
-        observations: [{ d: "2026-03-26", V122530: { v: "4.75" } }],
-      }),
-      { status: 200 },
-    ),
-    "DailyInfoWebServ": new Response(CBR_KEY_RATE_XML_SNIPPET, { status: 200, headers: { "Content-Type": "text/xml" } }),
-    "evds3.tcmb.gov.tr/igmevdsms-dis/fe": new Response(CBRT_TLREF_JSON_SNIPPET, { status: 200 }),
-  };
-}
-
-/** Banxico requires a token; pass via env. */
-const BANXICO_TEST_ENV = { BANXICO_TOKEN: "test-token" } as const;
-const GBP_RETAINED_FALLBACK_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 
 describe("parseEcbCompoundedEstrCsv", () => {
   it("extracts the latest ECB 3M compounded €STR observation", () => {
@@ -551,4 +447,3 @@ describe("parseCbrtEvdsSeries", () => {
     });
   });
 });
-

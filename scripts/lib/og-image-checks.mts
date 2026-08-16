@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-non-literal-fs-filename -- helpers operate on explicit caller-selected generated asset paths. */
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
 

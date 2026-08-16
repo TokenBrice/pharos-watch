@@ -8,7 +8,7 @@ import {
   observeHttpResponse,
   type HttpResponseObservation,
 } from "../../scripts/test-utils/http-response-contract";
-import { mockFetch } from "../../worker/src/test-helpers/__shared/mock-fetch";
+import { mockFetch } from "@shared/test-utils/mock-fetch";
 
 const { verifyAccessJwtUserIdentity } = vi.hoisted(() => ({
   verifyAccessJwtUserIdentity: vi.fn(),

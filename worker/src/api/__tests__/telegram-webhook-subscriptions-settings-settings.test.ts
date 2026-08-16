@@ -1,17 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TELEGRAM_SUBSCRIBABLE_STABLECOINS } from "../../lib/telegram-subscription-eligibility";
-import { TELEGRAM_ALERT_TYPES } from "@shared/types/status";
+
+
 import {
-  fetchSpy,
   handleTelegramWebhook,
   resolveTicker,
-  FROZEN_STABLECOINS,
-  encodeWatchlistToken,
   makeWebhookRequest,
-  makeCallbackRequest,
   sentMessageBody,
   expectMiniAppButton,
-  makeStablecoinsCacheValue,
   resetTelegramWebhookTest,
   fixtureMockD1 as baseFixtureMockD1,
 } from "./telegram-webhook.test-support";
