@@ -42,8 +42,8 @@ describe("ApiKeysPanel lifecycle mutations", () => {
     const second = makeKey({
       id: 2,
       name: "Digest Key",
-      keyPrefix: "fedcba9876543210",
-      maskedToken: "ph_live_fedcba9876543210_********",
+      keyPrefix: "digest-prefix",
+      maskedToken: "ph_live_digest-prefix_********",
     });
     const token = "ph_live_aaaaaaaaaaaaaaaa_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const fetchMock = vi.mocked(fetch).mockResolvedValue(

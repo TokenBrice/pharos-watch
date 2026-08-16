@@ -23,6 +23,7 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
       - id: classify
         env:
           DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
