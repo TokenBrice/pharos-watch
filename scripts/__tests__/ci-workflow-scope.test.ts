@@ -54,6 +54,8 @@ describe("CI workflow scope", () => {
     expect(acceptanceStep?.name).toContain("read-only");
     expect(acceptanceStep?.run).toContain("selectPostDeployProbes");
     expect(acceptanceStep?.run).toContain("collectWorkerHttpProbes");
+    expect(acceptanceStep?.run).toContain('from "./scripts/lib/worker-http-probes.mts"');
+    expect(acceptanceStep?.run).toContain('from "./scripts/lib/post-deploy-acceptance.mts"');
     expect(acceptanceStep?.run).toContain("Outcome:");
     expect(acceptanceStep?.run).toContain("automatic rollback");
     expect(acceptanceStep?.run).not.toContain("wrangler");

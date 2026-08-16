@@ -204,11 +204,11 @@ jobs:
           node --input-type=module <<'NODE'
           import { appendFileSync } from "node:fs";
 
-          import { fetchJsonProbe, collectWorkerHttpProbes } from "./scripts/lib/worker-http-probes.mjs";
+          import { fetchJsonProbe, collectWorkerHttpProbes } from "./scripts/lib/worker-http-probes.mts";
           import {
             selectPostDeployProbes,
             summarizePostDeployAcceptance,
-          } from "./scripts/lib/post-deploy-acceptance.mjs";
+          } from "./scripts/lib/post-deploy-acceptance.mts";
 
           const probes = selectPostDeployProbes({
             pagesDeployed: process.env.PAGES_DEPLOYED === "true",
