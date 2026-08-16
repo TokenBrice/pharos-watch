@@ -13,6 +13,7 @@ import {
   type V9OracleControlReview,
 } from "../safety-score-v9/control";
 import { loadV9MethodologyPolicy, resolveV9ReasonPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "../safety-score-v9/score-bearing-gates-policy";
 
 const CONTROL_POLICY = V9_CANDIDATE_POLICY_V1.policy.semantic.control;
 const MERGED_MINT_SIGNALS = CONTROL_POLICY.mintMergedSignals;
@@ -882,7 +883,11 @@ describe("Safety Score v9 economic control", () => {
   });
 
   it("share-bands a binding external-lock-mint material bridge by supply share", () => {
-    const evaluateBridge = (materialSupplyShare: number | null, tier = "external-lock-mint") => {
+    const evaluateBridge = (
+      materialSupplyShare: number | null,
+      tier = "external-lock-mint",
+      policy = V9_CANDIDATE_POLICY_V1,
+    ) => {
       const bridgeControl = control("bridge:lock-mint", "bridge", {
         scope: "deployment",
         economicLossScope: "deployment",
@@ -891,6 +896,7 @@ describe("Safety Score v9 economic control", () => {
       const result = evaluateV9EconomicControl(
         args({
           facts: facts([bridgeControl]),
+          policy,
           bridge: {
             status: requiredKnown("bridge"),
             routes: [{ controlKey: bridgeControl.controlKey, tier: tier as "external-lock-mint" | "opaque-or-unknown" }],
@@ -910,6 +916,15 @@ describe("Safety Score v9 economic control", () => {
     expect(evaluateBridge(null)).toMatchObject({ binding: true, severity: "high" });
     // Opaque topology stays critical regardless of share.
     expect(evaluateBridge(0.15, "opaque-or-unknown")).toMatchObject({ binding: true, severity: "critical" });
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V921);
+    gates.control.materialBridgeHighShareThreshold = 0.15;
+    expect(
+      evaluateBridge(
+        0.15,
+        "external-lock-mint",
+        loadV9MethodologyPolicy(V9_CANDIDATE_POLICY_V1.policy, gates),
+      ),
+    ).toMatchObject({ binding: true, severity: "high" });
   });
 
   it("moves known adverse deployment control out of the whole-asset pillar while preserving fail-closed cases", () => {

@@ -5,9 +5,9 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.2`
+- **Current methodology version:** `v9.21`
 - Public response schema: report v4 with score trace v3
-- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
+- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -28,6 +28,8 @@ V9 evaluates three pillars:
 The weights allocate bounded headroom; they are not an unrestricted weighted average. The evaluator applies evidence ceilings, peg behavior, track record, dependencies, wrapper-local risk, structural caps, and causally attributed danger after pillar evaluation.
 
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
+
+Since methodology `9.21`, the policy semantic digest also binds every score-bearing reshape and freshness gate that previously lived outside the policy asset: the insufficient-evidence withhold band, danger and F-grade peg predicates, pre-exit danger predicate, material-bridge high-share band, and the separately named evidence-expiry windows used by reviewed research, access, overlays, and reserve evidence. The active numeric values did not change, so the release rotates provenance without moving a score or grade. Counterfactual replay can supply a validated gate projection to the policy loader and receives a distinct semantic digest for any changed gate. Report-card presentation also derives grade thresholds from the active scoring policy rather than maintaining another threshold table.
 
 Oracle applicability is explicit in Economic Control. A reviewed path with no price-sensitive oracle or internal valuation authority is not applicable and emits no scored component. If no other binding control remains, the neutral empty set resolves to 95 without manufacturing a display row. A genuinely oracleless mechanism scores 95; privileged internal pricing scores 45. The latter can apply to a top-level mint, redemption, NAV, or exchange-rate quote even when borrower liquidation branches do not exist. External oracle tiers retain their existing scores.
 

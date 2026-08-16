@@ -6,6 +6,7 @@ import {
   type V9FactStatusV2,
   type V9ObservationState,
 } from "../../types/safety-score-v9-facts";
+import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "./score-bearing-gates-policy";
 
 /**
  * Reviewed research evidence (bridge-route, mint-authority, and oracle
@@ -13,7 +14,8 @@ import {
  * cadence: 365 days, the same window D11 ratified for access evidence and the
  * documentedTermsMaxAgeSec precedent.
  */
-export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC = 31_536_000;
+export const V9_REVIEW_EVIDENCE_MAX_AGE_SEC =
+  V9_SCORE_BEARING_GATES_POLICY_V921.evidenceExpiry.reviewedResearchMaxAgeSec;
 
 export interface CreateV9EvidenceReferenceArgs {
   evidenceId: string;

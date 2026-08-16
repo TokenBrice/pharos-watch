@@ -146,7 +146,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 ## Verification Shortcuts
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
-- **Safety Score V9 pillar weights / peg multiplier:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, loaded by `shared/lib/safety-score-v9/policy.ts` and evaluated under `shared/lib/safety-score-v9/`
+- **Safety Score V9 pillar weights / peg multiplier / score-bearing gates:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`, loaded and jointly digested by `shared/lib/safety-score-v9/policy.ts` and evaluated under `shared/lib/safety-score-v9/`
 - **Mint component weights / caps / posture bands:** `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`

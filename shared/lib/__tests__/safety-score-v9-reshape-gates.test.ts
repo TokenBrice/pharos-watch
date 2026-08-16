@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { hasV9DangerSignal, scoreV9Input } from "../safety-score-v9/formula";
-import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { loadV9MethodologyPolicy, V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V921 } from "../safety-score-v9/score-bearing-gates-policy";
 import {
   scoreV9EvaluatedAsset,
   type V9PillarEvaluation,
@@ -108,6 +109,15 @@ describe("hasV9DangerSignal", () => {
     expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "withhold")).toBe(true);
     expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "f-gate")).toBe(false);
     expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.79 }, POLICY, "f-gate")).toBe(true);
+  });
+
+  it("reads the danger floor from a counterfactual policy", () => {
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V921);
+    gates.danger.withholdPegMultiplierFloor = 0.84;
+    const counterfactual = loadV9MethodologyPolicy(POLICY.policy, gates);
+
+    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, POLICY, "withhold")).toBe(true);
+    expect(hasV9DangerSignal({ ...base, pegMultiplier: 0.85 }, counterfactual, "withhold")).toBe(false);
   });
 });
 

@@ -9,6 +9,7 @@ import {
   ratio,
   ratioToPercentage,
   relativeChangeRatio,
+  weightedMedian,
 } from "../stats";
 
 describe("mean", () => {
@@ -35,6 +36,39 @@ describe("median", () => {
   it("returns null for empty finite input", () => {
     expect(median([])).toBeNull();
     expect(median([NaN])).toBeNull();
+  });
+});
+
+describe("weightedMedian", () => {
+  it("returns the first value whose cumulative weight reaches half the total", () => {
+    expect(weightedMedian([
+      { value: 10, weight: 1 },
+      { value: 3, weight: 8 },
+      { value: 5, weight: 1 },
+    ])).toBe(3);
+  });
+
+  it("uses the lower value at an exact half-weight boundary", () => {
+    expect(weightedMedian([
+      { value: 20, weight: 1 },
+      { value: 10, weight: 1 },
+    ])).toBe(10);
+  });
+
+  it("ignores invalid points without mutating the caller's order", () => {
+    const points = [
+      { value: 4, weight: 1 },
+      { value: NaN, weight: 10 },
+      { value: 2, weight: 0 },
+      { value: -1, weight: 2 },
+    ];
+    expect(weightedMedian(points)).toBe(-1);
+    expect(points.map(({ value }) => value)).toEqual([4, NaN, 2, -1]);
+    expect(weightedMedian([{ value: 1, weight: Infinity }])).toBeNull();
+    expect(weightedMedian([
+      { value: 1, weight: Number.MAX_VALUE },
+      { value: 2, weight: Number.MAX_VALUE },
+    ])).toBeNull();
   });
 });
 

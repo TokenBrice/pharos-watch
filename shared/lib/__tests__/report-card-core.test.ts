@@ -6,8 +6,18 @@ import {
   scoreToGrade,
   UNKNOWN_REPORT_CARD_GRADE_RANK,
 } from "../report-cards";
+import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 describe("scoreToGrade", () => {
+  it("derives presentation thresholds from the active scoring policy", () => {
+    expect(GRADE_THRESHOLDS).toEqual(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.formula.gradeThresholds.map(({ grade, minScore }) => ({
+        grade,
+        min: minScore,
+      })),
+    );
+  });
+
   it("returns NR for null", () => {
     expect(scoreToGrade(null)).toBe("NR");
   });

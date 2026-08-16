@@ -14,12 +14,14 @@ import {
 import type { V9EvidenceResponsibility } from "../../types/safety-score-v9-facts";
 import {
   aggregateV9SmoothBoundedHeadroom,
+  type V9AggregationStrategy,
   type V9WeakestPathAggregationTrace,
 } from "./aggregation";
 import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
+  getV9ScoreBearingGatesPolicy,
   resolveV9ReasonPolicy,
 } from "./policy";
 import {
@@ -28,6 +30,8 @@ import {
   type V9ScopedRiskSignal,
 } from "./scoped-risk";
 import { clampScore } from "./primitives";
+
+export type { V9AggregationStrategy } from "./aggregation";
 
 const V9_QUALITY_PILLARS = ["backing", "exit", "control"] as const satisfies readonly V9QualityPillar[];
 
@@ -157,19 +161,6 @@ export interface V9ScoreAdjustmentTrace {
 }
 
 const SCORE_MAX = 100;
-// Withhold band (Lever 1): a would-be final score at or above this does not need
-// an insufficient-evidence withhold even with >=2 limited pillars. Tunable.
-const WITHHOLD_BAND_MAX_SCORE = 55;
-// Measured peg-history danger floor: a measured peg multiplier below this is a
-// danger signal (matches the calibration runner's MEASURED_PEG_MULTIPLIER_FLOOR).
-const DANGER_PEG_MULTIPLIER_FLOOR = 0.9;
-// F-gate peg floor (owner ruling 2026-07-21, reshape-v2 D1): a measured peg
-// multiplier in [0.8, 0.9) reads as degraded (D-range), not failing (F).
-// Deliberately DECOUPLED from the frozen D3 attribution predicate (0.90),
-// which is not a tunable knob and is untouched by this constant.
-const F_GATE_PEG_MULTIPLIER_FLOOR = 0.8;
-const DANGER_ONLY_GRADES = new Set<V9Grade>(["F"]);
-
 function compareCodeUnits(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -636,6 +627,7 @@ export function hasV9DangerSignal(
   gate: V9DangerGate = "withhold",
 ): boolean {
   assertV9ValidatedPolicyEnvelope(policy);
+  const gates = getV9ScoreBearingGatesPolicy(policy).danger;
   // (1) A fired signal:*:critical structural cap — presence, not bindingness.
   const measuredStructuralSignals = input.structuralSignals.filter(
     (signal) => signal.responsibility === "measured-adverse",
@@ -644,17 +636,22 @@ export function hasV9DangerSignal(
     (cap) => cap.kind.startsWith("signal:") && cap.kind.endsWith(":critical"),
   );
   // (2) Active depeg in any band.
-  const activeDepeg = input.activeDepegBps !== null && input.activeDepegBps > 0;
+  const activeDepeg =
+    input.activeDepegBps !== null &&
+    input.activeDepegBps > gates.activeDepegMinimumBpsExclusive;
   // (3) A required, rated parent imposes a parent cap.
   const parentCap = input.parentRequired && input.parentScore !== null;
   // (4) Centralized mint: critical always; high only for the withhold gate.
   const centralizedMint = measuredStructuralSignals.some(
     (signal) =>
       signal.kind === "centralized-mint" &&
-      (signal.severity === "critical" || (gate === "withhold" && signal.severity === "high")),
+      (gate === "f-gate"
+        ? gates.fGateCentralizedMintSeverities
+        : gates.withholdCentralizedMintSeverities
+      ).includes(signal.severity),
   );
   // (5) Measured peg history below the gate's danger floor.
-  const pegFloor = gate === "f-gate" ? F_GATE_PEG_MULTIPLIER_FLOOR : DANGER_PEG_MULTIPLIER_FLOOR;
+  const pegFloor = gate === "f-gate" ? gates.fGatePegMultiplierFloor : gates.withholdPegMultiplierFloor;
   const measuredPeg = typeof input.pegMultiplier === "number" && input.pegMultiplier < pegFloor;
   // (6) Any pillar strictly below its bounded-unknown floor.
   const subFloorPillar = anyPillarBelowFloor(input.pillars, policy, gate);
@@ -705,15 +702,20 @@ export interface V9PreExitDangerInput {
  */
 export function hasV9PreExitDangerSignal(input: V9PreExitDangerInput, policy: V9ValidatedPolicyEnvelope): boolean {
   assertV9ValidatedPolicyEnvelope(policy);
+  const gates = getV9ScoreBearingGatesPolicy(policy).danger;
   const measuredStructuralSignals = input.structuralSignals.filter(
     (signal) => signal.responsibility === "measured-adverse",
   );
   const firedCriticalSignal = resolveV9StructuralCaps(measuredStructuralSignals, policy).some(
     (cap) => cap.kind.startsWith("signal:") && cap.kind.endsWith(":critical"),
   );
-  const activeDepeg = input.activeDepegBps !== null && input.activeDepegBps > 0;
+  const activeDepeg =
+    input.activeDepegBps !== null &&
+    input.activeDepegBps > gates.activeDepegMinimumBpsExclusive;
   const centralizedMint = measuredStructuralSignals.some(
-    (signal) => signal.kind === "centralized-mint" && signal.severity === "critical",
+    (signal) =>
+      signal.kind === "centralized-mint" &&
+      gates.preExitCentralizedMintSeverities.includes(signal.severity),
   );
   // Mirrors the formula's `pegMultiplierRaw` for the danger check: an unverified
   // or not-applicable peg reads as par (1), never as a measured-peg danger.
@@ -723,7 +725,7 @@ export function hasV9PreExitDangerSignal(input: V9PreExitDangerInput, policy: V9
         ? 0
         : (input.pegScore / 100) ** policy.policy.semantic.formula.pegExponent
       : 1;
-  const measuredPeg = pegMultiplier < DANGER_PEG_MULTIPLIER_FLOOR;
+  const measuredPeg = pegMultiplier < gates.preExitPegMultiplierFloor;
   const activeControlIncident = measuredStructuralSignals.some((signal) => signal.kind === "active-control-incident");
   return firedCriticalSignal || activeDepeg || centralizedMint || measuredPeg || activeControlIncident;
 }
@@ -821,7 +823,7 @@ export function applyV9AssetPremium(
   };
 }
 
-function scoreV9InputWithCaps(
+export function scoreV9InputWithCaps(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
   scenarioCaps: readonly V9AttributedScenarioCap[],
@@ -836,6 +838,7 @@ function scoreV9InputWithCaps(
   wrapperLocalBoundedUncertaintyAttribution:
     readonly V9BoundedUncertaintyAttribution[] = [],
   pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
+  aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
 ): V9ScoreTrace {
   assertV9ValidatedPolicyEnvelope(policy);
   const input = V9ScoringInputSchema.parse(rawInput);
@@ -993,7 +996,7 @@ function scoreV9InputWithCaps(
     weakestPillar === null ? null : formula.compensabilityHeadroom;
   const aggregationRaw =
     pillarsComplete && aggregationHeadroom !== null
-      ? aggregateV9SmoothBoundedHeadroom(
+      ? aggregationStrategy(
           {
             backing: input.pillars.backing!,
             exit: input.pillars.exit!,
@@ -1139,6 +1142,7 @@ function scoreV9InputWithCaps(
       .map((fact) => fact.code),
   };
   const withholdDangerPresent = hasV9DangerSignal(dangerSignalInput, policy, "withhold");
+  const scoreBearingGates = getV9ScoreBearingGatesPolicy(policy);
 
   const effectiveNrReasons = [...nrReasons];
   let finalScore = baseFinalScore;
@@ -1153,10 +1157,10 @@ function scoreV9InputWithCaps(
   // are withheld — this keeps strong-backing majors from ever going NR.
   if (
     finalScore !== null &&
-    limitedPillarCount >= 2 &&
-    backingLimited &&
+    limitedPillarCount >= scoreBearingGates.withhold.minimumLimitedPillarCount &&
+    (!scoreBearingGates.withhold.requiresLimitedBacking || backingLimited) &&
     !withholdDangerPresent &&
-    finalScore < WITHHOLD_BAND_MAX_SCORE
+    finalScore < scoreBearingGates.withhold.maxScoreExclusive
   ) {
     effectiveNrReasons.push({
       code: "insufficient-evidence",
@@ -1220,7 +1224,8 @@ function scoreV9InputWithCaps(
           responsibility: "measured-adverse" as const,
         }]
       : []),
-    ...(typeof pegMultiplierRaw === "number" && pegMultiplierRaw < DANGER_PEG_MULTIPLIER_FLOOR
+    ...(typeof pegMultiplierRaw === "number" &&
+      pegMultiplierRaw < scoreBearingGates.danger.adverseAttributionPegMultiplierFloor
       ? [{
           source: "peg-performance" as const,
           path: "peg:historical-performance",
@@ -1269,7 +1274,7 @@ function scoreV9InputWithCaps(
   } else if (
     finalScore !== null &&
     attributedGrade !== null &&
-    DANGER_ONLY_GRADES.has(attributedGrade) &&
+    scoreBearingGates.danger.dangerOnlyGrades.includes(attributedGrade) &&
     adverseAttribution.length === 0
   ) {
     effectiveNrReasons.push({
@@ -1346,6 +1351,7 @@ export function scoreV9Input(
   wrapperLocalBoundedUncertaintyAttribution:
     readonly V9BoundedUncertaintyAttribution[] = [],
   pillarReasonProvenance: readonly V9PillarReasonProvenance[] = [],
+  aggregationStrategy: V9AggregationStrategy = aggregateV9SmoothBoundedHeadroom,
 ): V9ScoreTrace {
   return scoreV9InputWithCaps(
     rawInput,
@@ -1360,6 +1366,7 @@ export function scoreV9Input(
     wrapperLocalAdverseAttribution,
     wrapperLocalBoundedUncertaintyAttribution,
     pillarReasonProvenance,
+    aggregationStrategy,
   );
 }
 

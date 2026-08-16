@@ -1,5 +1,22 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
+export const SAFETY_SCORE_V9_POLICY_GATE_PROVENANCE: MethodologyChangelogEntry = {
+  version: "9.21",
+  title: "Every score-bearing gate rotates the methodology-policy digest",
+  date: "2026-08-16",
+  effectiveAt: 1786838400,
+  summary:
+    "Safety Score policy provenance now binds the reshape withhold band, danger and F-grade predicates, material-bridge share band, and score-bearing evidence-expiry windows. Policy-only replay and sensitivity analysis can change those gates through one validated projection and observe a different semantic digest instead of relying on code literals invisible to policy comparison.",
+  impact: [
+    "The shared scorer reads withhold, danger, F-only attribution, pre-exit danger, and material-bridge thresholds from the validated score-bearing-gates policy",
+    "Reviewed research, access, research-overlay, mechanism-overlay, issuer-attested reserve, and curated-reserve expiry windows are separately named and included in the semantic digest even where their current values coincide",
+    "The active values are unchanged, so scores, pillars, caps, grades, and evidence freshness outcomes do not move; the policy semantic digest and published score provenance rotate",
+    "Presentation grade bands now derive from the active scoring policy, preventing a second display threshold authority from drifting from the engine",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
 export const SAFETY_SCORE_V9_ROUTE_BUDGET_COMPLETENESS: MethodologyChangelogEntry = {
   version: "9.2",
   title: "Budgeted DEX observations stop publishing as a data-feed failure",

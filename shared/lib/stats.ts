@@ -44,6 +44,33 @@ export function median(values: readonly number[]): number | null {
   return (samples[middle - 1] + samples[middle]) / 2;
 }
 
+export interface WeightedMedianPoint {
+  value: number;
+  weight: number;
+}
+
+/**
+ * Discrete weighted median of finite values with positive finite weights.
+ * Returns the first value whose cumulative weight reaches half the total,
+ * preserving lower-median semantics at an exact 50% boundary.
+ */
+export function weightedMedian(points: readonly WeightedMedianPoint[]): number | null {
+  const samples = points
+    .filter(({ value, weight }) => Number.isFinite(value) && Number.isFinite(weight) && weight > 0)
+    .sort((left, right) => left.value - right.value);
+  if (samples.length === 0) return null;
+
+  const totalWeight = samples.reduce((sum, sample) => sum + sample.weight, 0);
+  if (!Number.isFinite(totalWeight)) return null;
+  const halfWeight = totalWeight / 2;
+  let cumulativeWeight = 0;
+  for (const sample of samples) {
+    cumulativeWeight += sample.weight;
+    if (cumulativeWeight >= halfWeight) return sample.value;
+  }
+  return samples[samples.length - 1]?.value ?? null;
+}
+
 /**
  * Nearest-rank percentile on a 0-100 percentile scale. Returns null for empty finite input.
  * Non-finite samples (NaN/Infinity) are silently dropped before computing.

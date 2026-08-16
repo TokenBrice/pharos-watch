@@ -14,6 +14,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
   assertV9ReasonCodesRegistered,
   assertV9ValidatedPolicyEnvelope,
+  getV9ScoreBearingGatesPolicy,
   resolveV9ReasonPolicy,
 } from "./policy";
 import { isV9UncanonicalizedChainPoolRoute } from "./facts";
@@ -304,12 +305,14 @@ function bridgeSharesReconcile(left: number, right: number): boolean {
 // (>= threshold) or unattributed (null) share stays high. Opaque topology stays
 // critical. This threshold is above the deployment-material binding floor so a
 // binding material-bridge lands in the moderate band until exposure is dominant.
-const MATERIAL_BRIDGE_HIGH_SHARE_THRESHOLD = 0.25;
-
-function materialBridgeSeverity(tier: V9BridgeTier, materialSupplyShare: number | null): V9Severity {
+function materialBridgeSeverity(
+  tier: V9BridgeTier,
+  materialSupplyShare: number | null,
+  highShareThreshold: number,
+): V9Severity {
   if (tier === "opaque-or-unknown") return "critical";
   if (materialSupplyShare === null) return "high";
-  return materialSupplyShare >= MATERIAL_BRIDGE_HIGH_SHARE_THRESHOLD ? "high" : "moderate";
+  return materialSupplyShare >= highShareThreshold ? "high" : "moderate";
 }
 
 function hasCompleteSubthresholdUnresolvedBridgeJoins(
@@ -1197,7 +1200,11 @@ export function evaluateV9EconomicControl(args: EvaluateV9EconomicControlArgs): 
       if (route.tier === "external-lock-mint" || route.tier === "opaque-or-unknown") {
         addStructuralFailure({
           kind: binding ? "material-bridge" : "peripheral-bridge",
-          severity: materialBridgeSeverity(route.tier, control.materialSupplyShare),
+          severity: materialBridgeSeverity(
+            route.tier,
+            control.materialSupplyShare,
+            getV9ScoreBearingGatesPolicy(args.policy).control.materialBridgeHighShareThreshold,
+          ),
           binding,
           reason: `Bridge control topology is ${route.tier}.`,
           materialSharePct: control.materialSupplyShare === null ? null : control.materialSupplyShare * 100,

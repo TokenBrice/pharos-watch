@@ -1,10 +1,6 @@
 import type {
-  V9EvidenceResponsibility,
-} from "../../types/safety-score-v9-facts";
-import type {
   V9AssetPremiumPolicy,
   V9EvidenceLevel,
-  V9ReasonCode,
   V9StructuralSignal,
   V9UnresolvedFact,
   V9ValidatedPolicyEnvelope,
@@ -13,6 +9,7 @@ import {
   applyV9AssetPremium,
   scoreV9Input,
   type V9AdverseAttribution,
+  type V9AggregationStrategy,
   type V9BoundedUncertaintyAttribution,
   type V9NRReason,
   type V9ParentAdverseAttribution,
@@ -25,14 +22,12 @@ import type { V9OperationalResilienceResult } from "./operational-resilience";
 import type { V9WrapperParentLimit } from "./wrapper-risk";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonPolicy } from "./policy";
 import { compareText } from "./primitives";
+import {
+  canonicalizeV9PublicReasons,
+  type V9PublicReason,
+} from "./reasons";
 
-export interface V9PillarReason {
-  code: V9ReasonCode;
-  path: string;
-  message: string;
-  responsibility: V9EvidenceResponsibility;
-  sourceGapId?: string | null;
-}
+export type V9PillarReason = V9PublicReason;
 
 export interface V9PillarEvaluation {
   score: number | null;
@@ -255,46 +250,10 @@ function worstEvidenceLevel(
 }
 
 function normalizeReasonList(reasons: readonly V9PillarReason[], envelope: V9ValidatedPolicyEnvelope) {
-  const canonical = [
-    ...new Map(
-      [...reasons]
-        .sort(
-          (left, right) =>
-            compareText(left.code, right.code) ||
-            compareText(left.path, right.path) ||
-            compareText(left.message, right.message) ||
-            compareText(left.responsibility, right.responsibility),
-        )
-        .map((reason) => [
-          `${reason.code}\u0000${reason.path}\u0000${reason.message}\u0000${reason.responsibility}`,
-          reason,
-        ]),
-    ).values(),
-  ];
-  const byPublicIdentity = new Map<string, V9PillarReason>();
-  const sourceGapIds = new Set<string>();
-  for (const reason of canonical) {
-    if (reason.sourceGapId != null) {
-      if (sourceGapIds.has(reason.sourceGapId)) continue;
-      sourceGapIds.add(reason.sourceGapId);
-    }
-    const key = `${reason.code}\u0000${reason.path}`;
-    const existing = byPublicIdentity.get(key);
-    if (existing !== undefined && existing.responsibility !== reason.responsibility) {
-      throw new Error(
-        `Safety Score v9 unresolved fact ${reason.code} at ${reason.path} has multiple causal owners`,
-      );
-    }
-    if (existing === undefined) byPublicIdentity.set(key, reason);
-  }
-  return [...byPublicIdentity.values()]
-    .sort(
-      (left, right) =>
-        compareText(left.code, right.code) ||
-        compareText(left.path, right.path) ||
-        compareText(left.message, right.message) ||
-        compareText(left.responsibility, right.responsibility),
-    )
+  return canonicalizeV9PublicReasons(reasons, {
+    dedupeSourceGapIds: true,
+    conflictSubject: "unresolved fact",
+  })
     .map((reason) => ({
       code: reason.code,
       path: reason.path,
@@ -517,6 +476,7 @@ function resolveV9AssetPremium(
 export function scoreV9EvaluatedAsset(
   input: V9ProductionScoreInput,
   envelope: V9ValidatedPolicyEnvelope,
+  aggregationStrategy?: V9AggregationStrategy,
 ): V9ProductionScoreTrace {
   assertV9ValidatedPolicyEnvelope(envelope);
   validateIdentity(input.identity);
@@ -576,6 +536,7 @@ export function scoreV9EvaluatedAsset(
     wrapperAttribution.adverse,
     wrapperAttribution.bounded,
     pillarReasonProvenance,
+    aggregationStrategy,
   );
   const premium = resolveV9AssetPremium(input, ordinaryTrace, envelope);
   const trace =
