@@ -1,6 +1,6 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { DetailResponseHelpers } from "./shared";
 
@@ -10,7 +10,10 @@ function buildCacheFallbackToken(
   pegType: string,
   price: number | null | undefined,
 ): Record<string, unknown> | null {
-  const supplyUsd = sumPegBuckets(circulatingUsd);
+  // The cache already stores provider-native USD circulating buckets. Wrapping
+  // them for the canonical accessor preserves that contract without applying
+  // any price conversion.
+  const supplyUsd = getCirculatingRaw({ circulating: circulatingUsd });
   if (!Number.isFinite(supplyUsd) || supplyUsd <= 0) return null;
   return {
     date,

@@ -1,7 +1,7 @@
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { CHAIN_META } from "@shared/lib/chains";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../../lib/coingecko";
@@ -311,7 +311,7 @@ function buildSupplyGapCandidates(
     const pegKey = pegTypeFromCurrency(meta.flags.pegCurrency);
     if (!pegKey) continue;
 
-    const dlMarketCap = sumPegBuckets(asset.circulating);
+    const dlMarketCap = getCirculatingRaw(asset);
     const metadataChainIds = buildMetadataChainIds(assetId);
     const knownChainIds = new Set<string>();
     for (const [chainId] of canonicalizeChainCirculating(asset.chainCirculating)) {
@@ -455,7 +455,7 @@ export async function reconcileTrackedSupplyGaps(
       const meta = ACTIVE_META_BY_ID.get(assetId);
       if (!meta || meta.detailProvider !== "defillama" || !meta.geckoId) return [];
 
-      if (sumPegBuckets(asset.circulating) <= 0) return [];
+      if (getCirculatingRaw(asset) <= 0) return [];
 
       const metadataChainIds = buildMetadataChainIds(assetId);
       if (metadataChainIds.length === 0) return [];

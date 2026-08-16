@@ -1,6 +1,6 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { STATUS_RECONCILIATION_THRESHOLDS } from "@shared/lib/status-thresholds";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { MintBurnReconciliationRow, MintBurnReconciliationSummary, StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
@@ -340,7 +340,7 @@ export async function getMintBurnReconciliation(
       const denominator = Math.max(
         Math.abs(chainSupplyDelta24hUsd),
         Math.abs(flowNet24hUsd),
-        Math.max(sumPegBuckets(asset.circulating), 1) * 0.005,
+        Math.max(getCirculatingRaw(asset), 1) * 0.005,
       );
       const diffRatio = denominator > 0 ? absoluteDiffUsd / denominator : 0;
       const status: MintBurnReconciliationRow["status"] =

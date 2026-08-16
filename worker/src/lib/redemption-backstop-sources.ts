@@ -1,4 +1,4 @@
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   deriveModelConfidenceWithDetails,
   deriveModelConfidence,
@@ -82,7 +82,7 @@ export async function resolveRedemptionBackstopEntry(
     db,
     asset.id,
     config,
-    sumPegBuckets(asset.circulating),
+    getCirculatingRaw(asset),
     dexLiquidityScore,
     now,
     options,

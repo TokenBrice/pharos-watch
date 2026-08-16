@@ -12,7 +12,7 @@ import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-reso
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import type { StablecoinData } from "@shared/types/market";
 import {
   getDexLiquidityTrendTolerances,
@@ -123,7 +123,7 @@ export async function buildCurrentDeviationMap(
   for (const [id, asset] of assetById) {
     const meta = TRACKED_META_BY_ID.get(id);
     if (!meta || meta.flags.navToken) continue;
-    const supply = asset.circulating ? sumPegBuckets(asset.circulating) : 0;
+    const supply = getCirculatingRaw(asset);
     if (supply <= 0 || asset.price == null || !Number.isFinite(asset.price)) {
       out.set(id, null);
       continue;

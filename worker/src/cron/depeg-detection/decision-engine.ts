@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_DEX_PROTOCOL_CORROBORATION_MIN,
@@ -305,7 +305,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision: emptyDecision(trackedCoinId) };
   }
 
-  const supply = sumPegBuckets(asset.circulating);
+  const supply = getCirculatingRaw(asset);
   if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) {
     const decision = emptyDecision(trackedCoinId);
     if (existing) {

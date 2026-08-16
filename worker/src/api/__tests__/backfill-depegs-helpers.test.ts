@@ -27,6 +27,12 @@ describe("parseSupplyData", () => {
       { ts: 200, supply: 20 },
     ]);
   });
+
+  it("sums all circulating buckets without applying a price", () => {
+    expect(parseSupplyData([
+      { date: "100", circulating: { peggedUSD: 125, peggedEUR: 75 } },
+    ])).toEqual([{ ts: 100, supply: 200 }]);
+  });
 });
 
 describe("findNearestSupply", () => {

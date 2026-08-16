@@ -61,8 +61,17 @@ describe("sumMcapForTrackedChains", () => {
     expect(sumMcapForTrackedChains("usdc-circle", {}, peggedTotal)).toBe(37_000_000_000);
   });
 
-  it("returns sumPegBuckets(circulating) for an untracked coin id", () => {
+  it("returns the circulating bucket total for an untracked coin id", () => {
     expect(sumMcapForTrackedChains("nonexistent", chainCirculatingDL, peggedTotal)).toBe(37_000_000_000);
+  });
+
+  it("uses the canonical circulating total when tracked-chain data is absent", () => {
+    expect(
+      sumMcapForTrackedChains("nonexistent", undefined, {
+        peggedUSD: 125_000_000,
+        peggedEUR: 75_000_000,
+      }),
+    ).toBe(200_000_000);
   });
 
   it("returns 0 when both chainCirculating and circulating are undefined", () => {

@@ -54,7 +54,7 @@ export {
 } from "@shared/lib/yield-scoring";
 import { computePysComponents } from "@shared/lib/yield-scoring";
 import type { YieldPysNullReason } from "@shared/types/yield";
-import { resolveChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/lib/chains";
 import { normalizeDexSymbol } from "../lib/dex-cron-constants";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
 
@@ -71,6 +71,21 @@ const BLOCKED_YIELD_OPPORTUNITY_PATTERNS = [
   /\bresolv\b/i,
   /\b(?:usr|stusr|wstusr)\b/i,
 ];
+
+function normalizeChainFilter(filter: Set<string> | undefined): Set<string> | undefined {
+  if (!filter) return undefined;
+  return new Set(
+    [...filter]
+      .map((chain) => normalizeChainId(chain))
+      .filter((chain): chain is string => chain !== null),
+  );
+}
+
+function isChainAllowed(filter: Set<string> | undefined, chain: string | undefined): boolean {
+  if (!filter || !chain) return true;
+  const chainId = normalizeChainId(chain);
+  return chainId !== null && filter.has(chainId);
+}
 
 interface PysNullReasonInput {
   apy30d: number;
@@ -272,14 +287,10 @@ export function matchAllDlPools(
   const nativeId = poolMap[stablecoinId];
   const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
   const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
-  const normalizedChainFilter = options?.chainFilter
-    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
-    : undefined;
+  const normalizedChainFilter = normalizeChainFilter(options?.chainFilter);
 
   const isEligibleChain = (poolChain: string | undefined): boolean => {
-    if (!normalizedChainFilter || !poolChain) return true;
-    const chainId = resolveChainId(poolChain) ?? poolChain.toLowerCase();
-    return normalizedChainFilter.has(chainId);
+    return isChainAllowed(normalizedChainFilter, poolChain);
   };
   const isReservedForAnotherCoin = (poolId: string): boolean => reservedPoolIds.has(poolId) && poolId !== nativeId;
   const addressMatches = (pool: { underlyingTokens?: string[] | null }): boolean =>
@@ -301,7 +312,7 @@ export function matchAllDlPools(
   const variant = variantMap[stablecoinId];
   if (variant) {
     const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
-    const variantChain = variant.variantChain ? resolveChainId(variant.variantChain) ?? variant.variantChain.toLowerCase() : null;
+    const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
     const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
     const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
 
@@ -310,7 +321,7 @@ export function matchAllDlPools(
         pool.exposure === "single" &&
         !seenUuids.has(pool.pool) &&
         !isReservedForAnotherCoin(pool.pool) &&
-        (!variantChain || (resolveChainId(pool.chain ?? "") ?? pool.chain?.toLowerCase()) === variantChain),
+        (!variantChain || normalizeChainId(pool.chain) === variantChain),
     );
 
     const addressCandidates = variantAddress
@@ -473,9 +484,7 @@ export function findBestLendingPool(
   const minApy = options?.minApy ?? 0;
   const minTvlUsd = options?.minTvlUsd ?? 0;
   const contractSet = new Set((options?.contractAddresses ?? []).map((address) => normalizeTokenAddress(address)));
-  const chainFilter = options?.chainFilter
-    ? new Set(Array.from(options.chainFilter).map((chain) => resolveChainId(chain) ?? chain.toLowerCase()))
-    : undefined;
+  const chainFilter = normalizeChainFilter(options?.chainFilter);
   const reservedPoolIds = options?.reservedPoolIds ?? new Set<string>();
 
   const baseCandidates = dlPools.filter((p) =>
@@ -483,7 +492,7 @@ export function findBestLendingPool(
     !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
     !reservedPoolIds.has(p.pool) &&
     !options?.isBlockedPool?.(p) &&
-    (!chainFilter || !p.chain || chainFilter.has(resolveChainId(p.chain) ?? p.chain.toLowerCase()))
+    isChainAllowed(chainFilter, p.chain)
   );
 
   // Primary match: underlying token address match.

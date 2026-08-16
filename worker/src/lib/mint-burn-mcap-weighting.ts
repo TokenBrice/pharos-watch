@@ -7,7 +7,7 @@
 // instead.
 
 import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
-import { sumPegBuckets } from "@shared/lib/supply";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   canonicalizeChainCirculating,
   type RawChainCirculating,
@@ -38,9 +38,10 @@ export function getMintBurnTrackedChains(stablecoinId: string): string[] {
  * after normalizing raw (e.g. capitalized DL) keys to canonical chain ids.
  *
  * Fallback policy (in order):
- *   1. If the coin has no tracked chains (legacy/future id) → `sumPegBuckets(circulating)`.
+ *   1. If the coin has no tracked chains (legacy/future id) → the canonical
+ *      circulating total from `getCirculatingRaw({ circulating })`.
  *   2. If the canonicalized chainCirculating has no tracked-chain entry →
- *      `sumPegBuckets(circulating)` (keeps CG-fallback assets with empty
+ *      the canonical circulating total (keeps CG-fallback assets with empty
  *      chainCirculating alive and tolerates current=null entries).
  *   3. Otherwise sum `chainCirculating[chainId].current` across tracked chains.
  *
@@ -52,11 +53,12 @@ export function sumMcapForTrackedChains(
   chainCirculating: RawChainCirculating | null | undefined,
   circulating: Record<string, number> | undefined,
 ): number {
+  const fallbackSupply = getCirculatingRaw({ circulating });
   const trackedChains = getMintBurnTrackedChains(stablecoinId);
-  if (trackedChains.length === 0) return sumPegBuckets(circulating);
+  if (trackedChains.length === 0) return fallbackSupply;
 
   const canonical = canonicalizeChainCirculating(chainCirculating);
-  if (canonical.size === 0) return sumPegBuckets(circulating);
+  if (canonical.size === 0) return fallbackSupply;
 
   let total = 0;
   let anyFound = false;
@@ -67,6 +69,6 @@ export function sumMcapForTrackedChains(
       anyFound = true;
     }
   }
-  if (!anyFound) return sumPegBuckets(circulating);
+  if (!anyFound) return fallbackSupply;
   return total;
 }

@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { resolveChainId } from "@shared/lib/chains";
+import { normalizeChainId } from "@shared/lib/chains";
 import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
 import type { YieldType } from "@shared/types/core";
 import type { YieldDeploymentPlace, YieldSourceRisk } from "@shared/types/yield";
@@ -61,7 +61,7 @@ export function buildReservedYieldPoolIds(): Set<string> {
 
 function normalizeYieldPoolChain(chain: string | null | undefined): string | null {
   if (!chain) return null;
-  return resolveChainId(chain) ?? chain.toLowerCase();
+  return normalizeChainId(chain);
 }
 
 export function getLendingOpportunityAbsoluteTvlFloor(chain: string | null | undefined): number {

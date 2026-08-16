@@ -251,8 +251,6 @@ export const DEBT_EXPORTS = {
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/sync-stablecoins/metadata.ts::buildPriceSourceHealth":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
-  "worker/src/cron/sync-stablecoins/shared.ts::sumPegBuckets":
-    "Unreferenced here: consumers import the same name from './supply' instead.",
   "worker/src/cron/sync-stablecoins/supplemental-assets/shared.ts::buildSupplementalAsset":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "worker/src/cron/telegram-alert-snapshots.ts::SAFETY_GRADE_RANK":
