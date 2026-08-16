@@ -40,6 +40,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - uses: ./.github/actions/setup-workspace
       - id: classify
         name: Select production surfaces
         env:
