@@ -9,7 +9,7 @@ import { BLOG_POSTS } from "../../src/data/blog";
 import {
   enforceCommittedArtifactSources,
   SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
-} from "../lib/commit-derived-artifacts.mjs";
+} from "../lib/commit-derived-artifacts.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");

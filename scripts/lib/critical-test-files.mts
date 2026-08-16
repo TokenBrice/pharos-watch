@@ -1,6 +1,6 @@
 import { CRITICAL_FILES } from "./critical-coverage.mjs";
 
-export const CRITICAL_TEST_FILES = [
+export const CRITICAL_TEST_FILES: string[] = [
   "src/lib/__tests__/api-fetch-contracts.test.ts",
   "src/lib/__tests__/critical-invariants.test.ts",
   "worker/src/__tests__/index.scheduled.test.ts",
@@ -192,12 +192,12 @@ export const CRITICAL_TEST_FILES = [
   "functions/__tests__/site-data-proxy.test.ts",
 ];
 
-export const GLOBAL_INVARIANT_TEST_FILES = [
+export const GLOBAL_INVARIANT_TEST_FILES: string[] = [
   "src/lib/__tests__/reserve-coinid-validation.test.ts",
   "worker/src/cron/__tests__/telegram-recap-cost-boundary.test.ts",
 ];
 
-export const CRITICAL_CONTRACT_TEST_FILES = [
+export const CRITICAL_CONTRACT_TEST_FILES: string[] = [
   "src/lib/__tests__/api-fetch-contracts.test.ts",
   "src/lib/__tests__/api-endpoints.test.ts",
   ...GLOBAL_INVARIANT_TEST_FILES,
@@ -217,18 +217,18 @@ export const CRITICAL_CONTRACT_TEST_FILES = [
   "worker/src/api/__tests__/events.test.ts",
 ];
 
-export function buildCriticalContractTestArgs(extraArgs = []) {
+export function buildCriticalContractTestArgs(extraArgs: readonly string[] = []): string[] {
   return ["run", ...CRITICAL_CONTRACT_TEST_FILES, ...extraArgs];
 }
 
 // coverage.include values are globs; enrolled paths like
 // functions/api/admin/[[path]].ts would otherwise parse as character classes
 // and silently drop those files from lcov (surfacing as MISSING failures).
-export function escapeCoverageIncludeGlob(file) {
+export function escapeCoverageIncludeGlob(file: string): string {
   return file.replace(/[\\[\](){}*?!+@|]/g, "\\$&");
 }
 
-export function buildCriticalCoverageArgs(extraArgs = []) {
+export function buildCriticalCoverageArgs(extraArgs: readonly string[] = []): string[] {
   return [
     "run",
     "--coverage",

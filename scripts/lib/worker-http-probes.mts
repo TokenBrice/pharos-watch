@@ -1,5 +1,21 @@
-export function accessHeaders(args) {
-  const headers = {};
+interface WorkerProbeArgs {
+  apiUrl: string;
+  adminApiUrl?: string;
+  cfAccessClientId?: string;
+  cfAccessClientSecret?: string;
+}
+
+interface WorkerHttpProbeResult {
+  url: string;
+  status: number;
+  ok: boolean;
+  latencyMs: number;
+  payload?: unknown;
+  error?: string;
+}
+
+export function accessHeaders(args: WorkerProbeArgs): Record<string, string> {
+  const headers: Record<string, string> = {};
   if (args.cfAccessClientId && args.cfAccessClientSecret) {
     headers["CF-Access-Client-Id"] = args.cfAccessClientId;
     headers["CF-Access-Client-Secret"] = args.cfAccessClientSecret;
@@ -7,13 +23,17 @@ export function accessHeaders(args) {
   return headers;
 }
 
-export async function fetchJsonProbe(args, path, origin = args.apiUrl) {
+export async function fetchJsonProbe(
+  args: WorkerProbeArgs,
+  path: string,
+  origin: string = args.apiUrl,
+): Promise<WorkerHttpProbeResult> {
   const url = new URL(path, origin);
   const startedAt = Date.now();
   try {
     const response = await fetch(url, { method: "GET", headers: accessHeaders(args) });
     const text = await response.text();
-    let payload = null;
+    let payload: unknown = null;
     try {
       payload = text ? JSON.parse(text) : null;
     } catch {
@@ -38,10 +58,14 @@ export async function fetchJsonProbe(args, path, origin = args.apiUrl) {
 }
 
 export async function collectWorkerHttpProbes(
-  args,
-  { includeHealth = true, includeStatus = false, includeStatusHistory = false } = {},
-) {
-  const probes = {};
+  args: WorkerProbeArgs,
+  {
+    includeHealth = true,
+    includeStatus = false,
+    includeStatusHistory = false,
+  }: { includeHealth?: boolean; includeStatus?: boolean; includeStatusHistory?: boolean } = {},
+): Promise<Record<string, WorkerHttpProbeResult>> {
+  const probes: Record<string, WorkerHttpProbeResult> = {};
   if (includeHealth) {
     probes.health = await fetchJsonProbe(args, "/api/health");
   }

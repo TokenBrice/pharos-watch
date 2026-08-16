@@ -1,13 +1,28 @@
 import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
 
-const DEFAULT_TOLERANCE = {
+interface PngComparisonTolerance {
+  maxMeanAbsPerChannel: number;
+  maxChangedPixelRatio: number;
+  changedPixelThreshold: number;
+}
+
+interface PngComparison {
+  matches: boolean;
+  summary: string;
+}
+
+const DEFAULT_TOLERANCE: PngComparisonTolerance = {
   maxMeanAbsPerChannel: 2.5,
   maxChangedPixelRatio: 0.04,
   changedPixelThreshold: 8,
 };
 
-export async function comparePngContent(expectedPath, actualPath, tolerance = DEFAULT_TOLERANCE) {
+export async function comparePngContent(
+  expectedPath: string,
+  actualPath: string,
+  tolerance: PngComparisonTolerance = DEFAULT_TOLERANCE,
+): Promise<PngComparison> {
   const expected = await sharp(expectedPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const actual = await sharp(actualPath).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   if (
@@ -49,7 +64,11 @@ export async function comparePngContent(expectedPath, actualPath, tolerance = DE
   };
 }
 
-export async function stalePngCheckLabel({ fileLabel, expectedPath, actualPath }) {
+export async function stalePngCheckLabel({
+  fileLabel,
+  expectedPath,
+  actualPath,
+}: { fileLabel: string; expectedPath: string; actualPath: string }): Promise<string | null> {
   const expected = existsSync(expectedPath) ? readFileSync(expectedPath) : null;
   const actual = readFileSync(actualPath);
   if (!expected) {
@@ -66,7 +85,10 @@ export async function stalePngCheckLabel({ fileLabel, expectedPath, actualPath }
   return null;
 }
 
-export async function promoteGeneratedPngIfChanged({ stagedPath, publicPath }) {
+export async function promoteGeneratedPngIfChanged({
+  stagedPath,
+  publicPath,
+}: { stagedPath: string; publicPath: string }): Promise<boolean> {
   const staged = readFileSync(stagedPath);
   const existing = existsSync(publicPath) ? readFileSync(publicPath) : null;
   if (existing?.equals(staged)) {
@@ -85,7 +107,7 @@ export async function promoteGeneratedPngIfChanged({ stagedPath, publicPath }) {
   return true;
 }
 
-export function writeFileIfChanged(path, contents) {
+export function writeFileIfChanged(path: string, contents: string | Uint8Array): boolean {
   const next = Buffer.isBuffer(contents) ? contents : Buffer.from(contents);
   const existing = existsSync(path) ? readFileSync(path) : null;
   if (existing?.equals(next)) return false;
@@ -93,12 +115,21 @@ export function writeFileIfChanged(path, contents) {
   return true;
 }
 
-export function formatOgWriteStatus({ check, changed = true, publicPath, suffix = "" }) {
+export function formatOgWriteStatus({
+  check,
+  changed = true,
+  publicPath,
+  suffix = "",
+}: { check: boolean; changed?: boolean; publicPath: string; suffix?: string }): string {
   const action = check ? "Checked" : changed ? "Wrote" : "Unchanged";
   return `${action} ${publicPath}${suffix}`;
 }
 
-export function assertNoStaleOgOutputs({ family, staleFiles, refreshCommand }) {
+export function assertNoStaleOgOutputs({
+  family,
+  staleFiles,
+  refreshCommand,
+}: { family: string; staleFiles: readonly string[]; refreshCommand: string }): void {
   if (staleFiles.length === 0) return;
   throw new Error(
     `${family} OG images are stale: ${staleFiles.join(", ")}. Run \`${refreshCommand}\` to refresh them.`,

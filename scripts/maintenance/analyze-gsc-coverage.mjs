@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 import { inflateRawSync } from "node:zlib";
-import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mjs";
+import { appendGscReportPreamble, runAsyncDirect } from "../lib/gsc-report.mts";
 
 const CSV_EXT = ".csv";
 const ZIP_EXT = ".zip";

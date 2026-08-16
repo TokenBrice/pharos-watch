@@ -39,14 +39,20 @@ const optimizer = new Beasties({
   reduceInlineStyles: false,
   inlineFonts: false,
   fonts: false,
-  logLevel: process.env.BEASTIES_LOG_LEVEL || "error",
+  logLevel: (process.env.BEASTIES_LOG_LEVEL || "error") as "error" | "info" | "warn" | "trace" | "debug" | "silent",
 });
 
 const asyncCssLoaderPath = "/critical-css-loader.js";
 const asyncStylesheetPattern =
   /<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\/_next\/static\/(?:chunks|css)\/[^"']+\.css)(?=[^>]*\bmedia=["']print["'])(?=[^>]*\bonload=["']this\.media\s*=\s*["']all["']["'])[^>]*>/gi;
 
-async function optimizePage(filePath, label) {
+interface OptimizationResult {
+  beforeBytes: number;
+  afterBytes: number;
+  skipped?: boolean;
+}
+
+async function optimizePage(filePath: string, label: string): Promise<OptimizationResult> {
   const before = readFileSync(filePath, "utf8");
 
   // Re-running Beasties on an already-optimized page re-attaches onload
@@ -99,9 +105,9 @@ async function optimizePage(filePath, label) {
   return { beforeBytes: Buffer.byteLength(before), afterBytes: Buffer.byteLength(after) };
 }
 
-const startedAt = Date.now();
-
-try {
+async function main(): Promise<void> {
+  const startedAt = Date.now();
+  try {
   const homepage = await optimizePage(homepagePath, "out/index.html");
   console.log(
     `[critical-css] Optimized out/index.html (${homepage.beforeBytes} -> ${homepage.afterBytes} bytes).`,
@@ -128,7 +134,10 @@ try {
       `(${detailBefore} -> ${detailAfter} bytes, ${Date.now() - startedAt}ms total).`,
     );
   }
-} catch (error) {
-  console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
+  } catch (error) {
+    console.error(`[critical-css] ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
 }
+
+void main();

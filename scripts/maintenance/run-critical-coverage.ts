@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mjs";
-import { localBin } from "../lib/local-bin.mjs";
-import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
+import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mts";
+import { localBin } from "../lib/local-bin.mts";
+import { withCiVitestArgs } from "../lib/vitest-ci-args.mts";
 
 function run(cmd: string, args: readonly string[]): void {
   const result = spawnSync(cmd, args, {

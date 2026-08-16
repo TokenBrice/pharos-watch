@@ -45,5 +45,5 @@ function shutdown(signal: NodeJS.Signals): void {
 process.on("SIGINT", () => shutdown("SIGINT"));
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 
-spawnChild("proxy", process.execPath, ["scripts/maintenance/dev-api-proxy.mjs"]);
+spawnChild("proxy", process.execPath, ["--import", "tsx", "scripts/maintenance/dev-api-proxy.ts"]);
 spawnChild("next", "next", ["dev", "--webpack"]);

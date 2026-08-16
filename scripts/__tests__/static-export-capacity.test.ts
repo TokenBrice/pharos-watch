@@ -4,7 +4,7 @@ import {
   countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
-} from "../lib/static-export-capacity.mjs";
+} from "../lib/static-export-capacity.mts";
 
 describe("static export capacity attribution", () => {
   it("counts each document once when it references a tracked chunk", () => {

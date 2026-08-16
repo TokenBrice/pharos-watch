@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
-import { enforceCommittedArtifactSources } from "../lib/commit-derived-artifacts.mjs";
+import { enforceCommittedArtifactSources } from "../lib/commit-derived-artifacts.mts";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

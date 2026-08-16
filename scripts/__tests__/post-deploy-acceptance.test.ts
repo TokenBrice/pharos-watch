@@ -4,7 +4,7 @@ import {
   POST_DEPLOY_ACCEPTANCE_OUTCOMES,
   selectPostDeployProbes,
   summarizePostDeployAcceptance,
-} from "../lib/post-deploy-acceptance.mjs";
+} from "../lib/post-deploy-acceptance.mts";
 
 describe("post-deploy acceptance probe selection", () => {
   it("selects only the Pages shell smoke for a Pages release", () => {

@@ -1,6 +1,14 @@
-const CLOUDFLARE_CHALLENGE_TEXT = ["performing security verification", "verify you are human"];
+const CLOUDFLARE_CHALLENGE_TEXT: readonly string[] = ["performing security verification", "verify you are human"];
 
-export function getOgCaptureValidationError({ status, hasMainContent, bodyText }) {
+export function getOgCaptureValidationError({
+  status,
+  hasMainContent,
+  bodyText,
+}: {
+  status: number;
+  hasMainContent: boolean;
+  bodyText: string;
+}): string | null {
   const normalizedBody = bodyText.toLowerCase();
 
   if (CLOUDFLARE_CHALLENGE_TEXT.some((text) => normalizedBody.includes(text))) {

@@ -1,6 +1,6 @@
 import { relative } from "node:path";
 
-import { isValidDateOnly } from "./date-helpers.mjs";
+import { isValidDateOnly } from "./date-helpers.mts";
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
 export const CRITICAL_FILES = [

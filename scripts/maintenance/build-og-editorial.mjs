@@ -22,14 +22,14 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { escapeXml } from "../lib/og-svg.mjs";
+import { escapeXml } from "../lib/og-svg.mts";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
   stalePngCheckLabel,
   writeFileIfChanged,
-} from "../lib/og-image-checks.mjs";
+} from "../lib/og-image-checks.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");

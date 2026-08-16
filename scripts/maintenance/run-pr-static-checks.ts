@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
-import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mjs";
+import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);

@@ -8,7 +8,7 @@
  * starts the Next.js dev server — just without authenticated API data.
  */
 
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -24,7 +24,7 @@ const PORT = parseInt(process.env.DEV_PROXY_PORT || "3001", 10);
 const ALLOWED_UPSTREAM_HOSTS = new Set(["site-api.pharos.watch", "localhost", "127.0.0.1", "[::1]"]);
 const ALLOWED_PATH_PREFIX = "/api/";
 
-function resolveUpstreamOrigin(rawOrigin) {
+function resolveUpstreamOrigin(rawOrigin?: string): string {
   const parsed = new URL(rawOrigin || DEFAULT_UPSTREAM_ORIGIN);
   const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "[::1]";
   if (!ALLOWED_UPSTREAM_HOSTS.has(parsed.hostname) || (parsed.protocol !== "https:" && !isLocalhost)) {
@@ -33,7 +33,7 @@ function resolveUpstreamOrigin(rawOrigin) {
   return parsed.origin;
 }
 
-function resolveProxyPath(rawUrl) {
+function resolveProxyPath(rawUrl?: string): string {
   const local = new URL(rawUrl || "/", `http://localhost:${PORT}`);
   if (!local.pathname.startsWith(ALLOWED_PATH_PREFIX)) {
     throw new Error("Dev proxy only forwards /api/* requests");
@@ -59,11 +59,11 @@ function resolveProxyPath(rawUrl) {
   return query ? `${pathname}?${query}` : pathname;
 }
 
-let UPSTREAM_ORIGIN;
+let UPSTREAM_ORIGIN: string;
 try {
   UPSTREAM_ORIGIN = resolveUpstreamOrigin(process.env.DEV_PROXY_UPSTREAM);
-} catch (err) {
-  console.error(`[dev-proxy] ${err.message}`);
+} catch (err: unknown) {
+  console.error(`[dev-proxy] ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 }
 
@@ -90,7 +90,7 @@ if (!SECRET) {
   process.exit(0);
 }
 
-const server = createServer(async (req, res) => {
+const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
   try {
     const upstream = new URL(resolveProxyPath(req.url), UPSTREAM_ORIGIN);
     // codeql[js/request-forgery] UPSTREAM_ORIGIN is allowlisted above, and resolveProxyPath only permits normalized /api/* paths.
@@ -99,11 +99,11 @@ const server = createServer(async (req, res) => {
       redirect: "error",
       headers: {
         "X-Pharos-Site-Proxy-Secret": SECRET,
-        Accept: req.headers.accept || "application/json",
+        Accept: (req.headers.accept || "application/json") as string,
       },
     });
 
-    const headers = {};
+    const headers: Record<string, string> = {};
     for (const name of FORWARDED_HEADERS) {
       const value = upstreamRes.headers.get(name);
       if (value) headers[name] = value;

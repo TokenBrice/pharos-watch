@@ -1,4 +1,4 @@
-export function hasVitestOption(args, optionName) {
+export function hasVitestOption(args: readonly string[], optionName: string): boolean {
   return args.some((arg, index) => {
     if (arg === optionName || arg.startsWith(`${optionName}=`)) {
       return true;
@@ -7,8 +7,10 @@ export function hasVitestOption(args, optionName) {
   });
 }
 
-/** @param {string[]} args @param {Readonly<Record<string, string | undefined>>} [env] */
-export function withCiVitestArgs(args, env = process.env) {
+export function withCiVitestArgs(
+  args: readonly string[],
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): readonly string[] {
   if (env.CI !== "true" || env.PHAROS_CI_VITEST_COMPACT === "0") {
     return args;
   }

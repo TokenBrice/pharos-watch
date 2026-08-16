@@ -7,8 +7,31 @@ import path from "node:path";
 
 const WORKER_CONFIG = "worker/wrangler.toml";
 
-function usage() {
-  console.log(`Usage: node scripts/maintenance/benchmark-worker-compatibility-date.mjs --candidate-date YYYY-MM-DD [options]
+interface BenchmarkOptions {
+  candidateDate: string | null;
+  baselineDate: string | null;
+  output: string | null;
+  skipLocalSmoke: boolean;
+  dryRun: boolean;
+}
+
+interface CommandResult {
+  command: string;
+  exitCode: number;
+  durationMs: number;
+  stdoutTail: string;
+  stderrTail: string;
+}
+
+interface DateResult {
+  label: string;
+  date: string;
+  bundleBytes: number;
+  checks: CommandResult[];
+}
+
+function usage(): void {
+  console.log(`Usage: node --import tsx scripts/maintenance/benchmark-worker-compatibility-date.ts --candidate-date YYYY-MM-DD [options]
 
 Builds and smoke-tests the current and candidate Workers compatibility dates
 without editing wrangler.toml or deploying. The candidate date belongs in a
@@ -24,21 +47,21 @@ Options:
 `);
 }
 
-function readValue(argv, index, flag) {
+function readValue(argv: readonly string[], index: number, flag: string): string {
   const value = argv[index];
   if (!value || value.startsWith("--")) throw new Error(`${flag} requires a value`);
   return value;
 }
 
-function validDate(value, flag) {
+function validDate(value: string, flag: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) {
     throw new Error(`${flag} must use a valid YYYY-MM-DD date`);
   }
   return value;
 }
 
-function parseArgs(argv) {
-  const options = {
+function parseArgs(argv: readonly string[]): BenchmarkOptions {
+  const options: BenchmarkOptions = {
     candidateDate: null,
     baselineDate: null,
     output: null,
@@ -62,8 +85,12 @@ function parseArgs(argv) {
   return options;
 }
 
-function run(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
+function run(
+  command: string,
+  args: readonly string[],
+  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
+): Promise<CommandResult> {
+  return new Promise<CommandResult>((resolve, reject) => {
     const startedAt = performance.now();
     const child = spawn(command, args, {
       cwd: options.cwd ?? process.cwd(),
@@ -74,8 +101,8 @@ function run(command, args, options = {}) {
     let stderr = "";
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => { stdout += chunk; });
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.stdout.on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.on("data", (chunk: string) => { stderr += chunk; });
     child.on("error", reject);
     child.on("close", (code) => {
       const result = {
@@ -91,8 +118,8 @@ function run(command, args, options = {}) {
   });
 }
 
-function commandPlan(date, bundlePath, includeSmoke) {
-  const commands = [
+function commandPlan(date: string, bundlePath: string, includeSmoke: boolean): Array<[string, string[]]> {
+  const commands: Array<[string, string[]]> = [
     ["npx", ["--no-install", "wrangler", "deploy", "--config", WORKER_CONFIG, "--dry-run", "--compatibility-date", date, "--outfile", bundlePath]],
     [
       "npx",
@@ -114,7 +141,7 @@ function commandPlan(date, bundlePath, includeSmoke) {
   return commands;
 }
 
-async function runDate(label, date, tempDirectory, includeSmoke) {
+async function runDate(label: string, date: string, tempDirectory: string, includeSmoke: boolean): Promise<DateResult> {
   const bundlePath = path.join(tempDirectory, `${label}.mjs`);
   const commands = commandPlan(date, bundlePath, includeSmoke);
   const results = [];
@@ -143,14 +170,16 @@ async function main() {
   const checkedInDate = config.match(/^compatibility_date\s*=\s*"(\d{4}-\d{2}-\d{2})"/m)?.[1];
   const baselineDate = options.baselineDate ?? checkedInDate;
   if (!baselineDate) throw new Error(`Could not read compatibility_date from ${WORKER_CONFIG}`);
-  if (options.candidateDate <= baselineDate) {
-    throw new Error(`Candidate date ${options.candidateDate} must be later than baseline ${baselineDate}`);
+  const candidateDate = options.candidateDate;
+  if (!candidateDate) throw new Error("--candidate-date is required");
+  if (candidateDate <= baselineDate) {
+    throw new Error(`Candidate date ${candidateDate} must be later than baseline ${baselineDate}`);
   }
 
   const tempDirectory = await mkdtemp(path.join(tmpdir(), "pharos-worker-compatibility-"));
   try {
     if (options.dryRun) {
-      for (const [label, date] of [["baseline", baselineDate], ["candidate", options.candidateDate]]) {
+      for (const [label, date] of [["baseline", baselineDate], ["candidate", candidateDate]] as Array<[string, string]>) {
         const bundlePath = path.join(tempDirectory, `${label}.mjs`);
         for (const [command, args] of commandPlan(date, bundlePath, !options.skipLocalSmoke)) {
           console.log([command, ...args].join(" "));
@@ -161,8 +190,15 @@ async function main() {
 
     const generatedAt = new Date().toISOString();
     const baseline = await runDate("baseline", baselineDate, tempDirectory, !options.skipLocalSmoke);
-    const candidate = await runDate("candidate", options.candidateDate, tempDirectory, !options.skipLocalSmoke);
-    const report = {
+    const candidate = await runDate("candidate", candidateDate, tempDirectory, !options.skipLocalSmoke);
+    const report: {
+      generatedAt: string;
+      workerConfig: string;
+      baseline: DateResult;
+      candidate: DateResult;
+      bundleDeltaBytes: number;
+      deployed: false;
+    } = {
       generatedAt,
       workerConfig: WORKER_CONFIG,
       baseline,
@@ -180,8 +216,8 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  if (error?.result) console.error(JSON.stringify(error.result, null, 2));
+main().catch((error: unknown) => {
+  if (error instanceof Error && "result" in error) console.error(JSON.stringify(error.result, null, 2));
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

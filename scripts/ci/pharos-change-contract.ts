@@ -9,9 +9,9 @@ import {
   hasPagesDeployImpact,
   hasWorkerDeployImpact,
   normalizeRepoPath,
-} from "../lib/deploy-impact.mjs";
+} from "../lib/deploy-impact.mts";
 import { splitNullDelimited } from "../lib/changed-files.mts";
-import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
+import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 type UnknownRecord = Record<string, unknown>;

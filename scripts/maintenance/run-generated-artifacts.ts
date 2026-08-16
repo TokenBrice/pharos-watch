@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 
-import { createExecutionUnit, runParallelExecutionUnits, runShellCommand } from "../lib/command-runner.mts";
+import {
+  createExecutionUnit,
+  runParallelExecutionUnits,
+  runShellCommand,
+  type CommandImplementation,
+} from "../lib/command-runner.mts";
 import { buildGeneratedArtifactPhases } from "../lib/automation-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -8,28 +13,87 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 // browser-rendering OG builders from stacking up on constrained runners.
 export const GENERATED_ARTIFACTS_MAX_PARALLEL = 4;
 
-/** @param {{ bootstrap?: boolean, check?: boolean, skip?: string[] }} [options] */
+interface GeneratedArtifactOptions {
+  bootstrap?: boolean;
+  check?: boolean;
+  only?: readonly string[];
+  phases?: readonly number[];
+  skip?: readonly string[];
+}
+
+interface GeneratedArtifactDefinition {
+  id: string;
+  command: string;
+  dependsOn?: string[];
+}
+
+interface GeneratedArtifactPhase {
+  phase: number;
+  artifacts: GeneratedArtifactDefinition[];
+}
+
+interface ArtifactExecutionUnit {
+  id: string;
+  commands: string[];
+  dependsOn?: string[];
+}
+
+interface ArtifactExecutionPhase {
+  phase: number;
+  units: ArtifactExecutionUnit[];
+}
+
+interface RunnerUnitResult {
+  status: number;
+  failedCmd: string | null;
+  aborted: boolean;
+  durationMs: number;
+  index: number;
+  unit: ArtifactExecutionUnit;
+}
+
+interface ArtifactRunResult extends RunnerUnitResult {
+  id: string;
+  phase: number;
+  statusLabel: "passed" | "tainted" | "failed";
+  taintedBy: string[];
+}
+
+interface GeneratedArtifactsResult {
+  status: number;
+  failedCmd: string | null;
+  aborted: boolean;
+  failures: RunnerUnitResult[];
+  results: ArtifactRunResult[];
+}
+
 export function buildGeneratedArtifactExecutionUnits({
   bootstrap = false,
   check = false,
   only = [],
   phases = [],
   skip = [],
-} = {}) {
+}: GeneratedArtifactOptions = {}): ArtifactExecutionUnit[] {
   return buildGeneratedArtifactExecutionPhases({ bootstrap, check, only, phases, skip }).flatMap(({ units }) => units);
 }
 
-/** @param {{ bootstrap?: boolean, check?: boolean, skip?: string[] }} [options] */
 export function buildGeneratedArtifactExecutionPhases({
   bootstrap = false,
   check = false,
   only = [],
   phases = [],
   skip = [],
-} = {}) {
-  return buildGeneratedArtifactPhases({ bootstrap, check, only, phases, skip }).map(({ phase, artifacts }) => ({
+}: GeneratedArtifactOptions = {}): ArtifactExecutionPhase[] {
+  const registryPhases: GeneratedArtifactPhase[] = buildGeneratedArtifactPhases({
+    bootstrap,
+    check,
+    only: [...only],
+    phases: [...phases],
+    skip: [...skip],
+  });
+  return registryPhases.map(({ phase, artifacts }) => ({
     phase,
-    units: artifacts.map((artifact) =>
+    units: artifacts.map<ArtifactExecutionUnit>((artifact) =>
       createExecutionUnit([artifact.command], {
         dependsOn: artifact.dependsOn ?? [],
         id: artifact.id,
@@ -38,14 +102,14 @@ export function buildGeneratedArtifactExecutionPhases({
   }));
 }
 
-function parseListValue(value) {
+function parseListValue(value: string): string[] {
   return value
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
-function parsePhaseList(value) {
+function parsePhaseList(value: string): number[] {
   return parseListValue(value).map((phase) => {
     if (!/^\d+$/.test(phase)) {
       throw new Error(`Invalid generated artifact phase: ${phase}`);
@@ -54,8 +118,24 @@ function parsePhaseList(value) {
   });
 }
 
-export function parseGeneratedArtifactsArgs(argv = []) {
-  const options = {
+export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
+  bootstrap: boolean;
+  check: boolean;
+  continueOnError: boolean;
+  dryRun: boolean;
+  help: boolean;
+  only: string[];
+  phases: number[];
+} {
+  const options: {
+    bootstrap: boolean;
+    check: boolean;
+    continueOnError: boolean;
+    dryRun: boolean;
+    help: boolean;
+    only: string[];
+    phases: number[];
+  } = {
     bootstrap: false,
     check: false,
     continueOnError: false,
@@ -139,32 +219,32 @@ export function printGeneratedArtifactsHelp(log = console.log) {
   log("  --help, -h        Print this help text.");
 }
 
-export function parseGeneratedArtifactsSkip(env = process.env) {
+export function parseGeneratedArtifactsSkip(env: Readonly<Record<string, string | undefined>> = process.env): string[] {
   return (env.GENERATED_ARTIFACTS_SKIP ?? "")
     .split(",")
     .map((id) => id.trim())
     .filter(Boolean);
 }
 
-export function resolveGeneratedArtifactsSkip({ check = false, env = process.env } = {}) {
+export function resolveGeneratedArtifactsSkip({
+  check = false,
+  env = process.env,
+}: { check?: boolean; env?: Readonly<Record<string, string | undefined>> } = {}): string[] {
   // Freshness validation must inspect the full artifact registry.
   return check ? [] : parseGeneratedArtifactsSkip(env);
 }
 
-/**
- * @param {{
- *   argv?: string[],
- *   env?: NodeJS.ProcessEnv,
- *   log?: (message: string) => unknown,
- *   runCommandImpl?: (command: string, extraEnv?: Record<string, string>, options?: Record<string, any>) => any,
- * }} [options]
- */
 export async function runGeneratedArtifacts({
   argv = process.argv.slice(2),
   env = process.env,
   log = console.log,
   runCommandImpl = runShellCommand,
-} = {}) {
+}: {
+  argv?: readonly string[];
+  env?: NodeJS.ProcessEnv;
+  log?: (message: string) => unknown;
+  runCommandImpl?: CommandImplementation;
+} = {}): Promise<GeneratedArtifactsResult> {
   const { bootstrap, check, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
     parseGeneratedArtifactsArgs(argv);
   const continueOnError = cliContinueOnError || env.GENERATED_ARTIFACTS_CONTINUE_ON_ERROR === "1";
@@ -201,13 +281,13 @@ export async function runGeneratedArtifacts({
     return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
   }
 
-  const allResults = [];
-  const failedArtifactIds = new Set();
-  const taintByArtifactId = new Map();
+  const allResults: ArtifactRunResult[] = [];
+  const failedArtifactIds = new Set<string>();
+  const taintByArtifactId = new Map<string, string[]>();
 
   for (const { phase, units } of executionPhases) {
     for (const unit of units) {
-      const taintedBy = new Set();
+      const taintedBy = new Set<string>();
       for (const dependencyId of unit.dependsOn ?? []) {
         if (failedArtifactIds.has(dependencyId)) taintedBy.add(dependencyId);
         for (const inheritedId of taintByArtifactId.get(dependencyId) ?? []) taintedBy.add(inheritedId);
@@ -224,7 +304,7 @@ export async function runGeneratedArtifacts({
     for (const unitResult of result.results ?? []) {
       const artifactId = unitResult.unit.id;
       const taintedBy = taintByArtifactId.get(artifactId) ?? [];
-      const artifactResult = {
+      const artifactResult: ArtifactRunResult = {
         ...unitResult,
         id: artifactId,
         phase,
@@ -251,7 +331,7 @@ export async function runGeneratedArtifacts({
   };
 }
 
-if (isDirectRun(import.meta.url, process.argv[1])) {
+async function runDirect(): Promise<void> {
   try {
     const result = await runGeneratedArtifacts();
     process.exitCode = result.status;
@@ -259,4 +339,8 @@ if (isDirectRun(import.meta.url, process.argv[1])) {
     console.error(`[generated-artifacts] FAILED: ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;
   }
+}
+
+if (isDirectRun(import.meta.url, process.argv[1])) {
+  void runDirect();
 }

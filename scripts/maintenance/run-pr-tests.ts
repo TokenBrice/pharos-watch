@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { localBin } from "../lib/local-bin.mjs";
+import { localBin } from "../lib/local-bin.mts";
 import { parseChangedFileArgs } from "../lib/changed-files.mts";
-import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mjs";
-import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
+import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
+import { withCiVitestArgs } from "../lib/vitest-ci-args.mts";
 
 interface RunPrTestsOptions {
   argv?: readonly string[];

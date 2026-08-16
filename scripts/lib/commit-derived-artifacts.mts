@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { matchesGlob } from "node:path";
 import { splitNullDelimited } from "./changed-files.mts";
 
-export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
+export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "shared/data/stablecoins/coins/**",
   "src/app/**",
   "src/lib/case-studies/**",
@@ -12,13 +12,19 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
   "src/lib/stablecoin-detail-json-ld.ts",
 ];
 
-function parseNullDelimitedPaths(output) {
+function parseNullDelimitedPaths(output: string): string[] {
   return splitNullDelimited(output)
     .map((path) => path.trim().replaceAll("\\", "/").replace(/^\.\//, ""))
     .filter(Boolean);
 }
 
-export function collectUncommittedPaths({ cwd = process.cwd(), execFile = execFileSync } = {}) {
+export function collectUncommittedPaths({
+  cwd = process.cwd(),
+  execFile = execFileSync,
+}: {
+  cwd?: string;
+  execFile?: typeof execFileSync;
+} = {}): string[] {
   const commands = [
     ["diff", "--name-only", "--diff-filter=ACDMRTUXB", "-z"],
     ["diff", "--cached", "--name-only", "--diff-filter=ACDMRTUXB", "-z"],
@@ -30,22 +36,10 @@ export function collectUncommittedPaths({ cwd = process.cwd(), execFile = execFi
   ].sort();
 }
 
-export function findUncommittedArtifactSources(sourcePaths, dirtyPaths) {
+export function findUncommittedArtifactSources(sourcePaths: readonly string[], dirtyPaths: readonly string[]): string[] {
   return dirtyPaths.filter((path) => sourcePaths.some((pattern) => path === pattern || matchesGlob(path, pattern)));
 }
 
-/**
- * @param {{
- *   artifactId: string,
- *   check: boolean,
- *   command: string,
- *   cwd?: string,
- *   execFile?: typeof execFileSync,
- *   outputPaths?: string[],
- *   sourcePaths: string[],
- *   warn?: (message: string) => unknown,
- * }} options
- */
 export function enforceCommittedArtifactSources({
   artifactId,
   check,
@@ -55,7 +49,16 @@ export function enforceCommittedArtifactSources({
   outputPaths = [],
   sourcePaths,
   warn = console.warn,
-}) {
+}: {
+  artifactId: string;
+  check: boolean;
+  command: string;
+  cwd?: string;
+  execFile?: typeof execFileSync;
+  outputPaths?: readonly string[];
+  sourcePaths: readonly string[];
+  warn?: (message: string) => unknown;
+}): { clean: boolean; dirtyOutputs: string[]; dirtySources: string[] } {
   const dirtyPaths = collectUncommittedPaths({ cwd, execFile });
   const dirtySources = findUncommittedArtifactSources(sourcePaths, dirtyPaths);
   const dirtyOutputs = findUncommittedArtifactSources(outputPaths, dirtyPaths);

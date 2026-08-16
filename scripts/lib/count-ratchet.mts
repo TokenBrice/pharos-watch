@@ -1,24 +1,33 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-export function readCountRatchetBaseline(path, cwd) {
+export function readCountRatchetBaseline(path: string, cwd: string): Record<string, unknown> | null {
   const absolute = join(cwd, path);
   if (!existsSync(absolute)) return null;
-  const parsed = JSON.parse(readFileSync(absolute, "utf8"));
+  const parsed: unknown = JSON.parse(readFileSync(absolute, "utf8"));
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`${path} must contain a JSON object`);
   }
-  return parsed;
+  return parsed as Record<string, unknown>;
 }
 
-export function writeCountRatchetBaseline(path, counts, cwd) {
+export function writeCountRatchetBaseline(path: string, counts: Record<string, number>, cwd: string): void {
   const absolute = join(cwd, path);
   mkdirSync(dirname(absolute), { recursive: true });
   writeFileSync(absolute, `${JSON.stringify(counts, null, 2)}\n`);
 }
 
-export function compareCountRatchetCounts(current, baseline) {
-  const violations = [];
+export interface CountRatchetViolation {
+  file: string;
+  count: number;
+  baselineCount: number;
+}
+
+export function compareCountRatchetCounts(
+  current: Record<string, number>,
+  baseline: Record<string, unknown>,
+): CountRatchetViolation[] {
+  const violations: CountRatchetViolation[] = [];
   for (const [file, count] of Object.entries(current)) {
     const baselineCount = Number(baseline[file] ?? 0);
     if (!Number.isFinite(baselineCount) || count > baselineCount) {
@@ -28,16 +37,6 @@ export function compareCountRatchetCounts(current, baseline) {
   return violations;
 }
 
-/**
- * @param {{
- *   collectCounts: () => Record<string, number>, baselinePath: string, cwd?: string, updateBaseline?: boolean,
- *   stdout?: { write(chunk: string): unknown }, stderr?: { write(chunk: string): unknown },
- *   labels: {
- *     baselineUpdated: string, failedToReadBaseline: string, missingBaseline: string, increased: string,
- *     ok: string, countNoun: string,
- *   }, remediation: string,
- * }} options
- */
 export function runCountRatchet({
   collectCounts,
   baselinePath,
@@ -47,7 +46,23 @@ export function runCountRatchet({
   stderr = process.stderr,
   labels,
   remediation,
-}) {
+}: {
+  collectCounts: () => Record<string, number>;
+  baselinePath: string;
+  cwd?: string;
+  updateBaseline?: boolean;
+  stdout?: { write(chunk: string): unknown };
+  stderr?: { write(chunk: string): unknown };
+  labels: {
+    baselineUpdated: string;
+    failedToReadBaseline: string;
+    missingBaseline: string;
+    increased: string;
+    ok: string;
+    countNoun: string;
+  };
+  remediation: string;
+}): number {
   const current = collectCounts();
 
   if (updateBaseline) {
@@ -80,7 +95,7 @@ export function runCountRatchet({
   }
 
   const currentTotal = Object.values(current).reduce((sum, count) => sum + count, 0);
-  const baselineTotal = Object.values(baseline).reduce((sum, count) => sum + Number(count), 0);
+  const baselineTotal = Object.values(baseline).reduce<number>((sum, count) => sum + Number(count), 0);
   stdout.write(`${labels.ok}: OK (${currentTotal}/${baselineTotal} ${labels.countNoun} at or below baseline)\n`);
   return 0;
 }

@@ -737,7 +737,7 @@ The three reviewed status read paths (the pulse refresh aggregate, top-coins sta
 
 The package-level `npm run check:telegram-load` command is blocking: it passes `--enforce-target-slo` and fails when the 5,000-watcher target misses the normal under-15-minute risk-alert SLO. For an advisory local report that only fails critical query-plan regressions, run `npx tsx scripts/ci/check-telegram-load.ts` directly without `--enforce-target-slo`.
 
-The reviewed dependency groups in `scripts/lib/telegram-load-guard.mjs` drive local merge-gate selection and are parity-checked against the GitHub workflow path filter. They cover dispatch/pending work, durable job and target schemas, sender transport, preset resolution, formatter/chunker behavior, scheduled-lane ownership, admin broadcast, delivery policy, Worker CPU configuration, migrations, and the guard itself. Full deploy fallback includes the advisory report unconditionally; the scheduled Monday workflow keeps the blocking SLO check.
+The reviewed dependency groups in `scripts/lib/telegram-load-guard.mts` drive local merge-gate selection and are parity-checked against the GitHub workflow path filter. They cover dispatch/pending work, durable job and target schemas, sender transport, preset resolution, formatter/chunker behavior, scheduled-lane ownership, admin broadcast, delivery policy, Worker CPU configuration, migrations, and the guard itself. Full deploy fallback includes the advisory report unconditionally; the scheduled Monday workflow keeps the blocking SLO check.
 
 ### Rollout and Rollback
 

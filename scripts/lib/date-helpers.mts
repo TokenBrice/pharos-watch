@@ -1,6 +1,6 @@
-export const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+export const DATE_ONLY_RE: RegExp = /^\d{4}-\d{2}-\d{2}$/;
 
-export function isValidDateOnly(value) {
+export function isValidDateOnly(value: unknown): boolean {
   if (typeof value !== "string" || !DATE_ONLY_RE.test(value)) {
     return false;
   }

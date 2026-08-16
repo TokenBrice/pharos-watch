@@ -19,7 +19,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mechanism-diagrams";
 import type { MechanismArchetype } from "@shared/types";
 import { MECHANISM_EXPLAINER_ENTRIES } from "../../src/lib/mechanism-explainer-registry";
-import { escapeXml } from "../lib/og-svg.mjs";
+import { escapeXml } from "../lib/og-svg.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");

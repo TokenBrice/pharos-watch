@@ -16,7 +16,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { localBin } from "../lib/local-bin.mjs";
+import { localBin } from "../lib/local-bin.mts";
 
 const DOMAIN_SCRIPTS = {
   "redemption-backstops": "scripts/ci/check-redemption-backstops.ts",

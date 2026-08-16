@@ -10,7 +10,7 @@ import {
   hasWorkerDeployImpact,
   hasWorkerReleaseImpact,
   normalizeRepoPath,
-} from "../lib/deploy-impact.mjs";
+} from "../lib/deploy-impact.mts";
 import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";

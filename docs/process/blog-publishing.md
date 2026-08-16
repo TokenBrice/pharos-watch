@@ -48,7 +48,7 @@ notes). Keep posts editorial: what shipped, what's next, and why.
    ```
    `src/data/blog/**` is wired into both `GIT_DATE_SCAN_PATHS`
    (`generate-sitemap-dates.ts`) and `SITEMAP_COMMIT_DERIVED_SOURCE_PATHS`
-   (`scripts/lib/commit-derived-artifacts.mjs`), so this step is mandatory.
+   (`scripts/lib/commit-derived-artifacts.mts`), so this step is mandatory.
 6. **Push** via the normal protected-main PR path. The homepage banner arms
    itself from `datePublished` on the next build — nothing else to touch.
 

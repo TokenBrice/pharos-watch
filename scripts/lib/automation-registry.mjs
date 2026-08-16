@@ -1,4 +1,4 @@
-import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mjs";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "./commit-derived-artifacts.mts";
 
 function uniqueSorted(values) {
   return [...new Set(values)].sort();
@@ -55,7 +55,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       "package.json",
       "scripts/ci/classify-deploy-changes.ts",
       "scripts/lib/automation-registry.mjs",
-      "scripts/lib/deploy-impact.mjs",
+      "scripts/lib/deploy-impact.mts",
     ],
     prefixes: [],
   },

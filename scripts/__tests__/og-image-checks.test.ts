@@ -7,7 +7,7 @@ import {
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
   writeFileIfChanged,
-} from "../lib/og-image-checks.mjs";
+} from "../lib/og-image-checks.mts";
 
 const tempDirs: string[] = [];
 

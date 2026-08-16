@@ -5,7 +5,7 @@ import { isDirectRun } from "./smoke-runtime.mjs";
  * @param {string} title
  * @param {string[]} values
  */
-function appendListSection(lines, title, values) {
+function appendListSection(lines: string[], title: string, values: readonly string[]): void {
   lines.push(`${title}:`);
   if (values.length === 0) {
     lines.push("- none");
@@ -15,23 +15,19 @@ function appendListSection(lines, title, values) {
   lines.push("");
 }
 
-/**
- * @param {string[]} lines
- * @param {{
- *   title: string;
- *   detailLines?: string[];
- *   inputs: string[];
- *   notes: string[];
- *   parsedFileCounts: Array<[string, number]>;
- * }} options
- */
-export function appendGscReportPreamble(lines, {
+export function appendGscReportPreamble(lines: string[], {
   title,
   detailLines = [],
   inputs,
   notes,
   parsedFileCounts,
-}) {
+}: {
+  title: string;
+  detailLines?: readonly string[];
+  inputs: readonly string[];
+  notes: readonly string[];
+  parsedFileCounts: readonly (readonly [string, number])[];
+}): void {
   lines.push(title);
   lines.push("No live network checks were performed.");
   for (const detail of detailLines) lines.push(detail);
@@ -47,13 +43,7 @@ export function appendGscReportPreamble(lines, {
   lines.push("");
 }
 
-/**
- * @param {string} importMetaUrl
- * @param {string | undefined} argv1
- * @param {() => Promise<number>} runCli
- * @returns {boolean}
- */
-export function runAsyncDirect(importMetaUrl, argv1, runCli) {
+export function runAsyncDirect(importMetaUrl: string, argv1: string | undefined, runCli: () => Promise<number>): boolean {
   if (!isDirectRun(importMetaUrl, argv1)) return false;
 
   runCli().then(

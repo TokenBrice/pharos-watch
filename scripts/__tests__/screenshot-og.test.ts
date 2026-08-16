@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { getOgCaptureValidationError } from "../lib/og-capture-validation.mjs";
+import { getOgCaptureValidationError } from "../lib/og-capture-validation.mts";
 
 describe("OG screenshot capture", () => {
   it("accepts a successful Pharos application document", () => {

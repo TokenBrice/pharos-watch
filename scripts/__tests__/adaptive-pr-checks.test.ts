@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { selectLintableFiles } from "../ci/run-changed-eslint.ts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
-import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mjs";
+import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.ts";
 
 describe("adaptive PR checks", () => {

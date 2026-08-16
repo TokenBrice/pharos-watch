@@ -169,7 +169,7 @@ describe("hasDeployImpact", () => {
 
   it("deploys for deploy-classifier infrastructure but not validation-only tooling", () => {
     const deploySupportFiles = [
-      "scripts/lib/deploy-impact.mjs",
+      "scripts/lib/deploy-impact.mts",
       "scripts/lib/automation-registry.mjs",
       "scripts/ci/classify-deploy-changes.ts",
       ".github/workflows/deploy-cloudflare.yml",

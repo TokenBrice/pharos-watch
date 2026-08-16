@@ -2,7 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mjs";
+import { collectWorkerHttpProbes } from "../lib/worker-http-probes.mts";
 
 const DEFAULT_DATABASE = "stablecoin-db";
 const DEFAULT_API_URL = "https://api.pharos.watch";

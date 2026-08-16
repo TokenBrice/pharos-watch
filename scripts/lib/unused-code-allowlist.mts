@@ -19,10 +19,10 @@
  */
 
 /** Modules whose only importers are invisible to the static scan. */
-export const SCANNER_BLIND_SPOT_MODULES = {};
+export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {};
 
 /** Exports whose only consumers are invisible to the static scan. */
-export const SCANNER_BLIND_SPOT_EXPORTS = {
+export const SCANNER_BLIND_SPOT_EXPORTS: Record<string, string> = {
   "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST":
     "Generated artifact: the export name is emitted as text by generate-safety-score-v9-evaluation-build-manifest.ts, never imported.",
   "src/components/chart-primitives/data-table.tsx::ChartDataTable":
@@ -30,13 +30,13 @@ export const SCANNER_BLIND_SPOT_EXPORTS = {
 };
 
 /** Unreferenced modules kept on purpose; deletion is a separate pass. */
-export const DEBT_MODULES = {
+export const DEBT_MODULES: Record<string, string> = {
   "worker/src/test-helpers/telegram-transport-control-schema.ts":
     "Worker test-helper module left behind by the telegram transport work; no test imports it any more.",
 };
 
 /** Unreferenced exports kept on purpose; deletion is a separate pass. */
-export const DEBT_EXPORTS = {
+export const DEBT_EXPORTS: Record<string, string> = {
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITION_FIELDS":
     "Unreferenced: nothing in the scanned graph (src, shared, worker, functions, scripts, tests) imports it.",
   "shared/data/coverage-dispositions/oracle-risk-branch-dispositions.ts::ORACLE_RISK_BRANCH_DISPOSITIONS":

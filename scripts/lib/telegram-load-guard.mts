@@ -5,7 +5,14 @@
  */
 export const TELEGRAM_LOAD_ADVISORY_COMMAND = "npm run check:telegram-load";
 
-export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
+interface TelegramLoadGuardDependencyGroup {
+  id: string;
+  reason: string;
+  paths: string[];
+  examples: string[];
+}
+
+export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS: TelegramLoadGuardDependencyGroup[] = [
   {
     id: "guard-contract",
     reason: "load model, trigger registry, workflow, and their regression tests",
@@ -13,7 +20,7 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
       ".github/workflows/telegram-load.yml",
       "scripts/ci/check-telegram-load.ts",
       "scripts/lib/telegram-load-scenarios.ts",
-      "scripts/lib/telegram-load-guard.mjs",
+      "scripts/lib/telegram-load-guard.mts",
       "scripts/__tests__/check-telegram-load.test.ts",
     ],
     examples: ["scripts/ci/check-telegram-load.ts"],
@@ -94,22 +101,22 @@ export const TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS = [
   },
 ];
 
-export const TELEGRAM_LOAD_GUARD_PATHS = [
+export const TELEGRAM_LOAD_GUARD_PATHS: string[] = [
   ...new Set(TELEGRAM_LOAD_GUARD_DEPENDENCY_GROUPS.flatMap((group) => group.paths)),
 ];
 
-function normalizePath(path) {
+function normalizePath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "");
 }
 
-export function matchesTelegramLoadGuardPattern(path, pattern) {
+export function matchesTelegramLoadGuardPattern(path: string, pattern: string): boolean {
   const normalizedPath = normalizePath(path);
   const normalizedPattern = normalizePath(pattern);
-  const memo = new Map();
+  const memo = new Map<string, boolean>();
 
-  function match(pathIndex, patternIndex) {
+  function match(pathIndex: number, patternIndex: number): boolean {
     const memoKey = `${pathIndex}:${patternIndex}`;
-    if (memo.has(memoKey)) return memo.get(memoKey);
+    if (memo.has(memoKey)) return memo.get(memoKey) ?? false;
 
     let matched;
     if (patternIndex === normalizedPattern.length) {
@@ -138,10 +145,10 @@ export function matchesTelegramLoadGuardPattern(path, pattern) {
   return match(0, 0);
 }
 
-export function isTelegramLoadGuardDependency(path) {
+export function isTelegramLoadGuardDependency(path: string): boolean {
   return TELEGRAM_LOAD_GUARD_PATHS.some((pattern) => matchesTelegramLoadGuardPattern(path, pattern));
 }
 
-export function hasTelegramLoadGuardImpact(changedFiles) {
+export function hasTelegramLoadGuardImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some(isTelegramLoadGuardDependency);
 }

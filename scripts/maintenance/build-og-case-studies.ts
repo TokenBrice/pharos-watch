@@ -27,14 +27,14 @@ import {
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
-import { escapeXml } from "../lib/og-svg.mjs";
+import { escapeXml } from "../lib/og-svg.mts";
 import {
   assertNoStaleOgOutputs,
   formatOgWriteStatus,
   promoteGeneratedPngIfChanged,
   stalePngCheckLabel,
   writeFileIfChanged,
-} from "../lib/og-image-checks.mjs";
+} from "../lib/og-image-checks.mts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../..");

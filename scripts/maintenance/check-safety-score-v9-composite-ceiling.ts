@@ -6,45 +6,93 @@
 // canonical V9 composite-ceiling audit;
 // it needs a replay artifact, so it runs operator-side, not in CI.
 //
-// Usage: node scripts/maintenance/check-safety-score-v9-composite-ceiling.mjs --replay <replay.json>
+// Usage: node --import tsx scripts/maintenance/check-safety-score-v9-composite-ceiling.ts --replay <replay.json>
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+
+type PillarName = "backing" | "exit" | "control";
+
+interface Card {
+  id: string;
+  grade: string;
+  score: number | null;
+  caps?: Array<{ source?: string }>;
+  pillars?: Partial<Record<PillarName, { score?: number }>>;
+  bindingCap?: { kind?: string };
+}
+
+interface MeasuredCard extends Card {
+  score: number;
+}
+
+interface Formula {
+  pillarWeights: Record<PillarName, number>;
+  gradeThresholds: Array<{ grade: string; minScore: number }>;
+  controlCompensabilityHeadroom: number;
+  compensabilityHeadroom: number;
+}
+
+interface PolicyDocument {
+  policy?: { semantic?: { formula: Formula } };
+  semantic?: { formula: Formula };
+}
+
+interface RegistryCoin {
+  id: string;
+  mechanismArchetype?: string;
+}
+
+interface RegistryDocument {
+  coins?: RegistryCoin[];
+}
+
+interface ReplayDocument {
+  cards?: Card[];
+  candidate?: { cards?: Card[] };
+  pipeline?: { candidate?: { cards?: Card[] } };
+}
 
 const args = process.argv.slice(2);
 const replayFlag = args.indexOf("--replay");
 if (replayFlag === -1 || !args[replayFlag + 1]) {
-  console.error("Usage: check-safety-score-v9-composite-ceiling.mjs --replay <replay.json>");
+  console.error("Usage: node --import tsx scripts/maintenance/check-safety-score-v9-composite-ceiling.ts --replay <replay.json>");
   process.exit(2);
 }
 
 const root = resolve(new URL("../..", import.meta.url).pathname);
-const replay = JSON.parse(readFileSync(resolve(args[replayFlag + 1]), "utf8"));
+const replay = JSON.parse(readFileSync(resolve(args[replayFlag + 1]), "utf8")) as ReplayDocument;
 const policy = JSON.parse(
   readFileSync(resolve(root, "shared/data/safety-score-v9/methodology-policy-candidate-v1.json"), "utf8"),
-);
-const registry = JSON.parse(readFileSync(resolve(root, "shared/data/stablecoins/coins.generated.json"), "utf8"));
+ ) as PolicyDocument;
+const registry = JSON.parse(readFileSync(resolve(root, "shared/data/stablecoins/coins.generated.json"), "utf8")) as
+  | RegistryCoin[]
+  | RegistryDocument;
 
-const formula = (policy.policy?.semantic ?? policy.semantic).formula;
+const formula = (policy.policy?.semantic ?? policy.semantic)!.formula;
 const weights = formula.pillarWeights;
-const aPlus = formula.gradeThresholds.find((row) => row.grade === "A+").minScore;
-const cards = (replay.pipeline?.candidate ?? replay.candidate ?? replay).cards.filter(
-  (card) => card.grade !== "NR" && card.score !== null,
+const aPlus = formula.gradeThresholds.find((row) => row.grade === "A+")!.minScore;
+const replayCards = replay.pipeline?.candidate?.cards ?? replay.candidate?.cards ?? replay.cards;
+const cards: MeasuredCard[] = replayCards!.filter(
+  (card): card is MeasuredCard => card.grade !== "NR" && card.score !== null,
 );
 const archetypeById = new Map(
-  (Array.isArray(registry) ? registry : registry.coins ?? []).map((coin) => [coin.id, coin.mechanismArchetype]),
+  (Array.isArray(registry) ? registry : registry.coins ?? []).map((coin): [string, string | undefined] => [
+    coin.id,
+    coin.mechanismArchetype,
+  ]),
 );
 
 const ISSUER_ARCHETYPES = new Set(["fiat-cash", "tbill"]);
-const isWrapper = (card) => (card.caps ?? []).some((cap) => cap.source === "parent");
+const isWrapper = (card: Card): boolean => (card.caps ?? []).some((cap) => cap.source === "parent");
 
-const VARIANTS = [
+const VARIANTS: Array<{ name: string; filter: (card: MeasuredCard) => boolean }> = [
   { name: "unrestricted", filter: () => true },
   { name: "non-wrapper", filter: (card) => !isWrapper(card) },
-  { name: "issuer-class", filter: (card) => ISSUER_ARCHETYPES.has(archetypeById.get(card.id)) && !isWrapper(card) },
+  { name: "issuer-class", filter: (card) => ISSUER_ARCHETYPES.has(archetypeById.get(card.id) ?? "") && !isWrapper(card) },
 ];
 
-function bestPillar(pool, pillar) {
-  let best = null;
+function bestPillar(pool: readonly MeasuredCard[], pillar: PillarName): { id: string; score: number } | null {
+  let best: { id: string; score: number } | null = null;
   for (const card of pool) {
     const score = card.pillars?.[pillar]?.score;
     if (typeof score === "number" && (best === null || score > best.score)) best = { id: card.id, score };

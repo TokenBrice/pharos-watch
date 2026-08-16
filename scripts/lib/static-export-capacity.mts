@@ -1,27 +1,39 @@
 const ROUTE_FAMILY_MATCHERS = [
   {
     family: "stablecoin-yield",
-    match: (path) => /^stablecoin\/([^/]+)\/yield\//.exec(path),
+    match: (path: string) => /^stablecoin\/([^/]+)\/yield\//.exec(path),
   },
   {
     family: "stablecoin-detail",
-    match: (path) => /^stablecoin\/([^/]+)\/[^/]+$/.exec(path),
+    match: (path: string) => /^stablecoin\/([^/]+)\/[^/]+$/.exec(path),
   },
   {
     family: "depeg-event",
-    match: (path) => /^depeg\/([^/]+)\//.exec(path),
+    match: (path: string) => /^depeg\/([^/]+)\//.exec(path),
   },
   {
     family: "digest-detail",
-    match: (path) => /^digest\/([^/]+)\//.exec(path),
+    match: (path: string) => /^digest\/([^/]+)\//.exec(path),
   },
-];
+] as const;
 
-function normalizeOutPath(path) {
+type RouteFamily = (typeof ROUTE_FAMILY_MATCHERS)[number]["family"];
+
+interface StaticRouteFile {
+  rel: string;
+  size: number;
+}
+
+interface ClassifiedRoute {
+  family: RouteFamily;
+  routeKey: string;
+}
+
+function normalizeOutPath(path: string): string {
   return path.replaceAll("\\", "/").replace(/^\.\//, "").replace(/^out\//, "");
 }
 
-export function classifyStaticRouteFile(path) {
+export function classifyStaticRouteFile(path: string): ClassifiedRoute | null {
   const normalized = normalizeOutPath(path);
   for (const matcher of ROUTE_FAMILY_MATCHERS) {
     const match = matcher.match(normalized);
@@ -30,8 +42,20 @@ export function classifyStaticRouteFile(path) {
   return null;
 }
 
-export function summarizeStaticRouteFamilies(files) {
-  const groups = new Map();
+export function summarizeStaticRouteFamilies(files: readonly StaticRouteFile[]): Array<{
+  family: RouteFamily;
+  routeCount: number;
+  fileCount: number;
+  totalBytes: number;
+  averageFilesPerRoute: number;
+  averageBytesPerRoute: number;
+}> {
+  const groups = new Map<RouteFamily, {
+    family: RouteFamily;
+    routeKeys: Set<string>;
+    fileCount: number;
+    totalBytes: number;
+  }>();
   for (const file of files) {
     const classified = classifyStaticRouteFile(file.rel);
     if (!classified) continue;
@@ -64,7 +88,19 @@ export function projectStaticRouteCapacity({
   fileLimit,
   minimumHeadroomRatio,
   averageFilesPerRoute,
-}) {
+}: {
+  totalFiles: number;
+  fileLimit: number;
+  minimumHeadroomRatio: number;
+  averageFilesPerRoute: number;
+}): {
+  fileHeadroom: number;
+  headroomRatio: number;
+  targetMaximumFiles: number;
+  filesUntilHeadroomFloor: number;
+  routesUntilHardLimit: number;
+  routesUntilHeadroomFloor: number;
+} {
   const fileHeadroom = Math.max(0, fileLimit - totalFiles);
   const headroomRatio = fileLimit > 0 ? fileHeadroom / fileLimit : 0;
   const targetMaximumFiles = Math.floor(fileLimit * (1 - minimumHeadroomRatio));
@@ -85,7 +121,7 @@ export function projectStaticRouteCapacity({
   };
 }
 
-export function countDocumentsReferencingChunks(documents, chunkNames) {
+export function countDocumentsReferencingChunks(documents: readonly string[], chunkNames: readonly string[]): number {
   const names = [...new Set(chunkNames)].filter(Boolean);
   if (names.length === 0) return 0;
 

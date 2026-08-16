@@ -1,4 +1,4 @@
-export function formatBytes(bytes) {
+export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   const units = ["KiB", "MiB", "GiB"];
   let value = bytes / 1024;

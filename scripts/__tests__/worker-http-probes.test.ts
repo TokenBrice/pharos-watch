@@ -5,7 +5,7 @@ import {
   accessHeaders,
   collectWorkerHttpProbes,
   fetchJsonProbe,
-} from "../lib/worker-http-probes.mjs";
+} from "../lib/worker-http-probes.mts";
 
 const args = {
   apiUrl: "https://api.example.test",
