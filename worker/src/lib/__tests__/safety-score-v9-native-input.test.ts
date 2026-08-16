@@ -12,6 +12,7 @@ import {
   normalizeNativeV9Input,
   parseNativeV9InputCacheArtifact,
   parseNativeV9InputCacheValue,
+  parseSafetyScoreV9InputCacheValue,
   type NativeSafetyScoreV9Input,
 } from "../safety-score-v9-native-input";
 import {
@@ -104,6 +105,7 @@ describe("native Safety Score V9 input", () => {
     expect(artifact.safetyScoreIdentity).toEqual(identity);
     expect(artifact.input).toEqual(input);
     expect(await parseNativeV9InputCacheValue(entry.value)).toEqual(input);
+    expect(await parseSafetyScoreV9InputCacheValue(entry.value)).toEqual(input);
 
     // The stored checksum must actually gate the payload.
     const tampered = JSON.stringify({ ...envelope, payloadSha256: "f".repeat(64) });
@@ -164,6 +166,37 @@ describe("native Safety Score V9 input", () => {
         }),
       ),
     ).toThrow(/Malformed native V9 input/);
+  });
+
+  it("inherits the canonical DEX observation-coverage count guard", () => {
+    const dexLiqMap = {
+      "usdc-circle": {
+        updatedAt: DEX_UPDATED_AT,
+        exitRouteObservations: [],
+        exitRouteObservationCoverage: {
+          status: "populated",
+          capabilityMatrixVersion: "fixture-v1",
+          retainedPoolCount: 1,
+          observationCount: 1,
+          scoreEligibleObservationCount: 0,
+          unsupportedPoolCount: 0,
+          evidenceCounts: {},
+          unsupportedReasons: {},
+        },
+      },
+      "usdt-tether": { updatedAt: DEX_UPDATED_AT },
+    };
+    expect(() =>
+      normalizeNativeV9Input(
+        nativeDraft({
+          dexLiqMap,
+          dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(
+            dexLiqMap,
+            `dex-liquidity-${DEX_UPDATED_AT}`,
+          ),
+        }),
+      ),
+    ).toThrow(/coverage observation count does not match DEX observations/);
   });
 
   it("derives one generation id per payload regardless of field order", () => {
@@ -255,6 +288,7 @@ describe("native Safety Score V9 input", () => {
     const parsed = await parseReportCardsFixedInputCacheValue(entry.value);
     expect(parsed.schemaVersion).toBe(3);
     expect(parsed.baseInputGenerationId).toMatch(/^report-cards-input:v1:[a-f0-9]{64}$/);
+    await expect(parseSafetyScoreV9InputCacheValue(entry.value)).resolves.toEqual(legacy);
   });
   describe("fail-closed consistency guards", () => {
     // The native capture is the deterministic-replay contract's payload: every

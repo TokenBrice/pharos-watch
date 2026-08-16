@@ -1,23 +1,17 @@
 import operationalResilienceOverlaysAsset from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  CanonicalTextSchema,
+  StrictIsoDateSchema,
+} from "@shared/types/safety-schema-primitives";
 import { z } from "zod";
 
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
 const CanonicalKeySchema = CanonicalTextSchema.refine(
   (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
   "Value must be a canonical lowercase identifier",
 );
-const IsoDateSchema = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/)
-  .refine((value) => {
-    const parsed = new Date(`${value}T00:00:00.000Z`);
-    return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
-  }, "Value must be a valid ISO calendar date");
+const IsoDateSchema = StrictIsoDateSchema;
 const UtcTimestampSchema = z
   .string()
   .datetime({ offset: true })
