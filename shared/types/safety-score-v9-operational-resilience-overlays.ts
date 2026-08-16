@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CanonicalTextSchema, StrictIsoDateSchema } from "@shared/lib/safety-schema-primitives";
+import { CanonicalTextSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
 
 const CanonicalKeySchema = CanonicalTextSchema.refine(
   (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),

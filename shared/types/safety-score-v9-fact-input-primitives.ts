@@ -5,7 +5,7 @@ import {
   FractionSchema,
   Sha256Schema,
   UnixSecondsSchema,
-} from "@shared/lib/safety-schema-primitives";
+} from "./safety-schema-primitives";
 import { canonicalArrayBy, V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
 
 export {

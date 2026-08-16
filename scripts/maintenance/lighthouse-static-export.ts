@@ -163,9 +163,12 @@ async function waitForReady(url: string): Promise<void> {
   throw new Error(`Static export server did not become ready at ${url}`);
 }
 
-/** @param {Readonly<Record<string, string | undefined>>} [sourceEnv] */
-export function createLighthouseChildEnv(sourceEnv = process.env) {
-  const env: NodeJS.ProcessEnv = {};
+export function createLighthouseChildEnv(
+  sourceEnv: Readonly<Record<string, string | undefined>> = process.env,
+): Record<string, string> {
+  // Not `NodeJS.ProcessEnv`: Next's type augmentation makes NODE_ENV required,
+  // and this is a deliberately empty allowlist-filtered env for a child process.
+  const env: Record<string, string> = {};
   for (const key of LIGHTHOUSE_CHILD_ENV_ALLOWLIST) {
     const value = sourceEnv[key];
     if (value) env[key] = value;
@@ -176,7 +179,10 @@ export function createLighthouseChildEnv(sourceEnv = process.env) {
 function runCommand(command: string, args: string[]): Promise<number> {
   return new Promise<number>((resolve) => {
     const child = spawn(command, args, {
-      env: createLighthouseChildEnv(),
+      // Next augments the global `NodeJS.ProcessEnv` to require NODE_ENV, which no
+      // allowlist-filtered child env can satisfy — and NODE_ENV is deliberately not
+      // in LIGHTHOUSE_CHILD_ENV_ALLOWLIST. Narrow cast at the boundary only.
+      env: createLighthouseChildEnv() as NodeJS.ProcessEnv,
       stdio: "inherit",
     });
     child.on("close", (code) => resolve(code ?? 1));

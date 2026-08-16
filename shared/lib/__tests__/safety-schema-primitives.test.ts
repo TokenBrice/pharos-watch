@@ -7,7 +7,7 @@ import {
   Sha256Schema,
   StrictIsoDateSchema,
   UnixSecondsSchema,
-} from "../safety-schema-primitives";
+} from "@shared/types/safety-schema-primitives";
 
 const SHA256 = "a".repeat(64);
 
