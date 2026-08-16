@@ -10,6 +10,7 @@ import type { CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { CHAIN_META } from "@shared/lib/chains";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress, formatCurrency, formatDeathDate } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 interface StablecoinCemeteryProps {
   coins: CemeteryEntry[];
@@ -195,7 +196,7 @@ const CemeteryObituaryRow = memo(function CemeteryObituaryRow({
               </a>
               {coin.archivedDataAvailable ? (
                 <Link
-                  href={`/stablecoin/${coin.id}/`}
+                  href={buildStablecoinUrl(coin.id)}
                   className="pharos-focus-ring text-xs text-muted-foreground underline-offset-2 hover:underline hover:text-foreground transition-colors"
                 >
                   View archived data →

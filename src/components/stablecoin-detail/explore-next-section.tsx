@@ -21,7 +21,7 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { PEG_SLUGS } from "@/lib/peg-landing";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 
 interface StaticComparisonEntry {

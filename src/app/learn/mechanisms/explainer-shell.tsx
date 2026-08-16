@@ -8,9 +8,9 @@ import {
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
-import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
@@ -22,7 +22,7 @@ import {
   SectionHeading,
   SectionKicker,
 } from "../_shared/section-primitives";
-import type { ArchetypeContent, ArchetypeDecommissioned } from "./content";
+import type { ArchetypeContent, ArchetypeDecommissioned } from "@/lib/mechanism-explainers";
 
 const DEAD_LOGO_BY_ID = new Map(
   DEAD_STABLECOINS.map((d) => [

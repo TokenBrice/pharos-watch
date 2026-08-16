@@ -118,7 +118,7 @@ describe("feed routes smoke", () => {
       startedAt: number;
       peakDeviationBps: number;
     }>;
-    const { selectStaticDepegEventPages } = await import("../../depeg/[event]/config");
+    const { selectStaticDepegEventPages } = await import("@/lib/depeg-event-config");
     const newest = selectStaticDepegEventPages(seeded)[0];
     expect(newest).toBeDefined();
     expect(xml).toContain("<item>");

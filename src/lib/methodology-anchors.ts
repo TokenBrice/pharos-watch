@@ -1,7 +1,7 @@
 /**
  * Stable methodology deep-links for inline `(method)` badges next to scored
  * values. Anchors are verified against the IDs in
- * `src/app/methodology/sections/methodology-content.ts`. Metrics without a
+ * `src/lib/methodology-content.ts`. Metrics without a
  * dedicated section anchor to the closest parent (e.g. report-card / bluechip /
  * redemption-backstop all live within Safety Scores).
  */

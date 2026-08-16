@@ -8,7 +8,7 @@ import {
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
-import { REDEMPTION_BACKSTOP_SECTION_CONTENT } from "../methodology-content";
+import { REDEMPTION_BACKSTOP_SECTION_CONTENT } from "@/lib/methodology-content";
 
 export function RedemptionBackstopMethodologySection() {
   const weights = EXIT_ROUTE_SCORING_TABLES.componentWeights;

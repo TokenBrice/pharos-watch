@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { logosById } from "@/lib/logos";
 import { SectionHeading, SectionKicker } from "./section-primitives";
 

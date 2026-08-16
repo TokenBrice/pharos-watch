@@ -8,7 +8,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { BLACKLIST_SECTION_CONTENT } from "../methodology-content";
+import { BLACKLIST_SECTION_CONTENT } from "@/lib/methodology-content";
 export function BlacklistTrackerMethodologySection() {
   return (
           <MethodologySectionShell

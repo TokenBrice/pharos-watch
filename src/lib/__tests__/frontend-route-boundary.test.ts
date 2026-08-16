@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -25,5 +25,33 @@ describe("frontend route boundary", () => {
       .map((path) => path.replace(`${ROOT}/`, ""));
 
     expect(violations).toEqual([]);
+  });
+
+  it("keeps script-consumed content registries outside route modules", () => {
+    for (const directory of [
+      "src/app/learn/case-studies/content",
+      "src/app/learn/mechanisms/content",
+    ]) {
+      const absoluteDirectory = join(ROOT, directory);
+      const routeOwnedModules = existsSync(absoluteDirectory)
+        ? readdirSync(absoluteDirectory)
+            .filter((file) => file.endsWith(".ts") && file !== "index.ts")
+            .sort()
+        : [];
+      expect(routeOwnedModules).toEqual([]);
+    }
+
+    const compatibilityEntrypoints = new Map([
+      ["src/app/learn/case-studies/content/index.ts", 'export * from "@/lib/case-studies";'],
+      ["src/app/learn/glossary/content.ts", 'export * from "@/lib/glossary-content";'],
+      ["src/app/learn/mechanisms/content/index.ts", 'export * from "@/lib/mechanism-explainers";'],
+      ["src/app/methodology/sections/methodology-content.ts", 'export * from "@/lib/methodology-content";'],
+    ]);
+    for (const [path, reexport] of compatibilityEntrypoints) {
+      const absolutePath = join(ROOT, path);
+      if (existsSync(absolutePath)) {
+        expect(readFileSync(absolutePath, "utf8")).toContain(reexport);
+      }
+    }
   });
 });

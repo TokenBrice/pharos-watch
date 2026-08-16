@@ -8,7 +8,7 @@ import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useYieldRankings } from "@/hooks/api-hooks";
 import { useLogos } from "@/hooks/use-logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatPercent, formatScore } from "@shared/lib/format";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
 import type { ReportCardGrade, YieldRanking } from "@shared/types";

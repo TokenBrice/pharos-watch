@@ -7,7 +7,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { MINT_AUTHORITY_SCORE_SECTION_CONTENT } from "../methodology-content";
+import { MINT_AUTHORITY_SCORE_SECTION_CONTENT } from "@/lib/methodology-content";
 
 const SIGNAL_COLUMNS = [
   { id: "signal", header: "Signal", rowHeader: true },

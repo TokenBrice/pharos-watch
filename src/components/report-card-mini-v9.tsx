@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CompareRadarV9 } from "@/components/radar-chart-v9";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type {
   SafetyScorePublicationIdentity,

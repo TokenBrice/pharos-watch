@@ -5,7 +5,7 @@ import { CLIENT_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stabl
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { PegCurrency, StablecoinData } from "@shared/types";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 const OTHER_PEGS = new Set<PegCurrency>(["VAR", "OTHER"]);
 

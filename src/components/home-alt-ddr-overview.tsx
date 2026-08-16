@@ -7,7 +7,7 @@ import { ShieldCheck, SquareArrowRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useLogos } from "@/hooks/use-logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";

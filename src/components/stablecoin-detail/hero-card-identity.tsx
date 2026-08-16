@@ -31,7 +31,7 @@ import {
   buildBackingTaxonomyUrl,
   buildGovernanceTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useLogos } from "@/hooks/use-logos";
 import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { VerdictPill } from "@/components/stablecoin-detail/verdict-pill";

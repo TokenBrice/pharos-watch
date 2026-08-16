@@ -2,7 +2,7 @@ import Link from "next/link";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { CoverageRow } from "@/lib/coverage";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 interface CoverageCoinIdentityProps {
   row: CoverageRow;

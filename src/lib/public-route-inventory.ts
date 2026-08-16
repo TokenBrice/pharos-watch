@@ -11,7 +11,7 @@ import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import { DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export type PublicRouteKind =
   | "primary"

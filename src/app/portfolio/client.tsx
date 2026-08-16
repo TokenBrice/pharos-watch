@@ -23,7 +23,7 @@ import { buildV9PortfolioProjection } from "@/lib/safety-score-v9-consumers";
 import { Card, CardContent } from "@/components/ui/card";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 // ---------------------------------------------------------------------------
 // PortfolioClient

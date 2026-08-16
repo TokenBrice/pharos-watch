@@ -13,12 +13,12 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { cn } from "@/lib/utils";
 import { LearnPageShell } from "./_shared/learn-page-shell";
 import { CrossLinksFooter } from "./_shared/section-primitives";
-import { ARCHETYPE_VISUALS } from "./mechanisms/content/types";
-import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "./case-studies/content";
-import { content as usdcSvb2023 } from "./case-studies/content/usdc-svb-2023";
-import { content as terraUst2022 } from "./case-studies/content/terra-ust-2022";
-import { content as usd0ppUsual2025 } from "./case-studies/content/usd0pp-usual-2025";
-import type { CaseStudyOutcome } from "./case-studies/content/types";
+import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
+import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
+import { content as usdcSvb2023 } from "@/lib/case-studies/usdc-svb-2023";
+import { content as terraUst2022 } from "@/lib/case-studies/terra-ust-2022";
+import { content as usd0ppUsual2025 } from "@/lib/case-studies/usd0pp-usual-2025";
+import type { CaseStudyOutcome } from "@/lib/case-studies/types";
 import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,

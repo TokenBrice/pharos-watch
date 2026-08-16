@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
@@ -450,7 +450,7 @@ function DisclosureRowFrame({
           {detail.yieldTypeLabel}
         </Badge>
         <Link
-          href={`${buildStablecoinUrl(detail.id)}yield/`}
+          href={buildStablecoinUrl(detail.id, "yield/")}
           className="pharos-focus-ring rounded-sm text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           {detail.symbol}

@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 
-import { ARCHETYPE_CONTENT } from "@/app/learn/mechanisms/content";
+import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");

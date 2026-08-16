@@ -6,7 +6,7 @@ import { HomeAltHero } from "@/components/home-alt-hero";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { logosById } from "@/lib/logos";
 import { getHomepageHeroSnapshot } from "@/lib/homepage-static-snapshot";
 import {

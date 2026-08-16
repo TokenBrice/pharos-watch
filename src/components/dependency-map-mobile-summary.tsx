@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatCurrency } from "@shared/lib/format";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 interface DependencyMapMobileSummaryProps {

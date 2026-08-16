@@ -5,8 +5,8 @@ import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { MechanismArchetype } from "@shared/types";
 import { cn } from "@/lib/utils";
-import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
-import type { CaseStudyOutcome } from "./content/types";
+import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
+import type { CaseStudyOutcome } from "@/lib/case-studies/types";
 import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,

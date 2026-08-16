@@ -6,7 +6,7 @@ import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { STATIC_COMPARE_PAIRS, buildLiveCompareUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export { STATIC_COMPARE_PAIRS };
 

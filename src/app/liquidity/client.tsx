@@ -16,7 +16,7 @@ import { StablecoinLogo } from "@/components/stablecoin-logo";
 import type { PegCurrency } from "@shared/types";
 import { useUrlSearchSync } from "@/hooks/use-url-search-sync";
 import { trackEvent } from "@/lib/analytics";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   PEG_FILTERS,
   buildLiquidityViewModel,

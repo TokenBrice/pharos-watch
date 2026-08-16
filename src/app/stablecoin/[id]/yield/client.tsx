@@ -22,7 +22,7 @@ import {
 } from "@/lib/yield-constants";
 import { buildYieldSourceExplorerModel } from "@/lib/yield-source-explorer-model";
 import type { YieldSourceRiskDriver } from "@/lib/yield-source-risk";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
 import { classifyApyChange } from "@/lib/yield-change-attribution";

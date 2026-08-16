@@ -8,7 +8,7 @@ import {
   GOVERNANCE_LABELS_SHORT,
   PEG_LABELS_SHORT,
 } from "@shared/lib/classification";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
 import {

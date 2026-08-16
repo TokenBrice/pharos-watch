@@ -2,7 +2,7 @@ import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 type TaxonomyShellCoin = {

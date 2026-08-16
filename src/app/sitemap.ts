@@ -2,11 +2,11 @@ import type { MetadataRoute } from "next";
 import { getActiveChainIds } from "@shared/lib/chains";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { ACTIVE_PEGS, PEG_SLUGS } from "@/lib/peg-landing";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 import {

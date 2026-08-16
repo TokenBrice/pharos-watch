@@ -20,7 +20,7 @@ import {
   TableSkeletonRows,
   type TableSkeletonColumn,
 } from "@/components/table";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { HOMEPAGE_TOP_CORE_STABLECOINS } from "@/lib/stablecoin-static-data";
 
 function MiniCardGridFallback() {

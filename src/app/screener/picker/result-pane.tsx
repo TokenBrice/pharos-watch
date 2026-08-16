@@ -38,6 +38,7 @@ import {
 import type { UseSelectorResult } from "./use-selector";
 import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
 import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export interface ResultPaneProps {
   selectorResult: UseSelectorResult;
@@ -275,7 +276,7 @@ export function ResultPane({
             ) as SelectorRecommendation;
             const sourceKey = rec.profile === "yield" ? rec.recommendedSource?.sourceKey : null;
             const yieldSourceUrl = sourceKey ? (yieldSourceUrls.get(`${rec.id}::${sourceKey}`) ?? null) : null;
-            const yieldInspectionHref = rec.profile === "yield" ? `/stablecoin/${rec.id}/yield/` : null;
+            const yieldInspectionHref = rec.profile === "yield" ? buildStablecoinUrl(rec.id, "yield/") : null;
             return (
               <SelectorShortlistCard
                 key={rec.id}

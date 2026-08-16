@@ -5,7 +5,7 @@ import { TRACKED_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { logosById } from "@/lib/logos";
 import { buildStablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import YieldAnalysisClient from "./client";
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return buildPageMetadata({
     title: `${coin.name} (${coin.symbol}): Yield Analysis`,
     description: `Per-source APY history, warning signals timeline, and source-switch history for ${coin.name} (${coin.symbol}).`,
-    canonical: `${buildStablecoinUrl(coin.id)}yield/`,
+    canonical: buildStablecoinUrl(coin.id, "yield/"),
     robots: { index: false, follow: true },
   });
 }

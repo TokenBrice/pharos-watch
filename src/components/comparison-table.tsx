@@ -37,7 +37,7 @@ import {
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 interface ComparisonTableProps {

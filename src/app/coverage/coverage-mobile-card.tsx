@@ -7,7 +7,7 @@ import {
   COVERAGE_FEATURES,
 } from "@/lib/coverage";
 import { MOBILE_PREVIEW_FEATURES } from "@/lib/coverage-page-config";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CoverageBadge } from "./coverage-badge";
 import { CoverageCoinIdentity } from "./coverage-coin-identity";
 

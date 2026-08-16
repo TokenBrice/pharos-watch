@@ -32,7 +32,7 @@ import {
   type YieldViewModel,
   type YieldViewModelRow,
 } from "@/lib/yield-view-model";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildYieldStoryCallouts } from "@/lib/yield-story-callouts";
 import { trackEvent } from "@/lib/analytics";
 import { formatCurrency, formatPercent } from "@shared/lib/format";

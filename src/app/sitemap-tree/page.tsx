@@ -16,6 +16,7 @@ import {
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 
 // WHY: human-readable sitemap-as-content companion to `/sitemap.xml`.
@@ -192,7 +193,7 @@ const LEARN_GROUP = NAV_GROUPS.find((g) => g.key === "learn");
 const REFERENCE_GROUP = NAV_GROUPS.find((g) => g.key === "reference");
 
 const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((coin) => ({
-  href: `/stablecoin/${coin.id}/`,
+  href: buildStablecoinUrl(coin.id),
   label: `${coin.name} (${coin.symbol})`,
   description:
     coin.status === "pre-launch"

@@ -1,7 +1,3 @@
-/**
- * Build the canonical URL path for a stablecoin detail page.
- * Encodes the ID to handle future ticker-issuer format safely.
- */
-export function buildStablecoinUrl(id: string): string {
-  return "/stablecoin/" + encodeURIComponent(id) + "/";
-}
+// Compatibility entrypoint for downstream consumers outside the frontend.
+// New code should import the runtime-neutral owner from @shared/lib/urls.
+export { buildStablecoinUrl } from "@shared/lib/urls";

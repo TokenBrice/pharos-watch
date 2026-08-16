@@ -6,7 +6,7 @@ import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps } from "@shared/lib/format";
@@ -40,7 +40,7 @@ import {
   formatEventUtcTime,
 } from "@/lib/depeg-event-display";
 import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
-import { CASE_STUDY_BY_DEPEG_SLUG } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_BY_DEPEG_SLUG } from "@/lib/case-studies";
 
 export function generateStaticParams() {
   return DEPEG_EVENT_ENTRIES.map((event) => ({ event: event.slug }));

@@ -12,7 +12,7 @@ import {
 } from "@/components/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCurrency } from "@shared/lib/format";
 import type { DependencyHub, DependencyHubsModel } from "@/lib/dependency-hubs-model";
 

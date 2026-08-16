@@ -5,8 +5,9 @@ import {
   getMechanismExplainerPath,
 } from "@shared/lib/classification";
 import { formatUtcDayLabel, slugifyId } from "@shared/lib/format";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
-import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
+import { ARCHETYPE_VISUALS } from "@/lib/mechanism-explainers/types";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
 import {
   CrossLinksFooter,
@@ -23,8 +24,8 @@ import {
 import { CaseStudyShare } from "./case-study-share";
 import { CaseStudyTimeline } from "./case-study-timeline";
 import { estimateCaseStudyReadingMinutes } from "./case-study-reading-time";
-import { CASE_STUDY_LIST } from "./content";
-import type { CaseStudy } from "./content/types";
+import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import type { CaseStudy } from "@/lib/case-studies/types";
 
 /** slug -> position in CASE_STUDY_LIST, built once so neighbour math avoids repeated O(n) scans. */
 const CASE_STUDY_INDEX_BY_SLUG = new Map(CASE_STUDY_LIST.map((study, index) => [study.slug, index]));
@@ -305,7 +306,7 @@ function EvidenceSnapshot({ study }: { study: CaseStudy }) {
     : formatEventWindowDate(study.eventWindow.startISO);
   const recordLinks = [
     ...(study.primaryCoinId
-      ? [{ href: `/stablecoin/${study.primaryCoinId}/`, label: "Stablecoin profile" }]
+      ? [{ href: buildStablecoinUrl(study.primaryCoinId), label: "Stablecoin profile" }]
       : []),
     ...(study.cemeteryId ? [{ href: "/cemetery/", label: "Cemetery record" }] : []),
     ...(study.depegEventSlug ? [{ href: "/depeg/", label: "Depeg tracker" }] : []),

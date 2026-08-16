@@ -10,7 +10,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { CHAIN_HEALTH_SECTION_CONTENT } from "../methodology-content";
+import { CHAIN_HEALTH_SECTION_CONTENT } from "@/lib/methodology-content";
 export function ChainHealthMethodologySection() {
   return (
     <MethodologySectionShell

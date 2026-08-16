@@ -5,7 +5,7 @@ import Link from "next/link";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import { useLogos } from "@/hooks/use-logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { CollateralUsageEntry } from "@/lib/collateral-usage-model";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
 

@@ -1,5 +1,6 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 /**
  * Escapes JSON-LD strings for safe embedding inside <script type="application/ld+json">.
@@ -104,7 +105,7 @@ export function buildStablecoinItemListEntries<T extends StablecoinItemListEntry
   coins: readonly T[],
   {
     schemaType = "WebPage",
-    resolveUrl = (coin) => `${SITE_URL}/stablecoin/${encodeURIComponent(coin.id)}/`,
+    resolveUrl = (coin) => `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
     resolveId = (_coin, url) => url,
     resolveImage,
     resolveDescription,

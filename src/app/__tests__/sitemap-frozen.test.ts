@@ -7,9 +7,9 @@ import sitemapDates from "@/generated/sitemap-dates.json";
 import docsMetadata from "@/generated/docs-metadata.json";
 import { changelogs } from "@/data/changelogs";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
-import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "@/lib/case-studies";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
 import {

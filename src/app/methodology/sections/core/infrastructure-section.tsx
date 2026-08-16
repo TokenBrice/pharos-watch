@@ -4,7 +4,7 @@ import {
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
-import { INFRASTRUCTURE_SECTION_CONTENT } from "../methodology-content";
+import { INFRASTRUCTURE_SECTION_CONTENT } from "@/lib/methodology-content";
 export function InfrastructureMethodologySection() {
   return (
     <MethodologySectionShell

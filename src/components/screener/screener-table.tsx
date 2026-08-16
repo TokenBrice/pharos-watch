@@ -20,7 +20,7 @@ import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
 import { RowSparkline } from "@/components/row-sparkline";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { MINT_AUTHORITY_STATUS_CONFIG } from "@/lib/mint-authority-display";
 import { PEG_METADATA, getMechanismArchetypeLabel } from "@shared/lib/classification";

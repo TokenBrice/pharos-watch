@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useNearViewport } from "@/hooks/use-near-viewport";
-import type { CaseStudySeverity, CaseStudyTimelineEntry } from "./content/types";
+import type { CaseStudySeverity, CaseStudyTimelineEntry } from "@/lib/case-studies/types";
 import { formatUtcDayLabel } from "@shared/lib/format";
 
 // Desktop track geometry — keep in sync with `auto-cols-[15.375rem]` (the dot

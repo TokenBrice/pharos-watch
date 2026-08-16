@@ -3,7 +3,7 @@
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
 import { QueryErrorNotice } from "@/components/query-error-notice";
-import type { CaseStudyDataWidget } from "./content/types";
+import type { CaseStudyDataWidget } from "@/lib/case-studies/types";
 
 const CASE_STUDY_CHART_DAYS = 1825;
 const CASE_STUDY_CHART_STALE_TIME_MS = 30 * 24 * 60 * 60 * 1000;

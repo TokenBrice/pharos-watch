@@ -7,7 +7,7 @@ import {
   CASE_STUDY_OUTCOME_COUNTS,
   CASE_STUDIES,
   caseStudySlugForEvent,
-} from "../content";
+} from "@/lib/case-studies";
 import {
   CASE_STUDY_CLIENT_BY_CEMETERY_ID,
   CASE_STUDY_CLIENT_BY_COIN_ID,
@@ -15,11 +15,11 @@ import {
   caseStudySlugForEvent as clientCaseStudySlugForEvent,
 } from "@/lib/case-study-client-index";
 import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "@/lib/case-study-event-window";
-import type { CaseStudy } from "../content/types";
+import type { CaseStudy } from "@/lib/case-studies/types";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
-const CONTENT_DIR = join(process.cwd(), "src/app/learn/case-studies/content");
+const CONTENT_DIR = join(process.cwd(), "src/lib/case-studies");
 const KNOWN_INTERNAL_ROUTES = new Set([
   "/about/",
   "/api/",

@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChainStablecoin } from "@/hooks/use-chains";
 import { trendColor } from "@/lib/chain-ui";
 import { logosById } from "@/lib/logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 
 export function StablecoinTable({

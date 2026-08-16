@@ -21,7 +21,7 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { SafetyScoreV9StatusNotice } from "@/components/safety-score-v9-status-notice";
 import { CompareEmptyState } from "@/components/compare-empty-state";
 import type { CompareRadarCohort } from "@/components/radar-chart-v9";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHART_PALETTE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
 import {

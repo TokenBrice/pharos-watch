@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { YIELD_TYPE_LABELS, YIELD_TYPE_STYLES } from "@shared/lib/classification";
 import { CLIENT_ACTIVE_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import type { YieldType } from "@shared/types";
@@ -121,7 +121,7 @@ export function YieldCoinIndex() {
                 {group.coins.map((coin) => (
                   <li key={coin.id}>
                     <Link
-                      href={`${buildStablecoinUrl(coin.id)}yield/`}
+                      href={buildStablecoinUrl(coin.id, "yield/")}
                       className="pharos-focus-ring rounded-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                     >
                       {coin.symbol}

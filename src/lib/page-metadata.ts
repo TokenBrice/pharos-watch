@@ -19,7 +19,7 @@ import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { DIGEST_DATES } from "@/lib/digest-registry";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 interface BuildPageMetadataInput {
   title: string;

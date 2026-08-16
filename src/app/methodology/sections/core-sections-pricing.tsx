@@ -17,7 +17,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../methodology-shared";
-import { PRICING_PIPELINE_SECTION_CONTENT } from "./methodology-content";
+import { PRICING_PIPELINE_SECTION_CONTENT } from "@/lib/methodology-content";
 export function PricingPipelineMethodologySection() {
   return (
     <MethodologySectionShell

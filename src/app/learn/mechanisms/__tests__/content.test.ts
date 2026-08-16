@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { MECHANISM_ARCHETYPE_LABELS, MECHANISM_ARCHETYPE_ONE_LINERS } from "@shared/lib/classification";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
-import { ARCHETYPE_CONTENT } from "@/app/learn/mechanisms/content";
+import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 
 describe("mechanism explainer content", () => {
   it("fully wires editorial content and representative coins for every archetype", () => {

@@ -10,7 +10,7 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
 import { MECHANISM_EXPLAINER_TITLES } from "@/lib/mechanism-explainer-registry";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
-import { ARCHETYPE_CONTENT } from "../content";
+import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 import { ArchetypeExplainerBody } from "../explainer-shell";
 
 const ARCHETYPE_SLUGS = new Set<string>(MECHANISM_ARCHETYPE_VALUES);

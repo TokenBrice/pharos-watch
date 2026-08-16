@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/classification";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import sitemapDates from "@/generated/sitemap-dates.json";
-import type { CaseStudy } from "./content/types";
+import type { CaseStudy } from "@/lib/case-studies/types";
 import {
   caseStudyWordCount,
   estimateCaseStudyReadingMinutes,

@@ -2,7 +2,7 @@ import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib
 import { API_ORIGIN, SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import type { StablecoinMeta } from "@shared/types";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 
