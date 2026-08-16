@@ -2,8 +2,10 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse } from "@/lib/request";
+import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
 });
@@ -11,20 +13,17 @@ afterEach(() => {
 describe("request lifecycle", () => {
   it("keeps the timeout active while the response body is being consumed", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (_input, init) => {
-        const signal = init?.signal;
-        return new Response(
+    mockFetch([{
+      match: "/slow-body",
+      respond: (request) => new Response(
           new ReadableStream({
             start(controller) {
-              signal?.addEventListener("abort", () => controller.error(signal.reason), { once: true });
+              request.signal.addEventListener("abort", () => controller.error(request.signal.reason), { once: true });
             },
           }),
           { status: 200, headers: { "Content-Type": "application/json" } },
-        );
-      }),
-    );
+        ),
+    }], { requireMatch: true });
 
     const pending = requestJson("/slow-body", { timeoutMs: 50 }).catch((error) => error);
     await vi.advanceTimersByTimeAsync(51);
@@ -33,10 +32,7 @@ describe("request lifecycle", () => {
   });
 
   it("classifies HTTP failures and preserves the consumed error body", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response('{"error":"nope"}', { status: 503 })),
-    );
+    mockFetch([{ match: "/unavailable", body: '{"error":"nope"}', status: 503 }], { requireMatch: true });
 
     await expect(requestJson("/unavailable")).rejects.toMatchObject({
       kind: "http",
@@ -46,10 +42,7 @@ describe("request lifecycle", () => {
   });
 
   it("validates JSON with a schema-like contract", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response('{"ok":"no"}', { status: 200 })),
-    );
+    mockFetch([{ match: "/schema", body: '{"ok":"no"}' }], { requireMatch: true });
     const schema = {
       safeParse: () => ({
         success: false as const,
@@ -64,15 +57,10 @@ describe("request lifecycle", () => {
   });
 
   it.each(["init", "explicit"] as const)("composes the %s abort signal", async (source) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async (_input, init) =>
-          new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
-          }),
-      ),
-    );
+    mockFetch([{
+      match: "/composed-signal",
+      outcomes: [{ stall: true }],
+    }], { requireMatch: true });
     const initController = new AbortController();
     const explicitController = new AbortController();
     const pending = requestJson("/composed-signal", {
@@ -89,15 +77,10 @@ describe("request lifecycle", () => {
 
   it("normalizes non-finite timeouts to 10 seconds", async () => {
     vi.useFakeTimers();
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async (_input, init) =>
-          new Promise<Response>((_resolve, reject) => {
-            init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), { once: true });
-          }),
-      ),
-    );
+    mockFetch([{
+      match: "/default-timeout",
+      outcomes: [{ stall: true }],
+    }], { requireMatch: true });
 
     const pending = requestJson("/default-timeout", { timeoutMs: Number.POSITIVE_INFINITY });
     const rejection = expect(pending).rejects.toMatchObject({

@@ -14,6 +14,7 @@ import { refreshMiniAppBundleOnce } from "./mini-app-api";
 import PharosWatchBotMiniAppPage, { metadata } from "./page";
 import type { TelegramMiniAppState } from "./types";
 import { installMatchMediaMock } from "@/test-utils/frontend";
+import { mockFetch } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
 
 const baseState: TelegramMiniAppState = {
   viewer: { userId: "42", username: "watcher", chatId: "42", chatType: "private", canMutate: true, mutationBlockReason: null },
@@ -36,6 +37,44 @@ const baseState: TelegramMiniAppState = {
 };
 
 type MiniAppWebApp = NonNullable<NonNullable<Window["Telegram"]>["WebApp"]>;
+
+interface MiniAppResponseLike {
+  ok: boolean;
+  status?: number;
+  headers?: Headers;
+  json(): Promise<unknown>;
+}
+
+function isMiniAppResponseLike(value: unknown): value is MiniAppResponseLike {
+  return typeof value === "object"
+    && value != null
+    && "ok" in value
+    && typeof value.ok === "boolean"
+    && "json" in value
+    && typeof value.json === "function";
+}
+
+function installMiniAppFetch(fetchImpl: ReturnType<typeof vi.fn>): void {
+  mockFetch([{
+    match: "/api/telegram-mini-app/",
+    respond: async (request) => {
+      const url = new URL(request.url);
+      const body = request.body == null ? undefined : await request.clone().text();
+      const result: unknown = await fetchImpl(`${url.pathname}${url.search}`, {
+        method: request.method,
+        headers: request.headers,
+        body,
+      });
+      if (result instanceof Response) return result;
+      if (!isMiniAppResponseLike(result)) throw new Error("Mini App fetch fixture must return a response-like value");
+      return {
+        body: await result.json(),
+        status: result.status ?? (result.ok ? 200 : 500),
+        headers: result.headers == null ? undefined : Object.fromEntries(result.headers),
+      };
+    },
+  }], { requireMatch: true });
+}
 
 /**
  * Collapses the launch preamble shared by the happy-path Mini App tests: a
@@ -68,7 +107,7 @@ function renderMiniApp(options: {
   };
   const fetchMock = options.fetchImpl
     ?? vi.fn().mockResolvedValue({ ok: true, json: async () => options.state ?? baseState });
-  vi.stubGlobal("fetch", fetchMock);
+  installMiniAppFetch(fetchMock);
   render(<PharosWatchBotMiniAppPage />);
   return fetchMock;
 }
@@ -76,6 +115,7 @@ function renderMiniApp(options: {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+  vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.sessionStorage.clear();
   Reflect.deleteProperty(window, "Telegram");
@@ -113,7 +153,7 @@ describe("PharosWatchBotMiniAppPage", () => {
 
   it("renders browser preview immediately without calling session APIs", () => {
     const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
     render(<PharosWatchBotMiniAppPage />);
 
     expect(screen.getByText("PharosWatchBot app preview")).toBeTruthy();
@@ -124,7 +164,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     vi.useFakeTimers();
     window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => baseState });
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
     const script = document.querySelector<HTMLScriptElement>('script[src="https://telegram.org/js/telegram-web-app.js"]');
@@ -164,7 +204,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     vi.useFakeTimers();
     window.Telegram = { WebApp: { initData: "", platform: "unknown", ready: vi.fn() } };
     const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -184,7 +224,7 @@ describe("PharosWatchBotMiniAppPage", () => {
       },
     };
     const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -196,7 +236,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     vi.useFakeTimers();
     window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
     const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -214,7 +254,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const close = vi.fn();
     window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
     const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -278,7 +318,7 @@ describe("PharosWatchBotMiniAppPage", () => {
   it("shows authorization-specific copy when the session API rejects initData", async () => {
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn() } };
     const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({ error: "Invalid Telegram Mini App session" }) });
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -290,7 +330,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: "Unavailable" }) })
       .mockResolvedValueOnce({ ok: true, json: async () => baseState });
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
 
@@ -571,7 +611,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => baseState })
       .mockReturnValueOnce(mutationResponse);
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
 
     render(<PharosWatchBotMiniAppPage />);
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
@@ -1004,7 +1044,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     await waitFor(() => expect(screen.getByText("@watcher")).toBeTruthy());
     fireEvent.click(screen.getByRole("tab", { name: "settings" }));
 
-    const compactPicker = screen.getByLabelText("Timezone") as unknown as HTMLSelectElement;
+    const compactPicker = screen.getByLabelText<HTMLSelectElement>("Timezone");
     const fullPicker = screen.getByLabelText("Timezone name") as HTMLInputElement;
     const datalist = document.getElementById("telegram-mini-app-timezone-options");
     expect(compactPicker.options.length).toBeLessThan(20);
@@ -1460,7 +1500,7 @@ describe("PharosWatchBotMiniAppPage", () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: true, json: async () => noSubscriberState })
       .mockReturnValueOnce(mutationResponse);
-    vi.stubGlobal("fetch", fetchMock);
+    installMiniAppFetch(fetchMock);
     window.Telegram = { WebApp: { initData: "signed-init-data", initDataUnsafe: { user: { username: "watcher" } }, ready: vi.fn(), expand: vi.fn(), enableClosingConfirmation: vi.fn(), disableClosingConfirmation: vi.fn(), HapticFeedback: { notificationOccurred: vi.fn(), impactOccurred: vi.fn() }, MainButton: mainButton } };
 
     render(<PharosWatchBotMiniAppPage />);
@@ -1472,6 +1512,9 @@ describe("PharosWatchBotMiniAppPage", () => {
       onClickHandlers[0]?.();
     });
 
+    await waitFor(() => {
+      if (fetchMock.mock.calls.length !== 2) throw new Error("mutation fetch has not started");
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     resolveMutation({ ok: true, json: async () => baseState });
     await waitFor(() => expect(screen.getByText("Recommended setup applied.")).toBeTruthy());

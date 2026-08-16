@@ -6,6 +6,7 @@ import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import { AdminActionExecutionProvider } from "@/components/status/admin-action-execution-provider";
 import type { ActionReadinessCheck } from "@/lib/status/admin-ops-insights";
+import { mockFetch, type MockFetchSpy } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
 
 const ASSET_SCOPE: StatusPageAction["scope"] = {
   type: "asset-or-batch",
@@ -58,18 +59,15 @@ function selectAsset(search: string, optionName: RegExp): void {
   fireEvent.click(screen.getByRole("option", { name: optionName }));
 }
 
-const fetchMock = vi.fn<typeof fetch>();
+let fetchMock: MockFetchSpy;
+
+function installFetch(routes: Parameters<typeof mockFetch>[0] = [{ match: "/api/admin/", body: { ok: true } }]): void {
+  fetchMock = mockFetch(routes, { requireMatch: true });
+}
 
 describe("AdminActionButton", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
-    fetchMock.mockResolvedValue(
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    installFetch();
   });
 
   afterEach(() => {
@@ -434,16 +432,15 @@ describe("AdminActionButton", () => {
   });
 
   it("treats a same-key idempotency ownership-loss conflict as unknown", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "Idempotency reservation ownership was lost" }), {
-        status: 409,
-        headers: {
-          "Content-Type": "application/json",
+    installFetch([{
+      match: "/api/admin/",
+      body: { error: "Idempotency reservation ownership was lost" },
+      status: 409,
+      headers: {
           "Idempotency-Key": "intent-key-for-test",
           "X-Idempotent-Replay": "true",
-        },
-      }),
-    );
+      },
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
@@ -456,12 +453,11 @@ describe("AdminActionButton", () => {
   });
 
   it("keeps a payload-reuse 409 as a definite failure", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ error: "Idempotency key reuse with different request payload" }), {
-        status: 409,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    installFetch([{
+      match: "/api/admin/",
+      body: { error: "Idempotency key reuse with different request payload" },
+      status: 409,
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
@@ -476,12 +472,12 @@ describe("AdminActionButton", () => {
 
   it("coalesces a double confirmation into one request", async () => {
     let resolveFetch!: (response: Response) => void;
-    fetchMock.mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveFetch = resolve;
-        }),
-    );
+    installFetch([{
+      match: "/api/admin/",
+      respond: () => new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
@@ -490,6 +486,9 @@ describe("AdminActionButton", () => {
     fireEvent.click(confirm);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      if (typeof resolveFetch !== "function") throw new Error("fetch responder not installed");
+    });
     resolveFetch(
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
@@ -501,12 +500,12 @@ describe("AdminActionButton", () => {
 
   it("shares running and result state across duplicate action instances", async () => {
     let resolveFetch!: (response: Response) => void;
-    fetchMock.mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveFetch = resolve;
-        }),
-    );
+    installFetch([{
+      match: "/api/admin/",
+      respond: () => new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    }]);
     const action = makeAction({ acceptsStablecoinFilter: false });
     renderActions([action, action]);
 
@@ -515,6 +514,9 @@ describe("AdminActionButton", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
 
     expect(document.querySelectorAll('[data-execution-status="running"]')).toHaveLength(2);
+    await waitFor(() => {
+      if (typeof resolveFetch !== "function") throw new Error("fetch responder not installed");
+    });
     resolveFetch(
       new Response(JSON.stringify({ ok: true, run: "shared-result" }), {
         status: 200,
@@ -534,18 +536,17 @@ describe("AdminActionButton", () => {
   });
 
   it("presents structured execution identity before the raw JSON disclosure", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
+    installFetch([{
+      match: "/api/admin/",
+      body: {
           status: "queued",
           jobId: "job-42",
           queueId: "queue-a",
           nextCursor: "cursor-9",
           followUpUrl: "/admin/crons",
-        }),
-        { status: 202, headers: { "Content-Type": "application/json" } },
-      ),
-    );
+      },
+      status: 202,
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
@@ -562,12 +563,10 @@ describe("AdminActionButton", () => {
   });
 
   it("renders an unsafe follow-up value as inert text", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ status: "succeeded", followUpUrl: "//evil.example/jobs/42" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    installFetch([{
+      match: "/api/admin/",
+      body: { status: "succeeded", followUpUrl: "//evil.example/jobs/42" },
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));
@@ -621,12 +620,12 @@ describe("AdminActionButton", () => {
 
   it("keeps the dialog open and removes casual dismissal while a request is running", async () => {
     let resolveFetch!: (response: Response) => void;
-    fetchMock.mockImplementationOnce(
-      () =>
-        new Promise<Response>((resolve) => {
-          resolveFetch = resolve;
-        }),
-    );
+    installFetch([{
+      match: "/api/admin/",
+      respond: () => new Promise<Response>((resolve) => {
+        resolveFetch = resolve;
+      }),
+    }]);
     renderActions([makeAction()]);
 
     fireEvent.click(screen.getByRole("button", { name: "Backfill Supply" }));

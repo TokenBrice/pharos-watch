@@ -3,6 +3,7 @@ import { assertAllFetchRoutesUsed, mockFetch, mockFetchStrict } from "../__share
 
 describe("mockFetch helper", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -65,6 +66,112 @@ describe("mockFetch helper", () => {
 
     expect(await pools.json()).toEqual({ data: "pools" });
     expect(await amps.json()).toEqual({ data: "amps" });
+  });
+
+  it("supports request predicate matchers", async () => {
+    mockFetch([
+      {
+        match: (request) => request.method === "DELETE" && new URL(request.url).searchParams.get("id") === "7",
+        body: { deleted: true },
+      },
+    ], { requireMatch: true });
+
+    const response = await fetch("https://api.example.test/items?id=7", { method: "DELETE" });
+
+    expect(await response.json()).toEqual({ deleted: true });
+    await expect(fetch("https://api.example.test/items?id=8", { method: "DELETE" })).rejects.toThrow(
+      "mockFetch: no match for URL: https://api.example.test/items?id=8",
+    );
+  });
+
+  it("matches required headers without rejecting extra request headers", async () => {
+    mockFetch([
+      {
+        match: "api.example.test/authorized",
+        matchHeaders: { Authorization: "Bearer test-token", "X-Tenant": "pharos" },
+        body: { authorized: true },
+      },
+    ], { requireMatch: true });
+
+    const response = await fetch("https://api.example.test/authorized", {
+      headers: { authorization: "Bearer test-token", "x-tenant": "pharos", "x-extra": "kept" },
+    });
+
+    expect(await response.json()).toEqual({ authorized: true });
+    await expect(fetch("https://api.example.test/authorized", {
+      headers: { authorization: "Bearer wrong-token", "x-tenant": "pharos" },
+    })).rejects.toThrow("mockFetch: no match for URL: https://api.example.test/authorized");
+  });
+
+  it("matches parsed JSON bodies structurally or with a predicate", async () => {
+    mockFetch([
+      {
+        match: "api.example.test/exact-json",
+        matchJson: { nested: { enabled: true }, ids: [1, 2] },
+        body: { match: "exact" },
+      },
+      {
+        match: "api.example.test/predicate-json",
+        matchJson: (body) => typeof body === "object" && body != null && "kind" in body && body.kind === "probe",
+        body: { match: "predicate" },
+      },
+    ], { requireMatch: true });
+
+    const exact = await fetch("https://api.example.test/exact-json", {
+      method: "POST",
+      body: JSON.stringify({ ids: [1, 2], nested: { enabled: true } }),
+    });
+    const predicate = await fetch("https://api.example.test/predicate-json", {
+      method: "POST",
+      body: JSON.stringify({ kind: "probe", ignored: true }),
+    });
+
+    expect(await exact.json()).toEqual({ match: "exact" });
+    expect(await predicate.json()).toEqual({ match: "predicate" });
+    await expect(fetch("https://api.example.test/exact-json", {
+      method: "POST",
+      body: JSON.stringify({ nested: { enabled: true }, ids: [2, 1] }),
+    })).rejects.toThrow("mockFetch: no match for URL: https://api.example.test/exact-json");
+  });
+
+  it("computes dynamic responses from the normalized request", async () => {
+    const fetchSpy = mockFetch([{
+      match: "api.example.test/echo",
+      respond: async (request) => ({
+        body: { method: request.method, body: await request.text() },
+        status: 201,
+        headers: { "X-Dynamic": "yes" },
+      }),
+    }], { requireMatch: true });
+
+    const response = await fetch("https://api.example.test/echo", { method: "POST", body: "payload" });
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get("X-Dynamic")).toBe("yes");
+    expect(await response.json()).toEqual({ method: "POST", body: "payload" });
+    expect(fetchSpy.getHistory()[0]?.body).toBe("payload");
+  });
+
+  it("resolves delayed responses after the configured duration", async () => {
+    vi.useFakeTimers();
+    mockFetch([{
+      match: "api.example.test/delayed",
+      body: { ready: true },
+      delayMs: 100,
+    }], { requireMatch: true });
+
+    let settled = false;
+    const pending = fetch("https://api.example.test/delayed").then((response) => {
+      settled = true;
+      return response;
+    });
+    await vi.advanceTimersByTimeAsync(99);
+    expect(settled).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1);
+    const response = await pending;
+    expect(settled).toBe(true);
+    expect(await response.json()).toEqual({ ready: true });
   });
 
   it("throws on unexpected URLs when requireMatch is enabled", async () => {

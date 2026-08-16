@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { PegSummaryCoin } from "@shared/types";
+import type { PegSummaryCoin, StablecoinData } from "@shared/types";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildStablecoinDetailHeroViewModel, buildStablecoinDetailViewModel } from "../stablecoin-detail-view-model";
 import { buildDetailFeatureSnapshot } from "../stablecoin-detail-query-view-model";
@@ -55,6 +56,16 @@ function makePegSummaryCoin(overrides: Partial<PegSummaryCoin> = {}): PegSummary
     methodologyVersion: "test",
     ...overrides,
   };
+}
+
+function makeUsdtStablecoin(overrides: Partial<StablecoinData> = {}): StablecoinData {
+  return makeStablecoin({
+    id: "usdt-tether",
+    name: "Tether",
+    symbol: "USDT",
+    circulating: { peggedUSD: 100 },
+    ...overrides,
+  });
 }
 
 function makeBuildStablecoinDetailViewModelParams(
@@ -181,14 +192,7 @@ describe("stablecoin detail view-model builder", () => {
           stablecoinList: {
             data: {
               peggedAssets: [
-                {
-                  id: "usdt-tether",
-                  name: "Tether",
-                  symbol: "USDT",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                },
+                makeUsdtStablecoin(),
               ],
               fxFallbackRates: {},
             } as never,
@@ -527,17 +531,11 @@ describe("stablecoin detail view-model builder", () => {
           stablecoinList: {
             data: {
               peggedAssets: [
-                {
-                  id: "usdt-tether",
-                  name: "Tether",
-                  symbol: "USDT",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
+                makeUsdtStablecoin({
                   circulatingPrevDay: { peggedUSD: 90 },
                   circulatingPrevWeek: { peggedUSD: 80 },
                   circulatingPrevMonth: { peggedUSD: 70 },
-                },
+                }),
               ],
               fxFallbackRates: {},
             } as never,
@@ -732,14 +730,7 @@ describe("stablecoin detail view-model builder", () => {
           stablecoinList: {
             data: {
               peggedAssets: [
-                {
-                  id: "usdt-tether",
-                  name: "Tether",
-                  symbol: "USDT",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                },
+                makeUsdtStablecoin(),
               ],
               fxFallbackRates: {},
             } as never,
@@ -798,14 +789,7 @@ describe("stablecoin detail view-model builder", () => {
           stablecoinList: {
             data: {
               peggedAssets: [
-                {
-                  id: "usdt-tether",
-                  name: "Tether",
-                  symbol: "USDT",
-                  pegType: "peggedUSD",
-                  price: 1,
-                  circulating: { peggedUSD: 100 },
-                },
+                makeUsdtStablecoin(),
               ],
               fxFallbackRates: {},
             } as never,

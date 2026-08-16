@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { jsonResponse } from "../../worker/src/test-helpers/__shared/mock-fetch";
 import {
   auditBinance,
   auditBitstamp,
@@ -6,13 +7,6 @@ import {
   auditOptionalSourceShapes,
   runPricingProviderAudit,
 } from "../maintenance/audit-pricing-provider-config";
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
 
 describe("audit-pricing-provider-config", () => {
   it("reports configured Binance pairs as present", async () => {

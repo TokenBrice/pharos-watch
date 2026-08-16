@@ -14,24 +14,18 @@ import { coverageFeature as priceCoverageFeature } from "@/lib/coverage/price";
 import { coverageFeature as redemptionCoverageFeature } from "@/lib/coverage/redemption";
 import { coverageFeature as reserveCoverageFeature } from "@/lib/coverage/reserves";
 import { COVERAGE_BREAKDOWN_VISUAL_CLASSES } from "@/lib/coverage-page-config";
+import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
 
 type TestCoin = StablecoinMeta & { mintAuthoritySummary?: MintAuthorityCoverageSummary };
 
 function makeCoin(overrides?: Partial<TestCoin>): TestCoin {
-  return {
+  return makeStablecoinMeta({
     id: "test-usd",
     name: "Test USD",
     symbol: "TUSDX",
-    flags: {
-      backing: "rwa-backed",
-      governance: "centralized",
-      pegCurrency: "USD",
-      yieldBearing: false,
-      rwa: true,
-      navToken: false,
-    },
+    flags: { ...makeStablecoinMeta().flags, rwa: true },
     ...overrides,
-  };
+  });
 }
 
 function makeRedemptionEntry(overrides?: Partial<RedemptionBackstopEntry>): RedemptionBackstopEntry {

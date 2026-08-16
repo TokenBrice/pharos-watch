@@ -2,6 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { mockFetch } from "../../worker/src/test-helpers/__shared/mock-fetch";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -13,10 +14,10 @@ beforeEach(() => {
   // The root error boundary probes /api/health on mount. Stub fetch so the
   // tests don't surface a degraded callout (or an unhandled rejection from a
   // missing global fetch).
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => Promise.reject(new Error("offline"))),
-  );
+  mockFetch([{
+    match: "/api/health",
+    respond: () => new Error("offline"),
+  }], { requireMatch: true });
 });
 
 afterEach(() => {

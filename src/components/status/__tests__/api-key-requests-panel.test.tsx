@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ApiKeySelfServeRequestAdminListResponse, ApiKeySelfServeRequestAdminSummary } from "@shared/types";
 import { buildAdminMutationReceiptMetadata } from "../admin-mutation-feedback";
 import type { AdminMutationIntentExecution } from "../admin-mutation-intent";
+import { mockFetch } from "../../../../worker/src/test-helpers/__shared/mock-fetch";
 
 const { useApiKeyRequestsMock } = vi.hoisted(() => ({
   useApiKeyRequestsMock: vi.fn(),
@@ -161,24 +162,15 @@ describe("ApiKeyRequestsPanel", () => {
   it("does not render durable request ids in the admin cards or notices", async () => {
     const request = makeRequest({ requestId: "akr_do_not_show" });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              ok: true,
-              requestId: request.requestId,
-              status: "rejected",
-              claimStatus: "released",
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-      ),
-    );
+    mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      body: {
+        ok: true,
+        requestId: request.requestId,
+        status: "rejected",
+        claimStatus: "released",
+      },
+    }], { requireMatch: true });
     renderPanel([request]);
 
     expect(screen.queryByText(request.requestId)).toBeNull();
@@ -195,21 +187,15 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("requires confirmation and sends reason plus idempotency header for mutations", async () => {
     const request = makeRequest({ requestId: "akr_mutation_target" });
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    const fetchMock = mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      body: {
           ok: true,
           requestId: request.requestId,
           status: "rejected",
           claimStatus: "released",
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+      },
+    }], { requireMatch: true });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-test" });
 
     renderPanel([request]);
@@ -227,30 +213,28 @@ describe("ApiKeyRequestsPanel", () => {
 
   it("reconciles an uncertain mutation with the same intent key and reports replay metadata", async () => {
     const request = makeRequest({ requestId: "akr_uncertain_target" });
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockRejectedValueOnce(new TypeError("connection closed"))
-      .mockImplementationOnce(async (_input, init) => {
-        const idempotencyKey = new Headers(init?.headers).get("Idempotency-Key") ?? "";
-        return new Response(
-          JSON.stringify({
+    let attempt = 0;
+    const fetchMock = mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      respond: (request) => {
+        attempt += 1;
+        if (attempt === 1) return new TypeError("connection closed");
+        const idempotencyKey = request.headers.get("Idempotency-Key") ?? "";
+        return {
+          body: {
             ok: true,
             requestId: request.requestId,
             status: "rejected",
             claimStatus: "released",
-          }),
-          {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
+          },
+          headers: {
               "Idempotency-Key": idempotencyKey,
               "X-Idempotent-Replay": "true",
               "X-Execution-Certainty": "confirmed",
-            },
           },
-        );
-      });
-    vi.stubGlobal("fetch", fetchMock);
+        };
+      },
+    }], { requireMatch: true });
     vi.stubGlobal("crypto", { randomUUID: () => "uncertain-uuid" });
     renderPanel([request]);
 
@@ -277,21 +261,15 @@ describe("ApiKeyRequestsPanel", () => {
       linkedKeyExpiresAt: GENERATED_AT + 3600,
       claimStatus: "issued",
     });
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(
-        JSON.stringify({
+    const fetchMock = mockFetch([{
+      match: "/api/admin/api-key-requests-admin/",
+      body: {
           ok: true,
           requestId: request.requestId,
           status: "issued",
           claimStatus: "released",
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        },
-      ),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+      },
+    }], { requireMatch: true });
     vi.stubGlobal("crypto", { randomUUID: () => "uuid-for-release-test" });
 
     renderPanel([request]);

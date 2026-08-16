@@ -7,6 +7,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
+import { jsonResponse as makeJsonResponse } from "../../../worker/src/test-helpers/__shared/mock-fetch";
 
 // Stub modules that are not relevant to what we're testing here.
 vi.mock("@shared/lib/site-data-lane", () => ({
@@ -26,16 +27,6 @@ import {
 
 const SomeSchema = z.object({ value: z.number() });
 type SomeData = z.infer<typeof SomeSchema>;
-
-function makeJsonResponse(body: unknown, status = 200): Response {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    headers: new Headers({ "content-type": "application/json" }),
-    json: async () => body,
-    text: async () => JSON.stringify(body),
-  } as unknown as Response;
-}
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -59,7 +50,7 @@ async function withAbortSignalAnyAbsent<T>(run: () => Promise<T>): Promise<T> {
     if (descriptor) {
       Object.defineProperty(AbortSignal, "any", descriptor);
     } else {
-      delete (AbortSignal as unknown as { any?: typeof AbortSignal.any }).any;
+      Reflect.deleteProperty(AbortSignal, "any");
     }
   }
 }

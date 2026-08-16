@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyRequestForm } from "@/components/api-key-request-form";
+import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
   cleanup();
@@ -72,13 +73,11 @@ describe("ApiKeyRequestForm", () => {
   it("prominently reveals an issued key after email verification", async () => {
     const suffix = randomUUID().slice(0, 8);
     const token = `ph_test_${suffix}_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify(issuedResponse(suffix, token)), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "/api/api-key-requests/verify",
+      body: issuedResponse(suffix, token),
+      status: 201,
+    }], { requireMatch: true });
 
     window.history.replaceState(null, "", `/api/#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
@@ -100,16 +99,11 @@ describe("ApiKeyRequestForm", () => {
     const suffix = randomUUID().slice(0, 8);
     const bodyWithoutToken = { ...issuedResponse(suffix, `ph_test_${suffix}_token`) };
     delete (bodyWithoutToken as Partial<ReturnType<typeof issuedResponse>>).token;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify(bodyWithoutToken), {
-            status: 201,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    mockFetch([{
+      match: "/api/api-key-requests/verify",
+      body: bodyWithoutToken,
+      status: 201,
+    }], { requireMatch: true });
 
     window.history.replaceState(null, "", `/api/#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
@@ -124,13 +118,11 @@ describe("ApiKeyRequestForm", () => {
 
   it("verifies a token staged by the pre-hydration hash sanitizer", async () => {
     const suffix = randomUUID().slice(0, 8);
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "/api/api-key-requests/verify",
+      body: issuedResponse(suffix, `ph_test_${suffix}_token`),
+      status: 201,
+    }], { requireMatch: true });
 
     window.history.replaceState(null, "", "/api/?utm_source=email");
     window.sessionStorage.setItem("pharos:api-key-verify-token", `akv_${suffix}`);
@@ -146,13 +138,11 @@ describe("ApiKeyRequestForm", () => {
 
   it("verifies via hash token and scrubs the fragment before posting", async () => {
     const suffix = randomUUID().slice(0, 8);
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response(JSON.stringify(issuedResponse(suffix, `ph_test_${suffix}_token`)), {
-        status: 201,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: "/api/api-key-requests/verify",
+      body: issuedResponse(suffix, `ph_test_${suffix}_token`),
+      status: 201,
+    }], { requireMatch: true });
 
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email#akv_${suffix}`);
     render(<ApiKeyRequestForm />);
@@ -167,8 +157,7 @@ describe("ApiKeyRequestForm", () => {
 
   it("ignores a query-string verify parameter without posting and scrubs it from the URL", async () => {
     const suffix = randomUUID().slice(0, 8);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     window.history.replaceState(null, "", `/api/?verify=qs-${suffix}&utm_source=email`);
     render(<ApiKeyRequestForm />);
@@ -181,23 +170,15 @@ describe("ApiKeyRequestForm", () => {
 
   it("does not display the durable request id after a pending submission", async () => {
     const suffix = randomUUID().slice(0, 8);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              status: "pending_verification",
-              requestId: `akr_${suffix}`,
-              message: "Check your inbox.",
-            }),
-            {
-              status: 202,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
-      ),
-    );
+    mockFetch([{
+      match: "/api/api-key-requests",
+      body: {
+        status: "pending_verification",
+        requestId: `akr_${suffix}`,
+        message: "Check your inbox.",
+      },
+      status: 202,
+    }], { requireMatch: true });
 
     render(<ApiKeyRequestForm />);
 
@@ -220,16 +201,11 @@ describe("ApiKeyRequestForm", () => {
   it("warns before leaving until the one-time key reveal is copied or acknowledged", async () => {
     const suffix = randomUUID().slice(0, 8);
     const token = `ph_test_${suffix}_${randomUUID().replaceAll("-", "").slice(0, 24)}`;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify(issuedResponse(suffix, token)), {
-            status: 201,
-            headers: { "Content-Type": "application/json" },
-          }),
-      ),
-    );
+    mockFetch([{
+      match: "/api/api-key-requests/verify",
+      body: issuedResponse(suffix, token),
+      status: 201,
+    }], { requireMatch: true });
     Object.defineProperty(navigator, "clipboard", {
       configurable: true,
       value: { writeText: vi.fn().mockRejectedValue(new Error("blocked")) },

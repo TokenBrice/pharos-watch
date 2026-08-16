@@ -8,6 +8,7 @@ import {
 import type { ApiKeySelfServeRequest, ApiKeySelfServeIssueResponse } from "@shared/types";
 import { submitApiKeyRequest, verifyApiKeyRequestToken } from "../api-key-self-serve";
 import { DEFAULT_REQUEST_TIMEOUT_MS } from "../request-lifecycle";
+import { jsonResponse } from "../../../worker/src/test-helpers/__shared/mock-fetch";
 
 const ApiKeySelfServeIssueResponseSchema = buildApiKeySelfServeIssueResponseSchema(
   SELF_SERVE_API_KEY_RATE_LIMIT_PER_MINUTE,
@@ -93,14 +94,6 @@ function requestBody(): ApiKeySelfServeRequest {
   };
 }
 
-function jsonResponse(body: unknown, init?: ResponseInit): Response {
-  return new Response(JSON.stringify(body), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-}
-
 describe("api key self-serve response schemas", () => {
   it.each([
     { status: "pending_verification", message: "Check your email." },
@@ -169,7 +162,7 @@ describe("api key self-serve requests", () => {
 
   it("preserves error JSON body messages from failed submissions", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ error: "Please use a longer use case." }, { status: 400 }),
+      jsonResponse({ error: "Please use a longer use case." }, 400),
     );
 
     await expect(submitApiKeyRequest(requestBody())).rejects.toThrow("Please use a longer use case.");
@@ -177,7 +170,7 @@ describe("api key self-serve requests", () => {
 
   it("preserves message fields from failed verification responses", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ message: "Verification link expired." }, { status: 410 }),
+      jsonResponse({ message: "Verification link expired." }, 410),
     );
 
     await expect(verifyApiKeyRequestToken("akv_expired")).rejects.toThrow("Verification link expired.");
@@ -185,7 +178,7 @@ describe("api key self-serve requests", () => {
 
   it("falls back to status text when an error JSON body carries a status field", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      jsonResponse({ status: "blocked", error: "Blocked request." }, { status: 403 }),
+      jsonResponse({ status: "blocked", error: "Blocked request." }, 403),
     );
 
     await expect(submitApiKeyRequest(requestBody())).rejects.toThrow("Request failed with status 403");

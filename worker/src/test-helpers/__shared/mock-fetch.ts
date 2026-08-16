@@ -1,38 +1,63 @@
 import { vi, type Mock } from "vitest";
 
-interface MockResponseRoute {
-  match: string;
+const NativeURL = URL;
+
+type MockRequestPredicate = (request: Request) => boolean | Promise<boolean>;
+type MockJsonPredicate = (body: unknown, request: Request) => boolean | Promise<boolean>;
+type MockJsonValue = null | boolean | number | string | MockJsonValue[] | { [key: string]: MockJsonValue };
+
+interface MockRouteMatcher {
+  match: string | MockRequestPredicate;
   /** Optional request-body substring used to disambiguate requests to one URL. */
   matchBody?: string;
+  /** Required request headers. Header names are case-insensitive and extra headers are allowed. */
+  matchHeaders?: HeadersInit;
+  /** Exact parsed JSON body, or a predicate over the parsed JSON body. */
+  matchJson?: MockJsonValue | MockJsonPredicate;
+}
+
+interface MockResponseRoute extends MockRouteMatcher {
   body: unknown;
   status?: number;
   headers?: Record<string, string>;
+  delayMs?: number;
 }
 
-interface MockReplayRoute {
-  match: string;
-  /** Optional request-body substring used to disambiguate requests to one URL. */
-  matchBody?: string;
+interface MockReplayRoute extends MockRouteMatcher {
   /** Ordered results to replay for this route. */
   outcomes: MockFetchOutcome[];
   body?: never;
   status?: never;
   headers?: never;
+  delayMs?: never;
 }
 
-type MockRoute = MockResponseRoute | MockReplayRoute;
+interface MockDynamicRoute extends MockRouteMatcher {
+  /** Compute a result from the normalized request. */
+  respond: MockFetchResponder;
+  body?: never;
+  status?: never;
+  headers?: never;
+  delayMs?: never;
+  outcomes?: never;
+}
+
+export type MockRoute = MockResponseRoute | MockReplayRoute | MockDynamicRoute;
 
 interface MockResponseOutcome {
   body: unknown;
   status?: number;
   headers?: Record<string, string>;
+  delayMs?: number;
 }
 
 interface MockRawResponseOutcome {
   response: Response;
+  delayMs?: number;
 }
 
-type MockFetchOutcome = MockResponseOutcome | MockRawResponseOutcome | Error | { stall: true };
+export type MockFetchOutcome = MockResponseOutcome | MockRawResponseOutcome | Error | { stall: true };
+type MockFetchResponder = (request: Request) => MockFetchOutcome | Response | Promise<MockFetchOutcome | Response>;
 
 interface MockFetchOptions {
   /** Require every fetch URL to match a configured route. */
@@ -54,7 +79,7 @@ interface MockFetchHistoryEntry {
   body: string | null;
 }
 
-type MockFetchSpy = Mock<MockFetchFn> & {
+export type MockFetchSpy = Mock<MockFetchFn> & {
   getHistory(): MockFetchHistoryEntry[];
   assertAllRoutesUsed(): void;
   assertAllOutcomesUsed(): void;
@@ -71,7 +96,14 @@ async function normalizeRequest(input: RequestInfo | URL, init?: RequestInit): P
   request: Request;
   history: MockFetchHistoryEntry;
 }> {
-  const request = new Request(input, init);
+  const locationValue: unknown = Reflect.get(globalThis, "location");
+  const locationHref: unknown = typeof locationValue === "object" && locationValue != null
+    ? Reflect.get(locationValue, "href")
+    : undefined;
+  const normalizedInput = typeof input === "string" && !NativeURL.canParse(input)
+    ? new NativeURL(input, typeof locationHref === "string" && locationHref ? locationHref : "http://localhost").toString()
+    : input;
+  const request = new Request(normalizedInput, init);
   const body = request.body == null ? null : await request.clone().text();
   return {
     request,
@@ -90,6 +122,90 @@ function responseFromOutcome(outcome: MockResponseOutcome | MockRawResponseOutco
   return new Response(body, {
     status: outcome.status ?? 200,
     headers: { "Content-Type": "application/json", ...outcome.headers },
+  });
+}
+
+function isJsonEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (left == null || right == null || typeof left !== "object" || typeof right !== "object") return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left)
+      && Array.isArray(right)
+      && left.length === right.length
+      && left.every((value, index) => isJsonEqual(value, right[index]));
+  }
+  const leftEntries = Object.entries(left).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+  const rightEntries = Object.entries(right).sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+  return leftEntries.length === rightEntries.length
+    && leftEntries.every(([key, value], index) => {
+      const rightEntry = rightEntries[index];
+      return rightEntry != null && key === rightEntry[0] && isJsonEqual(value, rightEntry[1]);
+    });
+}
+
+async function routeMatches(
+  route: MockRoute,
+  request: Request,
+  history: MockFetchHistoryEntry,
+  strictUrl: boolean,
+): Promise<boolean> {
+  const requestMatches = typeof route.match === "function"
+    ? await route.match(request.clone())
+    : strictUrl
+      ? history.url === route.match
+      : history.url.includes(route.match);
+  if (!requestMatches || (route.matchBody != null && history.body?.includes(route.matchBody) !== true)) {
+    return false;
+  }
+  if (route.matchHeaders != null) {
+    const expectedHeaders = new Headers(route.matchHeaders);
+    for (const [name, value] of expectedHeaders) {
+      if (request.headers.get(name) !== value) return false;
+    }
+  }
+  if (route.matchJson !== undefined) {
+    if (history.body == null) return false;
+    let parsedBody: unknown;
+    try {
+      parsedBody = JSON.parse(history.body);
+    } catch {
+      return false;
+    }
+    const jsonMatches = typeof route.matchJson === "function"
+      ? await route.matchJson(parsedBody, request.clone())
+      : isJsonEqual(parsedBody, route.matchJson);
+    if (!jsonMatches) return false;
+  }
+  return true;
+}
+
+function routeLabel(route: MockRoute): string {
+  return typeof route.match === "string" ? route.match : "[request predicate]";
+}
+
+function isReplayRoute(route: MockRoute): route is MockReplayRoute {
+  return "outcomes" in route && route.outcomes !== undefined;
+}
+
+function delayedResponse(delayMs: number, signal: AbortSignal | null): Promise<void> {
+  if (!Number.isFinite(delayMs) || delayMs < 0) {
+    throw new Error(`mockFetch: delayMs must be a non-negative finite number, received ${delayMs}`);
+  }
+  if (delayMs === 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    }, delayMs);
+    const abort = () => {
+      clearTimeout(timeout);
+      reject(signal?.reason ?? new DOMException("The operation was aborted.", "AbortError"));
+    };
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    signal?.addEventListener("abort", abort, { once: true });
   });
 }
 
@@ -115,15 +231,16 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
   const unmatchedPolicy = options.unmatched ?? (options.requireMatch ? "throw" : "not-found");
   const passthroughFetch = globalThis.fetch.bind(globalThis);
 
-  const spy = vi.fn<MockFetchFn>(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchImplementation: MockFetchFn = async (input: RequestInfo | URL, init?: RequestInit) => {
     const normalized = await normalizeRequest(input, init);
     history.push(normalized.history);
-    const route = routes.find((r) => {
-      const urlMatches = options.strictUrl === true
-        ? normalized.history.url === r.match
-        : normalized.history.url.includes(r.match);
-      return urlMatches && (r.matchBody == null || normalized.history.body?.includes(r.matchBody) === true);
-    });
+    let route: MockRoute | undefined;
+    for (const candidate of routes) {
+      if (await routeMatches(candidate, normalized.request, normalized.history, options.strictUrl === true)) {
+        route = candidate;
+        break;
+      }
+    }
     if (!route) {
       if (unmatchedPolicy === "throw") {
         throw new Error(`mockFetch: no match for URL: ${normalized.history.url}`);
@@ -134,37 +251,47 @@ export function mockFetch(routes: MockRoute[] = [], options: MockFetchOptions = 
       return new Response(JSON.stringify({ error: "Not found" }), { status: 404 });
     }
     routeHits.set(route, (routeHits.get(route) ?? 0) + 1);
-    if (!("outcomes" in route)) return responseFromOutcome(route);
-
-    const outcomeIndex = outcomeHits.get(route) ?? 0;
-    const outcome = route.outcomes[outcomeIndex];
-    if (!outcome) {
-      throw new Error(
-        `mockFetch: scripted outcomes exhausted for route match: ${route.match} (configured ${route.outcomes.length})`,
-      );
+    let outcome: MockFetchOutcome | Response;
+    if ("respond" in route) {
+      outcome = await route.respond(normalized.request.clone());
+    } else if (isReplayRoute(route)) {
+      const outcomeIndex = outcomeHits.get(route) ?? 0;
+      const scriptedOutcome = route.outcomes[outcomeIndex];
+      if (!scriptedOutcome) {
+        throw new Error(
+          `mockFetch: scripted outcomes exhausted for route match: ${routeLabel(route)} (configured ${route.outcomes.length})`,
+        );
+      }
+      outcomeHits.set(route, outcomeIndex + 1);
+      outcome = scriptedOutcome;
+    } else {
+      outcome = route;
     }
-    outcomeHits.set(route, outcomeIndex + 1);
     if (outcome instanceof Error) throw outcome;
+    if (outcome instanceof Response) return outcome;
     if ("stall" in outcome) return await stalledResponse(normalized.request.signal);
+    if (outcome.delayMs != null) await delayedResponse(outcome.delayMs, normalized.request.signal);
     return responseFromOutcome(outcome);
-  }) as unknown as MockFetchSpy;
-  spy.getHistory = () => history.map((entry) => ({ ...entry, headers: { ...entry.headers } }));
-  spy.assertAllRoutesUsed = () => {
-    const unused = routes.filter((route) => (routeHits.get(route) ?? 0) === 0);
-    if (unused.length > 0) {
-      throw new Error(`mockFetch: unused route match(es): ${unused.map((route) => route.match).join(", ")}`);
-    }
   };
-  spy.assertAllOutcomesUsed = () => {
-    const unused = routes
-      .filter((route): route is MockReplayRoute => (
-        "outcomes" in route && (outcomeHits.get(route) ?? 0) < route.outcomes.length
-      ))
-      .map((route) => `${route.match} (${route.outcomes.length - (outcomeHits.get(route) ?? 0)} remaining)`);
-    if (unused.length > 0) {
-      throw new Error(`mockFetch: unused scripted outcome(s): ${unused.join(", ")}`);
-    }
-  };
+  const spy = Object.assign(vi.fn<MockFetchFn>(fetchImplementation), {
+    getHistory: () => history.map((entry) => ({ ...entry, headers: { ...entry.headers } })),
+    assertAllRoutesUsed: () => {
+      const unused = routes.filter((route) => (routeHits.get(route) ?? 0) === 0);
+      if (unused.length > 0) {
+        throw new Error(`mockFetch: unused route match(es): ${unused.map(routeLabel).join(", ")}`);
+      }
+    },
+    assertAllOutcomesUsed: () => {
+      const unused = routes
+        .filter((route): route is MockReplayRoute => (
+          isReplayRoute(route) && (outcomeHits.get(route) ?? 0) < route.outcomes.length
+        ))
+        .map((route) => `${routeLabel(route)} (${route.outcomes.length - (outcomeHits.get(route) ?? 0)} remaining)`);
+      if (unused.length > 0) {
+        throw new Error(`mockFetch: unused scripted outcome(s): ${unused.join(", ")}`);
+      }
+    },
+  });
   if (options.stubGlobal !== false) {
     vi.stubGlobal("fetch", spy);
   }

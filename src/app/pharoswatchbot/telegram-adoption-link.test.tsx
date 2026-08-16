@@ -3,9 +3,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
+import { mockFetch } from "../../../worker/src/test-helpers/__shared/mock-fetch";
 
 describe("TelegramAdoptionLink", () => {
-  beforeEach(() => vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 204 }))));
+  beforeEach(() => {
+    mockFetch([{
+      match: "/pharoswatchbot-adoption",
+      outcomes: [{ response: new Response(null, { status: 204 }) }],
+    }], { requireMatch: true });
+  });
 
   it("records one allowlisted aggregate click without delaying navigation", () => {
     render(<TelegramAdoptionLink href="#bot" placement="hero">Open bot</TelegramAdoptionLink>);

