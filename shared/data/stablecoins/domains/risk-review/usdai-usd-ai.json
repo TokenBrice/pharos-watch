@@ -34,9 +34,9 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDai documentation shows an Arbitrum hub and public ecosystem references to LayerZero. The reviewed route is therefore an external interoperability-network path rather than purely issuer-native or canonical rollup bridging.",
-    "reviewedAt": "2026-07-20",
-    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial)",
+    "summary": "Canonical USDai issuance is native to the PYUSD-backed Arbitrum hub. Ethereum, Base, and Plasma use LayerZero OAdapter burn/mint representations whose live OTokens still grant BRIDGE_ADMIN_ROLE to the adapter and DEFAULT_ADMIN_ROLE to a chain-local 3-of-3 Safe; those satellite controls are assessed here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-5 (lead usd1-world-liberty-financial); Codex 2026-08-16 route-control refresh",
     "confidence": "verified",
     "protocols": [
       {
@@ -76,15 +76,17 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: the USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) returns endpoint() = LayerZero V2 endpoint 0x1a44076050125825900e736c501f859c50fe728c and token() = this OToken, and holds BRIDGE_ADMIN_ROLE mint authority over it. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "reviewNote": "Re-verified at Ethereum block 25766970 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "ethereum",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
         "failureDomainKeys": [
           "protocol:usdai-obridge",
-          "contract:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+          "contract:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "safe:ethereum:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 25766970,
         "sources": [
           {
             "label": "USDai token on Etherscan",
@@ -108,13 +110,18 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Reviewed mintAuthority documents this Arbitrum deployment as the collateralized USDai hub (transparent proxy, implementation 0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4, admin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c owned by the DVNTimelock). Native collateral-backed issuance; no bridge control carries the claim.",
+        "reviewNote": "Re-verified at Arbitrum block 495109986 on 2026-08-16: the collateralized USDai hub is a transparent proxy using source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c owned by the 48-hour DVNTimelock. This is the canonical native-issuance route; its PYUSD-backed mint authority is reviewed in mintAuthority, while its adapter ingress and egress belong to the bridge routes.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495109986,
         "sources": [
           {
-            "label": "USDai token on Arbiscan",
-            "url": "https://arbiscan.io/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
+            "label": "Arbitrum USDai proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
+          },
+          {
+            "label": "Arbitrum verified USDai v1.5 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
           },
           {
             "label": "USDai documentation",
@@ -135,15 +142,17 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: the same-address USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) holds BRIDGE_ADMIN_ROLE mint authority over this OToken per the reviewed mintAuthority role reads. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "reviewNote": "Re-verified at Base block 50043069 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "base",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
         "failureDomainKeys": [
           "protocol:usdai-obridge",
-          "contract:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+          "contract:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "safe:base:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 50043069,
         "sources": [
           {
             "label": "USDai token on Basescan",
@@ -168,15 +177,17 @@
         "semantics": "burn-mint",
         "scope": "peripheral",
         "reviewDisposition": "reviewed",
-        "reviewNote": "On-chain 2026-07-20: the same-address USDai OBridge 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 (immutable, owner() = satellite admin Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F) holds BRIDGE_ADMIN_ROLE mint authority over this OToken per the reviewed mintAuthority role reads. OToken burn-mint representation of the Arbitrum collateralized hub.",
+        "reviewNote": "Re-verified at Plasma block 29934940 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc. OAdapter 0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum hub, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
         "controllerChain": "plasma",
         "controllerAddress": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
         "failureDomainKeys": [
           "protocol:usdai-obridge",
-          "contract:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+          "contract:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+          "safe:plasma:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
         ],
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 29934940,
         "sources": [
           {
             "label": "USDai token on Plasmascan",

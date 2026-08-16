@@ -1,144 +1,81 @@
 {
   "id": "usdai-usd-ai",
   "mintAuthority": {
-    "mintPath": "permissioned-minter",
-    "authorityPosture": "unbounded-or-compromised",
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "USDai uses a collateralized hub implementation on Arbitrum and uncapped OToken implementations on Ethereum, Base, and Plasma. The three satellite DEFAULT_ADMIN_ROLE Safes can immediately grant themselves BRIDGE_ADMIN_ROLE and mint without a token cap. All four transparent proxies share deterministic addresses and chain-local state; their ProxyAdmins are owned by separate 48-hour DVNTimelocks governed by 3-of-3 proposer and executor Safes.",
+    "summary": "USDai's canonical Arbitrum hub mints against PYUSD received by the hub and mints accrued base yield only while pulling the matching PYUSD from its escrow. The transparent proxy can change mint logic only through a 48-hour DVNTimelock whose sole proposer and canceller is a 3-of-3 Safe. Satellite OToken and LayerZero controls are reviewed separately in the bridge-risk module.",
     "upgradeability": {
       "model": "transparent-proxy",
       "proxyAddresses": [
-        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
-        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
-        "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef",
         "0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
       ],
       "implementationAddresses": [
-        "0x30198aa66d057a6216db471fce234b98edc1e5ad",
-        "0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4",
-        "0x30198aa66d057a6216db471fce234b98edc1e5ad",
-        "0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc"
+        "0x0ab74df531c0d8f1c46643e404b3d14723bbc212"
       ],
       "adminAddresses": [
-        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
-        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
-        "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
         "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c"
       ],
       "canChangeMintLogic": true,
       "delaySec": 172800,
-      "controlRef": "USDai four-chain ProxyAdmin timelocks",
-      "observedAt": "2026-07-13",
+      "controlRef": "USDai Arbitrum ProxyAdmin timelock",
+      "observedAt": "2026-08-16",
+      "observedBlock": 495109986,
       "sources": [
         {
-          "label": "Sourcify exact-match USDai transparent proxy source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?fields=sources"
+          "label": "Arbitrum USDai proxy",
+          "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
         },
         {
-          "label": "Sourcify exact-match Ethereum and Base OToken implementation source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+          "label": "Arbitrum verified USDai v1.5 implementation",
+          "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
         },
         {
-          "label": "Arbitrum exact-match USDai hub implementation source",
-          "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+          "label": "USD.AI USDai source",
+          "url": "https://github.com/usdai-foundation/usdai-contracts/blob/main/src/USDai.sol"
         },
         {
-          "label": "Plasma exact-match OToken implementation source",
-          "url": "https://plasmascan.to/address/0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc/contract/9745/code"
-        },
-        {
-          "label": "Exact-match DVNTimelock source",
-          "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
+          "label": "Arbitrum DVNTimelock",
+          "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
         }
       ]
     },
     "controls": [
       {
-        "address": "0x5F0BC72FB5952b2f3F2E11404398eD507B25841F",
-        "label": "USDai satellite DEFAULT_ADMIN Safes",
-        "role": "minter-admin",
-        "authorityType": "safe",
-        "directMintAbility": "direct",
-        "threshold": 3,
-        "signerCount": 3,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "present",
-        "safe": {
-          "owners": [
-            "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
-            "0x986868c921075f31514015E6ecdbB4A6526579b2",
-            "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
-          ],
-          "threshold": 3,
-          "observedAt": "2026-07-13",
-          "source": "manual"
-        },
-        "failureDomainKeys": [
-          "safe:ethereum:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
-          "safe:base:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
-          "safe:plasma:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
-        ],
-        "routeChecks": {
-          "signingModel": "The same three owners formed distinct 3-of-3 Safe instances on every reviewed chain. Ethereum and Base enabled chain-local Zodiac Delay modules with 604,800-second cooldowns; Plasma had no enabled module. All instances had zero guard and module guard.",
-          "rateLimits": "OToken source applies no aggregate or per-call mint ceiling. DEFAULT_ADMIN_ROLE can grant BRIDGE_ADMIN_ROLE directly, so each current satellite Safe can bypass the bridge contract and mint arbitrary supply immediately.",
-          "pausersAdminsUpgraders": "The Safe was DEFAULT_ADMIN_ROLE holder on each OToken satellite and owner of each immutable OBridge contract. It is separately an executor, but not the sole proposer, for the 172,800-second upgrade timelock."
-        },
-        "observedAt": "2026-07-13",
-        "sources": [
-          {
-            "label": "Sourcify exact-match OToken implementation source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
-          },
-          {
-            "label": "Ethereum Safe account",
-            "url": "https://eth.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
-          },
-          {
-            "label": "Base Safe account",
-            "url": "https://base.blockscout.com/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
-          },
-          {
-            "label": "Plasma Safe account",
-            "url": "https://plasmascan.to/address/0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
-          }
-        ],
-        "evidence": "At Ethereum block 25526129, Base block 48592766, and Plasma block 27034527, OToken hasRole reads returned true for DEFAULT_ADMIN_ROLE on the chain-local 0x5F0B...841F Safe and true for BRIDGE_ADMIN_ROLE on OBridge 0xffa1...bae5. The Safe owner set was 0xe982...a69C, 0x9868...79b2, and 0xD1Af...b75e with threshold 3. Ethereum enabled module 0x719f...41AB, Base enabled 0x2ab9...2803, and Plasma enabled none; the two Delay modules were owned by and targeted their respective Safes, had zero guards, and enforced 604,800-second cooldown and expiration windows."
-      },
-      {
-        "address": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-        "label": "USDai OBridge mint contracts",
+        "chain": "arbitrum",
+        "address": "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
+        "label": "USDai canonical PYUSD-backed hub",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "Canonical issuance is bounded by PYUSD delivered to the hub: direct deposits mint the scaled PYUSD received, while base-yield harvest mints only the accrued amount and atomically pulls matching PYUSD from the escrow. The hub cannot change its immutable base-token or escrow identities.",
         "failureDomainKeys": [
-          "bridge:ethereum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-          "bridge:arbitrum:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-          "bridge:base:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
-          "bridge:plasma:0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5"
+          "contract:arbitrum:0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef"
         ],
-        "capDescription": "Satellite mint calls are uncapped at token level but require the current OBridge caller; the Arbitrum hub implementation separately underflow-checks mint against bridgedSupply, which was 2,123,929.642271 USDai at the cutoff.",
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495109986,
         "sources": [
           {
-            "label": "Sourcify exact-match OToken implementation source",
-            "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
+            "label": "Arbitrum verified USDai v1.5 implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
           },
           {
-            "label": "Arbitrum exact-match USDai hub implementation source",
-            "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
+            "label": "USD.AI USDai source",
+            "url": "https://github.com/usdai-foundation/usdai-contracts/blob/main/src/USDai.sol"
           },
           {
-            "label": "Ethereum OBridge contract",
-            "url": "https://eth.blockscout.com/address/0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5?tab=contract"
+            "label": "USD.AI mint and redeem architecture",
+            "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
           }
         ],
-        "evidence": "The same-address OBridge was a direct immutable deployment on all four chains: exact-block runtime lengths were nonzero and every EIP-1967 implementation, admin, and beacon slot was zero. owner() returned the local 0x5F0B...841F Safe everywhere. Ethereum, Base, and Plasma OTokens granted it BRIDGE_ADMIN_ROLE. Arbitrum's exact-source hub instead hard-codes it as _bridgeAdapter and decrements bridgedSupply on mint, preventing the bridge caller from creating more hub supply than was previously burned outbound."
+        "evidence": "At Arbitrum block 495109986, the proxy implementation was source-verified USDai v1.5 at 0x0ab74df531c0d8f1c46643e404b3d14723bbc212, baseToken() returned PYUSD 0x46850aD61C2B7d64d08c9C754F45254596696984, and paused() was false. Verified source transfers deposit assets into the hub before minting the scaled PYUSD amount; harvest() mints only accrued base yield and pulls the same PYUSD amount from the immutable BaseYieldEscrow. The current implementation has no role-authorized native mint function: DEFAULT_ADMIN_ROLE administers blacklist and pause roles, while the adapter-only burn/mint path belongs to the separate bridge review."
       },
       {
+        "chain": "arbitrum",
         "address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
-        "label": "USDai four-chain ProxyAdmin timelocks",
+        "label": "USDai Arbitrum ProxyAdmin timelock",
         "role": "proxy-admin",
         "authorityType": "timelock",
         "directMintAbility": "upgrade-only",
@@ -146,44 +83,30 @@
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
-          "safe:ethereum:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:base:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:plasma:0x783b08aa21de056717173f72e04be0e91328a07b"
+          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b"
         ],
-        "routeChecks": {
-          "signingModel": "Each chain-local timelock was self-administered. Safe 0x783b...a07b was sole proposer and canceller and one executor; Safe 0x5F0B...841F was the other executor. Both Safes had the same three owners and threshold 3.",
-          "rateLimits": "getMinDelay() returned 172,800 seconds on Ethereum, Arbitrum, Base, and Plasma. No RoleRevoked or MinDelayChange event occurred before the cutoff after each deployment.",
-          "pausersAdminsUpgraders": "Each chain-local ProxyAdmin 0x2ddf...dc3c was owned by its local DVNTimelock. An executed operation can replace the USDai/OToken implementation and therefore remove every current mint constraint."
-        },
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495109986,
         "sources": [
           {
-            "label": "Exact-match DVNTimelock source",
-            "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
+            "label": "Arbitrum USDai proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef?tab=contract"
           },
           {
-            "label": "Ethereum DVNTimelock role history",
-            "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
+            "label": "Arbitrum USDai ProxyAdmin",
+            "url": "https://arbitrum.blockscout.com/address/0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c"
           },
           {
-            "label": "Arbitrum DVNTimelock role history",
-            "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
-          },
-          {
-            "label": "Base DVNTimelock role history",
-            "url": "https://base.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
-          },
-          {
-            "label": "Plasma DVNTimelock contract",
-            "url": "https://plasmascan.to/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+            "label": "Arbitrum DVNTimelock",
+            "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
           }
         ],
-        "evidence": "At Ethereum block 25526129, Arbitrum block 483535601, Base block 48592766, and Plasma block 27034527, the shared-address ProxyAdmin 0x2ddf...dc3c owned each local token proxy and owner() returned the local DVNTimelock 0x0eea...639b. Each timelock returned a 172,800-second minimum delay. Complete RoleGranted/RoleRevoked histories resolved sole proposer and canceller Safe 0x783b...a07b plus executors 0x783b...a07b and 0x5F0B...841F, with no revocation before cutoff. The four exact block hashes were 0xd2eca668433c517ab710c73c244a2545203f12b35a83e4fb521595be762bdc3f, 0x45f33e882390a11b041d42014a808f848530c07e7c2d1738e8da692c4af5ca14, 0xa99a4dae34debb8307285b94373592fafc63005a817dbf45d54d48607a821872, and 0x32277619ba915b2f7d5ba0ba851ef2516efe0b99139c4df5fa67aaf0b17c62f5."
+        "evidence": "At Arbitrum block 495109986, the USDai EIP-1967 admin slot resolved to ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c, ProxyAdmin.owner() returned DVNTimelock 0x0eea1ee08611ff4a4e83bfe3916712751995639b, and getMinDelay() returned 172800 seconds. A completed timelocked upgrade can replace the collateral-bound mint logic, so the economic cap is raiseable rather than immutable."
       },
       {
+        "chain": "arbitrum",
         "address": "0x783b08aa21de056717173f72e04be0e91328a07b",
-        "label": "USDai timelock proposer and canceller Safes",
+        "label": "USDai Arbitrum timelock proposer Safe",
         "role": "governor",
         "authorityType": "safe",
         "directMintAbility": "upgrade-only",
@@ -199,129 +122,60 @@
             "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
           ],
           "threshold": 3,
-          "observedAt": "2026-07-13",
-          "source": "manual"
+          "enabledModules": [
+            "0x0f01365579158FBe041FAe1c7b7005E622d396c4"
+          ],
+          "observedBlock": 495109986,
+          "source": "onchain"
         },
         "failureDomainKeys": [
-          "safe:ethereum:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:base:0x783b08aa21de056717173f72e04be0e91328a07b",
-          "safe:plasma:0x783b08aa21de056717173f72e04be0e91328a07b"
+          "safe:arbitrum:0x783b08aa21de056717173f72e04be0e91328a07b"
         ],
-        "routeChecks": {
-          "signingModel": "All four chain-local Safes had owners 0xe982...a69C, 0x9868...79b2, and 0xD1Af...b75e with threshold 3. Ethereum, Arbitrum, and Base each enabled one chain-local Zodiac Delay module; Plasma enabled none.",
-          "rateLimits": "The direct Safe route can schedule and cancel upgrades immediately, but execution remains subject to the DVNTimelock's 172,800-second minimum delay.",
-          "pausersAdminsUpgraders": "The proposer Safe cannot bypass the timelock as ProxyAdmin owner. Its Delay module provides a slower alternate Safe execution path and does not remove the downstream 48-hour upgrade delay."
-        },
-        "observedAt": "2026-07-13",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495109986,
         "sources": [
-          {
-            "label": "Ethereum proposer Safe",
-            "url": "https://eth.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
-          },
           {
             "label": "Arbitrum proposer Safe",
             "url": "https://arbitrum.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
           },
           {
-            "label": "Base proposer Safe",
-            "url": "https://base.blockscout.com/address/0x783b08aa21de056717173f72e04be0e91328a07b"
-          },
-          {
-            "label": "Plasma proposer Safe",
-            "url": "https://plasmascan.to/address/0x783b08aa21de056717173f72e04be0e91328a07b"
+            "label": "Arbitrum DVNTimelock role history",
+            "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=logs"
           }
         ],
-        "evidence": "Exact-block Safe reads returned the same 3-of-3 signer set on all four chains, no guard or module guard, and standard fallback handler 0xfd07...Ec99. Ethereum enabled Delay module 0xa9b6...fbc2, Arbitrum 0x0f01...96c4, and Base 0x97d9...baa4; Plasma had no module. Each Delay module was a fixed EIP-1167 clone, was owned by and targeted its local Safe, had zero guard, and used 604,800-second cooldown and expiration values."
-      },
-      {
-        "address": "0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
-        "label": "USDai three-chain Zodiac module controller Safe",
-        "role": "governor",
-        "authorityType": "safe",
-        "directMintAbility": "can-authorize",
-        "threshold": 3,
-        "signerCount": 5,
-        "timelockDelaySec": 604800,
-        "canRaiseCap": true,
-        "modulesOrGuardsStatus": "none-detected",
-        "failureDomainKeys": [
-          "safe:ethereum:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
-          "safe:arbitrum:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4",
-          "safe:base:0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4"
-        ],
-        "safe": {
-          "owners": [
-            "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
-            "0x986868c921075f31514015E6ecdbB4A6526579b2",
-            "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e",
-            "0xA13Edef35775289F3CA677D348EE878165767CF3",
-            "0xCe4d6e4234885a8344ED2154722988D8e7d8267f"
-          ],
-          "threshold": 3,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "moduleGuard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "version": "1.4.1",
-          "observedAt": "2026-07-13",
-          "source": "manual"
-        },
-        "observedAt": "2026-07-13",
-        "sources": [
-          {
-            "label": "Ethereum Zodiac Delay module source",
-            "url": "https://eth.blockscout.com/address/0x719fb18e31287ab36771ab3038575253502e41ab?tab=contract"
-          },
-          {
-            "label": "Module-controller Safe",
-            "url": "https://eth.blockscout.com/address/0xd12d9635c57c92d32ae389db4dc143bcbe57a6a4"
-          }
-        ],
-        "evidence": "The same-address 3-of-5 Safe was the sole enabled upstream module of both Zodiac Delay paths on Ethereum, Arbitrum, and Base. Its chain-local instances had the listed owners, no enabled modules, zero guard and module guard, and the standard fallback handler. It can cause a satellite admin Safe to grant mint authority after the 604,800-second module cooldown, or queue upgrade scheduling through the proposer Safe before the additional 172,800-second DVNTimelock delay. It was not enabled on either Plasma Safe at the cutoff."
+        "evidence": "At Arbitrum block 495109986, this Safe remained the DVNTimelock's sole proposer and canceller and also held executor authority. Safe reads returned the same three owners, threshold 3, and one enabled Zodiac Delay module at 0x0f01365579158FBe041FAe1c7b7005E622d396c4. The Safe can schedule a mint-logic upgrade, but execution remains subject to the downstream 172800-second DVNTimelock delay."
       }
     ],
-    "economicCapSemantics": "unbounded",
-    "reconciliation": "unknown",
+    "economicCapSemantics": "raiseable",
+    "reconciliation": "continuous",
     "supervision": "none",
     "review": {
       "sources": [
         {
-          "label": "USD.AI technical protocol overview",
-          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview"
+          "label": "Arbitrum verified USDai v1.5 implementation",
+          "url": "https://arbitrum.blockscout.com/address/0x0ab74df531c0d8f1c46643e404b3d14723bbc212?tab=contract"
         },
         {
-          "label": "USD.AI proof-of-reserves dashboard guide",
-          "url": "https://docs.usd.ai/app-guide/proof-of-reserves"
+          "label": "USD.AI USDai source",
+          "url": "https://github.com/usdai-foundation/usdai-contracts/blob/main/src/USDai.sol"
         },
         {
-          "label": "USD.AI proof-of-reserves API",
-          "url": "https://api.usd.ai/usdai/dashboard/proof-of-reserves?chainId=42161"
+          "label": "USD.AI mint and redeem architecture",
+          "url": "https://usd.ai/insights/usdai-mint-redeem-upgrade"
         },
         {
-          "label": "USD.AI terms of service",
-          "url": "https://docs.usd.ai/terms-of-service/usd.ai-terms-of-service"
+          "label": "USD.AI protocol security and bridge scope",
+          "url": "https://usd.ai/insights/what-survives-unreal-intelligence"
         },
         {
-          "label": "Sourcify exact-match OToken implementation source",
-          "url": "https://sourcify.dev/server/v2/contract/1/0x30198aa66d057a6216db471fce234b98edc1e5ad?fields=sources"
-        },
-        {
-          "label": "Arbitrum exact-match USDai hub implementation source",
-          "url": "https://arbitrum.blockscout.com/address/0x2af577d7e3baa01a991509f7f218dea1ff7d5bc4?tab=contract"
-        },
-        {
-          "label": "Exact-match DVNTimelock source",
-          "url": "https://eth.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
-        },
-        {
-          "label": "Ethereum OBridge source",
-          "url": "https://eth.blockscout.com/address/0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5?tab=contract"
+          "label": "Arbitrum DVNTimelock",
+          "url": "https://arbitrum.blockscout.com/address/0x0eea1ee08611ff4a4e83bfe3916712751995639b?tab=contract"
         }
       ],
-      "evidence": "Deployment-complete review at Ethereum block 25526129, Arbitrum block 483535601, Base block 48592766, and Plasma block 27034527. The four same-address transparent proxies resolved respectively to implementations 0x3019...e5ad, 0x2af5...5bc4, 0x3019...e5ad, and 0xe306...f4cc, and all four admin slots resolved to ProxyAdmin 0x2ddf...dc3c. Satellite OTokens granted DEFAULT_ADMIN_ROLE to chain-local 3-of-3 Safe 0x5F0B...841F and BRIDGE_ADMIN_ROLE to immutable OBridge 0xffa1...bae5; the Safe can grant itself that uncapped mint role immediately. The Arbitrum hub mints only against collateral, escrowed base yield, or stored bridgedSupply under current exact-source code. Each ProxyAdmin owner was a 172,800-second DVNTimelock with exact proposer, executor, and canceller Safe identities. Chain-local Safe module inventories were reviewed through the 3-of-5 upstream Safe and 604,800-second Zodiac Delay paths; no guard or unreviewed module remained. On 2026-07-15, USD.AI's primary reserve and legal pages were challenged: the reserve view is an issuer-operated dashboard, no dated recurring independent supply-to-reserve report was found, and the Cayman foundation states that USDai is not supervised or insured by any governmental agency. Because satellite admins can grant themselves an uncapped mint role immediately, the economic mint remains unbounded and reconciliation remains unknown. Economic-posture fields reviewed 2026-08-15: satellite admins retain uncapped mint paths outside the hub reconciliation, and no prudential supervisor or independent attestation applies. 2026-08-15 reconciliation research: USD.AI's official technical overview and proof-of-reserves guide/API describe the Arbitrum hub's collateral mechanics and issuer-operated reserve rows, but no dated recurring report or named examiner reconciles the complete USDai liability across the hub and satellite OTokens against reserves; satellite mint paths are not covered by a qualifying live invariant.",
-      "reviewer": "Codex Safety Score V9 registry pass / SOL-IV calibration; Sol economic-posture batch 2026-08-15; Codex reconciliation wave 1 2026-08-15",
-      "reviewedAt": "2026-08-15"
+      "evidence": "Canonical-chain review at Arbitrum block 495109986 (2026-08-16T10:25:57Z): USDai proxy 0x0a1a1a107e45b7ced86833863f482bc5f4ed82ef resolved to source-verified v1.5 implementation 0x0ab74df531c0d8f1c46643e404b3d14723bbc212 and ProxyAdmin 0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c. Native deposit issuance is bounded by PYUSD received by the hub, and base-yield issuance pulls matching PYUSD from escrow. The hub held 174219797.575409 PYUSD against 173248199.986009703234096152 canonical USDai plus 971597.576938 recorded bridged USDai liabilities, a combined 174219797.562947703234096152. This continuously reconciles the complete hub liability at the observation block. The ProxyAdmin owner remained the 172800-second DVNTimelock; its sole proposer and canceller remained the reviewed 3-of-3 Safe. Current collateral constraints can therefore be replaced only after the governed delay, supporting raiseable economic-cap semantics and a partially bounded admin posture. Satellite OToken role administration and LayerZero message-mint exposure are intentionally excluded from Mint Authority and retained in bridgeRouteRisk, preventing the same bridge control from being assessed in both modules. No named prudential regulator supervises USD.AI.",
+      "reviewer": "Codex USDai canonical mint-authority correction",
+      "reviewedAt": "2026-08-16",
+      "disposition": "scoreable"
     }
   }
 }
