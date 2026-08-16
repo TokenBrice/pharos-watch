@@ -6,7 +6,7 @@ Route contract for `/screener/`, the filterable and exportable view of the full 
 
 - Static shell, metadata, FAQ, and support copy: `src/app/screener/page.tsx`
 - Client orchestration: `src/app/screener/client.tsx`
-- Filter schema and pure row pipeline: `src/app/screener/screener-filters.ts`
+- Filter schema and pure row pipeline: `src/lib/screener-filters.ts`
 - Toolbar and table: `src/components/screener/`
 - URL codec: `src/lib/url-state.ts`, `src/hooks/use-url-filters.ts`
 - Picker entry: `src/components/selector/selector-callout.tsx`

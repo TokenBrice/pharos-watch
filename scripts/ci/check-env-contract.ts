@@ -2,8 +2,8 @@
 
 import { readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { collectSourceFiles } from "../lib/source-files.mjs";
-import { splitLines } from "../lib/doc-files.mjs";
+import { collectSourceFiles } from "../lib/source-files.mts";
+import { splitLines } from "../lib/doc-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   getAllEnvBindingKeys,

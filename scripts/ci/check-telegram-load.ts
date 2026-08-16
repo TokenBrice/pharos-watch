@@ -654,7 +654,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
 const MIN_TELEGRAM_PLAN_MIGRATIONS = 1;
 
 function selectTelegramPlanMigrations(migrationsDir: string): string[] {
-  // Mirrors getMigrationFiles() in check-worker-migrations.mjs, inlined to
+  // Mirrors getMigrationFiles() in check-worker-migrations.ts, inlined to
   // avoid pulling that module's top-level await into this tsx-transformed CLI.
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))

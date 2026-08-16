@@ -27,7 +27,7 @@
  */
 
 import { readFileSync, statSync } from "node:fs";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { collectSourceFiles } from "../lib/source-files.mts";
 
 const FLAGS_SOURCE = "src/lib/feature-flags.ts";
 const CHUNKS_DIR = ".next/static/chunks";

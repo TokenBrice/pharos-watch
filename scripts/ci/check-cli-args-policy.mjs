@@ -5,9 +5,9 @@ import { readFileSync } from "node:fs";
 import { dirname, extname, posix, resolve } from "node:path";
 import ts from "typescript";
 import { CLI_ARGV_EXEMPTION_CATEGORIES, CLI_ARGV_POLICY } from "../lib/cli-argv-policy.mjs";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { runAsCli } from "../lib/source-files.mjs";
-import { getScriptKind } from "../lib/ts-ast.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { runAsCli } from "../lib/source-files.mts";
+import { getScriptKind } from "../lib/ts-ast.mts";
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
 const STRICT_PARSER_CALL_PATTERN = /\bparseStrictCliArgs\s*\(/;

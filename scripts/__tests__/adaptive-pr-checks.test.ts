@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { selectLintableFiles } from "../ci/run-changed-eslint.mjs";
-import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mjs";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mjs";
 import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.mjs";
 

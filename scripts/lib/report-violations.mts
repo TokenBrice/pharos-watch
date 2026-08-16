@@ -1,4 +1,18 @@
-import { formatScannedOk } from "./source-files.mjs";
+import { formatScannedOk } from "./source-files.mts";
+
+interface OutputWriter {
+  write(chunk: string): unknown;
+}
+
+interface ReportViolationOptions {
+  label: string;
+  violations: readonly string[];
+  heading?: string;
+  hint?: string;
+  scannedCount?: number;
+  stdout?: OutputWriter;
+  stderr?: OutputWriter;
+}
 
 /**
  * One violation reporter for the `scripts/ci` scanners.
@@ -34,7 +48,7 @@ export function reportViolations({
   scannedCount,
   stdout = process.stdout,
   stderr = process.stderr,
-}) {
+}: ReportViolationOptions): 0 | 1 {
   if (violations.length > 0) {
     stderr.write(`${heading}:\n\n`);
     for (const violation of violations) stderr.write(`  ${violation}\n`);

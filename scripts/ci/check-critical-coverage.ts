@@ -13,15 +13,46 @@ import {
   parseLcov,
   validateCriticalCoverageWaiverMetadata,
 } from "../lib/critical-coverage.mjs";
-import { splitNullDelimited } from "../lib/changed-files.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const LCOV_PATH = "coverage/lcov.info";
 
+type CoverageWaivers = Record<string, string>;
+type ExitFunction = (code?: string | number | null) => never;
+type GitExec = (file: string, args: readonly string[], options: { encoding: "utf8" }) => string;
+
+interface CoverageConsole {
+  error(...data: unknown[]): void;
+  log(...data: unknown[]): void;
+}
+
+interface CoverageFs {
+  existsSync(path: string): boolean;
+  readFileSync(path: string, encoding: "utf8"): string;
+}
+
+interface CompletenessOptions {
+  candidateFiles?: string[];
+  criticalFiles?: string[];
+  waivers?: CoverageWaivers;
+  reviewToday?: Date;
+  consoleImpl?: CoverageConsole;
+  exit?: ExitFunction;
+}
+
+interface CriticalCoverageCheckOptions {
+  env?: NodeJS.ProcessEnv;
+  fsImpl?: CoverageFs;
+  execFile?: GitExec;
+  consoleImpl?: CoverageConsole;
+  completenessOptions?: Omit<CompletenessOptions, "consoleImpl" | "exit">;
+  exit?: ExitFunction;
+}
+
 // Explicit branch floors at external provider, authentication, scoring, and
 // publication boundaries. These cover the error paths that line coverage can miss.
-/** @type {Record<string, number>} */
-export const CRITICAL_COVERAGE_BRANCH_FLOORS = {
+export const CRITICAL_COVERAGE_BRANCH_FLOORS: Record<string, number> = {
   "worker/src/lib/auth.ts": 40,
   "worker/src/lib/evm-rpc.ts": 40,
   "worker/src/lib/safety-scores.ts": 40,
@@ -29,7 +60,7 @@ export const CRITICAL_COVERAGE_BRANCH_FLOORS = {
 };
 
 // Explicit per-file minimums for critical reliability paths.
-function getCriticalThresholds(env = process.env) {
+function getCriticalThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
   return {
     "worker/src/lib/stablecoins-cache.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE ?? "50"),
     "worker/src/lib/auth.ts": Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD_AUTH ?? "70"),
@@ -45,8 +76,8 @@ function getCriticalThresholds(env = process.env) {
   };
 }
 
-function getCriticalBranchThresholds(env = process.env) {
-  const getThreshold = (value, fallback) => {
+function getCriticalBranchThresholds(env: NodeJS.ProcessEnv = process.env): Record<string, number> {
+  const getThreshold = (value: string | undefined, fallback: number): number => {
     const parsed = Number.parseFloat(value ?? "");
     return Number.isFinite(parsed) ? parsed : fallback;
   };
@@ -71,7 +102,7 @@ function getCriticalBranchThresholds(env = process.env) {
   };
 }
 
-export function parseChangedFilesFromEnv(env = process.env) {
+export function parseChangedFilesFromEnv(env: NodeJS.ProcessEnv = process.env): string[] {
   const raw = env.CRITICAL_COVERAGE_CHANGED_FILES;
   if (!raw) return [];
   return raw
@@ -80,11 +111,14 @@ export function parseChangedFilesFromEnv(env = process.env) {
     .filter(Boolean);
 }
 
-export function isAllZeroSha(ref) {
+export function isAllZeroSha(ref: string): boolean {
   return /^0+$/.test(ref);
 }
 
-export function getChangedFilesFromGit(ref, { execFile = execFileSync, consoleImpl = console } = {}) {
+export function getChangedFilesFromGit(
+  ref: string,
+  { execFile = execFileSync as GitExec, consoleImpl = console }: { execFile?: GitExec; consoleImpl?: CoverageConsole } = {},
+): string[] {
   if (!ref || isAllZeroSha(ref)) return [];
   try {
     const raw = execFile("git", ["diff", "--name-only", "-z", `${ref}...HEAD`], { encoding: "utf8" });
@@ -98,7 +132,14 @@ export function getChangedFilesFromGit(ref, { execFile = execFileSync, consoleIm
   }
 }
 
-function loadCoverageBaseline(path, { fsImpl = fs, consoleImpl = console, exit = process.exit } = {}) {
+function loadCoverageBaseline(
+  path: string,
+  {
+    fsImpl = fs,
+    consoleImpl = console,
+    exit = process.exit,
+  }: { fsImpl?: CoverageFs; consoleImpl?: CoverageConsole; exit?: ExitFunction } = {},
+): Record<string, unknown> | null {
   if (!fsImpl.existsSync(path)) return null;
   try {
     const parsed = JSON.parse(fsImpl.readFileSync(path, "utf8"));
@@ -120,7 +161,7 @@ export function runCriticalCoverageCompletenessGuard({
   reviewToday = new Date(),
   consoleImpl = console,
   exit = process.exit,
-} = {}) {
+}: CompletenessOptions = {}): boolean {
   const waiverErrors = validateCriticalCoverageWaiverMetadata(waivers, {
     candidateFiles,
     criticalFiles,
@@ -137,10 +178,11 @@ export function runCriticalCoverageCompletenessGuard({
     candidateFiles,
     today: reviewToday,
   });
-  for (const [label, rows] of /** @type {[string, {file: string, reviewAfter: string}[]][]} */ ([
+  const reviewGroups: Array<[string, Array<{ file: string; reviewAfter: string }>]> = [
     ["due or overdue", waiverReviewQueue.due],
     ["due soon", waiverReviewQueue.upcoming],
-  ])) {
+  ];
+  for (const [label, rows] of reviewGroups) {
     if (rows.length === 0) continue;
     consoleImpl.log(`[coverage] Critical coverage waiver reviews ${label}:`);
     for (const waiver of rows) {
@@ -181,11 +223,11 @@ export function runCriticalCoverageCompletenessGuard({
 export function runCriticalCoverageCheck({
   env = process.env,
   fsImpl = fs,
-  execFile = execFileSync,
+  execFile = execFileSync as GitExec,
   consoleImpl = console,
   completenessOptions = {},
   exit = process.exit,
-} = {}) {
+}: CriticalCoverageCheckOptions = {}): void {
   const threshold = Number.parseFloat(env.CRITICAL_COVERAGE_THRESHOLD ?? "40");
   const ratchetTolerance = Number.parseFloat(env.CRITICAL_COVERAGE_RATCHET_TOLERANCE ?? "0");
   const baselinePath = env.CRITICAL_COVERAGE_BASELINE_FILE ?? ".ci/critical-coverage-baseline.json";
@@ -208,7 +250,7 @@ export function runCriticalCoverageCheck({
   const parsed = parseLcov(lcov);
   const baseline = loadCoverageBaseline(baselinePath, { fsImpl, consoleImpl, exit });
   const changedFromEnv = parseChangedFilesFromEnv(env);
-  let changedFromRef = [];
+  let changedFromRef: string[] = [];
   if (changedFromEnv.length === 0) {
     try {
       changedFromRef = getChangedFilesFromGit(compareRef, { execFile, consoleImpl });
@@ -234,7 +276,7 @@ export function runCriticalCoverageCheck({
     consoleImpl.log(`[coverage] Baseline file not found at ${baselinePath}; ratchet checks skipped.`);
   }
 
-  function thresholdForFile(file) {
+  function thresholdForFile(file: string): number {
     const override = criticalThresholds[file];
     return Number.isFinite(override) ? override : threshold;
   }

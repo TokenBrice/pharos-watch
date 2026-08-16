@@ -2,9 +2,9 @@
 
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import ts from "typescript";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mts";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);

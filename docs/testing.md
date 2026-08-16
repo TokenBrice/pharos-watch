@@ -73,7 +73,7 @@ For deployment/worktree operating procedure, secrets, and rollback, see [Deploym
 CI shape:
 
 1. Internal-docs-only PRs run verified-link, source-path, doc-sync, and the generated `AGENTS.md` mirror check.
-2. Other PRs run `check:pr:static` plus two shards of `test:pr`. The static runner always checks changed-file lint, source types, environment/import contracts, and high-stakes coverage-waiver completeness; root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. It runs `check:structural` for affected production and validation paths, enforcing the Worker raw-console, provider-resilience, fetch-body, script-entrypoint, CLI-policy, and stale-flag checks. It adds data and Worker/Telegram checks only for relevant paths. Generated-artifact freshness is selected from the changed sources themselves through `scripts/ci/select-generated-artifacts.mjs`, in every lane rather than only when a Pages surface moved, so a Worker-only or shared-only commit that leaves a manifest-pinned artifact such as the Safety Score V9 evaluation-build manifest stale fails the PR gate rather than the release discovery gate. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. The pinned Gitleaks runner self-tests its path-scoped Falcon public-label allowlist against both a known label and a credential-shaped control before scanning the requested range. A separate 15-minute coverage job runs only when an enrolled critical source file changes, using the PR base SHA for the touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
+2. Other PRs run `check:pr:static` plus two shards of `test:pr`. The static runner always checks changed-file lint, source types, environment/import contracts, and high-stakes coverage-waiver completeness; root `package.json` or `package-lock.json` changes also run the production-scope dependency audit. It runs `check:structural` for affected production and validation paths, enforcing the Worker raw-console, provider-resilience, fetch-body, script-entrypoint, CLI-policy, and stale-flag checks. It adds data and Worker/Telegram checks only for relevant paths. Generated-artifact freshness is selected from the changed sources themselves through `scripts/ci/select-generated-artifacts.mts`, in every lane rather than only when a Pages surface moved, so a Worker-only or shared-only commit that leaves a manifest-pinned artifact such as the Safety Score V9 evaluation-build manifest stale fails the PR gate rather than the release discovery gate. `test:pr` unions the critical API contract list with Vitest's dependency-selected changed tests. The pinned Gitleaks runner self-tests its path-scoped Falcon public-label allowlist against both a known label and a credential-shaped control before scanning the requested range. A separate 15-minute coverage job runs only when an enrolled critical source file changes, using the PR base SHA for the touched-file no-regression ratchet. PRs that change GitHub workflows or composite actions also run the path-scoped Zizmor analysis before merge.
 3. PRs do not build the static site. The production Pages workflow performs the one authoritative build after merge.
 4. Nightly/manual validation runs full lint, typed lint, all TypeScript projects, `check:structural`, the complete two-shard Vitest suite, and the non-blocking Node 26 proof. CodeQL runs after relevant `main` changes and weekly; Zizmor additionally analyzes relevant pull requests. The weekly/manual all-critical coverage ratchet is blocking. The separate weekly Cloudflare account-state workflow compares the committed secret-free manifest through read-only API requests and fails clearly if `CLOUDFLARE_ACCOUNT_STATE_DRIFT_API_TOKEN` is not configured.
 5. A successful protected merge triggers the production deploy classifier. Worker mutation retains migration checks and activation proof; Pages publication retains artifact checks and the release-marker proof.
@@ -412,7 +412,7 @@ CI does **not** run a full-suite coverage gate. The PR workflow runs `coverage:c
 - Scopes v8 remapping to the enrolled critical source via per-file `--coverage.include` flags (built in `buildCriticalCoverageArgs`); per-file numbers are unchanged, the reporter just stops remapping the rest of the module graph
 - Parses `coverage/lcov.info`
 - Fails CI if any critical file falls below `CRITICAL_COVERAGE_THRESHOLD` (default: 40%, currently pinned to 40 in CI)
-- Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.mjs`)
+- Applies explicit per-file minimums for selected reliability paths (`alerts`, `auth`, `evm-rpc`, `health`, `stablecoin-detail`, `dex-liquidity/orchestrator`, plus the other file-specific overrides in `scripts/ci/check-critical-coverage.ts`)
 - Applies 40% branch/error-path floors to the `evm-rpc` provider, `auth`, `safety-scores`, and `price-publication-state` boundaries
 - For touched critical files, enforces a no-regression ratchet using `.ci/critical-coverage-baseline.json`
 - Fails non-doc PR static validation when a high-stakes candidate is missing enrollment or a waiver is expired
@@ -424,7 +424,7 @@ Gate scripts and ownership:
 
 - `scripts/lib/critical-test-files.mjs` owns critical test-file membership.
 - `scripts/lib/critical-coverage.mjs` owns critical source-file ratchet membership.
-- `scripts/ci/check-critical-coverage.mjs` owns threshold parsing, explicit per-file override handling, and touched-file ratchet enforcement.
+- `scripts/ci/check-critical-coverage.ts` owns threshold parsing, explicit per-file override handling, and touched-file ratchet enforcement.
 
 Useful env controls:
 
@@ -437,7 +437,7 @@ Useful env controls:
 - Per-file line overrides: `CRITICAL_COVERAGE_THRESHOLD_ALERTS`, `CRITICAL_COVERAGE_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOINS_CACHE`, `CRITICAL_COVERAGE_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_THRESHOLD_SCHEDULED`, `CRITICAL_COVERAGE_THRESHOLD_DAILY_DIGEST`, `CRITICAL_COVERAGE_THRESHOLD_STABLECOIN_DETAIL`, `CRITICAL_COVERAGE_THRESHOLD_HEALTH`, `CRITICAL_COVERAGE_THRESHOLD_STATUS`, `CRITICAL_COVERAGE_THRESHOLD_DEX_ORCHESTRATOR`, `CRITICAL_COVERAGE_THRESHOLD_API_PAGINATION`
 - Branch-floor overrides: `CRITICAL_COVERAGE_BRANCH_THRESHOLD_AUTH`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_EVM_RPC`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_SAFETY_SCORES`, `CRITICAL_COVERAGE_BRANCH_THRESHOLD_PRICE_PUBLICATION_STATE`
 
-Selected files have explicit threshold overrides in `scripts/ci/check-critical-coverage.mjs`; keep that map as the source of truth instead of duplicating override values in prose.
+Selected files have explicit threshold overrides in `scripts/ci/check-critical-coverage.ts`; keep that map as the source of truth instead of duplicating override values in prose.
 
 ### Critical Test Suites
 

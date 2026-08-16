@@ -4,7 +4,13 @@ import { isDirectRun } from "./smoke-runtime.mjs";
 
 export const DEFAULT_SOURCE_FILE_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "node_modules"]);
 
-export function resolveSourceRoot(root, cwd = process.cwd()) {
+interface CollectSourceFileOptions {
+  extensions?: Iterable<string>;
+  excludedDirs?: Iterable<string>;
+  skipDotEntries?: boolean;
+}
+
+export function resolveSourceRoot(root: string, cwd = process.cwd()): string {
   return isAbsolute(root) ? root : join(cwd, root);
 }
 
@@ -13,14 +19,18 @@ export function resolveSourceRoot(root, cwd = process.cwd()) {
  * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
  */
 export function collectSourceFiles(
-  rootDir,
-  { extensions, excludedDirs = DEFAULT_SOURCE_FILE_EXCLUDED_DIRS, skipDotEntries = false } = {},
-) {
+  rootDir: string,
+  {
+    extensions,
+    excludedDirs = DEFAULT_SOURCE_FILE_EXCLUDED_DIRS,
+    skipDotEntries = false,
+  }: CollectSourceFileOptions = {},
+): string[] {
   const extensionSet = extensions instanceof Set ? extensions : new Set(extensions ?? []);
   const excludedDirSet = excludedDirs instanceof Set ? excludedDirs : new Set(excludedDirs ?? []);
-  const files = [];
+  const files: string[] = [];
 
-  function visit(dir) {
+  function visit(dir: string): void {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (skipDotEntries && entry.name.startsWith(".")) continue;
       const entryPath = join(dir, entry.name);
@@ -45,19 +55,24 @@ export function collectSourceFiles(
  * @param {string} cwd
  * @param {{ extensions?: Iterable<string>, excludedDirs?: Iterable<string>, skipDotEntries?: boolean }} [options]
  */
-export function collectSourceFilesUnderRoot(root, cwd, { extensions, excludedDirs, skipDotEntries } = {}) {
+export function collectSourceFilesUnderRoot(
+  root: string,
+  cwd = process.cwd(),
+  { extensions, excludedDirs, skipDotEntries }: CollectSourceFileOptions = {},
+): string[] {
   const absolute = resolveSourceRoot(root, cwd);
   if (!existsSync(absolute)) return [];
   if (statSync(absolute).isFile()) return [absolute];
   return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
 }
 
-export function formatScannedOk(label, count) {
+export function formatScannedOk(label: string, count: number): string {
   return `${label}: OK (${count} file${count === 1 ? "" : "s"} scanned)\n`;
 }
 
-export function runAsCli(importMetaUrl, main) {
+export function runAsCli(importMetaUrl: string, main: () => number | void): void {
   if (isDirectRun(importMetaUrl, process.argv[1])) {
-    process.exitCode = main();
+    const exitCode = main();
+    if (exitCode !== undefined) process.exitCode = exitCode;
   }
 }

@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { matchesGlob } from "node:path";
-import { splitNullDelimited } from "./changed-files.mjs";
+import { splitNullDelimited } from "./changed-files.mts";
 
 export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
   "shared/data/stablecoins/coins/**",

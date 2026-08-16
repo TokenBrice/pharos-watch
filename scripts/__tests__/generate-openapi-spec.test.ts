@@ -52,4 +52,26 @@ describe("OpenAPI runtime response contracts", () => {
         .sort(),
     ).toEqual([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort());
   });
+
+  it("uses canonical runtime contracts for the five promoted response families", () => {
+    const responseSchemas = Object.fromEntries(
+      PUBLIC_API_ARTIFACT_ENDPOINTS.map((endpoint) => [endpoint.key, endpoint.responseSchema]),
+    );
+
+    expect(responseSchemas).toMatchObject({
+      "bluechip-ratings": "BluechipRatingsResponse",
+      "dex-liquidity": "DexLiquidityResponse",
+      "stress-signals": "StressSignalsResponse",
+      "mint-burn-flows": "MintBurnFlowsResponse",
+      "telegram-pulse": "TelegramPulseResponse",
+    });
+    expect([...OPENAPI_JSON_VALUE_ENDPOINT_KEYS].sort()).toEqual([
+      "non-usd-share",
+      "snapshot-coin",
+      "snapshot-day",
+      "snapshots-index",
+      "stablecoin-detail",
+      "stablecoin-summary",
+    ]);
+  });
 });

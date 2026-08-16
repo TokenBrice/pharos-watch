@@ -11,7 +11,7 @@ import {
   hasWorkerReleaseImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
-import { splitNullDelimited } from "../lib/changed-files.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CRITICAL_FILES } from "../lib/critical-coverage.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 

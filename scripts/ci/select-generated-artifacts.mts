@@ -2,13 +2,22 @@
 
 import { matchesGlob } from "node:path";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 
-function matchesPath(path, pattern) {
+interface GeneratedArtifactDefinition {
+  id: string;
+  sourcePaths: readonly string[];
+  dependsOn?: readonly string[];
+}
+
+function matchesPath(path: string, pattern: string) {
   return path === pattern || matchesGlob(path, pattern);
 }
 
-export function selectChangedGeneratedArtifactIds(changedFiles, registry = GENERATED_ARTIFACT_REGISTRY) {
+export function selectChangedGeneratedArtifactIds(
+  changedFiles: readonly string[],
+  registry: readonly GeneratedArtifactDefinition[] = GENERATED_ARTIFACT_REGISTRY,
+): string[] {
   const selected = new Set(
     registry
       .filter((artifact) => changedFiles.some((file) => artifact.sourcePaths.some((pattern) => matchesPath(file, pattern))))
@@ -30,7 +39,7 @@ export function selectChangedGeneratedArtifactIds(changedFiles, registry = GENER
   return registry.filter((artifact) => selected.has(artifact.id)).map((artifact) => artifact.id);
 }
 
-export function runSelector(argv = process.argv.slice(2), env = process.env) {
+export function runSelector(argv: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env) {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   if (rest.length > 0) throw new Error(`Unknown option(s): ${rest.join(", ")}`);
   return selectChangedGeneratedArtifactIds(collectChangedFiles({ base, head }));

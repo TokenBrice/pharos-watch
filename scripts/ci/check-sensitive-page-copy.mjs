@@ -15,7 +15,7 @@
 
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mts";
 
 export const SENSITIVE_COPY_ROOTS = [
   "src/app/api",

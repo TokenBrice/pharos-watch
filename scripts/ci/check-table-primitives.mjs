@@ -3,9 +3,9 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, posix, relative, sep } from "node:path";
 import ts from "typescript";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 
 const SOURCE_EXTENSIONS = new Set([".js", ".jsx", ".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["src"];

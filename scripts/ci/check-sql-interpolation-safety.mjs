@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
 
 export const DEFAULT_SQL_SAFETY_ROOTS = ["worker/src", "worker/scripts", "scripts"];
 export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)[^`]*(?:FROM|INTO|UPDATE|JOIN)\s+\$\{|(?:SELECT|DELETE|UPDATE)[^`]*(?:WHERE|AND|OR|SET)\s+[\w.]+\s*=\s*['"]?\$\{)/i;

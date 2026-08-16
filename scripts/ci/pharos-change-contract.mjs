@@ -10,7 +10,7 @@ import {
   hasWorkerDeployImpact,
   normalizeRepoPath,
 } from "../lib/deploy-impact.mjs";
-import { splitNullDelimited } from "../lib/changed-files.mjs";
+import { splitNullDelimited } from "../lib/changed-files.mts";
 import { CORE_RULES, DEFAULT_BASE_DOCS, PATH_FAMILIES } from "../lib/doc-ownership-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 

@@ -1,5 +1,5 @@
 import ts from "typescript";
-import { getScriptKind } from "./ts-ast.mjs";
+import { getScriptKind } from "./ts-ast.mts";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { resolveCapacityBasis } from "@shared/lib/redemption-backstop-capacity";
 import {

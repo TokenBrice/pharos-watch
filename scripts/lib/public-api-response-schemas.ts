@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 import { ChainsResponseSchema } from "@shared/types/chains";
 import {
@@ -12,14 +12,22 @@ import { StablecoinReservesResponseSchema } from "@shared/types/live-reserves";
 import {
   BlacklistResponseSchema,
   BlacklistSummaryResponseSchema,
+  BluechipRatingsMapSchema,
   DepegEventsResponseSchema,
+  DexLiquidityMapSchema,
   DexLiquidityHistoryResponseSchema,
   PegSummaryResponseSchema,
   StablecoinChartResponseSchema,
   StablecoinListResponseSchema,
+  StressSignalDetailResponseSchema,
+  StressSignalsAllResponseSchema,
   SupplyHistoryResponseSchema,
 } from "@shared/types/market";
-import { MintBurnEventsResponseSchema } from "@shared/types/mint-burn";
+import {
+  MintBurnEventsResponseSchema,
+  MintBurnFlowsResponseSchema,
+  MintBurnPerCoinResponseSchema,
+} from "@shared/types/mint-burn";
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
 import {
@@ -27,7 +35,11 @@ import {
   SafetyScoreHistoryV2ResponseSchema,
 } from "@shared/types/safety-score-history";
 import { StabilityIndexResponseSchema, UsdsStatusResponseSchema } from "@shared/types/stability";
-import { HealthResponseSchema, PublicStatusHistoryResponseSchema } from "@shared/types/status";
+import {
+  HealthResponseSchema,
+  PublicStatusHistoryResponseSchema,
+  TelegramPulseSchema,
+} from "@shared/types/status";
 import { TapeEventsResponseSchema } from "@shared/types/tape-event";
 import {
   YieldAdapterManifestResponseSchema,
@@ -41,6 +53,8 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   StablecoinReservesResponse: StablecoinReservesResponseSchema,
   StablecoinChartResponse: StablecoinChartResponseSchema,
   PegSummaryResponse: PegSummaryResponseSchema,
+  BluechipRatingsResponse: BluechipRatingsMapSchema,
+  DexLiquidityResponse: DexLiquidityMapSchema,
   DepegEventsResponse: DepegEventsResponseSchema,
   TapeEventsResponse: TapeEventsResponseSchema,
   UsdsStatusResponse: UsdsStatusResponseSchema,
@@ -52,6 +66,8 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   StabilityIndexResponse: StabilityIndexResponseSchema,
   BlacklistResponse: BlacklistResponseSchema,
   BlacklistSummaryResponse: BlacklistSummaryResponseSchema,
+  StressSignalsResponse: z.union([StressSignalsAllResponseSchema, StressSignalDetailResponseSchema]),
+  MintBurnFlowsResponse: z.union([MintBurnFlowsResponseSchema, MintBurnPerCoinResponseSchema]),
   MintBurnEventsResponse: MintBurnEventsResponseSchema,
   YieldRankingsResponse: YieldRankingsResponseSchema,
   YieldAdapterManifestResponse: YieldAdapterManifestResponseSchema,
@@ -64,6 +80,7 @@ export const PUBLIC_API_RESPONSE_SCHEMAS = {
   DigestArchiveResponse: DigestArchiveResponseSchema,
   DigestSnapshotResponse: DigestSnapshotResponseSchema,
   PublicStatusHistoryResponse: PublicStatusHistoryResponseSchema,
+  TelegramPulseResponse: TelegramPulseSchema,
 } as const satisfies Record<string, z.ZodType>;
 
 export type PublicApiResponseSchemaName = keyof typeof PUBLIC_API_RESPONSE_SCHEMAS;

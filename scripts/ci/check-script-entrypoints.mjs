@@ -2,8 +2,8 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles } from "../lib/source-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const SCAN_ROOTS = ["scripts", "docs", "package.json", ".github/workflows", ".github/actions"];

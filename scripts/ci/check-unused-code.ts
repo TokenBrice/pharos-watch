@@ -3,14 +3,51 @@
 import { statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { collectSourceFilesUnderRoot } from "../lib/source-files.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { collectSourceFilesUnderRoot } from "../lib/source-files.mts";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 import {
   DEBT_EXPORTS,
   DEBT_MODULES,
   SCANNER_BLIND_SPOT_EXPORTS,
   SCANNER_BLIND_SPOT_MODULES,
 } from "../lib/unused-code-allowlist.mjs";
+
+type DependencyKind = "default" | "named" | "namespace" | "side-effect";
+type AllowlistSection = "SCANNER_BLIND_SPOTS" | "DEBT";
+
+interface Dependency {
+  resolved: string;
+  kind: DependencyKind;
+  names: string[];
+}
+
+interface ModuleInfo {
+  exports: Set<string>;
+  typeExports: Set<string>;
+  dependencies: Dependency[];
+  hasWildcardExports: boolean;
+  hasSideEffectsOnly: boolean;
+}
+
+interface AllowlistMeta {
+  section: AllowlistSection;
+  reason: string;
+}
+
+interface DeadModule {
+  file: string;
+  reason: string;
+}
+
+interface UnusedExport {
+  file: string;
+  name: string;
+}
+
+interface StaleAllowlistEntry {
+  entry: string;
+  reason: string;
+}
 
 const ROOT = process.cwd();
 const AUDIT_ALLOWLIST = !process.argv.includes("--skip-allowlist-audit");
@@ -32,16 +69,19 @@ const ROOT_ENTRYPOINT_PATTERNS = [
 ];
 
 // Both allowlists keep their section so the audit can name it in failures.
-const withSection = (entries, section) =>
+const withSection = (
+  entries: Record<string, string>,
+  section: AllowlistSection,
+): Array<[string, AllowlistMeta]> =>
   Object.entries(entries).map(([entry, reason]) => [entry, { section, reason }]);
 
 const MODULE_ALLOWLIST = new Map([
-  ...withSection(SCANNER_BLIND_SPOT_MODULES, "SCANNER_BLIND_SPOTS"),
-  ...withSection(DEBT_MODULES, "DEBT"),
+  ...withSection(SCANNER_BLIND_SPOT_MODULES as Record<string, string>, "SCANNER_BLIND_SPOTS"),
+  ...withSection(DEBT_MODULES as Record<string, string>, "DEBT"),
 ]);
 const EXPORT_ALLOWLIST = new Map([
-  ...withSection(SCANNER_BLIND_SPOT_EXPORTS, "SCANNER_BLIND_SPOTS"),
-  ...withSection(DEBT_EXPORTS, "DEBT"),
+  ...withSection(SCANNER_BLIND_SPOT_EXPORTS as Record<string, string>, "SCANNER_BLIND_SPOTS"),
+  ...withSection(DEBT_EXPORTS as Record<string, string>, "DEBT"),
 ]);
 
 const VITEST_ALIASES = loadVitestAliases();
@@ -50,31 +90,33 @@ const files = collectSourceFiles();
 const fileSet = new Set(files);
 const moduleInfo = new Map(files.map((file) => [file, analyzeModule(file)]));
 
-const runtimeInbound = new Map(files.map((file) => [file, new Set()]));
-const namedExportUsage = new Map(files.map((file) => [file, new Set()]));
-const ambiguousUsage = new Set();
+const runtimeInbound = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
+const namedExportUsage = new Map<string, Set<string>>(files.map((file) => [file, new Set<string>()]));
+const ambiguousUsage = new Set<string>();
 
 for (const [file, info] of moduleInfo.entries()) {
   for (const dependency of info.dependencies) {
     if (!runtimeInbound.has(dependency.resolved)) continue;
-    runtimeInbound.get(dependency.resolved).add(file);
+    runtimeInbound.get(dependency.resolved)?.add(file);
     if (dependency.kind !== "named") {
       ambiguousUsage.add(dependency.resolved);
       continue;
     }
     const usedNames = namedExportUsage.get(dependency.resolved);
+    if (!usedNames) continue;
     for (const name of dependency.names) {
       usedNames.add(name);
     }
   }
 }
 
-const deadModules = [];
-const unusedExports = [];
+const deadModules: DeadModule[] = [];
+const unusedExports: UnusedExport[] = [];
 
 for (const file of files) {
   const rel = relative(ROOT, file).replaceAll("\\", "/");
   const info = moduleInfo.get(file);
+  if (!info) throw new Error(`Missing module analysis for ${file}`);
   if (!isReportableModule(rel) || isTestFile(rel) || isRootEntrypoint(rel)) continue;
 
   if ((runtimeInbound.get(file)?.size ?? 0) === 0) {
@@ -117,9 +159,9 @@ if (unusedExports.length > 0) {
 }
 
 if (AUDIT_ALLOWLIST) {
-  const stale = [];
+  const stale: StaleAllowlistEntry[] = [];
   for (const [entry, meta] of EXPORT_ALLOWLIST) {
-    const [file, symbol] = entry.split("::");
+    const [file = "", symbol = ""] = entry.split("::");
     if (!meta.reason) {
       stale.push({ entry, reason: `missing one-line reason in ${meta.section}` });
       continue;
@@ -172,7 +214,7 @@ if (deadModules.length === 0 && unusedExports.length === 0) {
 
 process.exit(1);
 
-function collectSourceFiles() {
+function collectSourceFiles(): string[] {
   const excludedDirs = new Set(["node_modules", ".next", "out"]);
   const results = SOURCE_DIRS.flatMap((dir) =>
     collectSourceFilesUnderRoot(dir, ROOT, { extensions: SOURCE_EXTENSIONS, excludedDirs }).filter(
@@ -182,16 +224,16 @@ function collectSourceFiles() {
   return results.sort();
 }
 
-function analyzeModule(file) {
-  const { sourceFile } = parseSourceFile(file);
+function analyzeModule(file: string): ModuleInfo {
+  const { sourceFile } = parseSourceFile(file) as { sourceFile: ts.SourceFile };
 
-  const exports = new Set();
+  const exports = new Set<string>();
   // Fully type-only export declarations (`export type { X }` / `export type { X } from`)
   // are intentionally excluded from `exports` (they are never runtime-dead), but the
   // allowlist audit still needs to know they exist so it doesn't false-flag a valid
   // type-only allowlist entry as a stale symbol.
-  const typeExports = new Set();
-  const dependencies = [];
+  const typeExports = new Set<string>();
+  const dependencies: Dependency[] = [];
   let hasWildcardExports = false;
   let hasSideEffectsOnly = true;
 
@@ -273,8 +315,8 @@ function analyzeModule(file) {
   return { exports, typeExports, dependencies, hasWildcardExports, hasSideEffectsOnly };
 }
 
-function collectImportDependencies(node, resolved) {
-  const deps = [];
+function collectImportDependencies(node: ts.ImportDeclaration, resolved: string): Dependency[] {
+  const deps: Dependency[] = [];
   const importClause = node.importClause;
   if (!importClause) {
     deps.push({ resolved, kind: "side-effect", names: [] });
@@ -301,7 +343,7 @@ function collectImportDependencies(node, resolved) {
   return deps;
 }
 
-function collectExportedNames(node, exports) {
+function collectExportedNames(node: ts.Node, exports: Set<string>): void {
   if (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node) || ts.isEnumDeclaration(node)) {
     if (node.name) exports.add(node.name.text);
     return;
@@ -314,7 +356,7 @@ function collectExportedNames(node, exports) {
   }
 }
 
-function collectBindingNames(name, exports) {
+function collectBindingNames(name: ts.BindingName, exports: Set<string>): void {
   if (ts.isIdentifier(name)) {
     exports.add(name.text);
     return;
@@ -327,12 +369,14 @@ function collectBindingNames(name, exports) {
   }
 }
 
-function hasExportModifier(node) {
-  return Boolean(node.modifiers?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword));
+function hasExportModifier(node: ts.Node): boolean {
+  return Boolean(
+    ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword),
+  );
 }
 
-function resolveModule(fromFile, specifier) {
-  let candidate = null;
+function resolveModule(fromFile: string, specifier: string): string | null {
+  let candidate: string | null = null;
 
   if (specifier.startsWith(".")) {
     candidate = resolve(dirname(fromFile), specifier);
@@ -355,8 +399,8 @@ function resolveModule(fromFile, specifier) {
  * and every export on them looked unreferenced because their only importers use
  * the aliased package specifier.
  */
-function resolveAliasSpecifier(specifier) {
-  let best = null;
+function resolveAliasSpecifier(specifier: string): string | null {
+  let best: { key: string; path: string } | null = null;
   for (const [key, target] of VITEST_ALIASES) {
     if (specifier === key) return target;
     if (!specifier.startsWith(`${key}/`)) continue;
@@ -374,10 +418,10 @@ function resolveAliasSpecifier(specifier) {
  * Fails closed: an unreadable or unexpected config shape is a hard error
  * rather than a silent loss of resolution coverage.
  */
-function loadVitestAliases() {
+function loadVitestAliases(): Map<string, string> {
   const configPath = resolve(ROOT, VITEST_CONFIG);
-  const { sourceFile } = parseSourceFile(configPath);
-  const aliases = new Map();
+  const { sourceFile } = parseSourceFile(configPath) as { sourceFile: ts.SourceFile };
+  const aliases = new Map<string, string>();
 
   visit(sourceFile, (node) => {
     if (!ts.isPropertyAssignment(node)) return;
@@ -405,14 +449,14 @@ function loadVitestAliases() {
 }
 
 /** `path.resolve(__dirname, "src")` / `path.resolve(__dirname, "worker/src/__mocks__/x.ts")` → absolute path. */
-function resolveAliasTarget(initializer) {
+function resolveAliasTarget(initializer: ts.Expression): string | null {
   if (ts.isStringLiteral(initializer)) return resolve(ROOT, initializer.text);
   if (!ts.isCallExpression(initializer)) return null;
   const segments = initializer.arguments.filter(ts.isStringLiteral).map((argument) => argument.text);
   return segments.length > 0 ? resolve(ROOT, ...segments) : null;
 }
 
-function resolveWithExtensions(basePath) {
+function resolveWithExtensions(basePath: string): string | null {
   const directStat = tryStat(basePath);
   if (directStat?.isFile()) return basePath;
 
@@ -429,7 +473,7 @@ function resolveWithExtensions(basePath) {
   return null;
 }
 
-function tryStat(path) {
+function tryStat(path: string): ReturnType<typeof statSync> | null {
   try {
     return statSync(path);
   } catch {
@@ -437,23 +481,23 @@ function tryStat(path) {
   }
 }
 
-function isReportableModule(relPath) {
+function isReportableModule(relPath: string): boolean {
   return REPORTABLE_DIR_PREFIXES.some((prefix) => relPath.startsWith(prefix));
 }
 
-function isUnusedExportReportable(relPath) {
+function isUnusedExportReportable(relPath: string): boolean {
   return UNUSED_EXPORT_DIR_PREFIXES.some((prefix) => relPath.startsWith(prefix));
 }
 
-function isRootEntrypoint(relPath) {
+function isRootEntrypoint(relPath: string): boolean {
   return ROOT_ENTRYPOINT_PATTERNS.some((pattern) => pattern.test(relPath));
 }
 
-function isTestFile(relPath) {
+function isTestFile(relPath: string): boolean {
   return relPath.includes("/__tests__/") || /\.test\.[^/]+$/.test(relPath) || /\.spec\.[^/]+$/.test(relPath);
 }
 
-function visit(node, callback) {
+function visit(node: ts.Node, callback: (node: ts.Node) => void): void {
   callback(node);
   node.forEachChild((child) => visit(child, callback));
 }

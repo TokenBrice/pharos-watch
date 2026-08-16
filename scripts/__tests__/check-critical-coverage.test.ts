@@ -14,7 +14,7 @@ import {
   parseChangedFilesFromEnv,
   runCriticalCoverageCompletenessGuard,
   runCriticalCoverageCheck,
-} from "../ci/check-critical-coverage.mjs";
+} from "../ci/check-critical-coverage.ts";
 import {
   CRITICAL_COVERAGE_WAIVERS,
   CRITICAL_FILES,

@@ -3,8 +3,8 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { relative, resolve } from "node:path";
-import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mjs";
-import { reportViolations } from "../lib/report-violations.mjs";
+import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mts";
+import { reportViolations } from "../lib/report-violations.mts";
 
 const repoRoot = process.cwd();
 const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
@@ -35,7 +35,17 @@ const ROOT_FILE_NAMES = new Set([
   "vitest.config.ts",
 ]);
 
-function* iterInlineCodeSpans(content) {
+interface InlineCodeSpan {
+  line: number;
+  value: string;
+}
+
+interface HistoricalCandidate {
+  revision: string;
+  path: string;
+}
+
+function* iterInlineCodeSpans(content: string): Generator<InlineCodeSpan> {
   let inFence = false;
 
   for (const [lineIndex, line] of splitLines(content).entries()) {
@@ -56,14 +66,14 @@ function* iterInlineCodeSpans(content) {
   }
 }
 
-function trimToken(token) {
+function trimToken(token: string): string {
   return stripLineColumnSuffix(token
     .trim()
     .replace(/^[("'[{]+/, "")
     .replace(/[)"'\]},.;]+$/, ""));
 }
 
-function isUnsignedInteger(value) {
+function isUnsignedInteger(value: string): boolean {
   if (value.length === 0) return false;
   for (const char of value) {
     if (char < "0" || char > "9") return false;
@@ -71,7 +81,7 @@ function isUnsignedInteger(value) {
   return true;
 }
 
-function stripLineColumnSuffix(value) {
+function stripLineColumnSuffix(value: string): string {
   const parts = value.split(":");
   if (parts.length <= 1 || !isUnsignedInteger(parts.at(-1) ?? "")) {
     return value;
@@ -83,7 +93,7 @@ function stripLineColumnSuffix(value) {
   return parts.join(":");
 }
 
-function shouldSkipCandidate(candidate) {
+function shouldSkipCandidate(candidate: string): boolean {
   return (
     candidate.length === 0 ||
     candidate.endsWith("/") ||
@@ -98,12 +108,12 @@ function shouldSkipCandidate(candidate) {
   );
 }
 
-function isRepoPathCandidate(candidate) {
+function isRepoPathCandidate(candidate: string): boolean {
   if (ROOT_FILE_NAMES.has(candidate)) return true;
   return ROOT_PATH_PREFIXES.some((prefix) => candidate.startsWith(prefix));
 }
 
-function normalizeCandidate(token) {
+function normalizeCandidate(token: string): string | null {
   const stripped = trimToken(token).split("#", 1)[0];
   if (!isRepoPathCandidate(stripped) || shouldSkipCandidate(stripped)) {
     return null;
@@ -111,16 +121,16 @@ function normalizeCandidate(token) {
   return stripped;
 }
 
-function parseHistoricalCandidate(token) {
+function parseHistoricalCandidate(token: string): HistoricalCandidate | null {
   const stripped = trimToken(token);
   const match = stripped.match(/^git:([0-9a-f]{7,40}):(.+)$/i);
   if (!match) return null;
-  const [, revision, path] = match;
+  const [, revision = "", path = ""] = match;
   if (!isRepoPathCandidate(path) || shouldSkipCandidate(path)) return null;
   return { revision, path };
 }
 
-const errors = [];
+const errors: string[] = [];
 
 for (const filePath of verifiedDocFiles) {
   const content = readFileSync(filePath, "utf8");

@@ -9,7 +9,7 @@ Primary files:
 - `src/app/dependency-map/page.tsx`
 - `src/app/dependency-map/client.tsx`
 - `src/app/dependency-map/dependency-hero.tsx` — summary strip plus the full-width graph
-- `src/app/dependency-map/dependency-hubs-model.ts`
+- `src/lib/dependency-hubs-model.ts`
 - `src/app/dependency-map/dependency-hubs-board.tsx`
 - `src/components/dependency-map-mobile-summary.tsx`
 - `src/lib/contagion-layout.ts` — graph construction, supernode scoring, simulation, and layout

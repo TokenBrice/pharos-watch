@@ -27,7 +27,7 @@ import { fileURLToPath } from "node:url";
 
 import ts from "typescript";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 
 /** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
 

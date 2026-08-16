@@ -1,5 +1,5 @@
 /**
- * Allowlists for scripts/ci/check-unused-code.mjs.
+ * Allowlists for scripts/ci/check-unused-code.ts.
  *
  * Two sections, deliberately separate:
  *

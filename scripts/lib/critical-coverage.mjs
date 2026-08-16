@@ -1,7 +1,7 @@
 import { relative } from "node:path";
 
 import { isValidDateOnly } from "./date-helpers.mjs";
-import { collectSourceFilesUnderRoot } from "./source-files.mjs";
+import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
 export const CRITICAL_FILES = [
   "src/lib/api.ts",

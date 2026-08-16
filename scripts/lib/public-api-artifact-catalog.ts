@@ -75,15 +75,10 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
 export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
   "stablecoin-detail",
   "stablecoin-summary",
-  "bluechip-ratings",
-  "dex-liquidity",
-  "stress-signals",
-  "mint-burn-flows",
   "non-usd-share",
   "snapshots-index",
   "snapshot-day",
   "snapshot-coin",
-  "telegram-pulse",
 ]);
 
 export const POSTMAN_FOLDERS: readonly { name: PostmanFolderName; description: string }[] = [
@@ -445,6 +440,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Bluechip ratings",
     description: "Safety ratings from bluechip.org for covered stablecoins.",
     tags: ["Risk"],
+    responseSchema: "BluechipRatingsResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -454,6 +450,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "DEX liquidity",
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
     tags: ["Liquidity"],
+    responseSchema: "DexLiquidityResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -518,6 +515,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Stress signals",
     description: "DEWS-style stress signals for the stablecoin universe or one selected asset.",
     tags: ["Risk", "Peg Monitoring"],
+    responseSchema: "StressSignalsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
     postman: {
       folder: "Risk and market structure",
@@ -639,6 +637,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Mint and burn flows",
     description: "Mint/burn flow aggregates for the selected window.",
     tags: ["Flows"],
+    responseSchema: "MintBurnFlowsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, HOURS_PARAM],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
@@ -981,6 +980,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Telegram pulse",
     description: "Lightweight public telemetry for Telegram alert surfaces.",
     tags: ["Status"],
+    responseSchema: "TelegramPulseResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },

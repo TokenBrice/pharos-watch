@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { localBin } from "../lib/local-bin.mjs";
-import { parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { parseChangedFileArgs } from "../lib/changed-files.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mjs";
 import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
 

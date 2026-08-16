@@ -12,7 +12,7 @@ import {
   validateDuplicatePrefixes,
   validateRolloutSafetyAnnotation,
   validateRolloutSafetyPolicy,
-} from "../ci/check-worker-migrations.mjs";
+} from "../ci/check-worker-migrations.ts";
 
 describe("parseRolloutSafetyPolicy", () => {
   it("reads the rollout-safety cutoff and required header from the manifest text", () => {

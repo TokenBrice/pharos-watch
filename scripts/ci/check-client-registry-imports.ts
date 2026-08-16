@@ -3,9 +3,9 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles } from "../lib/source-files.mjs";
-import { parseSourceFile } from "../lib/ts-ast.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles } from "../lib/source-files.mts";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 
 const ROOT = process.cwd();
 const SOURCE_ROOT = "src";

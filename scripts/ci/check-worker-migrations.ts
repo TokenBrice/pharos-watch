@@ -5,6 +5,62 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
+interface ManifestMigrationRow {
+  sequence: string;
+  filename: string;
+}
+
+interface ManifestMigrationRowOptions {
+  sectionHeading?: string;
+  nextHeading?: string;
+  allowEmpty?: boolean;
+}
+
+interface ManifestParity {
+  activeManifestCount: number;
+  retiredManifestCount: number;
+}
+
+interface RolloutSafetyPolicy {
+  enforcementPrefix: string;
+  requiredMode: string;
+}
+
+interface SchemaRow {
+  type: string;
+  name: string;
+  tblName: string;
+  sql: string;
+}
+
+interface SchemaFingerprint {
+  algorithm: "sha256";
+  value: string;
+  schemaRowCount: number;
+}
+
+interface MigrationExecutor {
+  backend: "node:sqlite" | "sqlite3";
+  close(): void;
+  execute(sql: string): void;
+  getSchemaRows(): SchemaRow[];
+}
+
+interface ValidateWorkerMigrationsOptions {
+  migrationsDir?: string;
+  manifestPath?: string;
+  includeSchemaFingerprint?: boolean;
+}
+
+interface WorkerMigrationResult {
+  backend: MigrationExecutor["backend"];
+  migrationCount: number;
+  manifestParity: ManifestParity;
+  rolloutSafetyCheckedCount: number;
+  schemaFingerprint: SchemaFingerprint | null;
+  uniqueDuplicates: string[];
+}
+
 export const ROLLOUT_SAFETY_ENFORCEMENT_PREFIX = "0071";
 export const REQUIRED_ROLLOUT_SAFETY_MODE = "backward-compatible";
 export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
@@ -15,13 +71,13 @@ export const UNSAFE_ROLLOUT_SAFETY_PATTERNS = Object.freeze([
 ]);
 export const UNSAFE_ROLLOUT_ADD_COLUMN_LABEL = "ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT";
 
-export function getMigrationFiles(migrationsDir) {
+export function getMigrationFiles(migrationsDir: string): string[] {
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))
     .sort();
 }
 
-export function getMigrationSequenceNumber(file) {
+export function getMigrationSequenceNumber(file: string): number {
   const match = file.match(/^(\d+)/);
   if (!match) {
     throw new Error(`Migration file ${file} is missing a leading numeric sequence.`);
@@ -29,13 +85,15 @@ export function getMigrationSequenceNumber(file) {
   return Number(match[1]);
 }
 
-export function findDuplicatePrefixes(migrationFiles) {
-  const sequenceNumbers = migrationFiles.map((file) => file.match(/^(\d+[a-z]?)/)?.[1]).filter(Boolean);
+export function findDuplicatePrefixes(migrationFiles: readonly string[]): string[] {
+  const sequenceNumbers = migrationFiles
+    .map((file) => file.match(/^(\d+[a-z]?)/)?.[1])
+    .filter((value): value is string => Boolean(value));
   const duplicates = sequenceNumbers.filter((num, index) => sequenceNumbers.indexOf(num) !== index);
   return [...new Set(duplicates)];
 }
 
-export function parseRolloutSafetyPolicy(manifestText) {
+export function parseRolloutSafetyPolicy(manifestText: string): RolloutSafetyPolicy {
   const startMatch = manifestText.match(/Rollout-safety enforcement starts at:\s*`(\d+)`/);
   if (!startMatch) {
     throw new Error("worker/migrations/MANIFEST.md is missing the rollout-safety enforcement line.");
@@ -56,7 +114,10 @@ export function parseRolloutSafetyPolicy(manifestText) {
  * @param {string} manifestText
  * @param {{ sectionHeading?: string, nextHeading?: string, allowEmpty?: boolean }} [options]
  */
-export function parseManifestMigrationRows(manifestText, { sectionHeading, nextHeading, allowEmpty = false } = {}) {
+export function parseManifestMigrationRows(
+  manifestText: string,
+  { sectionHeading, nextHeading, allowEmpty = false }: ManifestMigrationRowOptions = {},
+): ManifestMigrationRow[] {
   const startIndex = sectionHeading ? manifestText.indexOf(sectionHeading) : 0;
   if (startIndex === -1) {
     throw new Error(`worker/migrations/MANIFEST.md is missing the "${sectionHeading}" section.`);
@@ -84,7 +145,10 @@ export function parseManifestMigrationRows(manifestText, { sectionHeading, nextH
   return rows;
 }
 
-export function validateManifestMigrationParity(migrationFiles, manifestText) {
+export function validateManifestMigrationParity(
+  migrationFiles: readonly string[],
+  manifestText: string,
+): ManifestParity {
   if (!migrationFiles.includes("0000_baseline.sql")) {
     throw new Error("worker/migrations must include 0000_baseline.sql for fresh D1 setup replay.");
   }
@@ -113,7 +177,7 @@ export function validateManifestMigrationParity(migrationFiles, manifestText) {
   const activeFileSet = new Set(activeFiles);
   const activeManifestFileSet = new Set(activeManifestFiles);
   const retiredManifestFileSet = new Set(retiredManifestFiles);
-  const errors = [];
+  const errors: string[] = [];
 
   const duplicateActiveRows = activeManifestFiles.filter(
     (filename, index) => activeManifestFiles.indexOf(filename) !== index,
@@ -184,7 +248,7 @@ export function validateManifestMigrationParity(migrationFiles, manifestText) {
   };
 }
 
-export function validateRolloutSafetyPolicy(policy) {
+export function validateRolloutSafetyPolicy(policy: RolloutSafetyPolicy): void {
   if (policy.enforcementPrefix !== ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {
     throw new Error(
       `worker/migrations/MANIFEST.md rollout-safety enforcement must stay frozen at: ${ROLLOUT_SAFETY_ENFORCEMENT_PREFIX}`,
@@ -198,7 +262,7 @@ export function validateRolloutSafetyPolicy(policy) {
   }
 }
 
-export function validateDuplicatePrefixes(migrationFiles) {
+export function validateDuplicatePrefixes(migrationFiles: readonly string[]): string[] {
   const uniqueDuplicates = findDuplicatePrefixes(migrationFiles);
   if (uniqueDuplicates.length > 0) {
     throw new Error(`Duplicate migration sequence numbers: ${uniqueDuplicates.join(", ")}`);
@@ -206,19 +270,22 @@ export function validateDuplicatePrefixes(migrationFiles) {
   return uniqueDuplicates;
 }
 
-export function requiresRolloutSafetyValidation(file, enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {
+export function requiresRolloutSafetyValidation(
+  file: string,
+  enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
+): boolean {
   return getMigrationSequenceNumber(file) >= Number(enforcementPrefix);
 }
 
-export function parseRolloutSafetyMode(sql) {
+export function parseRolloutSafetyMode(sql: string): string | null {
   return sql.match(/^\s*--\s*rollout-safety:\s*([a-z-]+)\s*$/im)?.[1].toLowerCase() ?? null;
 }
 
-export function stripSqlComments(sql) {
+export function stripSqlComments(sql: string): string {
   return sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--.*$/gm, "");
 }
 
-export function findUnsafeRolloutStatements(sql) {
+export function findUnsafeRolloutStatements(sql: string): string[] {
   const normalizedSql = stripSqlComments(sql);
   const unsafeStatements = UNSAFE_ROLLOUT_SAFETY_PATTERNS.filter(({ pattern }) => pattern.test(normalizedSql)).map(
     ({ label }) => label,
@@ -240,7 +307,7 @@ export function findUnsafeRolloutStatements(sql) {
   return [...new Set(unsafeStatements)];
 }
 
-export function validateNoSqliteDotCommands(file, sql) {
+export function validateNoSqliteDotCommands(file: string, sql: string): void {
   const dotCommandLine = sql.split(/\r?\n/).find((line) => /^\s*\./.test(line));
 
   if (dotCommandLine) {
@@ -250,7 +317,11 @@ export function validateNoSqliteDotCommands(file, sql) {
   }
 }
 
-export function validateRolloutSafetyAnnotation(file, sql, enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX) {
+export function validateRolloutSafetyAnnotation(
+  file: string,
+  sql: string,
+  enforcementPrefix = ROLLOUT_SAFETY_ENFORCEMENT_PREFIX,
+): { checked: false; mode?: never } | { checked: true; mode: string } {
   if (!requiresRolloutSafetyValidation(file, enforcementPrefix)) {
     return { checked: false };
   }
@@ -287,11 +358,11 @@ WHERE sql IS NOT NULL
 ORDER BY type, name, tbl_name
 `;
 
-function normalizeSchemaSql(sql) {
+function normalizeSchemaSql(sql: string): string {
   return sql.replace(/\s+/g, " ").trim();
 }
 
-export function createSchemaFingerprint(schemaRows) {
+export function createSchemaFingerprint(schemaRows: readonly SchemaRow[]): SchemaFingerprint {
   const normalizedRows = schemaRows
     .map((row) => `${row.type}\t${row.name}\t${row.tblName}\t${normalizeSchemaSql(row.sql)}`)
     .sort();
@@ -304,7 +375,7 @@ export function createSchemaFingerprint(schemaRows) {
   };
 }
 
-async function createExecutor(dbPath) {
+async function createExecutor(dbPath: string): Promise<MigrationExecutor> {
   try {
     const { DatabaseSync } = await import("node:sqlite");
     const db = new DatabaseSync(dbPath);
@@ -314,7 +385,7 @@ async function createExecutor(dbPath) {
       close() {
         db.close();
       },
-      execute(sql) {
+      execute(sql: string) {
         db.exec(sql);
       },
       getSchemaRows() {
@@ -339,7 +410,7 @@ async function createExecutor(dbPath) {
       return {
         backend: "sqlite3",
         close() {},
-        execute(sql) {
+        execute(sql: string) {
           const result = spawnSync("sqlite3", ["-bail", dbPath], {
             encoding: "utf8",
             input: sql,
@@ -368,20 +439,31 @@ async function createExecutor(dbPath) {
             throw new Error(detail || `sqlite3 schema fingerprint query exited with status ${result.status}`);
           }
 
-          const rows = JSON.parse(result.stdout || "[]");
+          const rows: unknown = JSON.parse(result.stdout || "[]");
+          if (!Array.isArray(rows)) {
+            throw new Error("sqlite3 schema fingerprint query returned a non-array payload");
+          }
 
-          return rows.map((row) => ({
-            type: String(row.type),
-            name: String(row.name),
-            tblName: String(row.tbl_name),
-            sql: String(row.sql),
-          }));
+          return rows.map((row): SchemaRow => {
+            if (!row || typeof row !== "object") {
+              throw new Error("sqlite3 schema fingerprint query returned an invalid row");
+            }
+            const record = row as Record<string, unknown>;
+            return {
+              type: String(record.type),
+              name: String(record.name),
+              tblName: String(record.tbl_name),
+              sql: String(record.sql),
+            };
+          });
         },
       };
     }
 
+    const sqlite3ErrorCode =
+      sqlite3Probe.error && "code" in sqlite3Probe.error ? String(sqlite3Probe.error.code) : undefined;
     const sqlite3Detail = sqlite3Probe.error
-      ? sqlite3Probe.error.code === "ENOENT"
+      ? sqlite3ErrorCode === "ENOENT"
         ? "sqlite3 CLI is not installed"
         : sqlite3Probe.error.message
       : (sqlite3Probe.stderr || sqlite3Probe.stdout || "").trim() ||
@@ -396,7 +478,7 @@ export async function validateWorkerMigrations({
   migrationsDir = resolve("worker/migrations"),
   manifestPath = resolve("worker/migrations/MANIFEST.md"),
   includeSchemaFingerprint = false,
-} = {}) {
+}: ValidateWorkerMigrationsOptions = {}): Promise<WorkerMigrationResult> {
   const migrationFiles = getMigrationFiles(migrationsDir);
   if (migrationFiles.length === 0) {
     throw new Error(`No migration files found in ${migrationsDir}`);
@@ -412,7 +494,7 @@ export async function validateWorkerMigrations({
   const dbPath = join(tempDir, "migrations.db");
   const executor = await createExecutor(dbPath);
   let rolloutSafetyCheckedCount = 0;
-  let schemaFingerprint = null;
+  let schemaFingerprint: SchemaFingerprint | null = null;
 
   try {
     for (const file of migrationFiles) {
@@ -447,7 +529,7 @@ export async function validateWorkerMigrations({
   };
 }
 
-function parseCliArgs(argv) {
+function parseCliArgs(argv: readonly string[]) {
   let includeSchemaFingerprint = false;
   let schemaFingerprintOutput = process.env.PHAROS_MIGRATION_SCHEMA_FINGERPRINT_PATH ?? null;
 
@@ -473,7 +555,7 @@ function parseCliArgs(argv) {
   return { includeSchemaFingerprint, schemaFingerprintOutput };
 }
 
-function writeSchemaFingerprint(path, result) {
+function writeSchemaFingerprint(path: string, result: WorkerMigrationResult): void {
   if (!result.schemaFingerprint) {
     return;
   }
@@ -522,5 +604,5 @@ async function main() {
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  await main();
+  void main();
 }

@@ -24,7 +24,7 @@ import ts from "typescript";
  * makes every JSX element a parse error, so scanners silently see an empty or
  * truncated AST instead of failing.
  */
-export function getScriptKind(file) {
+export function getScriptKind(file: string): ts.ScriptKind {
   const ext = extname(file);
   if (ext === ".tsx") return ts.ScriptKind.TSX;
   if (ext === ".jsx") return ts.ScriptKind.JSX;
@@ -40,7 +40,7 @@ export function getScriptKind(file) {
  * @param {string} file Absolute path to the source file.
  * @returns {{ source: string, sourceFile: import("typescript").SourceFile }}
  */
-export function parseSourceFile(file) {
+export function parseSourceFile(file: string): { source: string; sourceFile: ts.SourceFile } {
   const source = readFileSync(file, "utf8");
   return {
     source,

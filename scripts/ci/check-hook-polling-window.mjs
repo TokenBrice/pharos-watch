@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles, resolveSourceRoot, runAsCli } from "../lib/source-files.mts";
 
 /**
  * Enforces the AGENTS.md polling rule: cron-backed hooks must derive
