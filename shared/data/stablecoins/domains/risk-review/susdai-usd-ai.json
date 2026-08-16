@@ -81,10 +81,10 @@
     "reviewedAt": "2026-07-15"
   },
   "bridgeRouteRisk": {
-    "tier": "external-lock-mint",
-    "summary": "sUSDai is native on Arbitrum (ERC-4626 vault). Ethereum, Base, and Plasma deployments are satellite OTokens minted by USD.AI's own LayerZero OAdapter under BRIDGE_ADMIN_ROLE (owner is the reviewed 3-of-3 Safe).",
-    "reviewedAt": "2026-07-22",
-    "reviewer": "GPT SOL-CORP-A wave6",
+    "tier": "external-validated-network",
+    "summary": "Canonical sUSDai issuance is native to the USDai-backed Arbitrum vault. Ethereum, Base, and Plasma use LayerZero OAdapter burn/mint representations whose live OTokens still grant BRIDGE_ADMIN_ROLE to the adapter and DEFAULT_ADMIN_ROLE to a chain-local 3-of-3 Safe; those satellite controls are assessed here rather than in Mint Authority.",
+    "reviewedAt": "2026-08-16",
+    "reviewer": "GPT SOL-CORP-A wave6; Codex 2026-08-16 route-control refresh",
     "confidence": "verified",
     "protocols": [
       {
@@ -93,8 +93,7 @@
         "slug": "layerzero",
         "url": "https://l2beat.com/interop/protocols/layerzero",
         "bridgeTypes": [
-          "lockAndMint",
-          "burnAndMint"
+          "oft"
         ]
       }
     ],
@@ -102,6 +101,10 @@
       {
         "label": "USD.AI contract addresses",
         "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+      },
+      {
+        "label": "USD.AI StakedUSDai source",
+        "url": "https://github.com/usdai-foundation/usdai-contracts/blob/main/src/StakedUSDai.sol"
       },
       {
         "label": "L2BEAT LayerZero",
@@ -124,9 +127,8 @@
         "controllerChain": "ethereum",
         "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Satellite sUSDai OToken on ethereum: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on ethereum, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "reviewNote": "Re-verified at Ethereum block 25768078 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum vault, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "USD.AI Docs",
@@ -135,8 +137,11 @@
         ],
         "failureDomainKeys": [
           "layerzero:oft:susdai-usd-ai",
-          "contract:ethereum:0xffb20098fd7b8e84762eea4609f299d101427f24"
-        ]
+          "contract:ethereum:0xffb20098fd7b8e84762eea4609f299d101427f24",
+          "safe:ethereum:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 25768078
       },
       {
         "id": "arbitrum:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
@@ -149,13 +154,22 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "sUSDai on Arbitrum is the native ERC-4626 deposit-mint vault (asset() = USDai, verified in the mint-authority review).",
+        "reviewNote": "Re-verified at Arbitrum block 495160622 on 2026-08-16: the USDai-backed sUSDai vault is a transparent proxy using source-verified implementation 0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b and ProxyAdmin 0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f owned by the 48-hour DVNTimelock. This is the canonical native-issuance route; its deposit-backed share minting is reviewed in mintAuthority, while adapter ingress and egress belong to the bridge routes.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
+        "observedAt": "2026-08-16",
+        "observedBlock": 495160622,
         "sources": [
           {
-            "label": "USD.AI Docs",
-            "url": "https://docs.usd.ai/"
+            "label": "Arbitrum sUSDai proxy",
+            "url": "https://arbitrum.blockscout.com/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9?tab=contract"
+          },
+          {
+            "label": "Arbitrum verified StakedUSDai implementation",
+            "url": "https://arbitrum.blockscout.com/address/0x88a233b8746da5dfd9c5e82c8a9f9f91b737198b?tab=contract"
+          },
+          {
+            "label": "USD.AI StakedUSDai source",
+            "url": "https://github.com/usdai-foundation/usdai-contracts/blob/main/src/StakedUSDai.sol"
           }
         ]
       },
@@ -174,9 +188,8 @@
         "controllerChain": "base",
         "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Satellite sUSDai OToken on base: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on base, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "reviewNote": "Re-verified at Base block 50049732 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0x30198aa66d057a6216db471fce234b98edc1e5ad. OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum vault, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "USD.AI Docs",
@@ -185,8 +198,11 @@
         ],
         "failureDomainKeys": [
           "layerzero:oft:susdai-usd-ai",
-          "contract:base:0xffb20098fd7b8e84762eea4609f299d101427f24"
-        ]
+          "contract:base:0xffb20098fd7b8e84762eea4609f299d101427f24",
+          "safe:base:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 50049732
       },
       {
         "id": "plasma:0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
@@ -203,9 +219,8 @@
         "controllerChain": "plasma",
         "controllerAddress": "0xffb20098fd7b8e84762eea4609f299d101427f24",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Satellite sUSDai OToken on plasma: BRIDGE_ADMIN_ROLE mint authority is the same-address OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 (live contract on plasma, owner() = 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F Safe, verified at 2026-07-20); mint executes on LayerZero message delivery.",
+        "reviewNote": "Re-verified at Plasma block 29948266 on 2026-08-16: the proxy still resolves to role-based OToken implementation 0xe306eca9a60376d2a82f40c8e1882e2ef1c8f4cc. OAdapter 0xffb20098fd7b8e84762eea4609f299d101427f24 holds BRIDGE_ADMIN_ROLE, while the chain-local 3-of-3 Safe 0x5F0BC72FB5952b2f3F2E11404398eD507B25841F holds DEFAULT_ADMIN_ROLE and can grant that uncapped token-level mint role. This is a LayerZero burn/mint representation of the Arbitrum vault, so the control is assessed as bridge risk rather than canonical mint authority.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-07-20",
         "sources": [
           {
             "label": "USD.AI Docs",
@@ -214,8 +229,11 @@
         ],
         "failureDomainKeys": [
           "layerzero:oft:susdai-usd-ai",
-          "contract:plasma:0xffb20098fd7b8e84762eea4609f299d101427f24"
-        ]
+          "contract:plasma:0xffb20098fd7b8e84762eea4609f299d101427f24",
+          "safe:plasma:0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+        ],
+        "observedAt": "2026-08-16",
+        "observedBlock": 29948266
       }
     ]
   }
