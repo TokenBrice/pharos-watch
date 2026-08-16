@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { mockFetchRetry } from "../../test-helpers/cron";
+import { D1_BATCH_SIZE } from "../../lib/constants";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
 const DAY_SECONDS = 86_400;
@@ -138,6 +139,56 @@ describe("handleAuditDepegHistory method safety", () => {
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: string };
     expect(body.error).toContain("limit");
+  });
+
+  it("rejects direct delete requests larger than the atomic batch cap", async () => {
+    const db = mockD1([], { allowUnmatched: true });
+    const deleteParam = Array.from({ length: D1_BATCH_SIZE + 1 }, (_value, index) => index + 1).join(",");
+    const req = makeApiRequest(`/api/audit-depeg-history?delete=${deleteParam}`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain(String(D1_BATCH_SIZE));
+    expect(body.error).toContain(String(D1_BATCH_SIZE + 1));
+  });
+
+  it("rejects direct deletes whose stability recompute would exceed the atomic batch cap", async () => {
+    const [event] = makeSyntheticSplitRows();
+    const longEvent = {
+      ...event,
+      ended_at: event.started_at + D1_BATCH_SIZE * DAY_SECONDS,
+    };
+    const startDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+    const supplyRows = Array.from({ length: D1_BATCH_SIZE + 1 }, (_value, index) => ({
+      stablecoin_id: "usdt-tether",
+      snapshot_date: startDay + index * DAY_SECONDS,
+      circulating_usd: 1_000_000_000,
+    }));
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows: [longEvent] },
+      { match: "FROM depeg_resolver_incident_event_links l", rows: [] },
+      {
+        match: "SELECT stablecoin_id, peak_deviation_bps, peg_reference, started_at, ended_at FROM depeg_events_with_provenance WHERE",
+        rows: [],
+      },
+      { match: "FROM supply_history", rows: supplyRows },
+      { match: "INSERT INTO stability_index", rows: [] },
+    ]);
+    const req = makeApiRequest("/api/audit-depeg-history?delete=1", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toContain(String(D1_BATCH_SIZE));
+    expect(body.error).toContain("stability recompute");
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO stability_index"))).toBe(false);
   });
 
   it("rejects malformed direct delete IDs instead of partially parsing them", async () => {

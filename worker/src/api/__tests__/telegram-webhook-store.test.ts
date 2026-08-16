@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { D1_BATCH_SIZE } from "../../lib/constants";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   countTelegramProcessedUpdateBacklog,
@@ -122,6 +123,30 @@ describe("persistPendingDisambiguationRow", () => {
     const [entry] = db.getHistory();
     expect(entry?.binds).toContain("confirm-bulk");
     expect(entry?.sql).toContain("telegram_pending_disambiguation.initiator_user_id = excluded.initiator_user_id");
+  });
+
+  it("rejects pending disambiguation batches above the D1 limit", async () => {
+    const db = mockD1([], { allowUnmatched: true });
+    const operationStatements = Array.from(
+      { length: D1_BATCH_SIZE },
+      () => db.prepare("UPDATE telegram_subscriptions SET alert_depeg = alert_depeg"),
+    );
+
+    await expect(
+      persistPendingDisambiguationRow(db, {
+        chatId: "-100",
+        actionType: "setup-step",
+        actionPayload: { step: "branch" },
+        alertTypes: [],
+        resolvedIds: [],
+        ambiguousTicker: "",
+        candidates: [],
+        remainingTickers: [],
+        initiatorUserId: "actor-2",
+        operationStatements,
+      }),
+    ).rejects.toThrow(`Pending disambiguation requires too many atomic statements (${D1_BATCH_SIZE + 1})`);
+    expect(db.getHistory()).toEqual([]);
   });
 });
 

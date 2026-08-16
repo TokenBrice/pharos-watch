@@ -1,3 +1,4 @@
+import { D1_BATCH_SIZE } from "../../lib/constants";
 import { errorResponse, methodNotAllowedResponse, parseQueryParams } from "../../lib/api-utils";
 
 export type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
@@ -27,6 +28,12 @@ function parseDeleteIds(value: string): number[] | Response {
   const ids = tokens.map((token) => Number.parseInt(token, 10));
   if (ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
     return errorResponse(400, "Invalid delete parameter: expected positive event IDs");
+  }
+  if (ids.length > D1_BATCH_SIZE) {
+    return errorResponse(
+      400,
+      `Too many delete IDs: at most ${D1_BATCH_SIZE} may be requested before stability recompute (received ${ids.length})`,
+    );
   }
   return ids;
 }

@@ -10,6 +10,7 @@ import {
   readBodyOrQueryParam,
   readBodyOrQueryStringParam,
 } from "../lib/api-utils";
+import { batchExecute } from "../lib/db";
 import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
@@ -300,7 +301,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     }
 
     if (updates.length > 0) {
-      await db.batch(updates);
+      await batchExecute(db, updates);
     }
     const cacheInvalidation = updates.length > 0
       ? await invalidateBlacklistDerivedCaches(db)
