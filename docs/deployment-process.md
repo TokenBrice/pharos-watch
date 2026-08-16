@@ -94,6 +94,7 @@ Deploy sequence in `.github/workflows/deploy-cloudflare.yml`:
 
 1. `plan`
    - rejects any ref other than `refs/heads/main`;
+   - checks out full history and installs the shared workspace before invoking the TypeScript deploy classifier;
    - diffs `github.event.before...github.sha` for pushes and consumes only `pages_deploy_required` and `worker_deploy_required`;
    - treats root `package.json` or `package-lock.json` changes conservatively as both-surface changes instead of parsing lockfile hunks;
    - accepts an explicit manual `surface` choice: `both` (default), `pages`, or `worker`;
