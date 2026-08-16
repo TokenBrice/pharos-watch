@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { classifyChangedFiles } from "../ci/classify-deploy-changes.mjs";
-import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mjs";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { classifyChangedFiles } from "../ci/classify-deploy-changes.ts";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { hasTelegramLoadGuardImpact } from "../lib/telegram-load-guard.mjs";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);

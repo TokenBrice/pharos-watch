@@ -1,6 +1,6 @@
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusResponse, StatusTransition } from "@shared/types";
-import type { StatusHistoryWindow } from "@/hooks/use-status-history";
+import type { StatusHistoryWindow } from "@/lib/admin-api-query-descriptors";
 import { STATUS_CAUSE_SEVERITY_RANK } from "@/lib/status/cause-severity";
 
 export const INCIDENT_HISTORY_WINDOWS: readonly StatusHistoryWindow[] = ["6h", "24h", "7d", "30d"];

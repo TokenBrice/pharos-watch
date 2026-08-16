@@ -58,6 +58,16 @@ function streamedResponse(
 
 const encode = (value: string) => new TextEncoder().encode(value);
 
+function warnRecords(spy: ReturnType<typeof vi.spyOn>): Array<Record<string, unknown>> {
+  return spy.mock.calls.flatMap((call: unknown[]) => {
+    try {
+      return [JSON.parse(String(call[0])) as Record<string, unknown>];
+    } catch {
+      return [];
+    }
+  });
+}
+
 describe("fetchWithRetry", () => {
   beforeEach(() => {
     sleepWithSignalMock.mockClear();
@@ -105,6 +115,44 @@ describe("fetchWithRetry", () => {
 
     expect(res?.status).toBe(404);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns and consumes the first HTTP response in network-only retry mode", async () => {
+    const first = new Response("upstream down", { status: 503 });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(first)
+      .mockResolvedValueOnce(new Response("should not be requested", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await fetchTextWithRetry(
+      "https://example.com/provider",
+      undefined,
+      2,
+      { retryMode: "network-only", returnFinalResponse: true },
+    );
+
+    expect(result).toMatchObject({ response: first, body: "upstream down" });
+    expect(first.bodyUsed).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(sleepWithSignalMock).not.toHaveBeenCalled();
+  });
+
+  it("retries thrown transport failures and can preserve the final error", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("network unavailable"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      await expect(fetchTextWithRetry(
+        "https://example.com/provider",
+        undefined,
+        1,
+        { retryMode: "network-only", throwOnFinalNetworkError: true },
+      )).rejects.toThrow("network unavailable");
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it("retries 429 responses before succeeding", async () => {
@@ -202,7 +250,11 @@ describe("fetchWithRetry", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledWith("https://example.com/secret-token/resource", expect.any(Object));
-    expect(warnSpy).toHaveBeenCalledWith("[fetch-retry] https://example.com/<redacted>/resource returned 520 (attempt 1/1)");
+    expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+      event: "fetch_retry_http_error",
+      status: 520,
+      metadata: expect.objectContaining({ url: "[url]" }),
+    }));
     expect(warnSpy.mock.calls.map((call) => call.join(" ")).join("\n")).not.toContain("secret-token");
     warnSpy.mockRestore();
   });
@@ -218,9 +270,10 @@ describe("fetchWithRetry", () => {
       0,
     );
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      "[fetch-retry] https://eth-mainnet.g.alchemy.com/[redacted] returned 520 (attempt 1/1)",
-    );
+    expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+      event: "fetch_retry_http_error",
+      metadata: expect.objectContaining({ url: "[url]" }),
+    }));
     expect(warnSpy.mock.calls.map((call) => call.join(" ")).join("\n")).not.toContain("real-secret-key");
     warnSpy.mockRestore();
   });
@@ -291,10 +344,10 @@ describe("fetchWithRetry", () => {
       await vi.advanceTimersByTimeAsync(5);
       await expectation;
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "[fetch-retry] https://example.com/slow.json failed (attempt 1/1):",
-        expect.objectContaining({ name: "TimeoutError" }),
-      );
+      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+        event: "fetch_retry_attempt_failed",
+        errorName: "TimeoutError",
+      }));
     } finally {
       warnSpy.mockRestore();
       vi.useRealTimers();
@@ -319,10 +372,10 @@ describe("fetchWithRetry", () => {
       await vi.advanceTimersByTimeAsync(5);
       await expectation;
       expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "[fetch-retry] https://example.com/slow.txt failed (attempt 1/1):",
-        expect.objectContaining({ name: "TimeoutError" }),
-      );
+      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+        event: "fetch_retry_attempt_failed",
+        errorName: "TimeoutError",
+      }));
     } finally {
       warnSpy.mockRestore();
       vi.useRealTimers();
@@ -368,14 +421,11 @@ describe("fetchWithRetry", () => {
       expect(result).toBeNull();
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(attempts.every((attempt) => attempt.cancel.mock.calls.length === 1)).toBe(true);
-      expect(warnSpy).toHaveBeenCalledWith(
-        "[fetch-retry] https://example.com/declared-overflow failed (attempt 1/2):",
-        expect.objectContaining({
-          name: "ResponseBodyTooLargeError",
-          maxBytes: 5,
-          observedBytes: 6,
-        }),
-      );
+      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+        event: "fetch_retry_attempt_failed",
+        errorName: "ResponseBodyTooLargeError",
+        metadata: expect.objectContaining({ maxBytes: 5, observedBytes: 6 }),
+      }));
     } finally {
       warnSpy.mockRestore();
     }
@@ -402,8 +452,8 @@ describe("fetchWithRetry", () => {
       expect(result).toBeNull();
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(attempts.every((attempt) => attempt.cancel.mock.calls.length === 1)).toBe(true);
-      expect(warnSpy.mock.calls.filter((call) =>
-        call[1] instanceof Error && call[1].name === "ResponseBodyTooLargeError"
+      expect(warnRecords(warnSpy).filter((record) =>
+        record.errorName === "ResponseBodyTooLargeError"
       )).toHaveLength(2);
     } finally {
       warnSpy.mockRestore();
@@ -489,14 +539,11 @@ describe("fetchWithRetry", () => {
       );
 
       expect(result).toBeNull();
-      expect(warnSpy).toHaveBeenCalledWith(
-        "[fetch-retry] https://example.com/mock.txt failed (attempt 1/1):",
-        expect.objectContaining({
-          name: "ResponseBodyTooLargeError",
-          maxBytes: 5,
-          observedBytes: 9,
-        }),
-      );
+      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
+        event: "fetch_retry_attempt_failed",
+        errorName: "ResponseBodyTooLargeError",
+        metadata: expect.objectContaining({ maxBytes: 5, observedBytes: 9 }),
+      }));
     } finally {
       warnSpy.mockRestore();
     }

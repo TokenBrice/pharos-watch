@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { sleep } from "./abort";
 import {
   getCronTimeoutBudgetMetadata,
@@ -241,7 +242,7 @@ export async function runCronWithLease<T>(
         ttlSec,
       });
     } catch (err) {
-      console.error(`[cron-lease] Lease state observer failed for ${job} (${event}):`, err);
+      logWorkerEventArgs("lib", "error", `[cron-lease] Lease state observer failed for ${job} (${event}):`, err);
       if (opts?.leaseStateObserverMode === "required") {
         throw new CronLeaseStateObserverError(job, event, err);
       }
@@ -263,7 +264,7 @@ export async function runCronWithLease<T>(
     try {
       await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
     } catch (releaseError) {
-      console.error(`[cron-lease] Failed to release lease for ${job} after observer failure:`, releaseError);
+      logWorkerEventArgs("lib", "error", `[cron-lease] Failed to release lease for ${job} after observer failure:`, releaseError);
     }
     throw error;
   }
@@ -417,7 +418,7 @@ export async function runCronWithLease<T>(
         await runWithOverloadRetry(() => releaseCronLease(db, job, owner), 2);
       } catch (releaseErr) {
         // Best-effort release: lease expiry still guarantees eventual progress.
-        console.error(`[cron-lease] Failed to release lease for ${job}:`, releaseErr);
+        logWorkerEventArgs("lib", "error", `[cron-lease] Failed to release lease for ${job}:`, releaseErr);
       }
     }
   }

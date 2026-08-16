@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { sleepWithSignal } from "../../lib/abort";
 import { cgHeaders, cgUrl } from "../../lib/coingecko";
 import { USER_AGENT } from "../../lib/constants";
@@ -99,7 +100,7 @@ export async function crawlCoinGeckoTickersStage({
     }
   } catch (err) {
     if (context.signal?.aborted) throw err;
-    console.warn(`[dex-discovery] cg_tickers error for ${context.stablecoinId}`, err);
+    logWorkerEventArgs("handler", "warn", `[dex-discovery] cg_tickers error for ${context.stablecoinId}`, err);
   } finally {
     await dependencies.sleepWithSignal(CG_TICKERS_RATE_MS, context.signal);
   }

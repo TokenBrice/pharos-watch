@@ -20,7 +20,7 @@ import {
   formatYieldRowLabels,
 } from "@/components/yield-leaderboard-row-parts";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { computePysBreakdown, getPysColor } from "@/lib/yield-constants";
 import { trackEvent } from "@/lib/analytics";
 import { deriveYieldRowPresentation, getYieldBenchmarkSelectionMode } from "@/lib/yield-workbench-row";
@@ -428,7 +428,7 @@ function YieldInstrumentRowBase({
         {/* Actions: deep dive + expand */}
         <div className="flex items-center justify-end gap-1 md:pt-0.5">
           <Link
-            href={`${buildStablecoinUrl(row.id)}yield/`}
+            href={buildStablecoinUrl(row.id, "yield/")}
             prefetch={false}
             onClick={(event) => {
               event.stopPropagation();

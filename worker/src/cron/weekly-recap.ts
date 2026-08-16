@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { formatIsoDate } from "@shared/lib/format";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -8,7 +9,6 @@ import {
   enqueueTelegramDigestEdition,
 } from "../lib/telegram-digest-outbox";
 import { SECONDS } from "../lib/time-constants";
-import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
 import {
@@ -16,14 +16,18 @@ import {
   insertDigestRecord,
   markDigestMetaBlocked,
   requestDigestCopy,
-  runDigestChannelDelivery,
 } from "./digest/platform";
+import {
+  runTelegramDigestDeliveryWithPermit,
+  type TelegramDigestPermittedDelivery,
+} from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import type { DigestValidationIssue } from "./daily-digest/response";
+import type { TelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
@@ -49,6 +53,26 @@ interface WeeklyDigestMeta {
   telegramDeliveryUpdatedAt?: number;
   telegramDeliveredAt?: number;
   [key: string]: unknown;
+}
+
+function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
 }
 
 function parseWeeklyDigestMeta(rawMeta: string | null, updatedAt: number | null): WeeklyDigestMeta {
@@ -162,22 +186,37 @@ async function deliverWeeklyDigestToTelegram(params: {
       throw new Error(`Immutable Telegram digest edition differs (${editionKey})`);
     }
   }
-  return runDigestChannelDelivery({
+  return runTelegramDigestDeliveryWithPermit({
     db: params.db,
-    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
     creds: params.telegramCreds,
-    logPrefix: "weekly-recap",
-    channelLabel: "Telegram",
-    deliver: async (creds) => {
+    owner: "weekly-recap",
+    editionKey,
+    signal: params.signal,
+    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
       const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
-      if (delivery.outcome === "sent") return "ok";
-      if (delivery.outcome === "skipped" && delivery.state === "sent") {
-        return "ok+already-sent";
+      if (delivery.outcome === "sent") {
+        return {
+          status: "ok",
+          transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
+        };
       }
-      if (delivery.outcome === "skipped") return `queued: ${delivery.state}`;
-      throw new Error(
-        `Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
-      );
+      if (delivery.outcome === "skipped" && delivery.state === "sent") {
+        return { status: "ok+already-sent", transportOutcome: null };
+      }
+      if (delivery.outcome === "skipped") {
+        return { status: `queued: ${delivery.state}`, transportOutcome: null };
+      }
+      const errorClass = telegramTransportErrorClass(delivery.errorClass);
+      return {
+        status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+        transportOutcome: {
+          ok: false,
+          errorClass,
+          retryAfterSec: errorClass == null
+            ? null
+            : delivery.retryAfterSec,
+        },
+      };
     },
   });
 }
@@ -428,7 +467,7 @@ export async function generateWeeklyRecap(
   try {
     safetyContext = await loadDigestSafetyContext(db, signal);
   } catch (error) {
-    console.error(JSON.stringify({
+    logWorkerEventArgs("handler", "error", JSON.stringify({
       scope: "weekly-recap",
       message: "Failed to resolve active Safety Score source",
       error: error instanceof Error ? error.message : String(error),

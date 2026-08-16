@@ -6,7 +6,7 @@ import { Info } from "lucide-react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 import { DDR_RESOLUTION_TIER_VALUES, type DdrResolutionTier, type DdrResponse } from "@shared/types/depeg-resolver";
 import {

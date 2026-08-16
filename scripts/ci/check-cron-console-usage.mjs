@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { runCountRatchet } from "../lib/count-ratchet.mjs";
-import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mjs";
+import { collectSourceFilesUnderRoot, runAsCli } from "../lib/source-files.mts";
 
 export const DEFAULT_CRON_CONSOLE_ROOTS = ["worker/src/cron", "worker/src/handlers/scheduled.ts"];
 export const DEFAULT_STRUCTURED_LOG_ROOTS = [

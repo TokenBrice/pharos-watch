@@ -4,8 +4,8 @@ import {
   renderMintAuthorityReviewAuditMarkdown,
 } from "../lib/mint-authority-review-audit";
 import { parseArgs } from "../maintenance/generate-mint-authority-review-audit";
-import { TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "../../shared/types";
+import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types";
 
 function coin(overrides: Partial<StablecoinMeta> & Pick<StablecoinMeta, "id" | "symbol">): StablecoinMeta {
   return {

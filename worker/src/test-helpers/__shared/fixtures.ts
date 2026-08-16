@@ -9,8 +9,9 @@ import type {
   BlacklistStablecoin,
   StablecoinData,
 } from "@shared/types/market";
-import type { DexLiquidityRow } from "../../api/dex-liquidity-response";
+import type { DexLiquidityRow } from "../../lib/dex-liquidity-response";
 import type { ApiKeyRow } from "../../lib/api-key-core";
+import { makeStablecoin, TEST_STABLECOIN_TIMESTAMP_SEC } from "@shared/test-utils/stablecoin";
 
 type BlacklistRow = {
   id: string;
@@ -133,7 +134,7 @@ type ApiKeyFixtureRow = ApiKeyRow & Record<string, unknown>;
 type DexLiquidityFixtureRow = DexLiquidityRow & Record<string, unknown>;
 
 export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinData {
-  const defaults: StablecoinData = {
+  return makeStablecoin({
     id: "usdt-tether",
     name: "Tether",
     symbol: "USDT",
@@ -143,10 +144,10 @@ export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinDa
     price: 1,
     priceSource: "defillama",
     priceConfidence: "high",
-    priceUpdatedAt: Math.floor(Date.now() / 1000),
-    priceObservedAt: Math.floor(Date.now() / 1000),
+    priceUpdatedAt: TEST_STABLECOIN_TIMESTAMP_SEC,
+    priceObservedAt: TEST_STABLECOIN_TIMESTAMP_SEC,
     priceObservedAtMode: "upstream",
-    priceSyncedAt: Math.floor(Date.now() / 1000),
+    priceSyncedAt: TEST_STABLECOIN_TIMESTAMP_SEC,
     consensusSources: [],
     agreeSources: [],
     supplySource: "defillama",
@@ -163,8 +164,8 @@ export function makeAsset(overrides: Partial<StablecoinData> = {}): StablecoinDa
       },
     },
     chains: ["Ethereum"],
-  };
-  return { ...defaults, ...overrides };
+    ...overrides,
+  });
 }
 
 export function makeApiKeyRow(overrides: Partial<ApiKeyRow> = {}): ApiKeyFixtureRow {

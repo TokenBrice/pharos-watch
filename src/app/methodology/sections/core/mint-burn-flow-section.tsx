@@ -9,7 +9,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { MINT_BURN_FLOW_SECTION_CONTENT } from "../methodology-content";
+import { MINT_BURN_FLOW_SECTION_CONTENT } from "@/lib/methodology-content";
 
 const BANK_RUN_GAUGE_COLUMNS = [
   { id: "band", header: "Band", cellClassName: "text-foreground" },

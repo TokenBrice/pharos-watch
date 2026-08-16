@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
@@ -35,7 +36,7 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   );
 
   if (!cgMarketsResult?.response.ok) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[${logPrefix}] CG markets fetch failed (${cgMarketsResult?.response.status ?? "no response"}), falling back to cgData mcap`,
     );
     return new Map();
@@ -45,11 +46,11 @@ async function fetchCoinGeckoCirculatingSupplyMap(
   try {
     cgMarketsRaw = JSON.parse(cgMarketsResult.body);
   } catch (err) {
-    console.warn(`[${logPrefix}] CG markets payload parse failed:`, err);
+    logWorkerEventArgs("handler", "warn", `[${logPrefix}] CG markets payload parse failed:`, err);
     return new Map();
   }
   if (!Array.isArray(cgMarketsRaw)) {
-    console.warn(`[${logPrefix}] CG markets returned unexpected shape, falling back to cgData mcap`);
+    logWorkerEventArgs("handler", "warn", `[${logPrefix}] CG markets returned unexpected shape, falling back to cgData mcap`);
     return new Map();
   }
 
@@ -89,7 +90,7 @@ export async function fetchSilverTokens(
 
       if (mcap > 0) {
         if (circulatingSupply && cgMcap && Math.abs(cgMcap - mcap) / mcap > 0.01) {
-          console.warn(
+          logWorkerEventArgs("handler", "warn",
             `[silver] ${token.symbol}: cgMcap=${cgMcap.toFixed(0)} rejected, using computed=${mcap.toFixed(0)} (supply=${circulatingSupply.toFixed(0)} × price=${price.toFixed(2)})`,
           );
         }
@@ -104,7 +105,7 @@ export async function fetchSilverTokens(
       const aggregate = await resolveCuratedAggregateSupplementalSupply(meta, priceData, cgData, chainRpcs, signal);
       const mcap = aggregate?.mcap ?? mcapMap[meta.id] ?? 0;
       if (!mcap) {
-        console.warn(`[silver] No mcap for ${meta.symbol}, including with mcap=0`);
+        logWorkerEventArgs("handler", "warn", `[silver] No mcap for ${meta.symbol}, including with mcap=0`);
       }
 
       const token = buildPricedSupplementalAsset(meta, priceData, cgData, {
@@ -118,7 +119,7 @@ export async function fetchSilverTokens(
     return tokens;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.error("[silver] fetchSilverTokens failed:", err);
+    logWorkerEventArgs("handler", "error", "[silver] fetchSilverTokens failed:", err);
     return [];
   }
 }

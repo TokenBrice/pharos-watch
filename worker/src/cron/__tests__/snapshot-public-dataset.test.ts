@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -10,6 +10,13 @@ import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer
 import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9-consumer-freshness";
 import { snapshotPublicDataset } from "../snapshot-public-dataset";
+
+function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
+  return createMockD1([
+    ...tables,
+    { match: "FROM public_snapshots WHERE snapshot_date", rows: [], first: null },
+  ]);
+}
 
 const ISO_DATE = "2026-05-16";
 const NOW_MS = new Date(`${ISO_DATE}T08:00:00Z`).getTime();

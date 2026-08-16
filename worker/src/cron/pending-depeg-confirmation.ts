@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPegReference, normalizePegType, type PegRateSource } from "@shared/lib/peg-rates";
@@ -362,7 +363,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     if (asset && meta && !refreshedPegReferenceIsAuthoritative) {
       return { kind: "wait", reason: "peg-reference-unavailable" };
     }
-    console.warn(`[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);
+    logWorkerEventArgs("handler", "warn", `[depeg-confirm] Deleted pending for ${row.symbol}: invalid peg_reference=${row.peg_reference}`);
     return {
       kind: "mutate",
       statements: buildOutcomeAndDeleteStmts(
@@ -453,7 +454,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     Math.abs(pendingState.lastSeenBps) >= threshold;
 
   if (openSet.has(row.stablecoin_id)) {
-    console.log(`[depeg-confirm] Cleaned pending for ${row.symbol}: open event already exists`);
+    logWorkerEventArgs("handler", "info", `[depeg-confirm] Cleaned pending for ${row.symbol}: open event already exists`);
     return {
       kind: "mutate",
       statements: buildOutcomeAndDeleteStmts(
@@ -469,7 +470,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
   }
 
   if (nativePegRecovered) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Cleared pending for ${row.symbol}: ${nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency ?? "native"} quote recovered to ${nativeSignal?.absBps ?? "n/a"}bps`,
     );
     return {
@@ -488,7 +489,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
 
   if (currentPrimaryStatus === "recover" && !nativePegStillDepegged) {
     addSource(opposingSources, "primary:authoritative");
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentPrimarySignal?.absBps ?? "n/a"}bps`,
     );
     return {

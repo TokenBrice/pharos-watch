@@ -51,7 +51,7 @@ describe("fetchPythPrices", () => {
     const outcome = await fetchPythPrices(feedIds);
 
     expect(outcome.value.size).toBe(0);
-    expect(warnSpy).toHaveBeenCalledWith("[pyth] Requested 1 feeds but Hermes returned 0 usable results");
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[pyth] Requested 1 feeds but Hermes returned 0 usable results"));
   });
 
   it("returns upstream-error outcome on API failure", async () => {

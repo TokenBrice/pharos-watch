@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   DEPEG_EVENT_CLOSE_REASON_VALUES,
   type DepegEvent,
@@ -108,7 +109,7 @@ export async function loadDexPriceRows(db: D1Database): Promise<Map<string, DexP
     if (isMissingTableError(err)) {
       return new Map<string, DexPriceRow>();
     }
-    console.error("[depeg-helpers] Unexpected error loading dex_prices:", msg);
+    logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex_prices:", msg);
     throw err;
   }
 }
@@ -168,17 +169,17 @@ export async function loadDexPoolChallengers(
 
   if (diagnostics.mode !== "absent") {
     if (diagnostics.incompletePublishedCoins.length > 0) {
-      console.warn(
+      logWorkerEventArgs("lib", "warn",
         `[depeg-helpers] Incomplete challenger snapshots fell back for: ${diagnostics.incompletePublishedCoins.join(", ")}`,
       );
     }
     if (diagnostics.emptyPublishedCoins.length > 0) {
-      console.log(
+      logWorkerEventArgs("lib", "info",
         `[depeg-helpers] Published empty challenger snapshots for: ${diagnostics.emptyPublishedCoins.join(", ")}`,
       );
     }
     if (diagnostics.legacyFallbackCoins.length > 0 && diagnostics.mode !== "legacy") {
-      console.log(
+      logWorkerEventArgs("lib", "info",
         `[depeg-helpers] Legacy challenger fallback used for: ${diagnostics.legacyFallbackCoins.join(", ")}`,
       );
     }
@@ -334,7 +335,7 @@ export async function loadDexPriceSources(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[depeg-helpers] Unexpected error loading dex price sources:", msg);
+      logWorkerEventArgs("lib", "error", "[depeg-helpers] Unexpected error loading dex price sources:", msg);
     }
     return new Map();
   }

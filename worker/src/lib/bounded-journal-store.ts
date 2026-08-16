@@ -1,6 +1,7 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { throwIfAborted } from "./abort";
+import { batchExecute } from "./db";
 import { parseJson } from "./json-parse";
 
 const MAX_BATCH_RECORDS = 48;
@@ -149,7 +150,7 @@ export async function appendBoundedJournal<TRecord extends JournalRecord, TProje
       ).bind(config.lane, assetId, BOUNDED_JOURNAL_MAX_ROWS_PER_ASSET),
     );
   }
-  await db.batch(statements);
+  await batchExecute(db, statements, { signal });
   throwIfAborted(signal);
   return { accepted: canonical.length, assets: assetIds.length };
 }

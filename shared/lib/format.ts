@@ -2,23 +2,73 @@ import { DAY_SECONDS, HOUR_SECONDS, SECONDS_PER_MINUTE } from "./time-constants"
 import { BPS_PER_UNIT } from "./math";
 import { isFiniteNumber } from "./type-guards";
 import { formatRelativeAgeSeconds } from "./relative-time";
-import type { PegCurrency } from "../types/core";
-export { formatCompactUsdShort, formatCompactUsdShortLowerK } from "./format-compact-usd-short";
+import { ratioToPercentage, relativeChangeRatio } from "./stats";
+import { getPegTaxonomyByCurrency } from "./peg-taxonomy";
 
-/** Abbreviate a number into tier suffixes (T/B/M/K) with configurable decimals and prefix. */
-function abbreviateNumber(value: number, decimals: number, prefix = ""): string {
-  if (!Number.isFinite(value)) return "N/A";
+type CompactUsdTier = "trillion" | "billion" | "million" | "thousand" | "unit";
+
+export interface CompactUsdFormatOptions {
+  currencyPrefix?: string;
+  decimals: Readonly<Record<CompactUsdTier, number>>;
+  invalidFallback: string;
+  maximumTier?: Exclude<CompactUsdTier, "unit">;
+  signPosition?: "before-currency" | "after-currency";
+  thousandSuffix?: "K" | "k";
+}
+
+const COMPACT_USD_TIERS = [
+  { tier: "trillion", divisor: 1e12, suffix: "T" },
+  { tier: "billion", divisor: 1e9, suffix: "B" },
+  { tier: "million", divisor: 1e6, suffix: "M" },
+  { tier: "thousand", divisor: 1e3, suffix: "K" },
+] as const;
+
+const DEFAULT_COMPACT_USD_OPTIONS: CompactUsdFormatOptions = {
+  decimals: { trillion: 2, billion: 2, million: 1, thousand: 0, unit: 0 },
+  invalidFallback: "N/A",
+};
+
+/** Canonical compact-USD renderer. Product-specific output differences are explicit options. */
+function formatCompactUsdWithOptions(
+  value: number,
+  options: CompactUsdFormatOptions = DEFAULT_COMPACT_USD_OPTIONS,
+): string {
+  if (!Number.isFinite(value)) return options.invalidFallback;
+
   const sign = value < 0 ? "-" : "";
   const abs = Math.abs(value);
-  if (abs >= 1e12) return `${sign}${prefix}${(abs / 1e12).toFixed(decimals)}T`;
-  if (abs >= 1e9) return `${sign}${prefix}${(abs / 1e9).toFixed(decimals)}B`;
-  if (abs >= 1e6) return `${sign}${prefix}${(abs / 1e6).toFixed(decimals)}M`;
-  if (abs >= 1e3) return `${sign}${prefix}${(abs / 1e3).toFixed(decimals)}K`;
-  return `${sign}${prefix}${abs.toFixed(decimals)}`;
+  const maximumTierIndex = options.maximumTier
+    ? COMPACT_USD_TIERS.findIndex(({ tier }) => tier === options.maximumTier)
+    : 0;
+  const selected = COMPACT_USD_TIERS
+    .slice(maximumTierIndex)
+    .find(({ divisor }) => abs >= divisor);
+  const tier: CompactUsdTier = selected?.tier ?? "unit";
+  const scaled = selected ? abs / selected.divisor : abs;
+  const suffix = selected?.tier === "thousand"
+    ? (options.thousandSuffix ?? selected.suffix)
+    : (selected?.suffix ?? "");
+  const body = `${scaled.toFixed(options.decimals[tier])}${suffix}`;
+  const currencyPrefix = options.currencyPrefix ?? "$";
+
+  return options.signPosition === "after-currency"
+    ? `${currencyPrefix}${sign}${body}`
+    : `${sign}${currencyPrefix}${body}`;
+}
+
+function abbreviateNumber(value: number, decimals: number): string {
+  return formatCompactUsdWithOptions(value, {
+    currencyPrefix: "",
+    decimals: { trillion: decimals, billion: decimals, million: decimals, thousand: decimals, unit: decimals },
+    invalidFallback: "N/A",
+  });
 }
 
 export function formatCurrency(value: number, decimals = 2): string {
-  return abbreviateNumber(value, decimals, "$");
+  return formatCompactUsdWithOptions(value, {
+    decimals: { trillion: decimals, billion: decimals, million: decimals, thousand: decimals, unit: decimals },
+    invalidFallback: "N/A",
+  });
 }
 
 export function abbreviateNumberParts(value: number): { short: number; suffix: string } {
@@ -32,11 +82,26 @@ export function abbreviateNumberParts(value: number): { short: number; suffix: s
 }
 
 export function formatCompactUsd(value: number): string {
-  if (!Number.isFinite(value)) return "N/A";
-  if (Math.abs(value) >= 1e9) return abbreviateNumber(value, 2, "$");
-  if (Math.abs(value) >= 1e6) return abbreviateNumber(value, 1, "$");
-  if (Math.abs(value) >= 1e3) return abbreviateNumber(value, 0, "$");
-  return `${value < 0 ? "-" : ""}$${Math.abs(value).toFixed(0)}`;
+  return formatCompactUsdWithOptions(value);
+}
+
+export function formatCompactUsdShort(value: number): string {
+  return formatCompactUsdWithOptions(value, {
+    decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
+    invalidFallback: "N/A",
+    maximumTier: "billion",
+    signPosition: "after-currency",
+  });
+}
+
+export function formatCompactUsdShortLowerK(value: number): string {
+  return formatCompactUsdWithOptions(value, {
+    decimals: { trillion: 1, billion: 1, million: 1, thousand: 0, unit: 0 },
+    invalidFallback: "$0",
+    maximumTier: "billion",
+    signPosition: "after-currency",
+    thousandSuffix: "k",
+  });
 }
 
 /** Signed compact-USD: same tiered abbreviation as formatCompactUsd, with a leading + for positives. */
@@ -57,16 +122,8 @@ function trimTrailingZeros(value: string): string {
   return value.replace(/(\.\d*?[1-9])0+$/u, "$1").replace(/\.0+$/u, "");
 }
 
-const PEG_CURRENCY_SYMBOLS: Record<PegCurrency, string> & Record<string, string> = {
-  USD: "$", EUR: "€", GBP: "£", CHF: "₣", BRL: "R$", RUB: "₽", JPY: "¥",
-  KRW: "₩", IDR: "Rp", INR: "₹", MYR: "RM", SGD: "S$", HKD: "HK$", TRY: "₺", AUD: "A$", ZAR: "R",
-  CAD: "C$", CNY: "¥", CNH: "¥", PHP: "₱", MXN: "MX$", VND: "₫", UAH: "₴", ARS: "AR$",
-  KGS: "som", NGN: "₦", XOF: "CFA ", COP: "COL$", CLP: "CL$", GHS: "₵", KES: "KSh", PEN: "S/", GOLD: "$", SILVER: "$", VAR: "$", OTHER: "$",
-};
-const USD_PRICED_PEG_CURRENCIES = new Set(["USD", "GOLD", "SILVER", "VAR", "OTHER"]);
-
 export function pegCurrencySymbol(pegCurrency: string): string {
-  return PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
+  return getPegTaxonomyByCurrency(pegCurrency)?.symbol ?? "$";
 }
 
 export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
@@ -81,8 +138,9 @@ export function formatNativePrice(
   decimals = 4,
 ): string {
   if (!isFiniteNumber(usdPrice)) return "N/A";
-  const symbol = PEG_CURRENCY_SYMBOLS[pegCurrency] ?? "$";
-  if (USD_PRICED_PEG_CURRENCIES.has(pegCurrency)) {
+  const taxonomy = getPegTaxonomyByCurrency(pegCurrency);
+  const symbol = taxonomy?.symbol ?? "$";
+  if (taxonomy?.nativePriceUsesUsdSymbol === true) {
     return formatPrice(usdPrice, "$", decimals);
   }
   if (!Number.isFinite(pegRef) || pegRef <= 0) return formatPrice(usdPrice, "$", decimals);
@@ -112,8 +170,9 @@ export function formatPegDeviation(price: number | null | undefined, pegValue = 
 }
 
 export function formatPercentChange(current: number, previous: number): string {
-  if (!Number.isFinite(current) || !Number.isFinite(previous) || previous === 0) return "N/A";
-  const change = ((current - previous) / previous) * 100;
+  const changeRatio = relativeChangeRatio(current, previous);
+  if (changeRatio == null) return "N/A";
+  const change = ratioToPercentage(changeRatio);
   const sign = change >= 0 ? "+" : "";
   return `${sign}${change.toFixed(2)}%`;
 }

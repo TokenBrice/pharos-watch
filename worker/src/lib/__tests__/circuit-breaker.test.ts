@@ -9,6 +9,7 @@ import {
   getCircuitStates,
   filterInactiveCircuitStates,
   mapCronStatusToCircuitOutcome,
+  resetCircuitBreakerStateForTests,
 } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
 
@@ -58,6 +59,7 @@ function circuitCacheKeysTouched(db: { getHistory: () => Array<{ sql: string; bi
 
 describe("circuit-breaker", () => {
   beforeEach(() => {
+    resetCircuitBreakerStateForTests();
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2025-01-15T12:00:00Z"));
   });
@@ -141,6 +143,16 @@ describe("circuit-breaker", () => {
       ]);
 
       expect(countCircuitRecordReads(db, "pending-source")).toBe(1);
+    });
+
+    it("drops memoized reads when isolate-local state is reset", async () => {
+      const db = mockDbWithCircuit("reset-source", makeRecord({ state: "closed" }));
+
+      await getCircuitRecord(db, "reset-source");
+      resetCircuitBreakerStateForTests();
+      await getCircuitRecord(db, "reset-source");
+
+      expect(countCircuitRecordReads(db, "reset-source")).toBe(2);
     });
   });
 

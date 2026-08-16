@@ -4,7 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { UpcomingHorizonHero } from "@/components/upcoming-horizon-hero";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { LAUNCH_PHASE_LABELS } from "@/lib/pre-launch";
 import { CLIENT_TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";

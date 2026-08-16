@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   BluechipRatingsMapSchema,
   type BluechipRatingsMap,
@@ -14,7 +15,7 @@ export function parseBluechipRatingsCache(
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    console.warn(`[bluechip-cache] Failed to parse ${context}:`, error);
+    logWorkerEventArgs("lib", "warn", `[bluechip-cache] Failed to parse ${context}:`, error);
     return {};
   }
 
@@ -24,7 +25,7 @@ export function parseBluechipRatingsCache(
     `${context}:bluechip-cache`,
   );
   if (!validation.ok) {
-    console.warn(`[bluechip-cache] Invalid Bluechip cache shape for ${context}: ${validation.issues}`);
+    logWorkerEventArgs("lib", "warn", `[bluechip-cache] Invalid Bluechip cache shape for ${context}: ${validation.issues}`);
     return {};
   }
 

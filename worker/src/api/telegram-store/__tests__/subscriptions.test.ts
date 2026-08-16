@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
 import { applySettingToSubscriptions, prepareSubscriberAndSubscriptionStatements } from "../subscriptions";
 import { prepareCoinSettingStatements } from "../../telegram-webhook-settings-mutations";
 import type { ParsedSetCommand } from "../../telegram-webhook-shared";
@@ -10,6 +10,17 @@ const COIN: ResolvedCoin = {
   symbol: "USDC",
   name: "USD Coin",
 };
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+): MockD1Database {
+  return baseMockD1([
+    ...tables,
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+  ], options);
+}
 
 function normalizeSql(sql: string): string {
   return sql.replace(/\s+/g, " ").trim();

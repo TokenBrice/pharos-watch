@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { throwIfAborted } from "../lib/abort";
@@ -38,7 +39,7 @@ export async function detectDepegEvents(
   if (duplicateRepair.commands.length > 0) {
     throwIfAborted(signal);
     const operationCount = await persistDepegCommands(db, duplicateRepair.commands);
-    console.log(`[depeg] Merged duplicate open events, ${operationCount} DB ops`);
+    logWorkerEventArgs("handler", "info", `[depeg] Merged duplicate open events, ${operationCount} DB ops`);
   }
 
   // Track event IDs that are still legitimately open after this run.
@@ -78,7 +79,7 @@ export async function detectDepegEvents(
   if (commands.length > 0) {
     throwIfAborted(signal);
     const operationCount = await persistDepegCommands(db, commands);
-    console.log(`[depeg] Wrote ${operationCount} depeg event updates`);
+    logWorkerEventArgs("handler", "info", `[depeg] Wrote ${operationCount} depeg event updates`);
   }
 
   // Close orphaned open events: events that remain open but were not
@@ -100,6 +101,6 @@ export async function detectDepegEvents(
   if (orphanRepair.commands.length > 0) {
     throwIfAborted(signal);
     const operationCount = await persistDepegCommands(db, orphanRepair.commands);
-    console.log(`[depeg] Closed ${operationCount} orphaned depeg events`);
+    logWorkerEventArgs("handler", "info", `[depeg] Closed ${operationCount} orphaned depeg events`);
   }
 }

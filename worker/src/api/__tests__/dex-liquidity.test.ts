@@ -1,13 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
+
+function makeDexDeploymentOutcomeFallbackTable() {
+  return { match: "FROM dex_deployment_outcomes", rows: [] };
+}
+
+function mockDexD1(tables: MockTableConfig[]) {
+  return mockD1([...tables, makeDexDeploymentOutcomeFallbackTable()]);
+}
 
 describe("handleDexLiquidity", () => {
   const row = makeDexLiquidityRow();
 
   it("returns 200 with liquidity map", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -35,7 +43,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("exposes exact deployment outcome truth", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "FROM dex_liquidity\n", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -68,7 +76,7 @@ describe("handleDexLiquidity", () => {
 
   it("logs malformed persisted JSON fields and falls back safely", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const db = mockD1([
+    const db = mockDexD1([
       {
         match: "dex_liquidity",
         rows: [makeDexLiquidityRow({ protocol_tvl_json: "{bad-json" })],
@@ -83,13 +91,12 @@ describe("handleDexLiquidity", () => {
     expect(body["usdt-tether"]?.protocolTvl).toEqual({});
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[cache] Failed to parse persisted JSON (dex-liquidity:usdt-tether:protocol_tvl_json); count=1:"),
-      expect.any(String),
     );
     warn.mockRestore();
   });
 
   it("returns 200 with empty map when no data", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -104,7 +111,7 @@ describe("handleDexLiquidity", () => {
   // `router-contract.test.ts` ("returns a router-level JSON 500 when an unwrapped
   // route handler throws"). Asserting the throw here keeps the cause visible.
   it("fails closed when dex_prices fails unexpectedly", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [], throwError: new Error("database is locked") },
@@ -114,7 +121,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("treats dex_prices as optional when the table is not deployed yet", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [], throwError: new Error("no such table: dex_prices") },
@@ -129,7 +136,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("treats deployment outcomes as optional when the table is not deployed yet", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -148,7 +155,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("fails closed when deployment outcomes fail unexpectedly", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -164,7 +171,7 @@ describe("handleDexLiquidity", () => {
 
   it("falls back to row timestamps when cron freshness lookups fail", async () => {
     const staleRow = makeDexLiquidityRow({ updated_at: 1_700_000_000 });
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       {
         match: "dex_prices",
@@ -201,7 +208,7 @@ describe("handleDexLiquidity", () => {
       stablecoin_id: "__global__",
       coverage_class: "unobserved",
     });
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [globalRow] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -212,7 +219,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("includes v2 fields in response", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -230,7 +237,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("classifies observed but unmeasured liquidity explicitly", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       {
         match: "dex_liquidity",
         rows: [makeDexLiquidityRow({
@@ -252,7 +259,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("classifies strong measured liquidity and marks high-confidence snapshots trendworthy", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       {
         match: "dex_liquidity",
         rows: [makeDexLiquidityRow({
@@ -274,7 +281,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("uses coverage confidence instead of balance ratio for liquidity evidence", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       {
         match: "dex_liquidity",
         rows: [makeDexLiquidityRow({
@@ -296,7 +303,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("classifies partial measured liquidity separately", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       {
         match: "dex_liquidity",
         rows: [makeDexLiquidityRow({
@@ -318,7 +325,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("includes X-Data-Age header", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [row] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -334,7 +341,7 @@ describe("handleDexLiquidity", () => {
       }),
       methodology_version: null,
     };
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity", rows: [legacyRow] },
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
@@ -345,7 +352,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("adds a Warning header when the latest liquidity cron run was degraded", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
       {
@@ -372,7 +379,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("adds a Warning header when the latest liquidity cron run is ok but shows high quality drift", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
       {
@@ -397,7 +404,7 @@ describe("handleDexLiquidity", () => {
   });
 
   it("adds a failure warning when the latest liquidity cron run errored", async () => {
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
       {
@@ -449,7 +456,7 @@ describe("handleDexLiquidity", () => {
       }),
     };
     const scoreUpdatedAt = retiredSourceRow.updated_at;
-    const db = mockD1([
+    const db = mockDexD1([
       { match: "dex_liquidity_history", rows: [] },
       { match: "dex_prices", rows: [] },
       {

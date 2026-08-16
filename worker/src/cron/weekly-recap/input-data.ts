@@ -3,6 +3,7 @@ import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepe
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
 import {
   DigestSafetyContextSchema,
+  type DigestEditorialCandidate,
   type DigestInputData,
   type DigestSafetyContext,
 } from "@shared/types/digest";
@@ -12,7 +13,11 @@ import {
 } from "@shared/types/safety-score-publication";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import { rollupDigestInputs, type RollupSummary } from "../daily-digest/collectors-shared";
-import { DEWS_BAND_RANK } from "../daily-digest/digest-intelligence-utils";
+import {
+  activeDepegEditorialCandidateId,
+  buildEditorialCandidates,
+  resolvedDepegEditorialCandidateId,
+} from "../daily-digest/editorial-candidates";
 import type {
   DailyDigestSourceRow,
   SpikeDepeg,
@@ -74,27 +79,102 @@ function toSpikeDepeg(signal: WeeklyDepegSignal | undefined): SpikeDepeg | null 
   };
 }
 
-function gradeRiskRank(grade: string): number {
-  const normalized = grade.trim().toUpperCase();
-  if (normalized.startsWith("A")) return 0;
-  if (normalized.startsWith("B")) return 1;
-  if (normalized.startsWith("C")) return 2;
-  if (normalized.startsWith("D")) return 3;
-  if (normalized.startsWith("F")) return 4;
-  return 2;
+function canonicalDailyCandidates(parsed: WeeklyParsedRow[], index: number): DigestEditorialCandidate[] {
+  const row = parsed[index];
+  if (!row) return [];
+  const inputData: DigestInputData = {
+    ...row.inputData,
+    mcap7dDelta: row.inputData.mcap7dDelta ?? 0,
+    activeDepegCount: row.inputData.activeDepegCount ?? 0,
+    topDepegs: row.inputData.topDepegs ?? [],
+    biggestSupplyChange: row.inputData.biggestSupplyChange ?? null,
+    mintBurnFlows:
+      row.inputData.mintBurnFlows?.flightToQuality && Array.isArray(row.inputData.mintBurnFlows.topPressure)
+        ? row.inputData.mintBurnFlows
+        : undefined,
+    blacklistActivity:
+      typeof row.inputData.blacklistActivity?.totalAmountUsd === "number" &&
+      Array.isArray(row.inputData.blacklistActivity.topEvents)
+        ? row.inputData.blacklistActivity
+        : undefined,
+    stabilityIndex:
+      row.inputData.stabilityIndex?.components ? row.inputData.stabilityIndex : null,
+  };
+  return row.inputData.editorialCandidates ?? buildEditorialCandidates(
+    inputData,
+    index > 0 ? parsed[index - 1]?.inputData ?? null : null,
+  );
+}
+
+function findDailyDepegCandidate(
+  candidates: readonly DigestEditorialCandidate[],
+  kind: "depeg" | "resolved-depeg",
+  expectedId: string,
+  symbol: string,
+): DigestEditorialCandidate | undefined {
+  const exact = candidates.find((candidate) => candidate.kind === kind && candidate.id === expectedId);
+  if (exact) return exact;
+
+  // Compatibility for daily rows persisted before event-stable candidate ids.
+  const sameSymbol = candidates.filter((candidate) =>
+    candidate.kind === kind && candidate.symbols.includes(symbol.toUpperCase()),
+  );
+  return sameSymbol.length === 1 ? sameSymbol[0] : undefined;
+}
+
+function weeklyRiskKind(candidate: DigestEditorialCandidate): WeeklyRiskKind | null {
+  if (candidate.kind === "resolved-depeg") return "depeg";
+  if (
+    candidate.kind === "depeg" ||
+    candidate.kind === "dews" ||
+    candidate.kind === "mint-burn" ||
+    candidate.kind === "blacklist" ||
+    candidate.kind === "grade" ||
+    candidate.kind === "yield" ||
+    candidate.kind === "liquidity" ||
+    candidate.kind === "supply"
+  ) {
+    return candidate.kind;
+  }
+  return null;
+}
+
+function collectCanonicalWeeklyRiskCandidates(parsed: WeeklyParsedRow[]): WeeklyRiskLeaderboardSignal[] {
+  const representativeByIdentity = new Map<string, WeeklyRiskLeaderboardSignal>();
+
+  parsed.forEach((row, index) => {
+    for (const candidate of canonicalDailyCandidates(parsed, index)) {
+      const kind = weeklyRiskKind(candidate);
+      if (kind == null || kind === "depeg") continue;
+      if (kind === "grade" && (row.inputData.gradeTransitions?.length ?? 0) === 0) continue;
+      // Blacklist candidates summarize a bounded daily window, while the other
+      // daily candidate ids describe a stable signal identity across the week.
+      const identity = candidate.kind === "blacklist" ? `${candidate.id}:${row.date}` : candidate.id;
+      const weekly: WeeklyRiskLeaderboardSignal = {
+        id: `weekly:${identity}`,
+        kind,
+        label: `${row.date} ${candidate.title}: ${candidate.headlineFacts.join("; ")}`,
+        symbols: candidate.symbols,
+        date: row.date,
+        impactScore: candidate.impactScore,
+        severityScore: candidate.impactScore,
+        ...(candidate.suppressReason ? { suppressReason: candidate.suppressReason } : {}),
+      };
+      const existing = representativeByIdentity.get(identity);
+      if (!existing || weekly.severityScore > existing.severityScore) {
+        representativeByIdentity.set(identity, weekly);
+      }
+    }
+  });
+
+  return [...representativeByIdentity.values()];
 }
 
 function buildWeeklyRiskLeaderboard(params: {
+  parsed: WeeklyParsedRow[];
   depegs: WeeklyDepegSignal[];
-  dewsChanges: WeeklyInputData["weeklySignals"]["topDewsChanges"];
-  pressureSignals: WeeklyInputData["weeklySignals"]["topPressureSignals"];
-  blacklistEvents: WeeklyInputData["weeklySignals"]["topBlacklistEvents"];
-  gradeTransitions: WeeklyInputData["weeklySignals"]["topGradeTransitions"];
-  yieldAnomalies: WeeklyInputData["weeklySignals"]["topYieldAnomalies"];
-  liquidityShifts: WeeklyInputData["weeklySignals"]["topLiquidityShifts"];
-  supplySignals: WeeklyInputData["weeklySignals"]["topSupplySignals"];
 }): WeeklyRiskLeaderboardSignal[] {
-  const rows: WeeklyRiskLeaderboardSignal[] = [];
+  const rows = collectCanonicalWeeklyRiskCandidates(params.parsed);
 
   for (const depeg of params.depegs) {
     rows.push({
@@ -108,97 +188,6 @@ function buildWeeklyRiskLeaderboard(params: {
       critical: depeg.critical,
       ...(depeg.carriedOver ? { carriedOver: true } : {}),
       ...(depeg.suppressReason ? { suppressReason: depeg.suppressReason } : {}),
-    });
-  }
-
-  for (const change of params.dewsChanges) {
-    const fromRank = DEWS_BAND_RANK[change.from] ?? 0;
-    const toRank = DEWS_BAND_RANK[change.to] ?? 0;
-    if (toRank <= fromRank) continue;
-    const score = Math.max(1, change.mcapUsd / 1_000_000 + change.score);
-    rows.push({
-      id: weeklySignalId("dews", [change.symbol, change.from, change.to]),
-      kind: "dews",
-      label: `${change.symbol}: DEWS ${change.from} -> ${change.to}, score ${change.score}, driver ${change.driver}`,
-      symbols: [change.symbol],
-      impactScore: change.mcapUsd / 1_000_000,
-      severityScore: score,
-    });
-  }
-
-  for (const pressure of params.pressureSignals) {
-    rows.push({
-      id: weeklySignalId("mint-burn", [pressure.date, pressure.symbol, "pressure"]),
-      kind: "mint-burn",
-      label: `${pressure.date} ${pressure.symbol}: mint/burn intensity ${Math.round(pressure.intensity)}, net ${formatCurrency(pressure.net24hUsd)}`,
-      symbols: [pressure.symbol],
-      date: pressure.date,
-      impactScore: Math.abs(pressure.net24hUsd) / 1_000_000,
-      severityScore: Math.abs(pressure.net24hUsd) / 1_000_000 + Math.abs(pressure.intensity),
-    });
-  }
-
-  for (const event of params.blacklistEvents) {
-    rows.push({
-      id: weeklySignalId("blacklist", [event.date, event.symbol, event.chain, event.type]),
-      kind: "blacklist",
-      label: `${event.date} ${event.symbol} on ${event.chain}: ${event.type}, ${formatCurrency(event.amountUsd)}`,
-      symbols: [event.symbol],
-      date: event.date,
-      impactScore: event.amountUsd / 1_000_000,
-      severityScore: event.amountUsd / 1_000_000,
-    });
-  }
-
-  for (const transition of params.gradeTransitions) {
-    const downgradeSteps = gradeRiskRank(transition.toGrade) - gradeRiskRank(transition.fromGrade);
-    if (downgradeSteps <= 0) continue;
-    rows.push({
-      id: weeklySignalId("grade", [transition.date, transition.symbol, transition.fromGrade, transition.toGrade]),
-      kind: "grade",
-      label: `${transition.date} ${transition.symbol}: grade ${transition.fromGrade} -> ${transition.toGrade}, ${formatCurrency(transition.mcapUsd)} mcap`,
-      symbols: [transition.symbol],
-      date: transition.date,
-      impactScore: transition.mcapUsd / 1_000_000,
-      severityScore: (downgradeSteps * transition.mcapUsd) / 1_000_000,
-    });
-  }
-
-  for (const anomaly of params.yieldAnomalies) {
-    rows.push({
-      id: weeklySignalId("yield", [anomaly.date, anomaly.symbol]),
-      kind: "yield",
-      label: `${anomaly.date} ${anomaly.symbol}: ${anomaly.apy}% APY, ${anomaly.warnings.join(", ")}`,
-      symbols: [anomaly.symbol],
-      date: anomaly.date,
-      impactScore: anomaly.mcapUsd / 1_000_000,
-      severityScore: anomaly.mcapUsd / 10_000_000 + anomaly.warnings.length * 25,
-      suppressReason: "yield anomaly requires corroboration before leading",
-    });
-  }
-
-  for (const shift of params.liquidityShifts) {
-    if (shift.scoreDelta >= 0) continue;
-    rows.push({
-      id: weeklySignalId("liquidity", [shift.date, shift.symbol]),
-      kind: "liquidity",
-      label: `${shift.date} ${shift.symbol}: liquidity score ${shift.scoreDelta}, ${formatCurrency(shift.mcapUsd)} mcap`,
-      symbols: [shift.symbol],
-      date: shift.date,
-      impactScore: (Math.abs(shift.scoreDelta) * shift.mcapUsd) / 1_000_000_000,
-      severityScore: (Math.abs(shift.scoreDelta) * shift.mcapUsd) / 1_000_000_000,
-    });
-  }
-
-  for (const supply of params.supplySignals) {
-    if (supply.amountUsd >= 0) continue;
-    rows.push({
-      id: weeklySignalId("supply", [supply.symbol, supply.label]),
-      kind: "supply",
-      label: `${supply.symbol}: ${supply.label}, ${formatCurrency(supply.amountUsd)}`,
-      symbols: [supply.symbol],
-      impactScore: Math.abs(supply.amountUsd) / 1_000_000,
-      severityScore: Math.abs(supply.amountUsd) / 1_000_000,
     });
   }
 
@@ -309,57 +298,78 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   const weekWindowStartSec = parsed[0]?.date
     ? Math.floor(Date.parse(`${parsed[0].date}T00:00:00Z`) / 1000)
     : 0;
-  const allDepegSignals = parsed.flatMap((d) => [
-    ...(d.inputData.topDepegs ?? []).map((depeg) => {
-      // Post-truth-layer dailies carry the live deviation; archived rows fall
-      // back to the stored peak.
-      const severityBps = depeg.currentBps ?? depeg.bps;
-      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(severityBps, depeg.mcapUsd);
-      // An event that predates the week window is a standing condition the
-      // reader has already seen in prior recaps, not fresh weekly news.
-      const carriedOver = depeg.startedAt != null && depeg.startedAt < weekWindowStartSec;
-      const severityScore = getDepegEditorialImpactScore(severityBps, depeg.mcapUsd) * (carriedOver ? 0.5 : 1);
-      return {
-        id: weeklySignalId("depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? d.date), "active"]),
-        symbol: depeg.symbol,
-        label: `${Math.abs(severityBps)} bps active ${severityBps >= 0 ? "above" : "below"} peg${carriedOver ? " (carried over from before this week)" : ""}`,
-        impactScore,
-        severityScore,
-        mcapUsd: depeg.mcapUsd,
-        bps: Math.abs(severityBps),
-        date: d.date,
-        kind: "active" as const,
-        critical: isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd }),
-        carriedOver,
-        suppressReason: depeg.suppressReason,
-      };
-    }),
-    ...(d.inputData.resolvedDepegs ?? []).map((depeg) => {
-      const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
-      return {
-        id: weeklySignalId("depeg", [
-          depeg.stablecoinId ?? depeg.symbol,
-          String(depeg.startedAt ?? d.date),
-          "resolved",
-        ]),
-        symbol: depeg.symbol,
-        label: `${depeg.peakBps} bps resolved after ${depeg.durationHours}h`,
-        impactScore,
-        severityScore: getDepegEditorialImpactScore(depeg.peakBps, depeg.mcapUsd),
-        mcapUsd: depeg.mcapUsd,
-        bps: depeg.peakBps,
-        date: d.date,
-        kind: "resolved" as const,
-        critical: isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
-      };
-    }),
-  ]);
-  const topDepegSignals = [...allDepegSignals]
+  const allDepegObservations = parsed.flatMap((d, index) => {
+    const dailyCandidates = canonicalDailyCandidates(parsed, index);
+    return [
+      ...(d.inputData.topDepegs ?? []).map((depeg) => {
+        // Post-truth-layer dailies carry the live deviation; archived rows fall
+        // back to the stored peak.
+        const severityBps = depeg.currentBps ?? depeg.bps;
+        const canonicalCandidate = findDailyDepegCandidate(
+          dailyCandidates,
+          "depeg",
+          activeDepegEditorialCandidateId(depeg),
+          depeg.symbol,
+        );
+        const impactScore = canonicalCandidate?.impactScore
+          ?? getDepegEditorialImpactScore(severityBps, depeg.mcapUsd);
+        // An event that predates the week window is a standing condition the
+        // reader has already seen in prior recaps, not fresh weekly news.
+        const carriedOver = depeg.startedAt != null && depeg.startedAt < weekWindowStartSec;
+        const severityScore = impactScore * (carriedOver ? 0.5 : 1);
+        const eventIdentity = `${depeg.stablecoinId ?? depeg.symbol.toUpperCase()}:${depeg.startedAt ?? "active"}`;
+        return {
+          id: weeklySignalId("depeg", [eventIdentity]),
+          eventIdentity,
+          symbol: depeg.symbol,
+          label: `${Math.abs(severityBps)} bps active ${severityBps >= 0 ? "above" : "below"} peg${carriedOver ? " (carried over from before this week)" : ""}`,
+          impactScore,
+          severityScore,
+          mcapUsd: depeg.mcapUsd,
+          bps: Math.abs(severityBps),
+          date: d.date,
+          kind: "active" as const,
+          critical: isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd }),
+          carriedOver,
+          suppressReason: depeg.suppressReason,
+        };
+      }),
+      ...(d.inputData.resolvedDepegs ?? []).map((depeg) => {
+        const canonicalCandidate = findDailyDepegCandidate(
+          dailyCandidates,
+          "resolved-depeg",
+          resolvedDepegEditorialCandidateId(depeg),
+          depeg.symbol,
+        );
+        const impactScore = canonicalCandidate?.impactScore
+          ?? depeg.impactScore
+          ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
+        const eventIdentity = `${depeg.stablecoinId ?? depeg.symbol.toUpperCase()}:${depeg.startedAt ?? `resolved:${depeg.endedAt ?? d.date}`}`;
+        return {
+          id: weeklySignalId("depeg", [eventIdentity]),
+          eventIdentity,
+          symbol: depeg.symbol,
+          label: `${depeg.peakBps} bps resolved after ${depeg.durationHours}h`,
+          impactScore,
+          severityScore: impactScore,
+          mcapUsd: depeg.mcapUsd,
+          bps: depeg.peakBps,
+          date: d.date,
+          kind: "resolved" as const,
+          critical: isCriticalDepegRisk({ bps: depeg.peakBps, mcapUsd: depeg.mcapUsd }),
+        };
+      }),
+    ];
+  });
+  const allDepegSignals = [...allDepegObservations]
     .sort(
       (a, b) =>
         Number(b.critical) - Number(a.critical) || b.severityScore - a.severityScore || b.impactScore - a.impactScore,
     )
-    .slice(0, 7);
+    .filter((signal, index, sorted) =>
+      sorted.findIndex((candidate) => candidate.eventIdentity === signal.eventIdentity) === index,
+    );
+  const topDepegSignals = allDepegSignals.slice(0, 7);
   const topSupplySignals = topSignals(
     parsed,
     (d) => {
@@ -601,14 +611,8 @@ export function buildWeeklyInputData(
   const spikeMetrics = buildWeeklySpikeMetrics(parsed, allDepegSignals);
 
   const riskLeaderboard = buildWeeklyRiskLeaderboard({
+    parsed,
     depegs: topDepegSignals,
-    dewsChanges: topDewsChanges,
-    pressureSignals: topPressureSignals,
-    blacklistEvents: topBlacklistEvents,
-    gradeTransitions: topGradeTransitions,
-    yieldAnomalies: topYieldAnomalies,
-    liquidityShifts: topLiquidityShifts,
-    supplySignals: topSupplySignals,
   });
 
   const weekOverWeekDeltas = buildWeeklyWowDeltas(current, priorParsed);

@@ -11,6 +11,20 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
+vi.mock("../telegram-digest-transport", () => ({
+  runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
+    creds: unknown;
+    deliver: (creds: unknown) => Promise<{ status: string }>;
+  }) => {
+    if (!params.creds) return "no-creds";
+    try {
+      return (await params.deliver(params.creds)).status;
+    } catch (error) {
+      return `failed: ${String(error).slice(0, 100)}`;
+    }
+  }),
+}));
+
 vi.mock("../../lib/digest-safety-context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/digest-safety-context")>();
   return {
@@ -31,6 +45,7 @@ import {
   deliverTelegramDigestEdition,
   enqueueTelegramDigestEdition,
 } from "../../lib/telegram-digest-outbox";
+import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
 import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DIGEST_MODEL } from "../../lib/constants";
 import {
@@ -151,6 +166,11 @@ function makeTables(overrides: Partial<{
       rows: overrides.recentWeeklyRows ?? [],
     },
     {
+      match: "digest_meta, input_data",
+      rows: [],
+      first: null,
+    },
+    {
       match: "WHERE generated_at >= ? AND (digest_meta IS NULL OR json_extract(digest_meta, '$.type') IS NULL OR json_extract(digest_meta, '$.type') != 'weekly')",
       rows: overrides.dailyRows ?? buildDailyRows(),
     },
@@ -223,6 +243,11 @@ describe("generateWeeklyRecap", () => {
       }),
       undefined,
     );
+    expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({
+      db,
+      owner: "weekly-recap",
+      editionKey: "weekly:2026-03-30",
+    }));
     expect(deliverTelegramDigestEdition).toHaveBeenCalledWith(
       db,
       { botToken: "bot", chatId: "chat" },
@@ -680,7 +705,13 @@ describe("generateWeeklyRecap", () => {
         first: null,
         rows: [],
       },
+      {
+        match: "digest_meta, input_data",
+        first: null,
+        rows: [],
+      },
       { match: "SELECT digest_title, digest_text, digest_meta", rows: [] },
+      { match: "UPDATE daily_digest", rows: [] },
       {
         match: "WHERE generated_at >= ? AND (digest_meta IS NULL",
         rows: [...prior, ...current],
@@ -736,7 +767,7 @@ describe("generateWeeklyRecap", () => {
       messages: { content: string }[];
     };
     const prompt = body.messages[0].content;
-    expect(prompt).toContain("USDT: grade A -> B");
+    expect(prompt).toContain("USDT grade fell to B");
     expect(prompt).not.toContain("undefined: grade undefined");
   });
 
@@ -773,7 +804,7 @@ describe("generateWeeklyRecap", () => {
         }],
       }),
     };
-    const expectedLeadId = `weekly:depeg:pmusd-protocol:${criticalStartedAt}:active`;
+    const expectedLeadId = `weekly:depeg:pmusd-protocol:${criticalStartedAt}`;
     const criticalExtended = VALID_WEEKLY_EXTENDED.replace(
       "PSI opened",
       "PMUSD spent Thursday 5284 bps below peg on $65M while PSI opened",

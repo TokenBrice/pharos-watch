@@ -1,5 +1,8 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { weightedMedian } from "@shared/lib/stats";
 import { roundTo } from "@shared/lib/math";
+import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import {
@@ -701,7 +704,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   tvlStabilityMap: Map<string, number>;
   volumeStabilityMap: Map<string, number>;
 }> {
-  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400;
+  const todayMidnight = bucketUnixMillisecondsToUtcDay(Date.now()) / 1000;
   const thirtyDaysAgo = todayMidnight - 30 * 86_400;
   const tvlStabilityMap = new Map<string, number>();
   const volumeStabilityMap = new Map<string, number>();
@@ -1418,7 +1421,7 @@ export async function computeDepthStability(
       `DEX depth stability publication changed ${publishedChanges}/${ACTIVE_STABLECOINS.length} current rows`,
     );
   }
-  console.log(`[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
+  logWorkerEventArgs("handler", "info", `[dex-liquidity] Published depth stability for ${stagedStabilityCount} coins from ${generationId}`);
 }
 
 /** Compute DEX-implied prices from the final retained pool set and persist to dex_prices. */
@@ -1585,19 +1588,12 @@ export async function computeDexPrices(
       tvl: o.tvl * dexPriceConfidenceForSourceFamily(o.sourceFamily),
     }));
 
-    // TVL-weighted median: sort by price, walk until cumulative (confidence-weighted) TVL crosses 50%
-    adjustedObs.sort((a, b) => a.price - b.price);
-    const adjustedTotalTvl = adjustedObs.reduce((s, o) => s + o.tvl, 0);
-    const halfTvl = adjustedTotalTvl / 2;
-    let cumTvl = 0;
-    let medianPrice = adjustedObs[0].price;
-    for (const obs of adjustedObs) {
-      cumTvl += obs.tvl;
-      if (cumTvl >= halfTvl) {
-        medianPrice = obs.price;
-        break;
-      }
-    }
+    // TVL-weighted lower-discrete median. The first-observation fallback
+    // preserves the scoring lane's non-empty-input contract if all adjusted
+    // confidence weights are non-positive.
+    const medianPrice = weightedMedian(
+      adjustedObs.map((observation) => ({ value: observation.price, weight: observation.tvl })),
+    ) ?? adjustedObs[0].price;
 
     // Raw TVL for DB storage (represents actual on-chain liquidity, not confidence-weighted)
     const totalTvl = plausibleObservations.reduce((s, o) => s + o.tvl, 0);
@@ -1751,17 +1747,17 @@ export async function computeDexPrices(
     const cleanup = await db.prepare("DELETE FROM dex_price_run_rows WHERE generation_id = ?").bind(generationId).run();
     const cleanedRows = Number(cleanup.meta?.changes ?? 0);
     if (cleanedRows !== observedIds.size) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[dex-liquidity] DEX price stage cleanup removed ${cleanedRows}/${observedIds.size} rows for ${generationId}`,
       );
     }
   } catch (error) {
     rethrowIfAborted(error, signal);
-    console.warn(`[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
+    logWorkerEventArgs("handler", "warn", `[dex-liquidity] Failed to clean published DEX price stage ${generationId}: ${String(error)}`);
   }
 
   if (observedIds.size > 0 || retiredCount > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Wrote ${observedIds.size} DEX price observations to dex_prices` +
         (collapsedDuplicateGroups > 0
           ? ` after collapsing ${collapsedDuplicateObservations} duplicate observations across ${collapsedDuplicateGroups} pool group(s)`

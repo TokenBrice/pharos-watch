@@ -11,7 +11,12 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 
 vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
 
-const db = mockD1();
+const db = mockD1([
+  {
+    match: "INSERT INTO admin_action_audit",
+    rows: [],
+  },
+]);
 const execCtx = {
   waitUntil: (_promise: Promise<unknown>) => {},
   passThroughOnException: () => {},

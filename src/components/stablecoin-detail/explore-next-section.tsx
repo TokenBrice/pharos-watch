@@ -21,8 +21,8 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { PEG_SLUGS } from "@/lib/peg-landing";
-import { buildStablecoinUrl } from "@/lib/urls";
-import { CASE_STUDY_BY_COIN_ID } from "@/app/learn/case-studies/content";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 
 interface StaticComparisonEntry {
   href: string;
@@ -117,7 +117,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, logos
     });
   }
 
-  const caseStudy = CASE_STUDY_BY_COIN_ID[coin.id];
+  const caseStudy = CASE_STUDY_CLIENT_BY_COIN_ID[coin.id];
   const hasPeers = related.length > 0 || staticComparisonPages.length > 0;
   const peersHref = pegSlug ? `/stablecoins/${pegSlug}/` : "/screener/";
   const hiddenComparisonCount = Math.max(0, staticComparisonPages.length - COMPARISON_MOBILE_CARD_CAP);

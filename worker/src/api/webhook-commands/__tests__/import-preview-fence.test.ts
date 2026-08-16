@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import searchableCoinsAsset from "@shared/data/stablecoins/coins.telegram-mini-app.generated.json";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { splitMessage } from "../../../lib/telegram-alerts";
 import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../../../lib/telegram-constants";
 import { packWatchlistDirectState } from "../../../lib/telegram-watchlist-token";
@@ -17,6 +17,16 @@ const payload: ConfirmBulkPayload = {
   coinIds: ["usdc-circle"],
   subscribeAll: false,
 };
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "UPDATE cache SET updated_at = updated_at", rows: [] },
+  ], options);
+}
 
 function context(db: D1Database, overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
   return {

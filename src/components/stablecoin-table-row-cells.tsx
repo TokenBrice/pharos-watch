@@ -11,7 +11,7 @@ import type { StablecoinTableRowModel } from "@/components/stablecoin-table-row-
 import type { StablecoinTableRowCellProps } from "@/components/stablecoin-table-row-types";
 import { confidenceClass } from "@/lib/confidence";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import {
   BACKING_BADGE_STYLES,
   BACKING_LABELS_SHORT,

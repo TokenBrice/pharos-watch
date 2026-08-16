@@ -13,6 +13,11 @@ import {
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { deepFreeze } from "./primitives";
+import {
+  V9_SCORE_BEARING_GATES_POLICY_V922,
+  parseV9ScoreBearingGatesPolicy,
+  type V9ScoreBearingGatesPolicy,
+} from "./score-bearing-gates-policy";
 
 const V9_POLICY_DIGEST_DOMAIN = "safety-score-v9.methodology-policy.v1";
 
@@ -99,23 +104,57 @@ function semanticPayload(policy: V9MethodologyPolicy): V9MethodologySemanticPayl
   } satisfies V9MethodologySemanticPayload;
 }
 
-function computeV9PolicySemanticDigest(policy: V9MethodologyPolicy): string {
+function computeV9PolicySemanticDigest(
+  policy: V9MethodologyPolicy,
+  scoreBearingGates: V9ScoreBearingGatesPolicy,
+): string {
+  const { methodologyVersion: _methodologyVersion, ...gateSemantics } = scoreBearingGates;
+  const canonicalGates = {
+    ...gateSemantics,
+    danger: {
+      ...scoreBearingGates.danger,
+      withholdCentralizedMintSeverities: sortedUnique(
+        scoreBearingGates.danger.withholdCentralizedMintSeverities,
+      ),
+      fGateCentralizedMintSeverities: sortedUnique(
+        scoreBearingGates.danger.fGateCentralizedMintSeverities,
+      ),
+      preExitCentralizedMintSeverities: sortedUnique(
+        scoreBearingGates.danger.preExitCentralizedMintSeverities,
+      ),
+      dangerOnlyGrades: sortedUnique(scoreBearingGates.danger.dangerOnlyGrades),
+    },
+  };
   return sha256Hex(
     stableJsonStringifyV1({
       domain: V9_POLICY_DIGEST_DOMAIN,
       policy: semanticPayload(policy),
+      scoreBearingGates: canonicalGates,
     }),
   );
 }
 
+export type V9ValidatedPolicyWithScoreBearingGates = V9ValidatedPolicyEnvelope & {
+  readonly scoreBearingGates: V9ScoreBearingGatesPolicy;
+};
+
 /** Parse, cross-validate, digest, and freeze one explicit methodology policy. */
-export function loadV9MethodologyPolicy(rawPolicy: unknown): V9ValidatedPolicyEnvelope {
-  const policy = V9MethodologyPolicySchema.parse(rawPolicy);
+export function loadV9MethodologyPolicy(
+  rawPolicy: unknown,
+  rawScoreBearingGates: unknown = V9_SCORE_BEARING_GATES_POLICY_V922,
+): V9ValidatedPolicyWithScoreBearingGates {
+  const basePolicy = V9MethodologyPolicySchema.parse(rawPolicy);
+  const scoreBearingGates = parseV9ScoreBearingGatesPolicy(rawScoreBearingGates);
+  const policy = {
+    ...basePolicy,
+    releaseVersion: scoreBearingGates.methodologyVersion,
+  } satisfies V9MethodologyPolicy;
   const envelope = {
     policy,
-    semanticDigest: computeV9PolicySemanticDigest(policy),
-  } satisfies V9ValidatedPolicyEnvelope;
-  const frozen = deepFreeze(envelope) as V9ValidatedPolicyEnvelope;
+    scoreBearingGates,
+    semanticDigest: computeV9PolicySemanticDigest(policy, scoreBearingGates),
+  } satisfies V9ValidatedPolicyWithScoreBearingGates;
+  const frozen = deepFreeze(envelope) as V9ValidatedPolicyWithScoreBearingGates;
   validatedPolicyEnvelopes.add(frozen);
   return frozen;
 }
@@ -126,6 +165,13 @@ export function assertV9ValidatedPolicyEnvelope(
   if (!validatedPolicyEnvelopes.has(envelope)) {
     throw new Error("Safety Score v9 policy must be created by loadV9MethodologyPolicy()");
   }
+}
+
+export function getV9ScoreBearingGatesPolicy(
+  envelope: V9ValidatedPolicyEnvelope,
+): V9ScoreBearingGatesPolicy {
+  assertV9ValidatedPolicyEnvelope(envelope);
+  return (envelope as V9ValidatedPolicyWithScoreBearingGates).scoreBearingGates;
 }
 
 export function assertV9ReasonCodesRegistered(

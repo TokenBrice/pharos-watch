@@ -3,6 +3,7 @@ import {
   type DexMeasuredExecutionObservationHistory,
   type DexMeasuredExecutionProfile,
 } from "@shared/types/measured-execution";
+import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
 
 export interface DexMeasuredExecutionHistoryCycle {
   generationId: string;
@@ -57,13 +58,12 @@ function conservativeCurve(
         : realizedCosts.every((cost): cost is number => cost != null)
           ? Math.max(...realizedCosts)
           : point.maxCostBps;
-    return {
+    return buildExitRouteCapacityPoint({
       requestedNotionalUsd: point.requestedNotionalUsd,
       maxCostBps: point.maxCostBps,
-      executableUsd,
-      completionRatio: executableUsd / point.requestedNotionalUsd,
+      capacityUsd: executableUsd,
       ...(executionCostBps == null ? {} : { executionCostBps }),
-    };
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null });
   });
   return result.some((point) => point === null)
     ? null

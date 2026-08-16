@@ -51,7 +51,7 @@ Classify the docs request:
 Use:
 
 ```bash
-node scripts/ci/pharos-change-contract.mjs
+node scripts/ci/pharos-change-contract.ts
 ```
 
 or `--staged` when auditing staged changes.

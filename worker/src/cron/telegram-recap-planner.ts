@@ -39,7 +39,7 @@ import {
   queueTelegramRecapTarget,
   recordTelegramRecapSkip,
   type DueTelegramRecapPreference,
-} from "./telegram-recap-store";
+} from "../lib/telegram-recap-store";
 
 /** Read one extra row so a complete fact ledger is never silently truncated. */
 const TELEGRAM_RECAP_TAPE_FRESHNESS_SEC = 90 * 60;

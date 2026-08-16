@@ -13,7 +13,7 @@ import {
 } from "@/lib/horizon-constellation-layout";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { logosById } from "@/lib/logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 
 const DOT = HORIZON_CONSTELLATION_LAYOUT.dot;

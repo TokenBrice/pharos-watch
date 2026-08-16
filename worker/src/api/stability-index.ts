@@ -3,8 +3,10 @@ import {
   errorResponse,
   jsonResponse,
   buildMethodologyEnvelope,
+  parseBooleanParam,
 } from "../lib/api-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CACHE_PROFILES } from "../lib/constants";
 import { decodeJsonString } from "../lib/cache-json";
@@ -84,9 +86,10 @@ function decodePsiObjectField(
 }
 
 export const handleStabilityIndex = async (db: D1Database, url: URL): Promise<Response> => {
-  const detail = url.searchParams.get("detail") === "true";
+  const detail = parseBooleanParam(url.searchParams.get("detail"), "detail", false);
+  if (detail instanceof Response) return detail;
   const now = Math.floor(Date.now() / 1000);
-  const todayMidnight = now - (now % DAY_SECONDS);
+  const todayMidnight = bucketUnixSecondsToUtcDay(now);
 
   // Daily history from stability_index. The detail query is intentionally unbounded so
   // historical event annotations (events go back to 2018) stay within the chart's range.

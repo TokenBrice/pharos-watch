@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import HomePage from "@/app/page";
 import { HOMEPAGE_TOP_CORE_STABLECOINS } from "@/lib/stablecoin-static-data";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 describe("homepage server-rendered links", () => {
   it("keeps a useful profile directory in the no-JavaScript document", () => {

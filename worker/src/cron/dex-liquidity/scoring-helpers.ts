@@ -7,6 +7,7 @@ import type {
 import { isBlockedDexId } from "../../lib/dex-cron-constants";
 import { DEX_PRICE_OBSERVATION_MIN_TVL_USD } from "../../lib/constants";
 import { clamp } from "@shared/lib/math";
+import { weightedMedian } from "@shared/lib/stats";
 import { normalizeProtocol } from "./pool-helpers";
 
 type PoolExtra = NonNullable<LiquidityMetrics["topPools"][number]["extra"]>;
@@ -420,19 +421,9 @@ function median(values: number[]): number {
 // Display path: soft `?? 0` fallbacks. Intentionally NOT unified with the confidence-weighted
 // median in scoring.ts (which hard-indexes adjustedObs[0].price); unifying would move outputs.
 function tvlWeightedMedian(observations: readonly Pick<DexPriceObs, "price" | "tvl">[]): number {
-  const sorted = [...observations].sort((left, right) => left.price - right.price);
-  const totalTvl = sorted.reduce((sum, observation) => sum + observation.tvl, 0);
-  const halfTvl = totalTvl / 2;
-  let cumulativeTvl = 0;
-  let medianPrice = sorted[0]?.price ?? 0;
-  for (const observation of sorted) {
-    cumulativeTvl += observation.tvl;
-    if (cumulativeTvl >= halfTvl) {
-      medianPrice = observation.price;
-      break;
-    }
-  }
-  return medianPrice;
+  return weightedMedian(
+    observations.map((observation) => ({ value: observation.price, weight: observation.tvl })),
+  ) ?? 0;
 }
 
 export function collapseDuplicateObservations(

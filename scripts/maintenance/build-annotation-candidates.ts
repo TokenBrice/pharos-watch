@@ -24,7 +24,7 @@ import {
   buildMaintenanceApiRequest,
 } from "../lib/maintenance-api";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
-import type { StablecoinMeta } from "../../shared/types";
+import type { StablecoinMeta } from "@shared/types";
 
 const ROOT = process.cwd();
 const OUTPUT_PATH = resolve(ROOT, "agents/annotation-candidates.md");

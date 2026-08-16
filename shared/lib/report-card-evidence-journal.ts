@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Sha256Schema } from "../types/safety-schema-primitives";
 import { RESERVE_EVIDENCE_SOURCE_ORIGIN_CLASSES } from "../types/report-card-evidence-journal";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";
@@ -10,7 +11,6 @@ const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_BYTES = 384 * 1_024;
 export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ENTRIES_PER_ASSET = 2;
 export const REPORT_CARD_EVIDENCE_JOURNAL_FIXED_INPUT_MAX_ASSETS = 512;
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 const AssetIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,127}$/);
 const SafeIdentifierSchema = z
   .string()

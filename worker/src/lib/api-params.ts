@@ -1,5 +1,8 @@
 import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import {
+  bucketUnixMillisecondsToUtcDay,
+  bucketUnixSecondsToUtcDay,
+} from "@shared/lib/time-buckets";
 import { errorResponse } from "./api-response";
 import { base64UrlToBytes, bytesToBase64Url } from "@shared/lib/base64url";
 
@@ -291,10 +294,10 @@ export function parseDayStartParam(value: string | null | undefined): number | n
     const numeric = Number(trimmed);
     if (!Number.isFinite(numeric)) return null;
     const seconds = numeric > 1_000_000_000_000 ? Math.floor(numeric / 1000) : numeric;
-    return Math.floor(seconds / DAY_SECONDS) * DAY_SECONDS;
+    return bucketUnixSecondsToUtcDay(seconds);
   }
 
   const parsedMs = Date.parse(trimmed);
   if (Number.isNaN(parsedMs)) return null;
-  return Math.floor(parsedMs / 1000 / DAY_SECONDS) * DAY_SECONDS;
+  return bucketUnixMillisecondsToUtcDay(parsedMs) / 1000;
 }

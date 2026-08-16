@@ -64,6 +64,7 @@ import {
   type V9ProductionScoreInput,
   type V9ProductionScoreTrace,
 } from "./score";
+import { canonicalizeV9PublicReasons } from "./reasons";
 import { buildV9RetainedStressState, type V9RetainedStressState } from "./stress";
 import { projectCompactV9ScoreTrace, type V9CompactScoreTrace } from "./trace";
 
@@ -119,41 +120,7 @@ function pillarReason(
 }
 
 function canonicalReasons(reasons: readonly V9PillarReason[]): V9PillarReason[] {
-  const normalized = [
-    ...new Map(
-      [...reasons]
-        .sort(
-          (left, right) =>
-            compareText(left.code, right.code) ||
-            compareText(left.path, right.path) ||
-            compareText(left.message, right.message) ||
-            compareText(left.responsibility, right.responsibility),
-        )
-        .map((reason) => [
-          `${reason.code}\u0000${reason.path}\u0000${reason.message}\u0000${reason.responsibility}`,
-          reason,
-        ]),
-    ).values(),
-  ];
-  const byPublicIdentity = new Map<string, V9PillarReason>();
-  for (const reason of normalized) {
-    const key = `${reason.code}\u0000${reason.path}`;
-    const existing = byPublicIdentity.get(key);
-    if (existing !== undefined && existing.responsibility !== reason.responsibility) {
-      throw new Error(
-        `Safety Score v9 reason ${reason.code} at ${reason.path} has multiple causal owners; ` +
-          "emit distinct causal paths instead of changing public identity by responsibility",
-      );
-    }
-    if (existing === undefined) byPublicIdentity.set(key, reason);
-  }
-  return [...byPublicIdentity.values()].sort(
-    (left, right) =>
-      compareText(left.code, right.code) ||
-      compareText(left.path, right.path) ||
-      compareText(left.message, right.message) ||
-      compareText(left.responsibility, right.responsibility),
-  );
+  return canonicalizeV9PublicReasons(reasons);
 }
 
 function pillarReasonsForGaps(

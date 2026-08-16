@@ -2,13 +2,13 @@ import {
   TELEGRAM_RECAP_MAX_RECIPIENTS_PER_RUN,
   TELEGRAM_RECAP_PENDING_PRIORITY,
   TELEGRAM_RECAP_TTL_SEC,
-} from "../../shared/lib/telegram-recap-policy";
+} from "@shared/lib/telegram-recap-policy";
 import {
   TELEGRAM_DISPATCH_INTERVAL_SEC,
   TELEGRAM_LOAD_GUARD_ASSUMPTIONS,
   TELEGRAM_PENDING_DRAIN_BUDGET,
   TELEGRAM_PENDING_PRIORITY,
-} from "../../shared/lib/telegram-delivery-policy";
+} from "@shared/lib/telegram-delivery-policy";
 
 export type TelegramRecapLoadScenarioId =
   | "recap-all-due"

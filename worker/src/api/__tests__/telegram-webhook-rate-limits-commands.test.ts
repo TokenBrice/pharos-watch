@@ -9,9 +9,44 @@ import {
   expectMiniAppButton,
   makeStablecoinsCacheValue,
   resetTelegramWebhookTest,
-  fixtureMockD1,
+  fixtureMockD1 as baseFixtureMockD1,
   fixtureLastSendMessageBody,
 } from "./telegram-webhook.test-support";
+
+function fixtureMockD1(
+  tables: Parameters<typeof baseFixtureMockD1>[0] = [],
+  options: Parameters<typeof baseFixtureMockD1>[1] = {},
+) {
+  return baseFixtureMockD1([
+    ...tables,
+    { match: "FROM telegram_subscribers", rows: [], first: null },
+    { match: "FROM telegram_subscriptions", rows: [] },
+    { match: "FROM telegram_preset_subscriptions", rows: [] },
+    { match: "FROM telegram_pending_disambiguation", rows: [], first: null },
+    { match: "FROM telegram_pending_alerts", rows: [], first: null },
+    { match: "FROM telegram_recap_preferences", rows: [], first: null },
+    { match: "FROM cache", rows: [], first: null },
+    { match: "FROM price_cache", rows: [], first: null },
+    { match: "FROM dex_liquidity", rows: [], first: null },
+    { match: "FROM yield_data", rows: [], first: null },
+    { match: "FROM stress_signals", rows: [], first: null },
+    { match: "FROM depeg_events", rows: [], first: null },
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "UPDATE telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    { match: "UPDATE telegram_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_pending_disambiguation", rows: [] },
+    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+    { match: "INSERT INTO telegram_usage_daily", rows: [] },
+    { match: "INSERT OR IGNORE INTO telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "UPDATE telegram_processed_updates", rows: [], runMeta: { changes: 1 } },
+    { match: "INSERT INTO cache", rows: [] },
+    { match: "DELETE FROM cache", rows: [] },
+  ], options);
+}
 
 // Webhook tests exercise command routing, so stub the canonical V9 loader with
 // one matching card (the fail-closed paths have their own focused tests).

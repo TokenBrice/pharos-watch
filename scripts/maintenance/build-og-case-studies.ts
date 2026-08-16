@@ -26,7 +26,7 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { escapeXml } from "../lib/og-svg.mjs";
 import {
   assertNoStaleOgOutputs,

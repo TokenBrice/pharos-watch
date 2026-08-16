@@ -4,7 +4,7 @@ import {
   MethodologyFacts,
   MethodologySectionShell,
 } from "../../methodology-shared";
-import { LIFECYCLE_PHASES_SECTION_CONTENT } from "../methodology-content";
+import { LIFECYCLE_PHASES_SECTION_CONTENT } from "@/lib/methodology-content";
 
 export function LifecyclePhasesMethodologySection() {
   return (

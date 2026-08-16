@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CoinGeckoMcapData } from "./supplemental-assets";
 import { buildSyncMetadata, type CronResult } from "./shared";
 import {
@@ -45,7 +46,7 @@ export async function syncViaCoingeckoFallback(
 ): Promise<CronResult> {
   const aborted = returnIfAborted(signal, "fallback-start");
   if (aborted) return aborted;
-  console.warn("[sync-stablecoins] Using CoinGecko supply fallback");
+  logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Using CoinGecko supply fallback");
 
   const intake = await runFallbackIntakePhase({
     cgData,

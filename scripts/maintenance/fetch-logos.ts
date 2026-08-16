@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import stablecoins from "../../shared/data/stablecoins/coins.generated.json";
+import stablecoins from "@shared/data/stablecoins/coins.generated.json";
 
 const COINGECKO_BASE = "https://api.coingecko.com/api/v3";
 const DEFILLAMA_BASE = "https://stablecoins.llama.fi";

@@ -8,7 +8,7 @@ import { DDRR_REVIEWER_VERSION as DDRR_CACHE_REVIEWER_VERSION } from "@shared/ty
 import { handleDepegResolverReview } from "../depeg-resolver-review";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { DDRR_SNAPSHOT_CACHE_GENERATION } from "../../lib/depeg-resolver-review-snapshot-cache";
-import { buildEmptyDdrrSummary } from "../../cron/compute-depeg-resolver-review";
+import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 
 afterEach(() => {
   vi.useRealTimers();

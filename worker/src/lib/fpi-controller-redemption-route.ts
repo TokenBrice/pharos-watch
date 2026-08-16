@@ -1,6 +1,6 @@
 import { SAME_NOTIONAL_EXIT_REQUEST_POLICY } from "@shared/lib/redemption-backstop-scoring";
 import type { ExitRouteObservation } from "@shared/types/exit-route";
-import { buildExitRouteCapacityPoint } from "./exit-route-capacity-point";
+import { buildExitRouteCapacityPoint } from "@shared/lib/exit-route-capacity-point";
 import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import { z } from "zod";
 
@@ -219,8 +219,10 @@ export function buildFpiControllerV9ExitRouteObservation(args: {
   const capacityCurve = requests.map((request) =>
     buildExitRouteCapacityPoint({
       requestedNotionalUsd: request,
-      capacityUsd: withinCost ? state.capacityUsd : 0,
-    }),
+      maxCostBps: SAME_NOTIONAL_EXIT_REQUEST_POLICY.maxCostBps,
+      capacityUsd: state.capacityUsd,
+      admitted: withinCost,
+    }, { clampNegativeCapacity: true, usdDecimals: null, ratioDecimals: null }),
   );
   const point = capacityCurve.find(
     (candidate) => candidate.requestedNotionalUsd === args.modeledExitSizeUsd,

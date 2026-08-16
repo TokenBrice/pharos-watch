@@ -7,6 +7,7 @@ import { useRegisteredApiQuery } from "./api-hooks";
 import { useStablecoins } from "./use-stablecoins";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
 import type { ApiMeta } from "@/lib/api";
 
 export function useChains() {
@@ -61,6 +62,7 @@ export function useChainStablecoins(chainId: string) {
     const coins: ChainStablecoin[] = [];
 
     for (const asset of data.peggedAssets) {
+      if (!CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(asset.id) || asset.frozen === true) continue;
       const cc = asset.chainCirculating;
       if (!cc || typeof cc !== "object") continue;
 

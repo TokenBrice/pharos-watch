@@ -3,7 +3,7 @@
 import { ExternalLink, Info } from "lucide-react";
 import { formatCoveragePayload, formatWhyPayload } from "@shared/lib/telegram-mini-app-payloads";
 import { ALERT_LABELS, PHAROS_COIN_PAGE_PREFIX } from "../constants";
-import { PHAROSWATCHBOT_BOT_URL } from "../../telegram-route-constants";
+import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
 import type { TelegramWebAppSdk } from "../telegram-sdk";
 import type {
   CatalogCoin,

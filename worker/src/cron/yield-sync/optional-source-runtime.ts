@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 const OPTIONAL_SINGLE_SOURCE_TIMEOUT_MS = 12_000;
 
 export const OPTIONAL_PROTOCOL_REQUEST_TIMEOUT_MS = 8_000;
@@ -26,7 +27,7 @@ export async function runTimedOptionalSource<T>(
       throw error instanceof Error ? error : new Error(String(error));
     }
     if (budgetController.signal.aborted) {
-      console.warn(`[yield] ${label} timed out; continuing without this source`);
+      logWorkerEventArgs("handler", "warn", `[yield] ${label} timed out; continuing without this source`);
     }
     return fallback;
   } finally {
@@ -46,7 +47,7 @@ export async function runOptionalSourceFamily<T>(
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));
     }
-    console.warn(`[yield] ${label} failed:`, error);
+    logWorkerEventArgs("handler", "warn", `[yield] ${label} failed:`, error);
     return fallback;
   }
 }

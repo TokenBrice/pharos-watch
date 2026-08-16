@@ -1,13 +1,9 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import type { SortDirection, SortState } from "@/lib/table-comparator";
 
-export type SortDirection = "asc" | "desc";
-
-export interface SortState<K extends string> {
-  key: K;
-  direction: SortDirection;
-}
+export type { SortDirection, SortState } from "@/lib/table-comparator";
 
 interface UseSortReturn<K extends string> {
   sortKey: K;

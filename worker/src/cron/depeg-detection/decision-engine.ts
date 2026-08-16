@@ -1,4 +1,4 @@
-import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { sumPegBuckets } from "@shared/lib/supply";
 import {
@@ -26,7 +26,6 @@ import {
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
-  isAuthoritativeDepegPegReference,
   isTrustedDexPriceRow,
 } from "../../lib/depeg-trust-policy";
 import {
@@ -52,6 +51,7 @@ import {
   resolveDirectRecovery,
   resolvePeakUpdateCommand,
 } from "./native-quote-policy";
+import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 
 interface DecisionContext {
   trackedCoinId: string;
@@ -325,14 +325,16 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision };
   }
 
-  const pegType = normalizePegType(asset.pegType);
-  const pegReferenceIsAuthoritative = isAuthoritativeDepegPegReference({
+  const pegSignal = deriveAuthoritativePegSignal({
+    price,
     pegCurrency: meta.flags.pegCurrency,
-    pegType,
-    pegRateSource: pegType ? input.pegRateSources[pegType] : undefined,
-    pegRateContributorCount: pegType ? input.pegRateCounts[pegType] : undefined,
+    pegType: asset.pegType,
+    pegRates: input.pegRates,
+    pegRateSources: input.pegRateSources,
+    pegRateCounts: input.pegRateCounts,
+    commodityOunces: meta.commodityOunces,
   });
-  if (!pegReferenceIsAuthoritative) {
+  if (pegSignal.kind === "rejected" && pegSignal.reason === "non-authoritative-reference") {
     const decision = emptyDecision(trackedCoinId);
     if (existing) {
       decision.seenEventIds.push(existing.id);
@@ -344,16 +346,11 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     ));
     return { kind: "skip", decision };
   }
-
-  const pegRef = getPegReference(pegType, input.pegRates, meta.commodityOunces);
-  if (!Number.isFinite(pegRef) || pegRef <= 0) {
+  if (pegSignal.kind === "rejected") {
     return { kind: "skip", decision: emptyDecision(trackedCoinId) };
   }
-
-  const primarySignal = deriveDepegSignal(price, pegRef);
-  if (primarySignal == null) {
-    return { kind: "skip", decision: emptyDecision(trackedCoinId) };
-  }
+  const pegRef = pegSignal.pegReference;
+  const primarySignal = pegSignal.signal;
   const { bps, absBps, direction } = primarySignal;
   const rawAbsBps = primarySignal.absRawBps ?? absBps;
   const threshold = getDepegThresholdBps(asset.pegType);
@@ -737,9 +734,9 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
 export function emitDepegDiagnostics(diagnostics: DepegDiagnostic[]): void {
   for (const diagnostic of diagnostics) {
     if (diagnostic.level === "warn") {
-      console.warn(diagnostic.message);
+      logWorkerEventArgs("handler", "warn", diagnostic.message);
     } else {
-      console.log(diagnostic.message);
+      logWorkerEventArgs("handler", "info", diagnostic.message);
     }
   }
 }

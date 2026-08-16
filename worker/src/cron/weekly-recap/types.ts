@@ -5,6 +5,8 @@ export type WeeklyRiskKind = "depeg" | "dews" | "mint-burn" | "blacklist" | "gra
 
 export interface WeeklyDepegSignal {
   id: string;
+  /** Stable identity shared by active and resolved observations of one event. */
+  eventIdentity: string;
   symbol: string;
   label: string;
   impactScore: number;

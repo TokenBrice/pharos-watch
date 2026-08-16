@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { normalizeStringSet } from "../../lib/normalizers";
 import { rotateFromCursor } from "../shared/cursor-rotation";
 import { getCache, setCache } from "../../lib/db-cache";
@@ -62,7 +63,7 @@ export async function getMintBurnRunState(
       persistenceFailed: false,
     };
   } catch (error) {
-    console.warn("[sync-mint-burn] Failed to load run-state; using defaults:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-mint-burn] Failed to load run-state; using defaults:", error);
     return {
       state: { degradedStreak: 0, resumeConfigKey: null },
       persistenceFailed: true,
@@ -92,7 +93,7 @@ export async function setMintBurnRunState(
       .run();
     return true;
   } catch (error) {
-    console.warn("[sync-mint-burn] Failed to persist run-state:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-mint-burn] Failed to persist run-state:", error);
     return false;
   }
 }

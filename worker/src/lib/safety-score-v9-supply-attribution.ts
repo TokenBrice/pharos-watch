@@ -1,5 +1,6 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import {
   admissionCodeForSupplyAttributionRejection,
   createSupplyAttributionJournalV1,
@@ -61,9 +62,7 @@ function aggregateSupplyUsd(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): number {
-  return Object.values(
-    fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
-  ).reduce((sum, value) => sum + value, 0);
+  return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
 }
 
 function hasUpstreamChainSupply(

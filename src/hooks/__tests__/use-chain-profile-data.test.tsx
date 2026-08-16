@@ -22,7 +22,7 @@ describe("useChainProfileData", () => {
     useChainStablecoinsMock.mockReset();
 
     useChainsMock.mockReturnValue({
-      data: { chains: [makeChain()] },
+      data: { chains: [makeChain({ totalUsd: 500_000_000 })] },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -70,6 +70,24 @@ describe("useChainProfileData", () => {
     expect(result.current.detailedSectionNotice).toMatch(/syncing to the latest chain snapshot/i);
   });
 
+  it("does not treat equal timestamps as matching when aggregate totals disagree", () => {
+    useChainStablecoinsMock.mockReturnValue({
+      coins: [makeCoin()],
+      totalUsd: 450_000_000,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      dataUpdatedAt: 1_710_500_000_000,
+      meta: { updatedAt: 1_710_500_000, ageSeconds: 60, status: "fresh" },
+    });
+
+    const { result } = renderHook(() => useChainProfileData("ethereum"));
+
+    expect(result.current.snapshotConsistency).toBe("mismatched");
+    expect(result.current.canRenderDetailedSections).toBe(false);
+  });
+
   it("still surfaces a route error when the stablecoin refresh fails against cached data", () => {
     const refreshError = new Error("cached response");
     useChainStablecoinsMock.mockReturnValue({
@@ -95,7 +113,7 @@ describe("useChainProfileData", () => {
     const refetchStablecoins = vi.fn().mockResolvedValue({ status: "success", error: null });
 
     useChainsMock.mockReturnValue({
-      data: { chains: [makeChain()] },
+      data: { chains: [makeChain({ totalUsd: 500_000_000 })] },
       isLoading: false,
       error: null,
       refetch: refetchChains,

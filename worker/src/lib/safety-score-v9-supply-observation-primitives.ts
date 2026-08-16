@@ -1,8 +1,152 @@
 import { throwIfAborted } from "./abort";
 import type { ChainRpcConfig } from "./chain-registry";
-import type { EvmMulticall3Result } from "./evm-rpc";
+import type { EvmBlockHeader, EvmMulticall3Result } from "./evm-rpc";
 import { fetchJsonWithRetry } from "./fetch-retry";
-import type { ReviewedDeploymentSupplyObservation } from "./safety-score-v9-supply-attribution-contract";
+import {
+  buildReviewedDeploymentRouteInventory,
+  deriveReviewedDeploymentUnitPartition,
+  reviewedDeploymentObservationTimingIssue,
+  type ReviewedDeploymentSupplyObservation,
+  type ReviewedDeploymentUnitPartitionV1,
+} from "./safety-score-v9-supply-attribution-contract";
+
+const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
+
+export type ReviewedDeploymentObservationRejectionCode =
+  | "route-inventory-unavailable"
+  | "deployment-identity-unavailable"
+  | "chain-rpc-unavailable"
+  | "safe-block-unavailable"
+  | "deployment-state-unavailable"
+  | "deployment-state-invalid"
+  | "deployment-identity-mismatch"
+  | "deployment-observation-skew"
+  | "packet-reconciliation-failed";
+
+export type ReviewedDeploymentObservationAttempt =
+  | { status: "accepted"; attribution: ReviewedDeploymentUnitPartitionV1 }
+  | {
+      status: "rejected";
+      rejectionCode: ReviewedDeploymentObservationRejectionCode;
+      failedRouteId: string | null;
+    };
+
+export type ReviewedDeploymentObservationResult =
+  | { status: "accepted"; observation: ReviewedDeploymentSupplyObservation }
+  | {
+      status: "rejected";
+      rejectionCode: ReviewedDeploymentObservationRejectionCode;
+      failedRouteId: string;
+    };
+
+export async function rewindEvmBlockHeaderToScoringClock(input: {
+  initialBlockNumber?: number;
+  initialHeader?: EvmBlockHeader;
+  scoringClockSec: number;
+  fetchHeader: (blockNumber: number) => Promise<EvmBlockHeader | null>;
+  signal?: AbortSignal;
+  maxRewindBlocks?: number;
+}): Promise<EvmBlockHeader | null> {
+  let blockNumber = input.initialHeader?.number ?? input.initialBlockNumber ?? -1;
+  let header = input.initialHeader ?? null;
+  const maxRewindBlocks = input.maxRewindBlocks
+    ?? REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS;
+  for (let rewind = 0; rewind <= maxRewindBlocks && blockNumber >= 0; rewind += 1) {
+    throwIfAborted(input.signal);
+    header ??= await input.fetchHeader(blockNumber);
+    if (header === null) return null;
+    if (header.timestamp <= input.scoringClockSec) return header;
+    blockNumber -= 1;
+    header = null;
+  }
+  return null;
+}
+
+export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
+  assetId: string;
+  aggregateSupplyUsd: number;
+  registryFingerprint: string;
+  scoringClockSec: number;
+  signal?: AbortSignal;
+  identityRuntime: (routeId: string) => "evm" | "solana" | null;
+  observeEvm: (route: {
+    routeId: string;
+    chainId: string;
+    contractAddress: string;
+  }) => Promise<ReviewedDeploymentObservationResult>;
+  observeSolana: (route: {
+    routeId: string;
+    chainId: string;
+    contractAddress: string;
+  }) => Promise<ReviewedDeploymentSupplyObservation | null>;
+  identityValidationError: (observation: ReviewedDeploymentSupplyObservation) => string | null;
+}): Promise<ReviewedDeploymentObservationAttempt> {
+  const inventory = buildReviewedDeploymentRouteInventory(input.assetId);
+  if (!inventory) {
+    return { status: "rejected", rejectionCode: "route-inventory-unavailable", failedRouteId: null };
+  }
+
+  const observations: ReviewedDeploymentSupplyObservation[] = [];
+  for (const route of inventory.routes) {
+    throwIfAborted(input.signal);
+    const runtime = input.identityRuntime(route.routeId);
+    if (!runtime) {
+      return {
+        status: "rejected",
+        rejectionCode: "deployment-identity-unavailable",
+        failedRouteId: route.routeId,
+      };
+    }
+    const result = runtime === "evm"
+      ? await input.observeEvm(route)
+      : await input.observeSolana(route).then<ReviewedDeploymentObservationResult>((observation) => observation
+          ? { status: "accepted", observation }
+          : {
+              status: "rejected",
+              rejectionCode: "deployment-state-unavailable",
+              failedRouteId: route.routeId,
+            });
+    if (result.status === "rejected") return result;
+    if (input.identityValidationError(result.observation)) {
+      return {
+        status: "rejected",
+        rejectionCode: "deployment-identity-mismatch",
+        failedRouteId: route.routeId,
+      };
+    }
+    observations.push(result.observation);
+  }
+
+  const blockTimes = observations.map((observation) => observation.blockTimeSec);
+  const captureStartedAtSec = Math.min(...blockTimes);
+  const captureEndedAtSec = Math.max(...blockTimes);
+  const timingIssue = reviewedDeploymentObservationTimingIssue({
+    assetId: input.assetId,
+    clockSec: input.scoringClockSec,
+    captureStartedAtSec,
+    captureEndedAtSec,
+    observedAtSec: captureEndedAtSec,
+    deployments: observations,
+  });
+  if (timingIssue) {
+    return {
+      status: "rejected",
+      rejectionCode: "deployment-observation-skew",
+      failedRouteId: timingIssue.failedRouteId,
+    };
+  }
+
+  const attribution = deriveReviewedDeploymentUnitPartition({
+    assetId: input.assetId,
+    aggregateSupplyUsd: input.aggregateSupplyUsd,
+    registryFingerprint: input.registryFingerprint,
+    scoringClockSec: input.scoringClockSec,
+    observations,
+  });
+  return attribution
+    ? { status: "accepted", attribution }
+    : { status: "rejected", rejectionCode: "packet-reconciliation-failed", failedRouteId: null };
+}
 
 const SOLANA_RPC_URLS = [
   "https://api.mainnet-beta.solana.com",

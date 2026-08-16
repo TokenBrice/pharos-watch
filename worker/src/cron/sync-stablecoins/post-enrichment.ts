@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Shared post-enrichment pipeline stages used by both the main DefiLlama
  * sync path and the CoinGecko supply fallback path.
@@ -232,7 +233,7 @@ export async function runPostEnrichmentPricePipeline(
       });
       if (!nativeDecision.accepted) {
         const action = reason === "fill" ? "fill" : "correction";
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Skipped native-peg ${action} for ${asset.symbol} (id=${asset.id}): ` +
           `${nativeDecision.reason}`,
         );
@@ -240,13 +241,13 @@ export async function runPostEnrichmentPricePipeline(
       }
 
       if (reason === "fill") {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Filled missing non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
           `$${nativePegImpliedUsd.priceUsd.toFixed(6)} via direct ${nativePegImpliedUsd.pegCurrency} quote`,
         );
         nativePegFillCount++;
       } else {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Corrected weak non-USD fiat price for ${asset.symbol} (id=${asset.id}): ` +
           `$${asset.price} from ${asset.priceSource ?? "unknown"} -> $${nativePegImpliedUsd.priceUsd.toFixed(6)} ` +
           `via direct ${nativePegImpliedUsd.pegCurrency} quote (${nativePegDivergenceBps}bps divergence)`,
@@ -311,7 +312,7 @@ export async function runPostEnrichmentPricePipeline(
           });
         }
       }
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[sync-stablecoins] Rejected unreasonable price for ${asset.symbol} (id=${asset.id}): ` +
         `$${asset.price} (${decision.reason})`,
       );
@@ -523,7 +524,7 @@ export async function runDepegPipeline(
     await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-detection`);
-    console.error(`[sync-stablecoins] Depeg detection failed${logContext}:`, err);
+    logWorkerEventArgs("handler", "error", `[sync-stablecoins] Depeg detection failed${logContext}:`, err);
     depegErrorCount++;
     depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
   }
@@ -545,7 +546,7 @@ export async function runDepegPipeline(
     }
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-confirmation`);
-    console.error(`[sync-stablecoins] Pending depeg confirmation failed${logContext}:`, err);
+    logWorkerEventArgs("handler", "error", `[sync-stablecoins] Pending depeg confirmation failed${logContext}:`, err);
     depegErrorCount++;
     depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }

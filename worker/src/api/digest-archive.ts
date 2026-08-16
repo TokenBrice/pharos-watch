@@ -3,7 +3,7 @@ import { CACHE_PROFILES } from "../lib/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
-import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../cron/daily-digest/shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";

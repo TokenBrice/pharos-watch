@@ -1,7 +1,9 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, type CacheWriteResult } from "./db-cache";
 import { sha256Hex } from "@shared/lib/sha256";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { executeAtomicBatch } from "./db";
 
 const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
@@ -268,8 +270,7 @@ export async function writeDewsPublishedGeneration(
   const payload = buildDewsPublicationPointerPayload(updatedAt, stablecoinIds);
   const pointerValue = JSON.stringify(payload);
   throwIfAborted(signal);
-  const [pointerResult] = await runWithOverloadRetry(
-    () => db.batch([
+  const [pointerResult] = await executeAtomicBatch(db, [
       db.prepare(
         `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
@@ -281,14 +282,11 @@ export async function writeDewsPublishedGeneration(
         stablecoinIdsDigest: payload.stablecoinIdsDigest,
         pointerValue,
       }),
-    ]),
-    3,
-    signal,
-  );
+    ], { returnResults: true, signal });
   throwIfAborted(signal);
   const written = Number(pointerResult?.meta?.changes ?? 0) > 0;
   if (!written) {
-    console.log(`[cache] Skipped write for "${DEWS_PUBLICATION_POINTER_CACHE_KEY}" — existing data is newer (started_at > ${updatedAt})`);
+    logWorkerEventArgs("lib", "info", `[cache] Skipped write for "${DEWS_PUBLICATION_POINTER_CACHE_KEY}" — existing data is newer (started_at > ${updatedAt})`);
   }
   return { written, skippedBecauseNewer: !written };
 }

@@ -10,6 +10,7 @@ import {
 } from "@shared/types/status/d1-capacity";
 import { getCache, setCacheIfNewer } from "../db-cache";
 import { parseJsonObject } from "../json-parse";
+import { executeAtomicBatch } from "../db";
 
 export const D1_CAPACITY_CACHE_KEY = "ops:d1-capacity:v1";
 const D1_CAPACITY_CACHE_VERSION = 1;
@@ -40,7 +41,7 @@ export async function refreshD1CapacityAssessment(
   observedAt: number,
 ): Promise<D1CapacityAssessment> {
   const observedHour = Math.floor(observedAt / 3600) * 3600;
-  await db.batch([
+  await executeAtomicBatch(db, [
     db
       .prepare(
         `INSERT INTO d1_capacity_observations

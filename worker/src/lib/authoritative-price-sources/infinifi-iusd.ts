@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { fetchEvmCallHexAtBlock } from "../evm-rpc";
@@ -41,13 +42,13 @@ async function fetchInfiniFiRedeemQuote(
     },
   );
   if (!quoteHex) {
-    console.warn(`[authoritative-price-sources] iusd-infinifi: RPC returned null`);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] iusd-infinifi: RPC returned null`);
     return null;
   }
 
   const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
-    console.warn(`[authoritative-price-sources] iusd-infinifi: contract returned zero or invalid output`);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] iusd-infinifi: contract returned zero or invalid output`);
     return null;
   }
 

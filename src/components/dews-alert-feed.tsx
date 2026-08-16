@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DEWSBadge } from "@/components/dews-badge";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getDewsAmplifiers, getTopDewsContributors } from "@/lib/dews-signal-utils";
 import { CLIENT_PSI_ELIGIBLE_META_BY_ID as PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible-client";
 import type { StressSignalEntry } from "@shared/types";

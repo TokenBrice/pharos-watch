@@ -230,6 +230,10 @@ function healthyD1(
       matchBinds: [NOW - 60],
       rows: publishedDewsRows,
     },
+    {
+      match: "INSERT INTO worker_canary_runs",
+      rows: [],
+    },
   ]);
 }
 

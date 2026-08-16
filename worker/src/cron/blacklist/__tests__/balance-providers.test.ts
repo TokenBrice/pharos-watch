@@ -3,7 +3,7 @@ import {
   fetchEvmTokenBalance,
   fetchEvmTokenCurrentBalance,
   fetchTronTokenCurrentBalance,
-} from "../balance-providers";
+} from "../../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
 import { createBudget } from "../../../lib/evm-logs";
 

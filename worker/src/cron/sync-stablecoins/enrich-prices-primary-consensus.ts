@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   getReferencePriceForContext,
   buildPriceValidationContext,
@@ -89,7 +90,7 @@ export function buildPrimaryConsensusResults(params: {
     logDexCandidateTelemetry(dexCandidateTelemetry);
 
     if (hasPromotedDexProtocolSource && !sources.some((source) => source.source.endsWith("-dex"))) {
-      console.log(`[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`);
+      logWorkerEventArgs("handler", "info", `[primary-prices] ${asset.symbol}: suppressed promoted DEX source(s) that lacked corroboration`);
     }
 
     params.stats.attempted++;
@@ -145,7 +146,7 @@ export function buildPrimaryConsensusResults(params: {
         .filter((source) => source.weight >= 2 && consensus.disagreeSources.includes(source.source))
         .map((source) => `${source.source}($${source.price.toFixed(4)})`);
       if (highWeightDisagrees.length > 0) {
-        console.log(
+        logWorkerEventArgs("handler", "info",
           `[primary-prices] ${asset.symbol}: high-weight disagree: ${highWeightDisagrees.join(", ")} ` +
             `vs consensus $${consensus.price.toFixed(4)}`,
         );
@@ -157,7 +158,7 @@ export function buildPrimaryConsensusResults(params: {
 export function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTelemetry | undefined): void {
   if (!telemetry) return;
   for (const row of telemetry.staleRows) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[primary-prices] dex-source-filter ${JSON.stringify({
         stablecoinId: row.stablecoinId,
         reason: "stale_source_age",
@@ -168,7 +169,7 @@ export function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTele
     );
   }
   for (const row of telemetry.malformedRows) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[primary-prices] dex-source-filter ${JSON.stringify({
         stablecoinId: row.stablecoinId,
         reason: "malformed_price_sources_json",
@@ -182,7 +183,7 @@ export function logDexPriceSourceLoadTelemetry(telemetry: DexPriceSourceLoadTele
 function logDexCandidateTelemetry(telemetry: PrimaryDexCandidateTelemetry[]): void {
   for (const candidate of telemetry) {
     if (candidate.status !== "excluded") continue;
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[primary-prices] dex-candidate-filter ${JSON.stringify({
         stablecoinId: candidate.stablecoinId,
         symbol: candidate.symbol,

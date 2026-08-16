@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { mechanismDiagramFor } from "../../src/components/stablecoin-detail/mechanism-diagrams";
 import type { MechanismArchetype } from "@shared/types";
+import { MECHANISM_EXPLAINER_ENTRIES } from "../../src/lib/mechanism-explainer-registry";
 import { escapeXml } from "../lib/og-svg.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,37 +27,17 @@ const CHECK_MODE = process.argv.includes("--check");
 
 const OUT_DIR = resolve(REPO_ROOT, "agents/og-learn-staging");
 
-const SLUGS: MechanismArchetype[] = [
-  "fiat-cash",
-  "tbill",
-  "cdp",
-  "synthetic-delta-neutral",
-  "algorithmic",
-  "rwa-credit-fund",
-  "commodity-claim",
-];
-
-const TITLES: Record<string, string> = {
-  "fiat-cash": "Fiat-Backed Stablecoins, Explained",
-  tbill: "Tokenized Treasury Stablecoins, Explained",
-  cdp: "CDP Stablecoins, Explained",
-  "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
-  algorithmic: "Algorithmic Stablecoins, Explained",
-  "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
-  "commodity-claim": "Gold and Commodity Tokens, Explained",
-};
-
 function checkPublishedPngs(): void {
   const missing: string[] = [];
   const empty: string[] = [];
-  for (const slug of SLUGS) {
-    const path = resolve(REPO_ROOT, "public", `og-learn-${slug}.png`);
+  for (const entry of MECHANISM_EXPLAINER_ENTRIES) {
+    const path = resolve(REPO_ROOT, "public", entry.ogFilename);
     if (!existsSync(path)) {
-      missing.push(`public/og-learn-${slug}.png`);
+      missing.push(`public/${entry.ogFilename}`);
       continue;
     }
     if (statSync(path).size <= 0) {
-      empty.push(`public/og-learn-${slug}.png`);
+      empty.push(`public/${entry.ogFilename}`);
     }
   }
 
@@ -70,7 +51,7 @@ function checkPublishedPngs(): void {
     process.exit(1);
   }
 
-  console.log(`Mechanism OG PNG check passed (${SLUGS.length} file(s)).`);
+  console.log(`Mechanism OG PNG check passed (${MECHANISM_EXPLAINER_ENTRIES.length} file(s)).`);
 }
 
 if (CHECK_MODE) {
@@ -111,9 +92,8 @@ function extractDesktopSvg(slug: MechanismArchetype): { inner: string; viewBoxH:
   return { inner, viewBoxH: heightAttr };
 }
 
-function buildOgSvg(slug: MechanismArchetype): string {
+function buildOgSvg(slug: MechanismArchetype, title: string): string {
   const { inner, viewBoxH } = extractDesktopSvg(slug);
-  const title = TITLES[slug];
 
   // Diagram placement: 1000px wide, scaled by viewBox ratio
   const diagramX = 100;
@@ -153,8 +133,8 @@ function buildOgSvg(slug: MechanismArchetype): string {
 `;
 }
 
-for (const slug of SLUGS) {
-  const out = resolve(OUT_DIR, `og-learn-${slug}.svg`);
-  writeFileSync(out, buildOgSvg(slug));
+for (const entry of MECHANISM_EXPLAINER_ENTRIES) {
+  const out = resolve(OUT_DIR, entry.ogFilename.replace(/\.png$/, ".svg"));
+  writeFileSync(out, buildOgSvg(entry.slug, entry.title));
   console.log(`Wrote ${out}`);
 }

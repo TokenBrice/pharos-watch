@@ -5,12 +5,12 @@ import { dirname, resolve } from "node:path";
 import {
   REDEMPTION_BACKSTOP_CONFIG_MANIFEST,
   REDEMPTION_BACKSTOP_CONFIGS,
-} from "../../shared/lib/redemption-backstop-configs";
+} from "@shared/lib/redemption-backstop-configs";
 import {
   resolveCapacityConfidence,
   resolveFeeConfidence,
   resolveFeeModelKind,
-} from "../../shared/lib/redemption-backstop-confidence";
+} from "@shared/lib/redemption-backstop-confidence";
 import {
   computeCapacityScore,
   computeRedemptionBackstopScore,
@@ -18,8 +18,8 @@ import {
   REDEMPTION_EXECUTION_SCORES,
   REDEMPTION_OUTPUT_ASSET_SCORES,
   REDEMPTION_SETTLEMENT_SCORES,
-} from "../../shared/lib/redemption-backstop-scoring";
-import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
+} from "@shared/lib/redemption-backstop-scoring";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 import { resolveStaticCostScore } from "../lib/redemption-audit-helpers";
 
 const ROOT = process.cwd();

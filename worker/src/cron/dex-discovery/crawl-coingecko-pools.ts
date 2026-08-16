@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ContractDeployment } from "@shared/types/core";
 import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
@@ -57,7 +58,7 @@ export async function crawlCoinGeckoPoolsStage({
   const providerChecks: DexDeploymentProviderCheck[] = [];
 
   if (!apiKey) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[dex-discovery] CG API key not configured — Stage 1 (CG onchain) skipped for ${context.stablecoinId}`,
     );
   }
@@ -65,7 +66,7 @@ export async function crawlCoinGeckoPoolsStage({
   const cgOnchainAllowed = apiKey ? await dependencies.shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_ONCHAIN) : false;
 
   if (apiKey && !cgOnchainAllowed) {
-    console.warn(`[dex-discovery] CG onchain circuit open — Stage 1 skipped for ${context.stablecoinId}`);
+    logWorkerEventArgs("handler", "warn", `[dex-discovery] CG onchain circuit open — Stage 1 skipped for ${context.stablecoinId}`);
   }
 
   if (!apiKey || !cgOnchainAllowed) {
@@ -86,7 +87,7 @@ export async function crawlCoinGeckoPoolsStage({
       const gtNetwork = getGeckoTerminalDiscoveryNetwork(chain, address);
       const dsNetwork = DS_CHAIN_MAP[chain] ?? providers?.dexscreener;
       if (!gtNetwork && !dsNetwork) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[dex-discovery] Chain "${chain}" not in discovery provider registry for ${context.stablecoinId}, skipping`,
         );
         unresolvedChains.push(chain);
@@ -186,7 +187,7 @@ export async function crawlCoinGeckoPoolsStage({
       }
     } catch (err) {
       if (context.signal?.aborted) throw err;
-      console.warn(`[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
+      logWorkerEventArgs("handler", "warn", `[dex-discovery] cg_onchain error for ${chain}:${address}`, err);
       providerChecks.push({ chain, address, provider: "coingecko", status: "failure" });
       await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, false);
     }

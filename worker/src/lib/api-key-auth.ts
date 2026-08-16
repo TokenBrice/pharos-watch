@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { timingSafeCompare } from "./auth";
 import {
   API_KEY_TOKEN_PATTERN,
@@ -74,7 +75,7 @@ async function authenticateLoadedApiKey(
         .run();
       clearApiKeyCache(parsed.prefix);
     } catch (err) {
-      console.warn("[api-keys] API key pepper migration write unavailable; keeping previous hash until D1 recovers:", err);
+      logWorkerEventArgs("lib", "warn", "[api-keys] API key pepper migration write unavailable; keeping previous hash until D1 recovers:", err);
     }
   }
 
@@ -162,7 +163,7 @@ export async function authenticateApiKey(
     );
   } catch (err) {
     clearApiKeyCache(parsed.prefix);
-    console.warn("[api-keys] API key authentication dependency unavailable:", err);
+    logWorkerEventArgs("lib", "warn", "[api-keys] API key authentication dependency unavailable:", err);
     return { kind: "unavailable" };
   }
 }

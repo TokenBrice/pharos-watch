@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { StablecoinMeta } from "@shared/types/core";
 import { DEFILLAMA_COINS, USER_AGENT } from "../lib/constants";
@@ -220,7 +221,7 @@ async function fetchCgPriceHistoryDaily(
     if (!result) return [];
     const parsed = CoinGeckoMarketChartSchema.safeParse(result.body);
     if (!parsed.success) {
-      console.warn("[backfill-pricing] CG market chart validation failed:", parsed.error.message);
+      logWorkerEventArgs("api", "warn", "[backfill-pricing] CG market chart validation failed:", parsed.error.message);
       return [];
     }
     return parsed.data.prices
@@ -228,7 +229,7 @@ async function fetchCgPriceHistoryDaily(
       .map(([timestampMs, price]) => ({ timestamp: Math.floor(timestampMs / 1000), price }));
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.error(`[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}/${vsCurrency}:`, err);
+    logWorkerEventArgs("api", "error", `[backfill-pricing] Failed to fetch CG daily price history for ${geckoId}/${vsCurrency}:`, err);
     return [];
   }
 }
@@ -276,7 +277,7 @@ export async function fetchCgPriceHistoryHourly(
     }
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.error(`[backfill-pricing] CG hourly phase-1 failed for ${geckoId}:`, err);
+    logWorkerEventArgs("api", "error", `[backfill-pricing] CG hourly phase-1 failed for ${geckoId}:`, err);
   }
 
   for (let chunkFrom = Math.max(HOURLY_EPOCH, startSec); chunkFrom < endSec; chunkFrom += CHUNK_SEC) {
@@ -302,7 +303,7 @@ export async function fetchCgPriceHistoryHourly(
       }
     } catch (err) {
       rethrowIfAborted(err, signal);
-      console.error(`[backfill-pricing] CG hourly chunk failed for ${geckoId}/${vsCurrency} (${chunkFrom}-${chunkTo}):`, err);
+      logWorkerEventArgs("api", "error", `[backfill-pricing] CG hourly chunk failed for ${geckoId}/${vsCurrency} (${chunkFrom}-${chunkTo}):`, err);
     }
   }
 
@@ -337,7 +338,7 @@ async function fetchDlPriceChart(
     return dedupeAndSortPrices(data.coins?.[coinId]?.prices ?? []);
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.error(`[backfill-pricing] DL fallback failed for ${coinId}:`, err);
+    logWorkerEventArgs("api", "error", `[backfill-pricing] DL fallback failed for ${coinId}:`, err);
     return [];
   }
 }

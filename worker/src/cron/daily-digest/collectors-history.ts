@@ -1,7 +1,8 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { round1 } from "@shared/lib/math";
 import { SECONDS } from "../../lib/time-constants";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { logCollectorParseFailure, markCollectorDegraded, type CollectorContext } from "./collectors-shared";
 
 export async function collectTotalMcapAth(
@@ -28,7 +29,7 @@ export async function collectTotalMcapAth(
       daysAgo: Math.max(0, Math.round((ctx.todayTs - dayTs) / SECONDS.ONE_DAY)),
     };
   } catch (error) {
-    console.error("[daily-digest] Failed to collect total mcap ATH:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect total mcap ATH:", error);
     markCollectorDegraded(degradedReasons, "total-mcap-ath-query");
     return undefined;
   }
@@ -75,7 +76,7 @@ export async function collectPsiContributors(
       .sort((a, b) => b.marketImpact - a.marketImpact)
       .slice(0, 3);
   } catch (error) {
-    console.error("[daily-digest] Failed to collect PSI contributors:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect PSI contributors:", error);
     markCollectorDegraded(degradedReasons, "psi-contributors-query");
     return undefined;
   }
@@ -184,7 +185,7 @@ export async function collectHistoricalContext(
       return { psiPrecedent, psiBandStreak, digestTrackingDays, supplyMoverContext };
     }
   } catch (error) {
-    console.error("[daily-digest] Failed to collect historical context:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect historical context:", error);
     markCollectorDegraded(degradedReasons, "historical-context-query");
   }
   return undefined;
@@ -248,7 +249,7 @@ export async function collectCrossDayTrends(
       gaugeTrajectory: gaugeTrajectory.length >= 3 ? gaugeTrajectory : null,
     };
   } catch (error) {
-    console.error("[daily-digest] Failed to collect cross-day trends:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect cross-day trends:", error);
     markCollectorDegraded(degradedReasons, "cross-day-trends-query");
   }
   return undefined;

@@ -1,14 +1,10 @@
-import { resolveChainId } from "./chains";
+import { normalizeChainId } from "./chains";
 import type { StablecoinMeta } from "../types/core";
 
 export interface CriticalControlIdentityOccurrence {
   key: string;
   path: "mint" | "upgrade" | "bridge" | "oracle";
   label: string;
-}
-
-function canonicalChain(chain: string): string {
-  return resolveChainId(chain) ?? chain.trim().toLowerCase();
 }
 
 function canonicalAddress(address: string): string {
@@ -18,7 +14,7 @@ function canonicalAddress(address: string): string {
 
 /** Address identities stay chain-scoped because the same bytes can name unrelated controllers. */
 export function criticalControllerKey(chain: string, address: string): string {
-  return `address:${canonicalChain(chain)}:${canonicalAddress(address)}`;
+  return `address:${normalizeChainId(chain) ?? ""}:${canonicalAddress(address)}`;
 }
 
 function appendReviewedKeys(

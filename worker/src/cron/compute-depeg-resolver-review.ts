@@ -32,7 +32,7 @@ import {
   coverageRowForIncident,
   failedPublicationCoverageRow,
 } from "./depeg-resolver-review/coverage-rows";
-import { buildDdrrResponseEnvelope } from "./depeg-resolver-review/response-envelope";
+import { buildDdrrResponseEnvelope } from "../lib/depeg-resolver-review-response";
 import { loadActualEventsByEventIds } from "./depeg-resolver-review/terminal-evidence";
 
 const DDRR_V2_INCIDENT_ROW_CAP = 20_000;
@@ -41,8 +41,6 @@ const DDRR_AUTO_REPAIR_CREATED_BY = [
   "ddr-worker:repair-task-runner-v1",
 ] as const;
 const DDRR_LINEAGE_READ_DEGRADED_REASON = "incident-lineage-read-failed";
-
-export { buildEmptyDdrrSummary } from "./depeg-resolver-review/response-envelope";
 
 export interface DdrrV2ReviewSource {
   incidents: DdrCanonicalIncident[];

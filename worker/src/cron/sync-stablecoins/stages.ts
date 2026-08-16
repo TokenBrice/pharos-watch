@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { BinanceFetchSession } from "../../lib/cex-tickers";
 import type { NativePegQuoteSession } from "../../lib/native-peg-quotes";
@@ -389,21 +390,21 @@ export async function runStablecoinsPricingStage(
   } = priceCompletion;
 
   if (authoritativeOverrideCount > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-stablecoins] Applied ${authoritativeOverrideCount} protocol-backed price override${authoritativeOverrideCount === 1 ? "" : "s"}`,
     );
   }
   if (rejectedCount > 0) {
-    console.log(`[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Rejected ${rejectedCount} unreasonable prices`);
   }
   if (nativePegCorrectionCount > 0) {
-    console.log(`[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via direct native quotes`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Corrected ${nativePegCorrectionCount} weak non-USD fiat prices via direct native quotes`);
   }
   if (nativePegFillCount > 0) {
-    console.log(`[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via direct native quotes`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Filled ${nativePegFillCount} missing non-USD fiat prices via direct native quotes`);
   }
   if (cachedFallbackCount > 0) {
-    console.log(`[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
+    logWorkerEventArgs("handler", "info", `[sync-stablecoins] Applied ${cachedFallbackCount} cached fallback prices`);
   }
   await reportStablecoinsStage(options.reportProgress, "price-validation", "Validated stablecoin prices", {
     itemsDone: options.assets.length - options.assets.filter(hasMissingPrice).length,

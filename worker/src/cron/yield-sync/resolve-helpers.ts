@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { resolveChainId } from "@shared/lib/chains";
 import type { YieldRiskConfigProtocol } from "@shared/lib/yield-source-risk-registry";
@@ -10,7 +11,7 @@ import {
   MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
-import { findBestLendingPool, isBlockedYieldOpportunitySource, meetsLendingPoolCoreEligibility } from "../yield-helpers";
+import { findBestLendingPool, isBlockedYieldOpportunitySource } from "../yield-helpers";
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
@@ -93,6 +94,63 @@ export function getRequiredLendingOpportunityTvlUsd(params: {
   }
 
   return Math.max(absoluteFloor, supplyUsd * MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY);
+}
+
+export type AutoLendingEligibilityReasonCode =
+  | "collision"
+  | "safety-score"
+  | "pool-exposure"
+  | "pool-stablecoin"
+  | "protocol-allowlist"
+  | "apy-floor"
+  | "tvl-floor"
+  | "source-blocked";
+
+export interface AutoLendingEligibilityVerdict {
+  eligible: boolean;
+  reasonCodes: AutoLendingEligibilityReasonCode[];
+  requiredMinTvlUsd: number;
+}
+
+/** Canonical explained verdict for deterministic auto-lending publication. */
+export function explainDeterministicAutoLendingEligibility(params: {
+  stablecoinId: string;
+  pool: DlPool;
+  safetyScore?: number;
+  safetySnapshotAvailable: boolean;
+  stablecoinSupplyById: Map<string, number>;
+}): AutoLendingEligibilityVerdict {
+  const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+    stablecoinId: params.stablecoinId,
+    poolChain: params.pool.chain,
+    stablecoinSupplyById: params.stablecoinSupplyById,
+  });
+  const reasonCodes: AutoLendingEligibilityReasonCode[] = [];
+
+  if (isAutoLendingCollisionBlockedForStablecoin(params.stablecoinId, params.pool)) {
+    reasonCodes.push("collision");
+  }
+  if (
+    params.safetySnapshotAvailable &&
+    !AUTO_LENDING_SAFETY_BYPASS_IDS.has(params.stablecoinId) &&
+    (params.safetyScore ?? 0) < MIN_SAFETY_SCORE_FOR_YIELD
+  ) {
+    reasonCodes.push("safety-score");
+  }
+  if (params.pool.exposure !== "single") reasonCodes.push("pool-exposure");
+  if (!params.pool.stablecoin) reasonCodes.push("pool-stablecoin");
+  if (!LENDING_PROTOCOL_ALLOWLIST.has(params.pool.project)) reasonCodes.push("protocol-allowlist");
+  if (params.pool.apy < MIN_LENDING_POOL_APY) reasonCodes.push("apy-floor");
+  if (params.pool.tvlUsd < requiredMinTvlUsd) reasonCodes.push("tvl-floor");
+  if (isBlockedYieldOpportunitySource({ poolMeta: params.pool.poolMeta, symbol: params.pool.symbol })) {
+    reasonCodes.push("source-blocked");
+  }
+
+  return {
+    eligible: reasonCodes.length === 0,
+    reasonCodes,
+    requiredMinTvlUsd,
+  };
 }
 
 function passesLendingOpportunitySizeGate(params: {
@@ -253,7 +311,7 @@ function appendResolvedYieldCandidates(
   }
 
   if (blockedDrops > 0 || ambiguousDrops > 0 || unresolvedDrops > 0 || sizeGateDrops > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[yield-sync] Dropped optional protocol candidates: blocked=${blockedDrops}, ambiguous=${ambiguousDrops}, unresolved=${unresolvedDrops}, sizeGate=${sizeGateDrops}`,
     );
   }
@@ -516,26 +574,14 @@ function appendDeterministicAutoLending(params: {
 
     const pool = params.dlPools.find((entry) => entry.pool === poolId);
     if (!pool) continue;
-    if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
-
-    if (params.safetySnapshotAvailable) {
-      const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
-      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
-    }
-
-    const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+    const eligibility = explainDeterministicAutoLendingEligibility({
       stablecoinId,
-      poolChain: pool.chain,
+      pool,
+      safetyScore: params.safetyScores.get(stablecoinId)?.score,
+      safetySnapshotAvailable: params.safetySnapshotAvailable,
       stablecoinSupplyById: params.stablecoinSupplyById,
     });
-
-    if (!meetsLendingPoolCoreEligibility(pool, {
-      allowlist: LENDING_PROTOCOL_ALLOWLIST,
-      minApy: MIN_LENDING_POOL_APY,
-      minTvlUsd: requiredMinTvlUsd,
-    })) continue;
-    if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
+    if (!eligibility.eligible) continue;
 
     if (isAlreadyResolved(params.resolved, stablecoinId, poolId)) {
       continue;
@@ -622,7 +668,7 @@ function logNewVariantScan(dlPools: DlPool[]): void {
   );
   const newVariants = scanForNewVariants(dlPools, trackedSymbols, knownVariantSymbols);
   if (newVariants.length > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-yield-data] Variant scanner found ${newVariants.length} new wrapper tokens:`,
       newVariants.map((variant) => `${variant.variantSymbol} (${variant.baseSymbol}, ${variant.chain}, $${(variant.tvlUsd / 1e6).toFixed(1)}M)`).join(", "),
     );
@@ -646,7 +692,7 @@ export function appendPoolFamilyYieldSources(params: {
   const reservedExplicitPoolIds = buildReservedYieldPoolIds();
   const autoDiscoveredIds = new Set<string>();
   if (!params.safetySnapshotAvailable) {
-    console.warn(JSON.stringify({
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "sync-yield-data",
       message: "V9 safety snapshot unavailable; retaining eligible auto-lending candidates as unrated",
     }));
@@ -671,7 +717,7 @@ export function appendPoolFamilyYieldSources(params: {
     reservedPoolIds: reservedExplicitPoolIds,
   });
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[sync-yield-data] Auto-discovery: ${deterministicCount + dynamicCount} lending pools (${deterministicCount} deterministic, ${dynamicCount} dynamic)`,
   );
 

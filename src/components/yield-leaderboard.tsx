@@ -23,7 +23,7 @@ import { useYieldRankings } from "@/hooks/api-hooks";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { computePysBreakdown, formatYieldWarningSignal, getPysColor } from "@/lib/yield-constants";
 import { YIELD_SOURCE_DEPTH_DEFINITIONS, formatYieldSourceRiskSummary } from "@/lib/yield-source-risk";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/report-cards";
@@ -706,7 +706,7 @@ export function YieldMobileCard({
           Provider
         </TableSourceLink>
         <Link
-          href={`${buildStablecoinUrl(row.id)}yield/`}
+          href={buildStablecoinUrl(row.id, "yield/")}
           prefetch={false}
           onClick={() => {
             trackEvent("yield_row_action", {

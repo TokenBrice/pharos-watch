@@ -208,7 +208,7 @@ describe("dex-liquidity pool helpers", () => {
   });
 
   it("builds symbol and address lookups and reports collisions", () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const { symbolToIds, addressToId, chainAddressToId } = buildSymbolLookups();
 

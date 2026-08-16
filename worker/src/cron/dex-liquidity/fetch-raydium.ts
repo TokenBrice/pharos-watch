@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
@@ -114,7 +115,7 @@ async function fetchPoolType(
       if (!pageHasEligiblePool.get(page)) {
         consecutiveFullPagesWithoutEligiblePools++;
         if (consecutiveFullPagesWithoutEligiblePools >= 2) {
-          console.log(
+          logWorkerEventArgs("handler", "info",
             `[fetch-raydium] ${poolType} stopped after ${consecutiveFullPagesWithoutEligiblePools} ` +
               `full page(s) below TVL threshold; resumeFromPage=${page + 1}`,
           );
@@ -127,7 +128,7 @@ async function fetchPoolType(
   });
 
   for (const error of result.errors) {
-    console.warn("[fetch-raydium]", error);
+    logWorkerEventArgs("handler", "warn", "[fetch-raydium]", error);
   }
   return makeDexApiFetchResult(result.rows, {
     ok: result.successfulPages > 0,
@@ -167,7 +168,7 @@ export async function fetchRaydiumPools(signal?: AbortSignal): Promise<DexApiFet
   }
 
   if (results.length > 0) {
-    console.log(`[fetch-raydium] Fetched ${results.length} pools`);
+    logWorkerEventArgs("handler", "info", `[fetch-raydium] Fetched ${results.length} pools`);
   }
   return makeDexApiFetchResult(results, { ok, degraded, errors, warnings });
 }

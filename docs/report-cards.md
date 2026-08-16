@@ -5,9 +5,9 @@ Safety Score V9 is the sole active stablecoin safety model. It publishes evidenc
 ## Methodology Identity
 
 - Active model: `v9`
-- **Current methodology version:** `v9.21`
+- **Current methodology version:** `v9.22`
 - Public response schema: report v4 with score trace v3
-- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`
+- Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus the versioned score-bearing gate projection in `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`
 - Implementation: `shared/lib/safety-score-v9/`
 - Structured changelog: `shared/data/methodology-changelogs/safety-score/`
 - Public methodology: `/methodology/#safety-scores-methodology`
@@ -30,6 +30,8 @@ The weights allocate bounded headroom; they are not an unrestricted weighted ave
 Missing evidence is classified by reason and ownership. A bounded documentation or integration gap can remain rateable under an explicit ceiling. An unbounded required fact returns NR. F is reserved for causally attributed measured danger rather than ordinary uncertainty.
 
 Live reserve percentages are scoring weights, not slice identities. Since methodology `9.21`, an adapter may attach a namespace-qualified stable `sourceKey` to a reserve category and the reviewed reserve sidecar carries the same key. A keyed live row joins one-to-one and fails closed when its reviewed key is missing or duplicated; the key remains stable across display-label edits and rebalancing. Historical unkeyed captures use a unique normalized-name compatibility join. Neither path compares the reviewed percentage with the live percentage, and both Backing classification and dependency compilation consume the same match set.
+
+Since methodology `9.22`, the policy semantic digest also binds every score-bearing reshape and freshness gate that previously lived outside the policy asset: the insufficient-evidence withhold band, danger and F-grade peg predicates, pre-exit danger predicate, material-bridge high-share band, and the separately named evidence-expiry windows used by reviewed research, access, overlays, and reserve evidence. The active numeric values did not change, so the release rotates provenance without moving a score or grade. Counterfactual replay can supply a validated gate projection to the policy loader and receives a distinct semantic digest for any changed gate. Report-card presentation also derives grade thresholds from the active scoring policy rather than maintaining another threshold table.
 
 Oracle applicability is explicit in Economic Control. A reviewed path with no price-sensitive oracle or internal valuation authority is not applicable and emits no scored component. If no other binding control remains, the neutral empty set resolves to 95 without manufacturing a display row. A genuinely oracleless mechanism scores 95; privileged internal pricing scores 45. The latter can apply to a top-level mint, redemption, NAV, or exchange-rate quote even when borrower liquidation branches do not exist. External oracle tiers retain their existing scores.
 
@@ -127,7 +129,7 @@ The writer compares *publication* identities. The capture's `v9-input` identity 
 
 - `src/app/safety-scores/v9-client.tsx` owns the active ratings grid, filters, and sorting. Its grade filter composes with an inline peg filter that groups the stablecoin-list `pegType` values into USD, non-USD fiat, and commodities (gold or silver); selecting the active peg pill again clears that peg constraint.
 - `src/app/safety-scores/pillar-explainer.tsx` renders the static three-column primer immediately below the hero. It introduces Backing, Exit, and Control through one plain-language question apiece, shows the current 40% / 35% / 25% weights, and keeps methodology detail out of the ratings grid.
-- `src/app/safety-scores/data-coverage-view-model.ts` and `data-coverage-module.tsx` derive and render the score-input coverage module on `/coverage/`. Collapsed it shows one sentence of headline counts and the open-data-point split by evidence responsibility; expanding it adds the responsibility explanations, the per-count breakdowns, and the most common reason codes by affected assets. A publication hold replaces the headline sentence. The Safety Scores hero no longer embeds this module.
+- `src/lib/safety-score-data-coverage.ts` and `data-coverage-module.tsx` derive and render the score-input coverage module on `/coverage/`. Collapsed it shows one sentence of headline counts and the open-data-point split by evidence responsibility; expanding it adds the responsibility explanations, the per-count breakdowns, and the most common reason codes by affected assets. A publication hold replaces the headline sentence. The Safety Scores hero no longer embeds this module.
 - `src/components/report-card-mini-v9.tsx` renders the V9 card treatment.
 - `src/components/stablecoin-detail/stablecoin-safety-score-v9-card.tsx` renders detail-page score, pillars, evidence, and breakdowns.
   - Pillar breakdowns render as `groups`, not a flat row list. Backing nests its components under the Reserves and Mechanism groups the producer already computes — component `effectiveWeight` sums exactly to each group's weight — with `mechanism`-sourced components under Mechanism and both `reserve-exposure` and `reserve-concentration` under Reserves. Rows sort by weight descending, and components under `2%` of the pillar fold into a `Smaller holdings (N) · X% combined` tail once at least three qualify. Exit and Control render a single unlabelled group; Exit keeps producer order because its route components are few and already meaningfully ordered. The Exit summary names the primary route and backup credit, while actual stress-request completion appears separately from the capacity component score. Other eligible routes are labeled as evaluated rather than implying that every route was blended into the pillar.

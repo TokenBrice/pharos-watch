@@ -365,6 +365,11 @@ describe("handleBackfillDepegs replay windows", () => {
     });
 
     const db = mockD1([
+      { match: "FROM depeg_events e", rows: [] },
+      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
+      { match: "DELETE FROM depeg_events", rows: [] },
+      { match: "INSERT INTO depeg_events", rows: [] },
+      { match: "INSERT OR REPLACE INTO depeg_event_provenance", rows: [] },
       {
         match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
         matchBinds: ["usdt-tether"],
@@ -463,7 +468,12 @@ describe("handleBackfillDepegs replay windows", () => {
         finalPointCount: 2,
       },
     });
-    const db = mockD1();
+    const db = mockD1([
+      { match: "FROM depeg_events e", rows: [] },
+      { match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at", rows: [] },
+      { match: "DELETE FROM depeg_events", rows: [] },
+      { match: "INSERT INTO depeg_backfill_runs", rows: [] },
+    ]);
     const req = makeApiRequest("/api/backfill-depegs?stablecoin=usdt-tether", {
       adminKey: "secret",
       method: "POST",

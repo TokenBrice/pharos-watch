@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { loadDewsSourceState } from "../source-state";
+import { loadDewsSourceState } from "../../../lib/dews/source-state";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import {
+  DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
+  DEWS_STALE_DEX_LIQUIDITY_SEC,
+} from "../source-state/hydration";
+
+describe("legacy DEWS hydration compatibility", () => {
+  it("retains the allowlisted freshness constants at their historical path", () => {
+    expect(DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC).toBeGreaterThan(0);
+    expect(DEWS_STALE_DEX_LIQUIDITY_SEC).toBeGreaterThan(0);
+  });
+});
 
 /**
  * Minimal D1 mock that returns a single row from the previous-stress-signals

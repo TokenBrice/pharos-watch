@@ -1,4 +1,4 @@
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates } from "@shared/lib/peg-rates";
 import {
   groupIncidents,
   quarantinedCoins,
@@ -18,8 +18,7 @@ import {
   getDexLiquidityTrendTolerances,
   selectTrendBaseline,
   type DexHistoryRow,
-} from "../../api/dex-liquidity-response";
-import { deriveDepegSignal } from "../../lib/depeg-signals";
+} from "../../lib/dex-liquidity-response";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import {
   loadRedemptionBackstopLiveSignalRows,
@@ -48,6 +47,7 @@ import {
   placeholders,
   toStructural,
 } from "./utils";
+import { deriveAuthoritativePegSignal } from "../authoritative-peg-signal";
 
 export interface DdrLoadedContext {
   active: DdrActiveEventInput[];
@@ -103,7 +103,7 @@ export async function queryRows<T>(label: string, query: () => Promise<{ results
   }
 }
 
-async function buildCurrentDeviationMap(
+export async function buildCurrentDeviationMap(
   db: D1Database,
   nowSec: number,
 ): Promise<CurrentDeviationMapResult> {
@@ -117,7 +117,7 @@ async function buildCurrentDeviationMap(
 
   const assets = cache.payload.peggedAssets as StablecoinData[];
   const assetById = new Map(assets.map((asset) => [asset.id, asset]));
-  const { rates } = derivePegRates(assets, TRACKED_META_BY_ID, cache.payload.fxFallbackRates);
+  const { rates, sources, counts } = derivePegRates(assets, TRACKED_META_BY_ID, cache.payload.fxFallbackRates);
   const out = new Map<string, number | null>();
 
   for (const [id, asset] of assetById) {
@@ -128,8 +128,16 @@ async function buildCurrentDeviationMap(
       out.set(id, null);
       continue;
     }
-    const pegRef = getPegReference(asset.pegType, rates, meta.commodityOunces);
-    out.set(id, deriveDepegSignal(asset.price, pegRef)?.bps ?? null);
+    const pegSignal = deriveAuthoritativePegSignal({
+      price: asset.price,
+      pegCurrency: meta.flags.pegCurrency,
+      pegType: asset.pegType,
+      pegRates: rates,
+      pegRateSources: sources,
+      pegRateCounts: counts,
+      commodityOunces: meta.commodityOunces,
+    });
+    out.set(id, pegSignal.kind === "signal" ? pegSignal.deviationBps : null);
   }
 
   return { byCoin: out, healthy: true, degradedReason: null, dataAsOf: cache.updatedAt };

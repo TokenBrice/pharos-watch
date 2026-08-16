@@ -1,19 +1,22 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getBlacklistPriceAssetId } from "@shared/lib/blacklist";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { D1_BATCH_SIZE } from "../../lib/constants";
 import { buildInClause } from "../../lib/db";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { type ChainRpcConfig } from "../../lib/chain-registry";
-import { syncCurrentBalanceCacheForRows } from "./current-balance-cache";
-import { type BlacklistRow, shouldSuppressAsMirrorZero } from "./shared";
-import { enrichRowBalances } from "./amount-recovery";
+import { syncCurrentBalanceCacheForRows } from "../../lib/blacklist/current-balance-cache";
+import { type BlacklistRow, shouldSuppressAsMirrorZero } from "../../lib/blacklist/shared";
+import { enrichRowBalances } from "../../lib/blacklist/amount-recovery";
 import { insertBlacklistRows } from "./persistence";
-import { type BlacklistRunBudget } from "./run-budget";
+import { type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
+import { throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import {
   buildCurrentBalanceSnapshotRows,
   buildLatestBlacklistRows,
   fetchBlacklistAssetPriceFromCache,
-} from "./row-preparation";
+} from "../../lib/blacklist/row-preparation";
 
 type BlacklistConfig = (typeof CONTRACT_CONFIGS)[number];
 // D1's practical SQL-variable ceiling can be lower than the nominal 100.
@@ -48,17 +51,23 @@ interface ProcessFetchedBlacklistRowsOptions {
 async function filterNewBlacklistRows(
   db: D1Database,
   rows: BlacklistRow[],
+  signal?: AbortSignal,
 ): Promise<BlacklistRow[]> {
   if (rows.length === 0) return rows;
 
   const existingIds = new Set<string>();
   for (let i = 0; i < rows.length; i += EXISTING_BLACKLIST_ID_QUERY_CHUNK) {
+    throwIfAborted(signal);
     const ids = rows.slice(i, i + EXISTING_BLACKLIST_ID_QUERY_CHUNK).map((row) => row.id);
     const { sql, binds } = buildInClause(ids);
-    const result = await db
-      .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
-      .bind(...binds)
-      .all<{ id: string }>();
+    const result = await runWithOverloadRetry(() => db
+        .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
+        .bind(...binds)
+        .all<{ id: string }>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
     for (const row of result.results ?? []) {
       existingIds.add(row.id);
     }
@@ -79,6 +88,7 @@ function filterCacheRepairLedgerRows(rows: BlacklistRow[]): BlacklistRow[] {
 async function fetchLatestKnownRepairRows(
   db: D1Database,
   rows: BlacklistRow[],
+  signal?: AbortSignal,
 ): Promise<BlacklistRow[]> {
   if (rows.length === 0) return [];
 
@@ -110,7 +120,13 @@ async function fetchLatestKnownRepairRows(
 
   const results: D1Result[] = [];
   for (let i = 0; i < statements.length; i += D1_BATCH_SIZE) {
-    results.push(...await db.batch(statements.slice(i, i + D1_BATCH_SIZE)));
+    throwIfAborted(signal);
+    results.push(...await runWithOverloadRetry(
+      () => db.batch(statements.slice(i, i + D1_BATCH_SIZE)),
+      3,
+      signal,
+    ));
+    throwIfAborted(signal);
   }
   return results
     .map((result) => (result as { results?: BlacklistRow[] }).results?.[0])
@@ -124,12 +140,12 @@ export async function processFetchedBlacklistRows(
   enrichCounters: BlacklistPostFetchCounters;
   currentBalanceCacheCounters: CurrentBalanceCacheCounters;
 }> {
-  const newRows = await filterNewBlacklistRows(options.db, options.rows);
+  const newRows = await filterNewBlacklistRows(options.db, options.rows, options.signal);
   const newRowIds = new Set(newRows.map((row) => row.id));
   const duplicateRows = options.rows.filter((row) => !newRowIds.has(row.id));
   const duplicateCount = options.rows.length - newRows.length;
   if (duplicateCount > 0) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-blacklist] Skipping ${duplicateCount} previously ingested row(s) before enrichment/cache sync`,
     );
   }
@@ -137,7 +153,7 @@ export async function processFetchedBlacklistRows(
   if (newRows.length === 0) {
     const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
     if (duplicateLedgerRows.length > 0) {
-      const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);
+      const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows, options.signal);
       const assetPriceUsd = getBlacklistPriceAssetId(options.config.stablecoin)
         ? await fetchBlacklistAssetPriceFromCache(options.db, options.config.stablecoin)
         : null;
@@ -193,7 +209,7 @@ export async function processFetchedBlacklistRows(
       row.amount_status = "permanently_unavailable";
     }
   }
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[sync-blacklist] enrichRowBalances (${options.chainLabel}): attempted=${enrichCounters.attempted} succeeded=${enrichCounters.succeeded} failed=${enrichCounters.failed}`,
   );
 

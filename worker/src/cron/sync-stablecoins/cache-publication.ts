@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { FROZEN_IDS, FROZEN_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "../../lib/api-utils";
 import { writeResponseReadyCache } from "../../lib/api-cache-read";
@@ -77,7 +78,7 @@ export async function validateAndWriteStablecoinsCache(
   if (!validation.ok) {
     const issueSummary = summarizeValidationIssues(validation.issues);
     const stablecoinsCacheAgeSec = await getStablecoinsCacheAgeSec(db);
-    console.error(
+    logWorkerEventArgs("handler", "error",
       `[sync-stablecoins] Schema validation failed${validationContext === "fallback" ? " in CG fallback" : ""}; blocking stablecoins cache write:`,
       issueSummary,
     );
@@ -116,11 +117,11 @@ export async function validateAndWriteStablecoinsCache(
     }
   }
   if (cacheResult.written) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-stablecoins] ${validationContext === "fallback" ? "CG fallback: cached" : "Cached"} ${assets.length} assets`,
     );
   } else {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[sync-stablecoins] Skipped stablecoins cache write; newer canonical cache already exists ` +
         `(syncStartSec=${syncStartSec})`,
     );

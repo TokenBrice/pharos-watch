@@ -9,7 +9,7 @@ import {
   type EmptyStateKind,
 } from "@/components/empty-state-illustration";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { FilterTag, StablecoinData } from "@shared/types";
 
 interface StablecoinTableEmptyStateProps {

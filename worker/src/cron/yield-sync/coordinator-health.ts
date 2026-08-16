@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ON_CHAIN_RATE_CONFIGS } from "../yield-config";
 import type { EvaluatedYieldSource } from "./evaluation";
 import {
@@ -28,7 +29,7 @@ export function logYieldApyDivergences(evaluatedSources: EvaluatedYieldSource[])
     const divergence = Math.abs(nativeApy - lendingApy) / Math.max(Math.abs(nativeApy), Math.abs(lendingApy), 1e-9);
     if (divergence <= 0.35) continue;
 
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[yield-sync] APY divergence for ${coinId}: native=${nativeApy.toFixed(1)}% vs lending=${lendingApy.toFixed(1)}%`,
     );
   }
@@ -84,7 +85,7 @@ export async function computeDeterministicOnChainHealth(params: {
   await persistDeterministicOnChainHealthState(params.db, params.startSec, nextOnChainHealthState);
 
   if (params.allDeterministicFailed && maskedAllDeterministicFailure) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[sync-yield-data] Deterministic on-chain lane failed, but all configured coins retained non-onchain yield coverage",
     );
   }

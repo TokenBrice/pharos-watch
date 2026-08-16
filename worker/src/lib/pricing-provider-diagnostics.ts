@@ -172,6 +172,11 @@ export function errorMessageFor(error: unknown): string {
   return sanitizeSnippet(raw);
 }
 
+export function responseSnippet(value: string): string | undefined {
+  const snippet = value.replace(/\s+/g, " ").trim().slice(0, MAX_SNIPPET_CHARS);
+  return snippet.length > 0 ? snippet : undefined;
+}
+
 function sanitizeSnippet(value: string): string {
   return value.replace(/\s+/g, " ").trim().slice(0, MAX_SNIPPET_CHARS);
 }
@@ -179,8 +184,7 @@ function sanitizeSnippet(value: string): string {
 export async function readResponseSnippet(response: Response): Promise<string | undefined> {
   try {
     const text = await response.text();
-    const snippet = sanitizeSnippet(text);
-    return snippet.length > 0 ? snippet : undefined;
+    return responseSnippet(text);
   } catch {
     return undefined;
   }

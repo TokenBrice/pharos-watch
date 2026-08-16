@@ -4,6 +4,7 @@ import { fetchBalancerPools } from "../dex-liquidity/fetch-balancer";
 import { fetchFluidPools } from "../dex-liquidity/fetch-fluid";
 import { fetchOrcaPools } from "../dex-liquidity/fetch-orca";
 import { fetchRaydiumPools } from "../dex-liquidity/fetch-raydium";
+import { jsonResponse } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../../lib/abort", async () => {
   const actual = await vi.importActual<typeof import("../../lib/abort")>("../../lib/abort");
@@ -16,10 +17,6 @@ vi.mock("../../lib/abort", async () => {
 // Mock global fetch
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
-
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status });
-}
 
 function mockJsonFetch(body: unknown, status = 200): void {
   mockFetch.mockImplementation(() => Promise.resolve(jsonResponse(body, status)));
@@ -203,7 +200,7 @@ describe("fetchFluidPools", () => {
     expect(pools.errors).toEqual([]);
     expect(pools.warnings).toHaveLength(1);
     expect(pools.warnings?.[0]).toContain("enrichment failed");
-    expect(warnSpy).toHaveBeenCalledWith("[fetch-fluid] Pool enrichment failed:", expect.any(String));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[fetch-fluid] Pool enrichment failed:"));
     warnSpy.mockRestore();
   });
 

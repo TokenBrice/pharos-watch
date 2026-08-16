@@ -1,10 +1,54 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import {
+  buildFreshnessMeta,
   buildCacheStatuses,
   getLatestSuccessfulCronTimestamp,
   getLatestSuccessfulCronTimestampResult,
 } from "../api-freshness";
+import { addFreshnessHeaders } from "../api-freshness-headers";
+import {
+  API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+  measureFreshnessAge,
+} from "../api-freshness-age";
+
+describe("public freshness clock skew", () => {
+  it("clamps public age and degrades timestamps beyond the explicit future-skew allowance", () => {
+    const nowSec = 1_800_000_000;
+    const updatedAt = nowSec + API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1;
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    try {
+      expect(measureFreshnessAge(nowSec, updatedAt, API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC)).toEqual({
+        ageSeconds: 0,
+        futureSkewSeconds: API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1,
+      });
+      expect(buildFreshnessMeta(updatedAt, 60)).toEqual({
+        updatedAt,
+        ageSeconds: 0,
+        status: "degraded",
+      });
+      expect(addFreshnessHeaders({ "Cache-Control": "public, max-age=60" }, updatedAt, 60)).toEqual({
+        "Cache-Control": "no-store",
+        "X-Data-Age": "0",
+        Warning: `199 - "Response timestamp is ${API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC + 1}s in the future"`,
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("tolerates bounded producer clock skew while keeping the public age nonnegative", () => {
+    const nowSec = 1_800_000_000;
+    const updatedAt = nowSec + API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC;
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    try {
+      expect(buildFreshnessMeta(updatedAt, 60)).toMatchObject({ ageSeconds: 0, status: "fresh" });
+      expect(addFreshnessHeaders({}, updatedAt, 60)).toEqual({ "X-Data-Age": "0" });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+});
 
 function cacheRow(key: string, updatedAt: number, value: unknown = {}): { key: string; updated_at: number; value: string } {
   return {

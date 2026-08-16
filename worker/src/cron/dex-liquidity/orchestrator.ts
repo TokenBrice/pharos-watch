@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type { LiquidityMetrics, LlamaPool } from "./types";
@@ -319,7 +320,7 @@ export async function consumeDexLiquidityScoringStage(
   try {
     await markDexLiquidityScoringStageConsumed(db, staged.generationId, Math.floor(Date.now() / 1000), signal);
   } catch (error) {
-    console.warn(JSON.stringify({
+    logWorkerEventArgs("handler", "warn", JSON.stringify({
       scope: "dex-liquidity",
       message: "Failed to mark scoring stage consumed after publication",
       error: error instanceof Error ? error.message : String(error),
@@ -464,7 +465,7 @@ function logDirectApiSourceSummary(
     return;
   }
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[dex-liquidity] direct-api source summary ${JSON.stringify({
       acceptedByProtocolChain: integration.acceptedByProtocolChain,
       excludedByReason: integration.excludedByReason,
@@ -477,7 +478,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   const failedSources: string[] = [];
   const criticalSourceFailures: string[] = [];
   const fallbackSignals: string[] = [];
-  console.log(`[dex-liquidity] Starting sync`);
+  logWorkerEventArgs("handler", "info", `[dex-liquidity] Starting sync`);
   throwIfAborted(ctx.signal);
   await reportCronProgress(ctx.reportProgress, {
     stage: "source-loading",
@@ -639,7 +640,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     },
   });
   if (!dataSources.dlYieldsAvailable) {
-    console.log("[dex-liquidity] DL yields unavailable — pool coverage may be reduced");
+    logWorkerEventArgs("handler", "info", "[dex-liquidity] DL yields unavailable — pool coverage may be reduced");
     failedSources.push("defillama-yields");
     criticalSourceFailures.push("defillama-yields");
     fallbackSignals.push("dl-yields-unavailable");
@@ -712,7 +713,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
 
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.uniV3PriceObs);
   mergeDexPriceObservationMap(priceObservations, subgraphEnrichment.aerodromePriceObs);
-  console.log(`[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
+  logWorkerEventArgs("handler", "info", `[dex-liquidity] Total: ${priceObservations.size} coins with price observations across all sources`);
 
   return {
     validationReferences,
@@ -776,7 +777,7 @@ async function buildDexLiquidityPoolState(
     primarySkippedByDirectApiDerivedIdentity > 0 ||
     primarySkippedByDirectApiWildcardIdentity > 0
   ) {
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Preferred direct API over DL for ${primarySkippedByDirectApiExactIdentity} exact matches and ` +
         `${primarySkippedByDirectApiDerivedIdentity} unique derived matches and ` +
         `${primarySkippedByDirectApiWildcardIdentity} optional wildcard matches`,
@@ -1099,7 +1100,7 @@ async function persistDexLiquidityScoreState(
         },
       },
     });
-    console.warn(`[dex-liquidity] Skipping persistence because ${skippedReason}`);
+    logWorkerEventArgs("handler", "warn", `[dex-liquidity] Skipping persistence because ${skippedReason}`);
     return {
       persistence: {
         placeholderCount: 0,

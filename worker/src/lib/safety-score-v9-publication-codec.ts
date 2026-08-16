@@ -7,7 +7,7 @@ import {
 } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import { throwIfAborted } from "./abort";
-import { gzipCanonicalJson } from "./canonical-json-gzip";
+import { gunzipBytesBounded, gzipCanonicalJson } from "./canonical-json-gzip";
 import { sha256Hex } from "./hash";
 import { parseJson } from "./json-parse";
 
@@ -84,40 +84,6 @@ function base64ToBytes(value: string, label: string): Uint8Array {
     throw new Error(`${label} base64 payload is not canonical`);
   }
   return bytes;
-}
-
-async function gunzipBytesBounded(
-  compressed: Uint8Array,
-  maximumBytes: number,
-  signal: AbortSignal | undefined,
-  label: string,
-): Promise<Uint8Array> {
-  throwIfAborted(signal);
-  const stream = new Response(Uint8Array.from(compressed)).body!.pipeThrough(
-    new DecompressionStream("gzip"),
-  );
-  const reader = stream.getReader();
-  const output = new Uint8Array(maximumBytes);
-  let byteLength = 0;
-  try {
-    while (true) {
-      throwIfAborted(signal);
-      const { done, value } = await reader.read();
-      if (done) break;
-      byteLength += value.byteLength;
-      if (byteLength > maximumBytes) {
-        throw new Error(`${label} exceeds ${maximumBytes} uncompressed bytes`);
-      }
-      output.set(value, byteLength - value.byteLength);
-    }
-  } catch (error) {
-    await reader.cancel(error).catch(() => undefined);
-    throw error;
-  } finally {
-    reader.releaseLock();
-  }
-  throwIfAborted(signal);
-  return output.subarray(0, byteLength);
 }
 
 function parsePublicationPayload(
@@ -288,12 +254,13 @@ export async function parseSafetyScoreV9Publication(
   }
   const uncompressed = await gunzipBytesBounded(
     compressed,
-    Math.min(
-      storage.uncompressedBytes,
-      SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
-    ),
-    signal,
-    "Safety Score v9 publication",
+    {
+      label: "Safety Score v9 publication",
+      maximumCompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_COMPRESSED_BYTES,
+      maximumUncompressedBytes: SAFETY_SCORE_V9_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
+      expectedUncompressedBytes: storage.uncompressedBytes,
+      signal,
+    },
   );
   if (uncompressed.byteLength !== storage.uncompressedBytes) {
     throw new Error(

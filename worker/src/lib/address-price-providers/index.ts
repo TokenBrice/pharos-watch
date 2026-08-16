@@ -10,6 +10,7 @@ import {
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { CIRCUIT_SOURCE } from "../constants";
 import { throwIfAborted } from "../abort";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
@@ -136,12 +137,6 @@ export function resolveEnabledAddressPriceProviders(
     seen.add(value);
   }
   return [...seen];
-}
-
-function sumCirculatingUsd(asset: AddressPriceAssetLike): number {
-  return Object.values(asset.circulating ?? {}).reduce((sum, value) => (
-    typeof value === "number" && Number.isFinite(value) ? sum + value : sum
-  ), 0);
 }
 
 function readStringHint(asset: AddressPriceAssetLike | undefined, key: "priceConfidence" | "priceSource"): string | null {
@@ -384,7 +379,7 @@ export function buildAddressPriceTargetsByProvider(params: {
           recentlyMissingPrice: targeting.recentlyMissingPrice,
           missingPrice: targeting.missingPrice,
           expiresBeforeNextGeneration: targeting.expiresBeforeNextGeneration,
-          circulatingUsd: sumCirculatingUsd(asset),
+          circulatingUsd: getCirculatingRaw(asset),
         });
       }
     }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApiKeyCreateResponse, ApiKeyMutationResponse, ApiKeyRotateResponse, ApiKeySummary } from "@shared/types";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { RefreshCw } from "lucide-react";
@@ -19,20 +19,17 @@ import { useApiKeys } from "@/hooks/use-api-keys";
 import { useApiKeyAuditLog } from "@/hooks/use-api-key-audit-log";
 import {
   buildApiKeyExpiryWindow,
-  buildApiKeyInventorySummary,
   buildApiKeyInventoryView,
   buildCreateApiKeyPayload,
   buildEditableKeyState,
   buildUpdateApiKeyPayload,
-  DEFAULT_API_KEY_INVENTORY_QUERY,
   DEFAULT_CREATE_KEY_STATE,
 } from "@/lib/api-key-admin-view-model";
 import type {
-  ApiKeyInventoryExpiryPreset,
-  ApiKeyInventoryQuery,
   CreateKeyState,
   EditableKeyState,
 } from "@/lib/api-key-admin-view-model";
+import { useApiKeyInventoryController } from "@/hooks/use-api-key-inventory-controller";
 import {
   AdminMutationFeedback,
   AdminMutationReceipt,
@@ -96,13 +93,6 @@ export function ApiKeysPanel() {
   const { executions, runIntent, clear } = useAdminMutationIntents();
   const [createState, setCreateState] = useState<CreateKeyState>(DEFAULT_CREATE_KEY_STATE);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [inventoryQuery, setInventoryQuery] = useState<ApiKeyInventoryQuery>(() => ({
-    ...DEFAULT_API_KEY_INVENTORY_QUERY,
-    sort: { ...DEFAULT_API_KEY_INVENTORY_QUERY.sort! },
-  }));
-  const [expiryPreset, setExpiryPreset] = useState<ApiKeyInventoryExpiryPreset>("any");
-  const [selectedKeyId, setSelectedKeyId] = useState<number | null>(null);
-  const [drafts, setDrafts] = useState<Record<number, EditableKeyState>>({});
   const [busyKeyId, setBusyKeyId] = useState<number | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -120,75 +110,30 @@ export function ApiKeysPanel() {
 
   const keys = data?.keys ?? EMPTY_KEYS;
   const nowSeconds = data?.generatedAt ?? mountedAtSeconds;
-  const keySummary = useMemo(() => buildApiKeyInventorySummary(keys, nowSeconds), [keys, nowSeconds]);
-  const inventoryView = useMemo(
-    () =>
-      buildApiKeyInventoryView(keys, nowSeconds, {
-        ...inventoryQuery,
-        expiryWindow: buildApiKeyExpiryWindow(expiryPreset, nowSeconds),
-      }),
-    [expiryPreset, inventoryQuery, keys, nowSeconds],
-  );
-  const filterOptions = useMemo(() => {
-    const owners = new Set<string>();
-    const tiers = new Set<string>();
-    let hasUnassignedOwner = false;
-    for (const key of keys) {
-      if (key.ownerEmail == null) hasUnassignedOwner = true;
-      else owners.add(key.ownerEmail);
-      tiers.add(key.tier);
-    }
-    return {
-      owners: [...owners].sort((left, right) => left.localeCompare(right)),
-      hasUnassignedOwner,
-      tiers: [...tiers].sort((left, right) => left.localeCompare(right)),
-    };
-  }, [keys]);
-  const selectedKey = inventoryView.keys.find((key) => key.id === selectedKeyId) ?? null;
+  const {
+    changeExpiryPreset,
+    changeInventoryPage,
+    changeInventoryPageSize,
+    expiryPreset,
+    filterOptions,
+    inventoryQuery,
+    inventoryView,
+    keySummary,
+    resetInventoryView,
+    selectedDraft,
+    selectedKey,
+    selectedKeyId,
+    setDrafts,
+    setSelectedKeyId,
+    updateInventoryQuery,
+    updateSelectedDraft,
+  } = useApiKeyInventoryController(keys, nowSeconds);
   const auditQuery = useApiKeyAuditLog(selectedKey?.id ?? null);
-  const draftState = useMemo(() => {
-    const next: Record<number, EditableKeyState> = {};
-    for (const key of keys) {
-      next[key.id] = drafts[key.id] ?? buildEditableKeyState(key);
-    }
-    return next;
-  }, [drafts, keys]);
-  const selectedDraft = selectedKey ? (draftState[selectedKey.id] ?? buildEditableKeyState(selectedKey)) : null;
   const selectedKeyIdOnPage = selectedKey?.id ?? null;
 
   useEffect(() => {
     if (selectedKeyIdOnPage != null) detailPanelRef.current?.focus();
   }, [selectedKeyIdOnPage]);
-
-  function updateInventoryQuery(patch: Partial<ApiKeyInventoryQuery>) {
-    setInventoryQuery((previous) => ({ ...previous, ...patch, page: 1 }));
-    setSelectedKeyId(null);
-  }
-
-  function changeInventoryPage(page: number) {
-    setInventoryQuery((previous) => ({ ...previous, page }));
-    setSelectedKeyId(null);
-  }
-
-  function changeInventoryPageSize(pageSize: number) {
-    setInventoryQuery((previous) => ({ ...previous, page: 1, pageSize }));
-    setSelectedKeyId(null);
-  }
-
-  function changeExpiryPreset(preset: ApiKeyInventoryExpiryPreset) {
-    setExpiryPreset(preset);
-    setInventoryQuery((previous) => ({ ...previous, page: 1 }));
-    setSelectedKeyId(null);
-  }
-
-  function resetInventoryView() {
-    setInventoryQuery({
-      ...DEFAULT_API_KEY_INVENTORY_QUERY,
-      sort: { ...DEFAULT_API_KEY_INVENTORY_QUERY.sort! },
-    });
-    setExpiryPreset("any");
-    setSelectedKeyId(null);
-  }
 
   function selectKey(apiKey: ApiKeySummary, origin: HTMLButtonElement) {
     if (selectedKeyId === apiKey.id) {
@@ -534,12 +479,7 @@ export function ApiKeysPanel() {
                   auditError={auditQuery.error}
                   auditLoading={auditQuery.isLoading}
                   auditFetching={auditQuery.isFetching}
-                  onDraftChange={(patch) =>
-                    setDrafts((previous) => ({
-                      ...previous,
-                      [selectedKey.id]: { ...selectedDraft, ...patch },
-                    }))
-                  }
+                  onDraftChange={updateSelectedDraft}
                   onSave={() => void runUpdate(selectedKey, selectedDraft, "start")}
                   onDeactivate={() =>
                     requestLifecycle("deactivate", selectedKey, document.activeElement as HTMLElement)

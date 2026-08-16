@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
 import { postDigestTweet, type TwitterCreds } from "../lib/twitter";
@@ -17,14 +18,19 @@ import { buildDailyDigestInput } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
+import {
+  runTelegramDigestDeliveryWithPermit,
+  type TelegramDigestPermittedDelivery,
+} from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
-import { NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
+import { NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead-requirements";
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
 import type { DigestValidationIssue } from "./daily-digest/response";
 import { logWorkerEvent } from "../lib/structured-log";
+import type { TelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
@@ -33,6 +39,26 @@ import {
 export { classifyRegime } from "./daily-digest/prompt";
 
 const TWITTER_SENT_MARKER_PREFIX = "daily-digest:twitter-sent:";
+
+function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
+}
 
 function getTwitterSentMarkerKey(date: string): string {
   return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
@@ -79,7 +105,7 @@ export async function generateDailyDigest(
     },
   });
   if (!anthropicApiKey) {
-    console.log("[daily-digest] No API key configured, skipping");
+    logWorkerEventArgs("handler", "info", "[daily-digest] No API key configured, skipping");
     await reportCronProgress(reportProgress, {
       stage: "skipped",
       message: "Skipping daily digest because Anthropic credentials are missing",
@@ -104,7 +130,7 @@ export async function generateDailyDigest(
     const ageSec = Math.floor(Date.now() / 1000) - latest.generated_at;
     const isBroken = latest.digest_text.trimStart().startsWith("```");
     if (ageSec < SECONDS.ONE_HOUR && !isBroken && !force) {
-      console.log(
+      logWorkerEventArgs("handler", "info",
         `[daily-digest] Latest digest is ${Math.round(ageSec / 60)}min old, skipping`,
       );
       await reportCronProgress(reportProgress, {
@@ -121,7 +147,7 @@ export async function generateDailyDigest(
       return { metadata: "skipped: recent digest exists" };
     }
     if (isBroken) {
-      console.log("[daily-digest] Latest digest is malformed (code-block response), regenerating");
+      logWorkerEventArgs("handler", "info", "[daily-digest] Latest digest is malformed (code-block response), regenerating");
     }
   }
 
@@ -362,7 +388,7 @@ export async function generateDailyDigest(
           await deleteCache(db, markerKey);
         } catch (rollbackErr) {
           degradedReasons.push("twitter-send-marker-rollback");
-          console.error("[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
+          logWorkerEventArgs("handler", "error", "[daily-digest] Failed to roll back Twitter send marker after delivery failure:", rollbackErr);
         }
         throw err;
       }
@@ -390,7 +416,7 @@ export async function generateDailyDigest(
         telegramAppendices = await prepareTelegramDigestAppendices(db);
       } catch (err) {
         degradedReasons.push("telegram-appendix-state");
-        console.error("[daily-digest] Failed to prepare Telegram digest appendices:", err);
+        logWorkerEventArgs("handler", "error", "[daily-digest] Failed to prepare Telegram digest appendices:", err);
       }
       const enqueueResult = await enqueueTelegramDigestEdition(db, {
         editionKey: telegramEditionKey,
@@ -428,30 +454,41 @@ export async function generateDailyDigest(
       recordCronFailure("daily-digest", err, { metadata: { stage: "telegram-outbox-write" } });
     }
   }
-  const telegramStatus = qualityGateStatus ?? await runDigestChannelDelivery({
+  const telegramStatus = qualityGateStatus ?? await runTelegramDigestDeliveryWithPermit({
     db,
-    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
     creds: telegramCreds,
-    logPrefix: "daily-digest",
-    channelLabel: "Telegram",
-    deliver: async (creds) => {
+    owner: "daily-digest",
+    editionKey: telegramEditionKey,
+    signal,
+    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
       if (!telegramOutboxReady) throw new Error("Telegram digest outbox was not persisted");
       const delivery = await deliverTelegramDigestEdition(db, creds, telegramEditionKey, signal);
       if (delivery.outcome === "sent") {
         const appendixSuffix = telegramAppendices?.metadata.hasAppendix
           ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
           : "";
-        return `ok${appendixSuffix}`;
+        return {
+          status: `ok${appendixSuffix}`,
+          transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
+        };
       }
       if (delivery.outcome === "skipped" && delivery.state === "sent") {
-        return "skipped: already-sent";
+        return { status: "skipped: already-sent", transportOutcome: null };
       }
       if (delivery.outcome === "skipped") {
-        return `queued: ${delivery.state}`;
+        return { status: `queued: ${delivery.state}`, transportOutcome: null };
       }
-      throw new Error(
-        `Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
-      );
+      const errorClass = telegramTransportErrorClass(delivery.errorClass);
+      return {
+        status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+        transportOutcome: {
+          ok: false,
+          errorClass,
+          retryAfterSec: errorClass == null
+            ? null
+            : delivery.retryAfterSec,
+        },
+      };
     },
   });
   if (degradedReasons.includes("twitter-send-marker-write")) {
@@ -500,7 +537,7 @@ export async function generateDailyDigest(
       telegramStatus,
     },
   });
-  console.log(`[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
+  logWorkerEventArgs("handler", "info", `[daily-digest] Generated and stored digest: "${digestCopy.digestTitle}" (${digestCopy.digestText.length} chars + ${digestCopy.digestExtended.length} extended), tweet: ${tweetStatus}, telegram: ${telegramStatus}${qualityMetadata}`);
   const lifecycleMetadata = lifecycleFlags.length > 0
     ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`
     : "";

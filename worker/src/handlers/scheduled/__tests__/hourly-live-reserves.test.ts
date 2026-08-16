@@ -201,7 +201,23 @@ describe("runFourHourlyReserveSyncSlot", () => {
       "sync-kinesis-supply",
     ]);
     expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Live reserves sync failed"), expect.any(Error));
+    const errorLine = errorSpy.mock.calls
+      .map((call: readonly unknown[]) => call[0])
+      .find((value: unknown): value is string => typeof value === "string" && value.includes("Live reserves sync failed"));
+    expect(errorLine).toBeDefined();
+    if (typeof errorLine !== "string") throw new Error("expected a structured reserve failure log line");
+    const errorRecord = JSON.parse(errorLine) as {
+      message?: string;
+      errorName?: string;
+      errorMessage?: string;
+      errorStack?: string;
+    };
+    expect(errorRecord).toMatchObject({
+      message: "[hourly-live-reserves] Live reserves sync failed:",
+      errorName: "Error",
+      errorMessage: "sync blew up",
+    });
+    expect(errorRecord.errorStack).toContain("sync blew up");
   });
 
   it("terminalizes an exhausted all-error queue while still running independent Kinesis", async () => {
@@ -249,10 +265,23 @@ describe("runFourHourlyReserveSyncSlot", () => {
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     expect(checkCollateralDrift).toHaveBeenCalledTimes(1);
     expect(finishScheduledCheckpoint).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Redemption backstops sync failed"),
-      expect.any(Error),
-    );
+    const errorLine = errorSpy.mock.calls
+      .map((call: readonly unknown[]) => call[0])
+      .find((value: unknown): value is string => typeof value === "string" && value.includes("Redemption backstops sync failed"));
+    expect(errorLine).toBeDefined();
+    if (typeof errorLine !== "string") throw new Error("expected a structured redemption failure log line");
+    const errorRecord = JSON.parse(errorLine) as {
+      message?: string;
+      errorName?: string;
+      errorMessage?: string;
+      errorStack?: string;
+    };
+    expect(errorRecord).toMatchObject({
+      message: "[hourly-live-reserves] Redemption backstops sync failed:",
+      errorName: "Error",
+      errorMessage: "rb blew up",
+    });
+    expect(errorRecord.errorStack).toContain("rb blew up");
   });
 
   it("swallows drift check errors and logs them", async () => {

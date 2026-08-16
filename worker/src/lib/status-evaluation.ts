@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
 import { assessPublicHealth } from "./public-health-assessment";
 import { emptyDatasetFreshness, emptyReserveComposition } from "./status/derived-data";
@@ -110,7 +111,7 @@ async function countRecentStatusTransitions(db: D1Database, now: number): Promis
       .first<{ cnt: number | null }>();
     return row?.cnt ?? 0;
   } catch (err) {
-    console.warn("[status] transitions count query failed:", err);
+    logWorkerEventArgs("lib", "warn", "[status] transitions count query failed:", err);
     return 0;
   }
 }

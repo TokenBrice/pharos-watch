@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import {
   D1_MAX_BOUND_PARAMETERS,
   batchExecute,
@@ -19,7 +20,7 @@ import {
   getCompletedSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
-import { startOfUtcDaySec } from "../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
@@ -106,7 +107,7 @@ export async function snapshotSupply(
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
   throwIfAborted(signal);
   if (stablecoinsCache.kind !== "ok") {
-    console.error("[snapshot-supply] No stablecoins cache found");
+    logWorkerEventArgs("handler", "error", "[snapshot-supply] No stablecoins cache found");
     return {
       status: "degraded",
       itemCount: 0,
@@ -129,7 +130,7 @@ export async function snapshotSupply(
   // previous 20h wall-clock cooldown drifted the write time through the whole
   // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
   // date-keying pins the write to the first healthy run after UTC midnight.
-  const snapshotDate = startOfUtcDaySec();
+  const snapshotDate = startOfUtcDaySec(new Date());
 
   for (const asset of stablecoinsCache.payload.peggedAssets) {
     if (!snapshotEligibleIds.has(asset.id)) continue;
@@ -188,7 +189,7 @@ export async function snapshotSupply(
   // Verify cache freshness — skip if stale (>20 min) to avoid snapshotting outdated data
   const cacheAge = nowSec - stablecoinsCache.updatedAt;
   if (cacheAge > CACHE_MAX_AGE_SEC) {
-    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
+    logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_MAX_AGE_SEC}s), skipping snapshot`);
     return {
       status: "degraded",
       itemCount: 0,
@@ -196,7 +197,7 @@ export async function snapshotSupply(
     };
   }
   if (cacheAge > CACHE_DEGRADED_AGE_SEC) {
-    console.warn(`[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
+    logWorkerEventArgs("handler", "warn", `[snapshot-supply] Cache is ${cacheAge}s old (>${CACHE_DEGRADED_AGE_SEC}s), proceeding with degraded freshness`);
   }
 
   if (
@@ -234,7 +235,7 @@ export async function snapshotSupply(
     const invalidSupplyIds = publicationCoverage.missingActiveIds.filter(
       (id) => cachedIds.has(id),
     );
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[snapshot-supply] Exact active coverage failed: ` +
       `${publicationCoverage.presentActiveCount}/${publicationCoverage.expectedActiveCount}; ` +
       `missing=${publicationCoverage.missingActiveIds.slice(0, 20).join(",")}`,
@@ -302,6 +303,6 @@ export async function snapshotSupply(
     };
   }
 
-  console.log(`[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
+  logWorkerEventArgs("handler", "info", `[snapshot-supply] Inserted ${snapshotRows.length} rows for date ${formatIsoDate(snapshotDate)}`);
   return { itemCount: snapshotRows.length };
 }

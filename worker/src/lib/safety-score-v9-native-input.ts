@@ -1,16 +1,8 @@
 import { z } from "zod";
-import { base64ToBytes, bytesToBase64 } from "@shared/lib/base64";
-import { uniqueSorted } from "@shared/lib/safety-score-v9/primitives";
-import { PegSummaryCoinSchema } from "@shared/types/market";
-import {
-  DexExitRouteObservationSchema,
-  ExitRouteObservationCoverageSchema,
-} from "@shared/types/market";
-import { RedemptionBackstopMapSchema } from "@shared/types/redemption";
-import { ReserveSliceSchema } from "@shared/types/reserves";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { REPORT_CARDS_BASE_INPUT_GENERATION_ID_PREFIX } from "@shared/lib/report-cards-base-input-identity";
 import {
+  FixedDexLiquidityRowSchema,
   ReportCardsFixedInputMethodologyVersionsSchema,
   computeRedemptionPayloadFingerprint,
   normalizeFixedInputExitRouteObservations,
@@ -18,36 +10,27 @@ import {
   normalizeReportCardsFixedInputMethodologyVersions,
 } from "@shared/lib/report-cards-fixed-input-identity";
 import { sha256Hex } from "@shared/lib/sha256";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import {
   SafetyScoreV9InputIdentitySchema,
   type SafetyScoreV9InputIdentity,
 } from "@shared/types/safety-score-publication";
-import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
-import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
 import {
-  DexDeploymentSupplyCoverageSchema,
-  FreshnessEntrySchema,
-  NavPriceObservationSchema,
-  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
-  SafetyScoreV9SupplyAttributionSchema,
   normalizeFixedInput,
   parseReportCardsFixedInputCacheValue,
 } from "./report-cards-fixed-input";
 import {
-  projectSafetyScoreV9PegScoreResult,
-  projectSafetyScoreV9PegSummary,
-  SafetyScoreV9PegProvenanceSummarySchema,
-} from "./safety-score-v9-peg-provenance";
+  assertCommonFixedInputConsistency,
+  createFixedInputPayloadFields,
+  normalizeCommonFixedInputRecords,
+  sortedRecord,
+} from "./report-cards-fixed-input-contract";
 import {
-  normalizeReviewedDeploymentAttribution,
-  reviewedDeploymentAttributionValidationError,
-} from "./safety-score-v9-supply-attribution-contract";
-import {
-  normalizeXautRepresentationGroupAttribution,
-  XAUT_ASSET_ID,
-  xautRepresentationGroupAttributionValidationError,
-} from "./safety-score-v9-xaut-supply-attribution-contract";
+  buildFixedInputCacheEntry,
+  FixedInputCacheEnvelopeFields,
+  parseFixedInputCacheEntry,
+  REPORT_CARDS_FIXED_INPUT_CACHE_KEY,
+} from "./report-cards-fixed-input-cache-codec";
 import { V9PublicationInputHealthSchema } from "./safety-score-v9-publication-assessment";
 import { parseJson } from "./json-parse";
 
@@ -60,29 +43,26 @@ import { parseJson } from "./json-parse";
  */
 export const NativeDexLiquidityRowSchema = z
   .object({
-    exitRouteObservations: z.array(DexExitRouteObservationSchema).nullable().optional(),
-    exitRouteObservationCoverage: ExitRouteObservationCoverageSchema.optional(),
-    updatedAt: z.number().int().nonnegative(),
+    exitRouteObservations: FixedDexLiquidityRowSchema.shape.exitRouteObservations,
+    exitRouteObservationCoverage: FixedDexLiquidityRowSchema.shape.exitRouteObservationCoverage,
+    updatedAt: FixedDexLiquidityRowSchema.shape.updatedAt,
   })
   .strict()
   .superRefine((row, ctx) => {
-    if (!row.exitRouteObservations || !row.exitRouteObservationCoverage) return;
-    const eligibleObservationCount = row.exitRouteObservations.filter(
-      (observation) => observation.scoreEligible,
-    ).length;
-    if (row.exitRouteObservationCoverage.observationCount !== row.exitRouteObservations.length) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservationCoverage", "observationCount"],
-        message: "coverage observation count does not match DEX observations",
-      });
-    }
-    if (row.exitRouteObservationCoverage.scoreEligibleObservationCount !== eligibleObservationCount) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["exitRouteObservationCoverage", "scoreEligibleObservationCount"],
-        message: "coverage eligible-observation count does not match DEX observations",
-      });
+    // Zod cannot pick from a refined object schema. Supply neutral values for
+    // the V3-only fields so the canonical shared row owns the common coverage
+    // refinement while the native schema still admits only its narrow fields.
+    const canonical = FixedDexLiquidityRowSchema.safeParse({
+      liquidityScore: null,
+      concentrationHhi: null,
+      poolCount: 0,
+      chainCount: 0,
+      ...row,
+    });
+    if (!canonical.success) {
+      for (const issue of canonical.error.issues) {
+        ctx.addIssue({ code: "custom", path: issue.path, message: issue.message });
+      }
     }
   });
 
@@ -97,64 +77,14 @@ const NativeChainCirculatingRowSchema = z
   })
   .strict();
 
-const NativeSafetyScoreV9InputPayloadFields = {
-  capturedAt: z.string().datetime(),
-  sourceGeneration: z.string().min(1),
-  registryRevision: z.string().min(1),
-  methodologyVersion: z.string().min(1),
-  clockSec: z.number().int().nonnegative(),
-  updatedAt: z.number().int().nonnegative(),
-  liquidityStale: z.boolean(),
-  redemptionStale: z.boolean(),
-  inputFreshness: z.object({
-    dexLiquidity: FreshnessEntrySchema,
-    redemptionBackstops: FreshnessEntrySchema,
-  }),
-  v9PublicationInputHealth: V9PublicationInputHealthSchema,
-  pegDataById: z.record(z.string(), PegSummaryCoinSchema),
-  // NAV observations support route-output valuation only. They remain separate
-  // from peg rows because NAV tokens have no fixed peg deviation to score.
-  navPriceById: z.record(z.string(), NavPriceObservationSchema).optional(),
-  activeDepegPeakBpsById: z.record(z.string(), z.number().finite().nonnegative()),
-  redemptionBackstopMap: RedemptionBackstopMapSchema,
-  liveReserveMap: z.record(z.string(), z.array(ReserveSliceSchema)),
-  liveReserveProvenanceMap: z.record(
-    z.string(),
-    z.object({ source: z.string().min(1), fetchedAt: z.number().int().nonnegative() }),
-  ),
-  chainCirculatingById: z
+const NativeSafetyScoreV9InputPayloadFields = createFixedInputPayloadFields({
+  publicationHealthSchema: V9PublicationInputHealthSchema,
+  afterRedemptionBackstopMap: {},
+  chainCirculatingByIdSchema: z
     .record(z.string(), z.record(z.string(), NativeChainCirculatingRowSchema))
     .default({}),
-  // Top-level USD circulating buckets, carried beside the per-chain map because
-  // the supplemental/fallback intake lanes populate only the aggregate. Values
-  // are already USD-denominated (DefiLlama list semantics); never multiply by
-  // price.
-  aggregateCirculatingById: z
-    .record(
-      z.string(),
-      z.object({
-        circulating: z.record(z.string(), z.number().finite().nonnegative()),
-        observedAtSec: z.number().int().nonnegative().nullable(),
-      }),
-    )
-    .default({}),
-  // V9-only supply attribution remains separate from chainCirculatingById:
-  // the latter belongs to the exact prepared base input and must stay immutable.
-  safetyScoreV9SupplyAttributionById: z
-    .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
-    .default({}),
-  // Diagnostic-only producer provenance. Carried in the private V9 envelope but
-  // intentionally excluded from every score-bearing identity.
-  evidenceJournalById: ReportCardEvidenceJournalByIdV1Schema.default({}),
-  supplyAttributionJournalById: SupplyAttributionJournalByIdV1Schema.default({}),
-  // V9-only historical peg evidence quality. Raw depeg events never enter the
-  // capture; only canonical score-neutral summaries and their digests do.
-  pegProvenanceById: z
-    .record(z.string(), SafetyScoreV9PegProvenanceSummarySchema)
-    .default({}),
-  dexDeploymentSupplyCoverageById: z.record(z.string(), DexDeploymentSupplyCoverageSchema).default({}),
-  liveToFallbackCoins: z.array(z.string()).default([]),
-};
+  beforeLiveToFallbackCoins: {},
+});
 
 /**
  * Schema v4: the native Safety Score V9 input. Everything the V8 report-card
@@ -171,12 +101,12 @@ export const NativeSafetyScoreV9InputSchema = z
     activeAssetIds: z.array(z.string().min(1)),
     dexGenerationId: z.string().min(1),
     redemptionGenerationId: z.string().min(1),
-    dexPayloadFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    redemptionPayloadFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-    registryFingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+    dexPayloadFingerprint: Sha256Schema,
+    redemptionPayloadFingerprint: Sha256Schema,
+    registryFingerprint: Sha256Schema,
     inputMethodologyVersions: ReportCardsFixedInputMethodologyVersionsSchema,
     dexLiqMap: z.record(z.string(), NativeDexLiquidityRowSchema),
-    baseInputGenerationId: z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/),
+    baseInputGenerationId: BaseInputGenerationIdSchema,
   })
   .strict();
 
@@ -196,10 +126,8 @@ export type SafetyScoreV9CompilerInput = Omit<
   captureKind: "exact-publication-inputs" | "public-reconstruction" | "native-v9-inputs";
 };
 
-// Same D1 row key as report-cards-fixed-input.ts's REPORT_CARDS_FIXED_INPUT_CACHE_KEY
-// (the definition site); only the envelope version differs between the two lanes.
+// Same D1 row key as the retained replay lane; only the envelope version differs.
 export const NATIVE_V9_INPUT_CACHE_KEY = REPORT_CARDS_FIXED_INPUT_CACHE_KEY;
-const NATIVE_V9_INPUT_CACHE_MAX_BYTES = 1_900_000;
 
 // The prefix is a published format namespace (public fact-set schemas, OpenAPI,
 // the publication codec, and the `safety_score_history_v2` CHECK all pin it),
@@ -215,13 +143,8 @@ const NATIVE_V9_BASE_INPUT_DIGEST_DOMAIN = "report-cards.native-v9-base-input.v2
  */
 const NativeV9InputCacheEnvelopeSchema = z.object({
   schemaVersion: z.literal(2),
-  kind: z.literal("report-cards-fixed-input-exact"),
-  encoding: z.literal("gzip-base64"),
-  sourceGeneration: z.string().min(1),
+  ...FixedInputCacheEnvelopeFields,
   safetyScoreIdentity: SafetyScoreV9InputIdentitySchema,
-  payloadSha256: z.string().regex(/^[a-f0-9]{64}$/),
-  uncompressedBytes: z.number().int().positive(),
-  payload: z.string().min(1),
 });
 
 /** Fields excluded from the v2 base-input digest. */
@@ -298,91 +221,18 @@ export function computeNativeDexLiquidityPayloadFingerprint(
   );
 }
 
-function sortedRecord<T>(record: Record<string, T>): Record<string, T> {
-  return Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)));
-}
-
-function assertSameIds(actual: readonly string[], expected: readonly string[], label: string): void {
-  const actualSorted = [...actual].sort();
-  const expectedSorted = [...expected].sort();
-  if (JSON.stringify(actualSorted) !== JSON.stringify(expectedSorted)) {
-    const expectedSet = new Set(expectedSorted);
-    const actualSet = new Set(actualSorted);
-    throw new Error(
-      `${label} mismatch: missing=${expectedSorted.filter((id) => !actualSet.has(id)).join(",") || "none"}; ` +
-        `unexpected=${actualSorted.filter((id) => !expectedSet.has(id)).join(",") || "none"}`,
-    );
-  }
-}
-
-function assertNativeFreshnessConsistency(input: NativeSafetyScoreV9Input): void {
-  const dexFreshness = input.inputFreshness.dexLiquidity;
-  const dexTimestamps = uniqueSorted(Object.values(input.dexLiqMap).map((row) => String(row.updatedAt)));
-  if (dexTimestamps.length !== 1 || Number(dexTimestamps[0]) !== dexFreshness.updatedAt) {
-    throw new Error("Native V9 input DEX rows do not match the DEX freshness generation");
-  }
-  const expectedDexGeneration = `dex-liquidity-${dexFreshness.updatedAt}`;
-  if (input.dexGenerationId !== expectedDexGeneration) {
-    throw new Error(
-      `Native V9 input DEX generation ${input.dexGenerationId} does not match active-row generation ${expectedDexGeneration}`,
-    );
-  }
-
-  const redemptionFreshness = input.inputFreshness.redemptionBackstops;
-  const hasRedemptionRows = Object.keys(input.redemptionBackstopMap).length > 0;
-  if (hasRedemptionRows) {
-    const redemptionTimestamps = uniqueSorted(
-      Object.values(input.redemptionBackstopMap).map((row) => String(row.updatedAt)),
-    );
-    if (redemptionTimestamps.length !== 1 || Number(redemptionTimestamps[0]) !== redemptionFreshness.updatedAt) {
-      throw new Error("Native V9 input redemption rows do not match the redemption freshness generation");
-    }
-  } else if (!redemptionFreshness.stale) {
-    throw new Error("Native V9 input has no redemption rows but marks redemption freshness as current");
-  }
-  if (
-    (hasRedemptionRows && !input.redemptionGenerationId.startsWith("redemption:")) ||
-    (!hasRedemptionRows && input.redemptionGenerationId !== "redemption-backstops-unavailable")
-  ) {
-    throw new Error(`Native V9 input redemption generation ${input.redemptionGenerationId} is not producer-bound`);
-  }
-  if (input.liquidityStale !== dexFreshness.stale || input.redemptionStale !== redemptionFreshness.stale) {
-    throw new Error("Native V9 input top-level freshness flags do not match lane freshness");
-  }
-
-  for (const [lane, freshness] of Object.entries(input.inputFreshness)) {
-    if (freshness.updatedAt != null && freshness.updatedAt > input.clockSec) {
-      throw new Error(
-        `Native V9 input ${lane} producer timestamp ${freshness.updatedAt} is later than scoring clock ${input.clockSec}`,
-      );
-    }
-    if (freshness.updatedAt == null || freshness.ageSeconds == null) {
-      if (!freshness.stale) throw new Error(`Native V9 input ${lane} freshness is incomplete but not stale`);
-      continue;
-    }
-    const expectedAge = input.clockSec - freshness.updatedAt;
-    if (freshness.ageSeconds !== expectedAge) {
-      throw new Error(
-        `Native V9 input ${lane} age ${freshness.ageSeconds} does not match clock-derived age ${expectedAge}`,
-      );
-    }
-  }
-}
-
 function assertNativeV9InputConsistency(
   input: NativeSafetyScoreV9Input,
   options: { verifyBaseInputGenerationId: boolean } = { verifyBaseInputGenerationId: true },
 ): void {
-  if (new Set(input.activeAssetIds).size !== input.activeAssetIds.length) {
-    throw new Error("Native V9 input active asset identities contain duplicates");
-  }
-  const invalidNavPriceIds = Object.keys(input.navPriceById ?? {}).filter(
-    (id) => ACTIVE_STABLECOINS.find((coin) => coin.id === id)?.flags.navToken !== true,
-  );
-  if (invalidNavPriceIds.length > 0) {
-    throw new Error(`Native V9 input NAV price rows target non-NAV assets: ${invalidNavPriceIds.join(",")}`);
-  }
-  assertSameIds(Object.keys(input.dexLiqMap), input.activeAssetIds, "Native V9 input DEX active rows");
+  assertCommonFixedInputConsistency(input, {
+    phase: "identity",
+    laneLabel: "Native V9 input",
+    exactLabel: "Native V9 input",
+    requireProducerBindings: true,
+    validateNavPriceIds: true,
+    dexActiveRowsLabel: "Native V9 input DEX active rows",
+  });
 
   const currentDexPayloadFingerprint = computeNativeDexLiquidityPayloadFingerprint(
     input.dexLiqMap,
@@ -402,93 +252,14 @@ function assertNativeV9InputConsistency(
       `Native V9 input redemption payload fingerprint ${input.redemptionPayloadFingerprint} does not match payload ${currentRedemptionPayloadFingerprint}`,
     );
   }
+  assertCommonFixedInputConsistency(input, {
+    phase: "evidence",
+    laneLabel: "Native V9 input",
+    exactLabel: "Native V9 input",
+    requireProducerBindings: true,
+    validateNavPriceIds: false,
+  });
 
-  for (const [assetId, attribution] of Object.entries(input.safetyScoreV9SupplyAttributionById)) {
-    if (!input.activeAssetIds.includes(assetId)) {
-      throw new Error(`V9 supply attribution targets inactive asset ${assetId}`);
-    }
-    if (attribution.model !== "reviewed-deployment-unit-partition-v1" && attribution.observedAtSec > input.clockSec) {
-      throw new Error(`V9 supply attribution for ${assetId} is later than the scoring clock`);
-    }
-    if (assetId === XAUT_ASSET_ID && attribution.model === "canonical-lock-mint-partition-v1") {
-      throw new Error("Legacy XAUT lock/mint attribution is no longer admissible; a reconciled V2 packet is required");
-    }
-    const aggregate = input.aggregateCirculatingById[assetId];
-    const aggregateSupplyUsd = Object.values(aggregate?.circulating ?? {}).reduce((sum, value) => sum + value, 0);
-    const attributedSupplyUsd =
-      attribution.model === "canonical-lock-mint-partition-v1"
-        ? Object.values(attribution.currentSupplyUsdByChain).reduce((sum, value) => sum + value, 0)
-        : attribution.model === "canonical-lock-mint-group-partition-v2"
-          ? attribution.canonical.currentSupplyUsd + attribution.representationGroup.currentSupplyUsd
-          : attribution.deployments.reduce((sum, deployment) => sum + deployment.currentSupplyUsd, 0);
-    const toleranceUsd = Math.max(0.000001, aggregateSupplyUsd * 1e-12);
-    if (aggregateSupplyUsd <= 0 || Math.abs(attributedSupplyUsd - aggregateSupplyUsd) > toleranceUsd) {
-      throw new Error(`V9 supply attribution for ${assetId} does not conserve aggregate circulating USD`);
-    }
-    if (attribution.model === "reviewed-deployment-unit-partition-v1") {
-      const validationError = reviewedDeploymentAttributionValidationError({
-        assetId,
-        attribution,
-        aggregateSupplyUsd,
-        registryFingerprint: input.registryFingerprint,
-        clockSec: input.clockSec,
-      });
-      if (validationError) throw new Error(validationError);
-    } else if (attribution.model === "canonical-lock-mint-group-partition-v2") {
-      if (attribution.assetId !== assetId) {
-        throw new Error(`V9 supply attribution key ${assetId} does not match packet asset ${attribution.assetId}`);
-      }
-      const validationError = xautRepresentationGroupAttributionValidationError({
-        attribution,
-        aggregateSupplyUsd,
-        registryFingerprint: input.registryFingerprint,
-        clockSec: input.clockSec,
-      });
-      if (validationError) throw new Error(validationError);
-    }
-  }
-  for (const [assetId, records] of Object.entries(input.evidenceJournalById)) {
-    if (!input.activeAssetIds.includes(assetId)) {
-      throw new Error(`Evidence journal targets inactive asset ${assetId}`);
-    }
-    for (const record of records) {
-      if (record.completedAtSec > input.clockSec) {
-        throw new Error(`Evidence journal for ${assetId} is later than the scoring clock`);
-      }
-    }
-  }
-  for (const [assetId, records] of Object.entries(input.supplyAttributionJournalById)) {
-    if (!input.activeAssetIds.includes(assetId)) {
-      throw new Error(`Supply attribution journal targets inactive asset ${assetId}`);
-    }
-    for (const record of records) {
-      if (record.completedAtSec > input.clockSec) {
-        throw new Error(`Supply attribution journal for ${assetId} is later than the scoring clock`);
-      }
-    }
-  }
-  const pegProvenanceIds = Object.keys(input.pegProvenanceById);
-  if (pegProvenanceIds.length > 0) {
-    assertSameIds(pegProvenanceIds, Object.keys(input.pegDataById), "V9 peg provenance rows");
-  }
-  for (const [assetId, summary] of Object.entries(input.pegProvenanceById)) {
-    const pegSummary = input.pegDataById[assetId];
-    if (!pegSummary || summary.assetId !== assetId) {
-      throw new Error(`V9 peg provenance does not match peg row ${assetId}`);
-    }
-    if (
-      summary.clockSec !== input.clockSec ||
-      summary.trackingStartSec !== (pegSummary.historyCoverage?.startedAt ?? null)
-    ) {
-      throw new Error(`V9 peg provenance clock/coverage does not match peg row ${assetId}`);
-    }
-    if (
-      stableJsonStringifyV1(projectSafetyScoreV9PegScoreResult(summary.legacyInclusive.result)) !==
-      stableJsonStringifyV1(projectSafetyScoreV9PegSummary(pegSummary))
-    ) {
-      throw new Error(`V9 peg provenance score does not match peg row ${assetId}`);
-    }
-  }
   // Integrity gate: a *supplied* base generation id must match the payload it
   // claims to identify. Skipped only when this same call just derived the id
   // from the identical payload, where the comparison is true by construction.
@@ -500,7 +271,13 @@ function assertNativeV9InputConsistency(
       );
     }
   }
-  assertNativeFreshnessConsistency(input);
+  assertCommonFixedInputConsistency(input, {
+    phase: "freshness",
+    laneLabel: "Native V9 input",
+    exactLabel: "Native V9 input",
+    requireProducerBindings: true,
+    validateNavPriceIds: false,
+  });
 }
 
 /**
@@ -521,39 +298,14 @@ export function normalizeNativeV9Input(value: unknown): NativeSafetyScoreV9Input
     throw new Error(`Malformed native V9 input at ${issue?.path.join(".") || "root"}: ${issue?.message}`);
   }
   const input = parsed.data;
-  const normalizedPayload = {
+  const normalizedPayload = NativeSafetyScoreV9InputIntakeSchema.parse({
     ...input,
     activeAssetIds: [...input.activeAssetIds].sort(),
     inputMethodologyVersions: normalizeReportCardsFixedInputMethodologyVersions(input.inputMethodologyVersions),
-    pegDataById: sortedRecord(input.pegDataById),
-    ...(input.navPriceById ? { navPriceById: sortedRecord(input.navPriceById) } : {}),
-    activeDepegPeakBpsById: sortedRecord(input.activeDepegPeakBpsById),
+    ...normalizeCommonFixedInputRecords(input),
     dexLiqMap: normalizeNativeDexLiquidityMap(input.dexLiqMap),
     redemptionBackstopMap: normalizeFixedRedemptionBackstopMap(input.redemptionBackstopMap),
-    liveReserveMap: sortedRecord(input.liveReserveMap),
-    liveReserveProvenanceMap: sortedRecord(input.liveReserveProvenanceMap),
-    chainCirculatingById: sortedRecord(input.chainCirculatingById),
-    aggregateCirculatingById: sortedRecord(input.aggregateCirculatingById),
-    safetyScoreV9SupplyAttributionById: sortedRecord(
-      Object.fromEntries(
-        Object.entries(input.safetyScoreV9SupplyAttributionById).map(([assetId, attribution]) => [
-          assetId,
-          attribution.model === "canonical-lock-mint-partition-v1"
-            ? { ...attribution, currentSupplyUsdByChain: sortedRecord(attribution.currentSupplyUsdByChain) }
-            : attribution.model === "canonical-lock-mint-group-partition-v2"
-              ? normalizeXautRepresentationGroupAttribution(attribution)
-              : normalizeReviewedDeploymentAttribution(attribution),
-        ]),
-      ),
-    ),
-    // Both journal maps are validated by the intake parse above (superRefine
-    // only, no transform), so they carry through unchanged.
-    evidenceJournalById: input.evidenceJournalById,
-    supplyAttributionJournalById: input.supplyAttributionJournalById,
-    pegProvenanceById: sortedRecord(input.pegProvenanceById),
-    dexDeploymentSupplyCoverageById: sortedRecord(input.dexDeploymentSupplyCoverageById),
-    liveToFallbackCoins: [...input.liveToFallbackCoins].sort(),
-  };
+  });
   const suppliedBaseInputGenerationId = input.baseInputGenerationId;
   const normalized = NativeSafetyScoreV9InputSchema.parse({
     ...normalizedPayload,
@@ -584,16 +336,6 @@ export function normalizeSafetyScoreV9CompilerInput(value: unknown): SafetyScore
   return normalizeFixedInput(value);
 }
 
-async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new CompressionStream("gzip"));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
-}
-
-async function gunzipText(bytes: Uint8Array): Promise<string> {
-  const stream = new Response(Uint8Array.from(bytes)).body!.pipeThrough(new DecompressionStream("gzip"));
-  return new Response(stream).text();
-}
-
 export async function buildNativeV9InputCacheEntry(
   value: unknown,
   safetyScoreIdentity: SafetyScoreV9InputIdentity,
@@ -614,31 +356,13 @@ export async function buildNativeV9InputCacheEntry(
     pegProvenanceById: _pegProvenance,
     ...baseInput
   } = input;
-  const payload = JSON.stringify(baseInput);
-  const uncompressedBytes = new TextEncoder().encode(payload);
-  const compressed = await gzipBytes(uncompressedBytes);
-  const envelope = JSON.stringify({
+  return buildFixedInputCacheEntry({
     schemaVersion: 2,
-    kind: "report-cards-fixed-input-exact",
-    encoding: "gzip-base64",
     sourceGeneration: input.sourceGeneration,
     safetyScoreIdentity: identity,
-    payloadSha256: sha256Hex(payload),
-    uncompressedBytes: uncompressedBytes.byteLength,
-    payload: bytesToBase64(compressed),
+    payload: baseInput,
+    label: "Native V9 input cache artifact",
   });
-  const storedBytes = new TextEncoder().encode(envelope).byteLength;
-  if (storedBytes > NATIVE_V9_INPUT_CACHE_MAX_BYTES) {
-    throw new Error(
-      `Native V9 input cache artifact is ${storedBytes} bytes; maximum is ${NATIVE_V9_INPUT_CACHE_MAX_BYTES}`,
-    );
-  }
-  return {
-    key: NATIVE_V9_INPUT_CACHE_KEY,
-    value: envelope,
-    storedBytes,
-    uncompressedBytes: uncompressedBytes.byteLength,
-  };
 }
 
 export interface NativeV9InputCacheArtifact {
@@ -647,24 +371,14 @@ export interface NativeV9InputCacheArtifact {
 }
 
 export async function parseNativeV9InputCacheArtifact(value: unknown): Promise<NativeV9InputCacheArtifact> {
-  const parsedEnvelope = typeof value === "string" ? parseJson(value) : null;
-  if (parsedEnvelope && !parsedEnvelope.ok) {
-    throw new Error(`Malformed native V9 input cache envelope: ${parsedEnvelope.message}`);
-  }
-  const raw = parsedEnvelope?.ok ? parsedEnvelope.value : value;
-  const envelope = NativeV9InputCacheEnvelopeSchema.parse(raw);
-  const payload = await gunzipText(base64ToBytes(envelope.payload));
-  if (new TextEncoder().encode(payload).byteLength !== envelope.uncompressedBytes) {
-    throw new Error("Native V9 input cache artifact byte length does not match its envelope");
-  }
-  if (sha256Hex(payload) !== envelope.payloadSha256) {
-    throw new Error("Native V9 input cache artifact checksum mismatch");
-  }
-  const parsedPayload = parseJson(payload);
-  if (!parsedPayload.ok) {
-    throw new Error(`Malformed native V9 input cache payload: ${parsedPayload.message}`);
-  }
-  const input = normalizeNativeV9Input(parsedPayload.value);
+  const { envelope, payload } = await parseFixedInputCacheEntry({
+    value,
+    envelopeSchema: NativeV9InputCacheEnvelopeSchema,
+    malformedEnvelopeLabel: "Malformed native V9 input cache envelope",
+    malformedPayloadLabel: "Malformed native V9 input cache payload",
+    artifactLabel: "Native V9 input cache artifact",
+  });
+  const input = normalizeNativeV9Input(payload);
   if (input.sourceGeneration !== envelope.sourceGeneration) {
     throw new Error("Native V9 input cache generation mismatch");
   }

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { z } from "zod";
 import { median } from "@shared/lib/stats";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -112,7 +113,7 @@ async function fetchKavaJson(url: string, signal?: AbortSignal): Promise<unknown
     },
   );
   if (!result?.response.ok) {
-    console.warn(`[kava-pricefeed] request failed with status ${result?.response.status ?? "no response"}`);
+    logWorkerEventArgs("lib", "warn", `[kava-pricefeed] request failed with status ${result?.response.status ?? "no response"}`);
     return null;
   }
   return result.body;
@@ -126,7 +127,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
   const blockPayload = await fetchKavaJson(`${KAVA_API_BASE}/cosmos/base/tendermint/v1beta1/blocks/latest`, signal);
   const blockResult = KavaBlockSchema.safeParse(blockPayload);
   if (!blockResult.success) {
-    console.warn("[kava-pricefeed] latest block response failed schema validation");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block response failed schema validation");
     return null;
   }
 
@@ -141,21 +142,21 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
     nowSec - blockTime > KAVA_BLOCK_MAX_AGE_SEC ||
     blockTime - nowSec > KAVA_BLOCK_MAX_FUTURE_SKEW_SEC
   ) {
-    console.warn("[kava-pricefeed] latest block identity or freshness validation failed");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] latest block identity or freshness validation failed");
     return null;
   }
 
   const marketsPayload = await fetchKavaJson(`${KAVA_API_BASE}/kava/pricefeed/v1beta1/markets`, signal);
   const marketsResult = KavaMarketsSchema.safeParse(marketsPayload);
   if (!marketsResult.success) {
-    console.warn("[kava-pricefeed] markets response failed schema validation");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] markets response failed schema validation");
     return null;
   }
 
   const matchingMarkets = marketsResult.data.markets.filter((market) => market.market_id === KAVA_USDX_MARKET_ID);
   const market = matchingMarkets.length === 1 ? matchingMarkets[0] : null;
   if (!market?.active || market.base_asset !== "usdx" || market.quote_asset !== "usd" || market.oracles.length === 0) {
-    console.warn("[kava-pricefeed] USDX market identity or active-oracle validation failed");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX market identity or active-oracle validation failed");
     return null;
   }
   const authorizedOracles = new Set(market.oracles);
@@ -166,12 +167,12 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
   );
   const aggregateResult = KavaAggregatePriceSchema.safeParse(aggregatePayload);
   if (!aggregateResult.success || aggregateResult.data.price.market_id !== KAVA_USDX_MARKET_ID) {
-    console.warn("[kava-pricefeed] USDX aggregate response failed schema or market validation");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate response failed schema or market validation");
     return null;
   }
   const aggregatePrice = parseFinitePositiveDecimal(aggregateResult.data.price.price);
   if (aggregatePrice == null) {
-    console.warn("[kava-pricefeed] USDX aggregate price is not finite and positive");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate price is not finite and positive");
     return null;
   }
 
@@ -181,7 +182,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
   );
   const rawResult = KavaRawPricesSchema.safeParse(rawPayload);
   if (!rawResult.success || rawResult.data.raw_prices.some((entry) => entry.market_id !== KAVA_USDX_MARKET_ID)) {
-    console.warn("[kava-pricefeed] USDX raw-price response failed schema or market validation");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX raw-price response failed schema or market validation");
     return null;
   }
 
@@ -199,7 +200,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
     return [{ price, expiry }];
   });
   if (activeRawPrices.length === 0) {
-    console.warn("[kava-pricefeed] USDX has no authorized raw oracle valid through the cache trust window");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX has no authorized raw oracle valid through the cache trust window");
     return null;
   }
 
@@ -214,7 +215,7 @@ export async function fetchKavaUsdxPrice(signal?: AbortSignal): Promise<KavaUsdx
     dispersionBps > KAVA_MAX_ORACLE_DISPERSION_BPS ||
     aggregateDeviationBps > KAVA_MAX_AGGREGATE_MEDIAN_DEVIATION_BPS
   ) {
-    console.warn("[kava-pricefeed] USDX aggregate and active raw oracles do not agree within bounds");
+    logWorkerEventArgs("lib", "warn", "[kava-pricefeed] USDX aggregate and active raw oracles do not agree within bounds");
     return null;
   }
 

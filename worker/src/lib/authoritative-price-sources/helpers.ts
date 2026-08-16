@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -101,7 +102,7 @@ export async function fetchBoundedVaultQuote(
   });
   if (!quoteHex) {
     const message = `[authoritative-price-sources] ${config.id}: ${label}() returned null`;
-    console.warn(message);
+    logWorkerEventArgs("lib", "warn", message);
     if (options?.throwOnNullQuote) {
       throw new Error(message);
     }
@@ -110,14 +111,14 @@ export async function fetchBoundedVaultQuote(
 
   const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
-    console.warn(`[authoritative-price-sources] ${config.id}: ${label}() returned zero or invalid output`);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${config.id}: ${label}() returned zero or invalid output`);
     return null;
   }
 
   const assetsPerShare = decodeAssetsPerShare(outputAmount);
   if (!Number.isFinite(assetsPerShare) || assetsPerShare <= 0) return null;
   if (assetsPerShare < ERC4626_NAV_MIN_RATIO || assetsPerShare > ERC4626_NAV_MAX_RATIO) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[authoritative-price-sources] ${config.id}: ${label}() ratio ${assetsPerShare} outside trusted bounds`,
     );
     return null;
@@ -280,7 +281,7 @@ export function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): b
   try {
     return BigInt(`0x${result.slice(start, end)}`);
   } catch (err) {
-    console.warn("[price-sources] hex parse ignored:", err);
+    logWorkerEventArgs("lib", "warn", "[price-sources] hex parse ignored:", err);
     return null;
   }
 }
@@ -480,7 +481,7 @@ export function resolveTrustedOverrideParent(
   );
   if (!trustedParent) {
     context.lastUntrustedParent = { parentId, reason: untrustedReason ?? "untrusted" };
-    console.warn(untrustedParentMessage());
+    logWorkerEventArgs("lib", "warn", untrustedParentMessage());
     return null;
   }
 
@@ -550,7 +551,7 @@ export async function resolveVaultAssetsPerShareWithCache(
     // synchronous, so serving it under an aborted candidate budget costs
     // nothing and rescues the asset from a missing generation.
     liveError = error;
-    console.warn(`[authoritative-price-sources] ${asset.id}: live vault rate failed; consulting cached rate:`, error);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] ${asset.id}: live vault rate failed; consulting cached rate:`, error);
   }
   if (liveRate != null) {
     context.vaultRateWrites?.set(asset.id, { rate: liveRate, observedAt: nowSec });
@@ -629,7 +630,7 @@ export function getUsdcQuotedRedeemConfig(stablecoinId: string): {
   if (!contract || !quoteContract) return null;
 
   if (quoteContract.decimals !== 6) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[authoritative-price-sources] getUsdcQuotedRedeemConfig: expected 6-decimal USDC quote, got ${quoteContract.decimals}`,
     );
     return null;

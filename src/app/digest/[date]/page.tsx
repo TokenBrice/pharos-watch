@@ -12,10 +12,7 @@ import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { DigestContentEntry } from "@shared/types";
-import digests from "@data/digests.json";
-
-const allDigests = digests as DigestContentEntry[];
-const digestByDate = new Map(allDigests.map((d) => [d.date, d]));
+import { DIGEST_BY_DATE, DIGEST_ENTRIES } from "@/lib/digest-registry";
 
 const DIGEST_RESEARCH_LINKS = [
   {
@@ -41,7 +38,7 @@ const DIGEST_RESEARCH_LINKS = [
 ] as const;
 
 export function generateStaticParams() {
-  return allDigests.map((d) => ({ date: d.date }));
+  return DIGEST_ENTRIES.map((d) => ({ date: d.date }));
 }
 
 function formatDate(dateStr: string): string {
@@ -61,7 +58,7 @@ function buildDigestMetadataDescription(digest: DigestContentEntry, formattedDat
 
 export async function generateMetadata({ params }: { params: Promise<{ date: string }> }): Promise<Metadata> {
   const { date } = await params;
-  const digest = digestByDate.get(date);
+  const digest = DIGEST_BY_DATE.get(date);
   if (!digest) {
     return {
       title: "Digest Not Found",
@@ -81,7 +78,7 @@ export async function generateMetadata({ params }: { params: Promise<{ date: str
 
 export default async function DigestDetailPage({ params }: { params: Promise<{ date: string }> }) {
   const { date } = await params;
-  const digest = digestByDate.get(date);
+  const digest = DIGEST_BY_DATE.get(date);
   if (!digest) notFound();
 
   const formatted = formatDate(digest.date);
@@ -91,9 +88,9 @@ export default async function DigestDetailPage({ params }: { params: Promise<{ d
   const editionKicker = digest.editionNumber ? `${editionLabel} #${digest.editionNumber}` : editionLabel;
 
   // Find prev/next digests
-  const idx = allDigests.findIndex((d) => d.date === digest.date);
-  const newer = idx > 0 ? allDigests[idx - 1] : null;
-  const older = idx < allDigests.length - 1 ? allDigests[idx + 1] : null;
+  const idx = DIGEST_ENTRIES.findIndex((d) => d.date === digest.date);
+  const newer = idx > 0 ? DIGEST_ENTRIES[idx - 1] : null;
+  const older = idx < DIGEST_ENTRIES.length - 1 ? DIGEST_ENTRIES[idx + 1] : null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

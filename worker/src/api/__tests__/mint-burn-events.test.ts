@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnEvents } from "../mint-burn-events";
 
 describe("handleMintBurnEvents", () => {
@@ -39,18 +40,6 @@ describe("handleMintBurnEvents", () => {
     expect(event).toHaveProperty("blockNumber");
     expect(event).toHaveProperty("explorerTxUrl");
     expect(event).not.toHaveProperty("stablecoin_id");
-  });
-
-  it("returns 400 when stablecoin param is missing", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events"));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns 404 for unknown stablecoin ID", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=<script>"));
-    expect(res.status).toBe(404);
   });
 
   it("rejects invalid direction with 400", async () => {
@@ -288,4 +277,11 @@ describe("handleMintBurnEvents", () => {
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
   });
+});
+
+registerStablecoinParameterContract({
+  name: "mint/burn events",
+  path: "/api/mint-burn-events",
+  invoke: handleMintBurnEvents,
+  missingParameterError: "Missing required parameter: stablecoin",
 });

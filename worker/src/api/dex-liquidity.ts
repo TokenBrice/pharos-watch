@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { safeJsonParse, addFreshnessHeaders, jsonResponseWithHeaders } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { isMissingTableError } from "../lib/db";
@@ -16,7 +17,7 @@ import {
   type DexHistoryRow,
   type DexLiquidityRow,
   type DexPriceRow,
-} from "./dex-liquidity-response";
+} from "../lib/dex-liquidity-response";
 import { classifyLiquidityEvidence } from "./dex-liquidity-evidence";
 import { toErrorMessage } from "../lib/error-utils";
 
@@ -49,7 +50,7 @@ export const handleDexLiquidity = async (db: D1Database): Promise<Response> => {
         if (isMissingTableError(err)) {
           return { results: [] as DexPriceRow[] };
         }
-        console.error("[dex-liquidity] Unexpected error loading dex_prices:", msg);
+        logWorkerEventArgs("api", "error", "[dex-liquidity] Unexpected error loading dex_prices:", msg);
         throw err;
       }),
     db

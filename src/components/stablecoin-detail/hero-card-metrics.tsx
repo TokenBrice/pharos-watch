@@ -128,7 +128,9 @@ export function HeroCompactPriceCell({
               ? "text-muted-foreground"
               : isNavToken
                 ? "text-green-700 dark:text-green-400"
-                : deviationColorClass(Math.abs(deviationBps))
+                : deviationBps == null
+                  ? "text-muted-foreground"
+                  : deviationColorClass(Math.abs(deviationBps))
           }
         >
           {deviationLabel}
@@ -356,7 +358,9 @@ export function HeroPriceCard({
             ? "text-muted-foreground"
             : isNavToken
               ? "text-green-700 dark:text-green-400"
-              : deviationColorClass(Math.abs(deviationBps))
+              : deviationBps == null
+                ? "text-muted-foreground"
+                : deviationColorClass(Math.abs(deviationBps))
         }`}
       >
         {formatPriceReferenceLine({ coinData, pegRef, pegReferenceUnavailable, isNavToken })}

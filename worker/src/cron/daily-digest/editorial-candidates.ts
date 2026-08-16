@@ -25,6 +25,27 @@ function candidateId(kind: DigestEditorialCandidateKind, parts: string[]): strin
     .replace(/-+/g, "-");
 }
 
+export function activeDepegEditorialCandidateId(
+  depeg: DigestInputData["topDepegs"][number],
+): string {
+  // Candidate IDs are persisted in digest metadata and lead history. They
+  // identify the active coin-level policy signal, not the underlying event;
+  // weekly event deduplication keeps its separate startedAt-based identity.
+  return candidateId("depeg", [
+    depeg.stablecoinId ?? depeg.symbol,
+    "active",
+  ]);
+}
+
+export function resolvedDepegEditorialCandidateId(
+  depeg: NonNullable<DigestInputData["resolvedDepegs"]>[number],
+): string {
+  return candidateId("resolved-depeg", [
+    depeg.stablecoinId ?? depeg.symbol,
+    String(depeg.startedAt ?? depeg.peakBps),
+  ]);
+}
+
 function addCandidate(
   candidates: DigestEditorialCandidate[],
   candidate: DigestEditorialCandidate,
@@ -92,7 +113,7 @@ function addActiveDepegCandidates(
     const age = depeg.ageHours != null ? `${depeg.ageHours}h old` : "age unknown";
     const severityDirection = severityBps >= 0 ? "above" : "below";
     addCandidate(candidates, {
-      id: candidateId("depeg", [depeg.stablecoinId ?? depeg.symbol, "active"]),
+      id: activeDepegEditorialCandidateId(depeg),
       kind: "depeg",
       title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg`,
       symbols: [depeg.symbol],
@@ -121,7 +142,7 @@ function addResolvedDepegCandidates(candidates: DigestEditorialCandidate[], data
   for (const depeg of data.resolvedDepegs ?? []) {
     const impactScore = depeg.impactScore ?? getDepegMarketImpactScore(depeg.peakBps, depeg.mcapUsd);
     addCandidate(candidates, {
-      id: candidateId("resolved-depeg", [depeg.stablecoinId ?? depeg.symbol, String(depeg.startedAt ?? depeg.peakBps)]),
+      id: resolvedDepegEditorialCandidateId(depeg),
       kind: "resolved-depeg",
       title: `${depeg.symbol} recovered from ${depeg.peakBps} bps`,
       symbols: [depeg.symbol],

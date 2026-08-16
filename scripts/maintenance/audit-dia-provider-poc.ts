@@ -3,8 +3,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { PriceSourceDepthAudit, PriceSourceDepthRow } from "./audit-price-source-depth";
-import { ACTIVE_META_BY_ID } from "../../shared/lib/stablecoins/registry";
-import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { runAsMain, toPositiveInt, writeOutputFile } from "../lib/coverage-audit-cli";
 

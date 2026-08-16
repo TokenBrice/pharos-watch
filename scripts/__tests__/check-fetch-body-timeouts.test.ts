@@ -7,7 +7,7 @@ import {
   findFetchBodyTimeoutViolations,
   makeViolationKey,
   scanFetchBodyTimeouts,
-} from "../ci/check-fetch-body-timeouts.mjs";
+} from "../ci/check-fetch-body-timeouts.ts";
 
 function withTempRepo(files: Record<string, string>, run: (dir: string) => void): void {
   const dir = mkdtempSync(join(tmpdir(), "pharos-fetch-body-timeouts-"));

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { setCache } from "../../lib/db-cache";
 import { buildPerCoinCacheControl, PER_COIN_CACHE_TTL_SECONDS } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -45,7 +46,7 @@ export function logUpstreamFailure(
   stablecoinId: string,
   status: number | "no-response",
 ): void {
-  console.warn(`[detail] upstream failure source=${source} stablecoin=${stablecoinId} status=${status}`);
+  logWorkerEventArgs("api", "warn", `[detail] upstream failure source=${source} stablecoin=${stablecoinId} status=${status}`);
 }
 
 export function logUpstreamException(
@@ -53,7 +54,7 @@ export function logUpstreamException(
   stablecoinId: string,
   err: unknown,
 ): void {
-  console.error(
+  logWorkerEventArgs("api", "error",
     `[detail] upstream exception source=${source} stablecoin=${stablecoinId} error=${String(err).slice(0, 300)}`,
   );
 }
@@ -139,7 +140,7 @@ export function createDetailResponseHelpers(config: {
       (async () => {
         const bodyBytes = new TextEncoder().encode(body).length;
         if (bodyBytes > DETAIL_CACHE_MAX_VALUE_BYTES) {
-          console.error(
+          logWorkerEventArgs("api", "error",
             `[detail] cache write skipped stablecoin=${config.stablecoinId} bytes=${bodyBytes} exceeds ${DETAIL_CACHE_MAX_VALUE_BYTES}`,
           );
           await recordCacheWriteFailure("value-too-large", bodyBytes);
@@ -162,7 +163,7 @@ export function createDetailResponseHelpers(config: {
             });
           }
         } catch (err) {
-          console.error(
+          logWorkerEventArgs("api", "error",
             `[detail] cache write failed stablecoin=${config.stablecoinId} bytes=${bodyBytes} error=${String(err).slice(0, 300)}`,
           );
           await recordCacheWriteFailure("write-error", bodyBytes);
@@ -178,7 +179,7 @@ export function createDetailResponseHelpers(config: {
     const tokens = await fetchSupplyHistoryFallback(config.db, config.stablecoinId, config.pegType);
     if (tokens.length > 0) {
       const latestSuffix = latestTokenDate != null ? ` latest=${latestTokenDate}` : "";
-      console.warn(
+      logWorkerEventArgs("api", "warn",
         `[detail] fallback source=supply_history stablecoin=${config.stablecoinId} reason=${reason} points=${tokens.length}${latestSuffix}`,
       );
     }

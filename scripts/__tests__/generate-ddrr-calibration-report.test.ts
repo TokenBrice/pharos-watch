@@ -2,14 +2,14 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { summarizeDdrrRows } from "../../shared/lib/depeg-resolver-review";
+import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
 import type {
   DdrrResponse,
   DdrrRow,
   DdrrV2CoverageRow,
   DdrrV2NoCallReviewRow,
   DdrrV2PredictionReviewRow,
-} from "../../shared/types/depeg-resolver-review";
+} from "@shared/types/depeg-resolver-review";
 import {
   buildDdrrCalibrationReport,
   isTrustedDdrrApiKeyDestination,

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_MS } from "@shared/lib/time-constants";
@@ -64,7 +65,7 @@ export async function buildBackfillPlan(opts: {
 
   const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCache.kind !== "ok") {
-    console.warn(`[backfill-depegs] stablecoins cache ${stablecoinsCache.kind} (${stablecoinsCache.reason})`);
+    logWorkerEventArgs("api", "warn", `[backfill-depegs] stablecoins cache ${stablecoinsCache.kind} (${stablecoinsCache.reason})`);
   }
   const stablecoinsPayload =
     stablecoinsCache.kind === "ok" || (stablecoinsCache.kind === "degraded" && stablecoinsCache.payload)
@@ -116,7 +117,7 @@ export async function buildBackfillPlan(opts: {
         }
       }
     } catch (err) {
-      console.error(`[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
+      logWorkerEventArgs("api", "error", `[backfill-depegs] Failed to fetch detail for ${meta.symbol}:`, err);
     }
 
     const trackedMeta = PSI_ELIGIBLE_META_BY_ID.get(meta.id);

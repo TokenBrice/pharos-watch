@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DdrActiveEventInput } from "@shared/lib/depeg-resolver";
 import type { StablecoinMeta } from "@shared/types/core";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import {
@@ -9,7 +9,7 @@ import {
   makeWorkerV9Card,
 } from "../../../test-helpers/report-cards-v9";
 import type { DdrEventDbRow } from "../types";
-import { loadDdrContext, type DdrLoadedContext } from "../context";
+import { buildCurrentDeviationMap, loadDdrContext, type DdrLoadedContext } from "../context";
 import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
   allocateDdrRunId,
@@ -20,6 +20,20 @@ import {
 
 const NOW_SEC = 1_780_358_400;
 const DAY = 86_400;
+
+const DEFAULT_DDR_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT stablecoin_id, direction, peak_deviation_bps, started_at, ended_at, recovery_price FROM depeg_events WHERE ended_at IS NOT NULL", rows: [] },
+  { match: "FROM supply_history", rows: [] },
+  { match: "FROM mint_burn_hourly", rows: [] },
+  { match: "FROM dex_liquidity", rows: [] },
+  { match: "FROM dex_liquidity_history", rows: [] },
+  { match: "FROM redemption_backstop_runs", rows: [] },
+  { match: "FROM redemption_backstop_run_rows", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_DDR_D1_TABLES]);
+}
 
 function publishedDewsConfigs(signalsJson = "{}") {
   const computedAt = NOW_SEC - 60;
@@ -323,6 +337,44 @@ describe("allocateDdrRunId", () => {
 });
 
 describe("loadDdrContext", () => {
+  it("leaves resolver deviation null for a thin non-USD peg reference", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "brz-transfero",
+                  symbol: "BRZ",
+                  pegType: "peggedREAL",
+                  price: 0.18,
+                  circulating: { ethereum: 20_000_000 },
+                },
+                {
+                  id: "wbrl-ripio",
+                  symbol: "WBRL",
+                  pegType: "peggedREAL",
+                  price: 0.19,
+                  circulating: { ethereum: 20_000_000 },
+                },
+              ],
+            }),
+            updated_at: NOW_SEC,
+          },
+        ],
+      },
+    ]);
+
+    const result = await buildCurrentDeviationMap(db, NOW_SEC);
+
+    expect(result.healthy).toBe(true);
+    expect(result.byCoin.get("brz-transfero")).toBeNull();
+    expect(result.byCoin.get("wbrl-ripio")).toBeNull();
+  });
+
   it("degrades when the stablecoins cache is stale", async () => {
     const db = mockD1([
       {

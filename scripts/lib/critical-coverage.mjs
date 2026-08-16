@@ -1,13 +1,14 @@
 import { relative } from "node:path";
 
 import { isValidDateOnly } from "./date-helpers.mjs";
-import { collectSourceFilesUnderRoot } from "./source-files.mjs";
+import { collectSourceFilesUnderRoot } from "./source-files.mts";
 
 export const CRITICAL_FILES = [
   "src/lib/api.ts",
   "worker/src/api/safety-score-history-v2.ts",
   "worker/src/lib/api-cache-read.ts",
   "worker/src/lib/api-freshness.ts",
+  "worker/src/lib/api-freshness-age.ts",
   "worker/src/lib/api-freshness-headers.ts",
   "worker/src/lib/freshness-sentinels.ts",
   "worker/src/lib/api-history.ts",
@@ -36,9 +37,14 @@ export const CRITICAL_FILES = [
   "worker/src/cron/pending-depeg-confirmation.ts",
   "worker/src/cron/pending-depeg-confirmation-decision.ts",
   "worker/src/cron/pending-depeg-confirmation-evidence.ts",
-  "worker/src/cron/compute-dews.ts",
   "worker/src/lib/dews/signal-families.ts",
   "worker/src/lib/dews-publication-pointer.ts",
+  "worker/src/lib/dews/persistence.ts",
+  "worker/src/lib/dews/scoring.ts",
+  "worker/src/lib/dews/source-state.ts",
+  "worker/src/lib/dews/source-state/fallback.ts",
+  "worker/src/lib/dews/source-state/hydration.ts",
+  "worker/src/lib/dews/source-state/legacy-bridge.ts",
   "worker/src/cron/compute-depeg-resolver.ts",
   "worker/src/cron/compute-depeg-resolver-review.ts",
   "worker/src/cron/depeg-detection/decision-engine.ts",
@@ -57,12 +63,7 @@ export const CRITICAL_FILES = [
   "worker/src/cron/depeg-resolver/utils.ts",
   "worker/src/lib/depeg-resolver-incident-store.ts",
   "worker/src/lib/depeg-resolver-publication-store.ts",
-  "worker/src/cron/dews/persistence.ts",
-  "worker/src/cron/dews/scoring.ts",
-  "worker/src/cron/dews/source-state.ts",
-  "worker/src/cron/dews/source-state/fallback.ts",
-  "worker/src/cron/dews/source-state/hydration.ts",
-  "worker/src/cron/dews/source-state/legacy-bridge.ts",
+  "worker/src/lib/depeg-resolver-review-response.ts",
   "worker/src/cron/sync-live-reserves.ts",
   "worker/src/cron/sync-live-reserves-core.ts",
   "worker/src/cron/sync-live-reserves-finalize.ts",
@@ -276,11 +277,14 @@ const HIGH_STAKES_COVERAGE_CANDIDATE_PATTERNS = [
 /** @type {Record<string, string>} */
 export const CRITICAL_COVERAGE_WAIVERS = {
   "worker/src/cron/depeg-resolver/constants.ts": "2026-08-30",
+  // These two scheduled-path facades only re-export the live lib/dews owners;
+  // the owners are enrolled above, while the compatibility surfaces remain
+  // covered by their direct import contracts.
+  "worker/src/cron/compute-dews.ts": "2026-09-05",
+  "worker/src/cron/dews/source-state/hydration.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality-observer.ts": "2026-09-05",
   "worker/src/lib/safety-score-v9-transfer-materiality.ts": "2026-09-05",
   "worker/src/cron/depeg-resolver/storage-adapters.ts": "2026-08-30",
-  "worker/src/cron/dews/contracts.ts": "2026-09-05",
-  "worker/src/cron/dews/progress.ts": "2026-09-05",
   "worker/src/cron/sync-live-reserves-config.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/cache-publication.ts": "2026-09-05",
   "worker/src/cron/sync-stablecoins/enrich-prices-cmc-pass.ts": "2026-09-05",

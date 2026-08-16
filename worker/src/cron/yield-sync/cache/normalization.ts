@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../../lib/structured-log";
 import type { YieldBenchmarkKey } from "@shared/types/yield";
 import { isFiniteNumber, isRecord } from "@shared/lib/type-guards";
 import { RISK_FREE_RATE_FALLBACK } from "../../../lib/constants";
@@ -333,7 +334,7 @@ export function parseRiskFreeRatesCache(
       SGD: parseOptional("SGD"),
     };
   } catch (err) {
-    console.warn(`[yield-sync] Failed to parse bundled benchmarks cache: ${toErrorMessage(err)}`);
+    logWorkerEventArgs("handler", "warn", `[yield-sync] Failed to parse bundled benchmarks cache: ${toErrorMessage(err)}`);
     return null;
   }
 }

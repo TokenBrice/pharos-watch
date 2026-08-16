@@ -5,7 +5,13 @@ import {
   getRedemptionBackstopVersionAt,
 } from "@shared/lib/methodology-versions/redemption-backstop";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
-import { assertAllD1MatchesUsed, mockD1, mockD1Strict } from "../../test-helpers/__shared/mock-d1";
+import {
+  assertAllD1MatchesUsed,
+  mockD1,
+  mockD1Strict,
+  type MockD1Database,
+  type MockTableConfig,
+} from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import {
   buildRedemptionBackstopsSnapshot,
@@ -18,6 +24,20 @@ import {
 } from "../redemption-backstops-store";
 import { pruneRedemptionBackstopRunRetention } from "../redemption-backstops-store-write";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+
+const REDEMPTION_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT INTO redemption_backstop_runs", rows: [] },
+  { match: "INSERT INTO redemption_backstop_run_rows", rows: [] },
+  { match: "INSERT OR REPLACE INTO redemption_backstop_history", rows: [] },
+  { match: "UPDATE redemption_backstop_runs", rows: [], runMeta: { changes: 1 } },
+  { match: "DELETE FROM redemption_backstop_run_rows", rows: [], runMeta: { changes: 0 } },
+  { match: "DELETE FROM redemption_backstop_runs", rows: [], runMeta: { changes: 0 } },
+  { match: "DELETE FROM redemption_backstop_history", rows: [], runMeta: { changes: 0 } },
+];
+
+function mockRedemptionD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...REDEMPTION_WRITE_TABLES]);
+}
 
 /** Realistic mock row matching an actual offchain-issuer config (EURC). */
 function makeRealisticRow(overrides: Record<string, unknown> = {}) {
@@ -298,7 +318,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("falls back to an earlier completed run when the newest completed manifest is not complete", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "FROM redemption_backstop_runs",
         rows: [
@@ -336,7 +356,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("falls back to an earlier completed run when a row in the newest run fails schema validation", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "FROM redemption_backstop_runs",
         rows: [
@@ -579,7 +599,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("drops invalid enum and collection values from details JSON before applying fallbacks", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "FROM redemption_backstop_runs",
         rows: [
@@ -673,7 +693,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   it("reads frozen v3.997 current/history/run fixture shapes without v4 optional fields", async () => {
     expect(LEGACY_V3997_REDEMPTION_BACKSTOP_HISTORY_ROW.snapshot_date).toBe(1_746_748_800);
 
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "FROM redemption_backstop_runs",
         rows: [LEGACY_V3997_REDEMPTION_BACKSTOP_RUN_ROW],
@@ -741,7 +761,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("writes immutable run/history rows under a completed run manifest without a legacy current mirror", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "COUNT(*) AS row_count",
         rows: [],
@@ -835,7 +855,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("marks a started run as failed when row writes fail", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "COUNT(*) AS row_count",
         rows: [],
@@ -906,7 +926,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("marks a started run as failed when immutable run rows are incomplete", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "COUNT(*) AS row_count",
         rows: [],
@@ -1014,7 +1034,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("records retention failures as completed-run warnings without failing the snapshot", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "COUNT(*) AS row_count",
         rows: [],
@@ -1066,7 +1086,7 @@ describe("loadRedemptionBackstopSnapshot", () => {
   });
 
   it("preserves manifest deletion counts when orphan run-row retention later fails", async () => {
-    const db = mockD1([
+    const db = mockRedemptionD1([
       {
         match: "DELETE FROM redemption_backstop_runs",
         rows: [],

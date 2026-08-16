@@ -20,6 +20,14 @@ export interface CanonicalJsonGzipOptions {
   signal?: AbortSignal;
 }
 
+export interface BoundedGunzipOptions {
+  label: string;
+  maximumCompressedBytes: number;
+  maximumUncompressedBytes: number;
+  expectedUncompressedBytes?: number;
+  signal?: AbortSignal;
+}
+
 function nextChunkEnd(value: string, offset: number): number {
   let end = Math.min(value.length, offset + UTF8_CHUNK_CODE_UNITS);
   if (end < value.length) {
@@ -100,4 +108,82 @@ export async function gzipCanonicalJson(
     contentSha256: hash.digest("hex"),
     uncompressedBytes,
   };
+}
+
+/** Decompress gzip bytes while enforcing bounds before and during allocation. */
+export async function gunzipBytesBounded(
+  compressed: Uint8Array,
+  options: BoundedGunzipOptions,
+): Promise<Uint8Array> {
+  const {
+    label,
+    maximumCompressedBytes,
+    maximumUncompressedBytes,
+    expectedUncompressedBytes,
+    signal,
+  } = options;
+  throwIfAborted(signal);
+  if (!Number.isInteger(maximumCompressedBytes) || maximumCompressedBytes < 0) {
+    throw new Error(`${label} compressed byte limit must be a non-negative integer`);
+  }
+  if (!Number.isInteger(maximumUncompressedBytes) || maximumUncompressedBytes < 0) {
+    throw new Error(`${label} uncompressed byte limit must be a non-negative integer`);
+  }
+  if (
+    expectedUncompressedBytes != null &&
+    (!Number.isInteger(expectedUncompressedBytes) || expectedUncompressedBytes < 0)
+  ) {
+    throw new Error(`${label} expected uncompressed byte length must be a non-negative integer`);
+  }
+  if (compressed.byteLength > maximumCompressedBytes) {
+    throw new Error(`${label} exceeds the compressed byte limit; maximum is ${maximumCompressedBytes}`);
+  }
+  if (expectedUncompressedBytes != null && expectedUncompressedBytes > maximumUncompressedBytes) {
+    throw uncompressedByteLimitError(label, maximumUncompressedBytes);
+  }
+
+  const allocationLimit = Math.min(maximumUncompressedBytes, expectedUncompressedBytes ?? Infinity);
+  const stream = new Response(Uint8Array.from(compressed)).body!.pipeThrough(new DecompressionStream("gzip"));
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let uncompressedBytes = 0;
+  try {
+    while (true) {
+      throwIfAborted(signal);
+      const { done, value } = await reader.read();
+      if (done) break;
+      uncompressedBytes += value.byteLength;
+      if (uncompressedBytes > allocationLimit) {
+        throw new Error(
+          expectedUncompressedBytes != null && allocationLimit === expectedUncompressedBytes
+            ? `${label} exceeds its declared uncompressed byte length of ${expectedUncompressedBytes}`
+            : `${label} exceeds the uncompressed byte limit; maximum is ${maximumUncompressedBytes}`,
+        );
+      }
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel(error).catch(() => undefined);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+  if (expectedUncompressedBytes != null && uncompressedBytes !== expectedUncompressedBytes) {
+    throw new Error(`${label} payload length mismatch`);
+  }
+  const output = new Uint8Array(uncompressedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  throwIfAborted(signal);
+  return output;
+}
+
+export async function gunzipTextBounded(
+  compressed: Uint8Array,
+  options: BoundedGunzipOptions,
+): Promise<string> {
+  return new TextDecoder().decode(await gunzipBytesBounded(compressed, options));
 }

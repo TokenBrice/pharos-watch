@@ -1,5 +1,5 @@
 /**
- * Allowlists for scripts/ci/check-unused-code.mjs.
+ * Allowlists for scripts/ci/check-unused-code.ts.
  *
  * Two sections, deliberately separate:
  *
@@ -26,7 +26,7 @@ export const SCANNER_BLIND_SPOT_EXPORTS = {
   "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts::SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST":
     "Generated artifact: the export name is emitted as text by generate-safety-score-v9-evaluation-build-manifest.ts, never imported.",
   "src/components/chart-primitives/data-table.tsx::ChartDataTable":
-    "scripts/ci/check-table-primitives.mjs matches the exported component name as a string, not through an import.",
+    "scripts/ci/check-table-primitives.ts matches the exported component name as a string, not through an import.",
 };
 
 /** Unreferenced modules kept on purpose; deletion is a separate pass. */

@@ -9,7 +9,7 @@ import { CopyButton } from "@/components/copy-button";
 import { PreLaunchTweetEmbed } from "@/components/pre-launch-tweet-embed";
 import { TermText } from "@/components/term-text";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { clampScore } from "@shared/lib/math";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
 import {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { parseChangedFileArgs } from "../lib/changed-files.mts";
 
 function runNpmScript(name, args, env = process.env) {
   const result = spawnSync("npm", ["run", name, "--", ...args], { env, stdio: "inherit" });

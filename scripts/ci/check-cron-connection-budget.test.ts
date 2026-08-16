@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CRON_CONNECTION_BUDGET_ENTRIES } from "../../shared/lib/cron-jobs";
+import { CRON_CONNECTION_BUDGET_ENTRIES } from "@shared/lib/cron-jobs";
 import { evaluateCronConnectionBudget } from "./check-cron-connection-budget";
 
 describe("check-cron-connection-budget", () => {

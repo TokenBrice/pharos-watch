@@ -51,9 +51,12 @@ export function buildStablecoinLiveMetadata(
       health = { kind: "nav" };
     } else if (peg && asset.price != null) {
       const reference = getPegReference(peg, rates, meta?.commodityOunces);
-      const bps = Math.abs(deriveDeviationBps(asset.price, reference));
-      const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
-      health = { kind: "peg", status: bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm" };
+      const deviationBps = deriveDeviationBps(asset.price, reference);
+      if (deviationBps != null) {
+        const bps = Math.abs(deviationBps);
+        const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
+        health = { kind: "peg", status: bps >= threshold ? "alert" : bps >= threshold / 2 ? "watch" : "calm" };
+      }
     }
     if (marketCapUsd > 0 || health) {
       map.set(asset.id, {

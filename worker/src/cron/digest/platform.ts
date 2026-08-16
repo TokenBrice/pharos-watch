@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type {
   DigestModelResponseParseOptions,
   DigestValidationIssue,
@@ -191,11 +192,11 @@ export async function requestDigestCopy(
     const elapsedMs = Date.now() - started;
     const budgetMs = ANTHROPIC_TIMEOUT_MS * CORRECTIVE_RETRY_BUDGET_FRACTION;
     if (elapsedMs >= budgetMs) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[${options.logPrefix}] Digest quality checks failed but skipping corrective retry: elapsed ${elapsedMs}ms >= ${budgetMs}ms (${CORRECTIVE_RETRY_BUDGET_FRACTION * 100}% of budget). Issues: ${formatDigestValidationIssues(hardIssues)}`,
       );
     } else {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[${options.logPrefix}] Digest quality checks failed, retrying once (elapsed ${elapsedMs}ms): ${formatDigestValidationIssues(hardIssues)}`,
       );
       prompt = [
@@ -225,18 +226,18 @@ export async function requestDigestCopy(
   }
 
   if (parsed.usedRawTextFallback) {
-    console.warn(`[${options.logPrefix}] Failed to parse JSON response, using raw text fallback`);
+    logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] Failed to parse JSON response, using raw text fallback`);
   }
   if (parsed.strippedDashCount > 0) {
-    console.log(`[${options.logPrefix}] Prompt compliance: ${parsed.strippedDashCount} forbidden dashes stripped`);
+    logWorkerEventArgs("handler", "info", `[${options.logPrefix}] Prompt compliance: ${parsed.strippedDashCount} forbidden dashes stripped`);
   }
   if (parsed.forbiddenPhraseHits.length > 0) {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[${options.logPrefix}] Prompt compliance: forbidden phrase(s) present: ${parsed.forbiddenPhraseHits.map((phrase) => phrase.trim()).join(", ")}`,
     );
   }
   if (qualityIssues.length > 0) {
-    console.warn(`[${options.logPrefix}] Digest quality checks still failing: ${formatDigestValidationIssues(qualityIssues)}`);
+    logWorkerEventArgs("handler", "warn", `[${options.logPrefix}] Digest quality checks still failing: ${formatDigestValidationIssues(qualityIssues)}`);
   }
 
   return {

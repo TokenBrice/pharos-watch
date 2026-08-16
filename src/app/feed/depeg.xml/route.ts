@@ -4,8 +4,9 @@ import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
 import {
   getPeakDeviationMagnitudeBps,
   selectStaticDepegEventPages,
-} from "@/app/depeg/[event]/config";
+} from "@/lib/depeg-event-config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { DepegEventSchema } from "@shared/types/market";
 import { z } from "zod";
 
@@ -76,7 +77,7 @@ function depegItems(events: readonly DepegFeedEvent[]): RssItem[] {
       const eventLink =
         staticPageSlugs.has(event.slug)
           ? `${SITE_URL}/depeg/${event.slug}/`
-          : `${SITE_URL}/stablecoin/${event.stablecoinId}/#depeg-history`;
+          : `${SITE_URL}${buildStablecoinUrl(event.stablecoinId, "#depeg-history")}`;
       return {
         title,
         link: eventLink,

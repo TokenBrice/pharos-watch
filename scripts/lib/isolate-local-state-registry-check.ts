@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import ts from "typescript";
-import { collectSourceFiles } from "./source-files.mjs";
-import { getScriptKind } from "./ts-ast.mjs";
-import type { IsolateLocalStateRegistryEntry } from "../../shared/lib/isolate-local-state-registry";
+import { collectSourceFiles } from "./source-files.mts";
+import { getScriptKind } from "./ts-ast.mts";
+import type { IsolateLocalStateRegistryEntry } from "@shared/lib/isolate-local-state-registry";
 
 export interface IsolateLocalStateCandidate {
   sourcePath: string;

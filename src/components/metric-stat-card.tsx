@@ -3,96 +3,98 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatValueStack } from "@/components/stat-tile";
 import { cn } from "@/lib/utils";
 
+type MetricStatCardVariant = "default" | "hero" | "compact";
+
+const CONTENT_CLASS_BY_VARIANT: Record<MetricStatCardVariant, string> = {
+  default: "",
+  hero: "pt-1",
+  compact: "",
+};
+
+const VALUE_CLASS_BY_VARIANT: Record<MetricStatCardVariant, string> = {
+  default: "",
+  hero: "pharos-numeric text-4xl font-semibold leading-none sm:text-5xl",
+  compact: "pharos-numeric text-2xl font-extrabold tracking-tight",
+};
+
+const SUBTEXT_CLASS_BY_VARIANT: Record<MetricStatCardVariant, string> = {
+  default: "",
+  hero: "mt-2 text-sm text-muted-foreground",
+  compact: "text-sm text-muted-foreground",
+};
+
 interface MetricStatCardProps {
   title: ReactNode;
-  /** Optional left-accent border class. When omitted, the card renders flat (homepage style). */
-  borderColorClass?: string;
-  /** When set, renders the left border via inline style (for non-Tailwind hex colors). */
-  borderColorHex?: string;
   value?: ReactNode;
   subtext?: ReactNode;
   headerRight?: ReactNode;
   className?: string;
-  contentClassName?: string;
-  titleClassName?: string;
   valueClassName?: string;
   subtextClassName?: string;
   children?: ReactNode;
-  onClick?: () => void;
-  actionLabel?: string;
+  variant?: MetricStatCardVariant;
 }
 
-const TITLE_CLASS = "pharos-kicker";
-
-export function MetricStatCard({
+function MetricStatCardContent({
   title,
-  borderColorClass,
-  borderColorHex,
   value,
   subtext,
   headerRight,
-  className,
-  contentClassName,
-  titleClassName,
   valueClassName,
   subtextClassName,
   children,
-  onClick,
-  actionLabel,
-}: MetricStatCardProps) {
-  const hasValue = value !== undefined && value !== null;
-  const hasSubtext = subtext !== undefined && subtext !== null;
-  const hasCustomContent = children !== undefined && children !== null;
-  const isInteractive = typeof onClick === "function";
-
+  variant,
+}: Omit<MetricStatCardProps, "className"> & { variant: MetricStatCardVariant }) {
   return (
-    <Card
-      className={cn(
-        "@container pharos-card-shell",
-        (borderColorClass || borderColorHex) && "border-l-[3px]",
-        borderColorClass,
-        isInteractive &&
-          "cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className,
-      )}
-      style={borderColorHex ? { borderLeftColor: borderColorHex } : undefined}
-      role={isInteractive ? "button" : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
-      aria-label={isInteractive ? actionLabel : undefined}
-      onClick={onClick}
-      onKeyDown={
-        isInteractive
-          ? (event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                onClick?.();
-              }
-            }
-          : undefined
-      }
-    >
+    <>
       <CardHeader className="pb-1">
         {headerRight ? (
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className={cn(TITLE_CLASS, titleClassName)}>{title}</CardTitle>
+            <CardTitle className="pharos-kicker">{title}</CardTitle>
             {headerRight}
           </div>
         ) : (
-          <CardTitle className={cn(TITLE_CLASS, titleClassName)}>{title}</CardTitle>
+          <CardTitle className="pharos-kicker">{title}</CardTitle>
         )}
       </CardHeader>
-      <CardContent className={contentClassName}>
-        {hasCustomContent ? (
-          children
-        ) : (
+      <CardContent className={CONTENT_CLASS_BY_VARIANT[variant]}>
+        {children !== undefined && children !== null ? children : (
           <StatValueStack
-            value={hasValue ? value : undefined}
-            subtext={hasSubtext ? subtext : undefined}
-            valueClassName={valueClassName}
-            subtextClassName={subtextClassName}
+            value={value}
+            subtext={subtext}
+            valueClassName={cn(VALUE_CLASS_BY_VARIANT[variant], valueClassName)}
+            subtextClassName={cn(SUBTEXT_CLASS_BY_VARIANT[variant], subtextClassName)}
           />
         )}
       </CardContent>
+    </>
+  );
+}
+
+export function MetricStatCard({ variant = "default", className, ...props }: MetricStatCardProps) {
+  return (
+    <Card className={cn("@container pharos-card-shell", className)}>
+      <MetricStatCardContent {...props} variant={variant} />
+    </Card>
+  );
+}
+
+export function InteractiveMetricStatCard({
+  actionLabel,
+  onClick,
+  variant = "hero",
+  className,
+  ...props
+}: MetricStatCardProps & { actionLabel: string; onClick: () => void }) {
+  return (
+    <Card className={cn("@container pharos-card-shell relative transition-colors hover:bg-muted/40", className)}>
+      <MetricStatCardContent {...props} variant={variant} />
+      <button
+        type="button"
+        className="absolute inset-0 cursor-pointer rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={actionLabel}
+        onClick={onClick}
+      />
     </Card>
   );
 }

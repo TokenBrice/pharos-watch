@@ -6,7 +6,7 @@ import type { Virtualizer } from "@tanstack/react-virtual";
 import { TableToolbar } from "./table-toolbar";
 import type { StablecoinData, FilterTag, PegSummaryCoin, DexLiquidityMap } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useSort } from "@/hooks/use-sort";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import type { ColumnId } from "@/hooks/use-preferences";

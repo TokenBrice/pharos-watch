@@ -8,16 +8,16 @@ import {
   filterDependencyGraphEdgesToLive,
   type DependencyGraphDiagnostics,
   type DependencyGraphEdge,
-} from "../../shared/lib/dependency-graph";
+} from "@shared/lib/dependency-graph";
 import {
   deriveEffectiveDependencySet,
   type DependencyDerivationBaseSource,
   type DependencyDerivationSource,
   type DependencyFallbackReason,
-} from "../../shared/lib/dependency-derivation";
-import { getL2BeatInfrastructureContext } from "../../shared/lib/chains/l2beat-audit";
-import { buildReserveSymbolMatcher } from "../../shared/lib/reserve-symbol-matchers";
-import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../../shared/lib/stablecoins/registry";
+} from "@shared/lib/dependency-derivation";
+import { getL2BeatInfrastructureContext } from "@shared/lib/chains/l2beat-audit";
+import { buildReserveSymbolMatcher } from "@shared/lib/reserve-symbol-matchers";
+import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import type {
   DependencyType,
   DependencyWeight,
@@ -25,7 +25,7 @@ import type {
   ReserveNonLinkReview,
   ReserveSlice,
   StablecoinMeta,
-} from "../../shared/types";
+} from "@shared/types";
 import {
   buildMarketCapMapFromStablecoins,
   formatUsd,

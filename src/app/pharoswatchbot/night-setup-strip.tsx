@@ -6,7 +6,7 @@ import {
   MINI_APP_SETUP_DEEP_LINK,
   RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
-} from "./telegram-route-constants";
+} from "@/lib/telegram-route-constants";
 
 const WATCH_ORDERS = [
   {

@@ -11,7 +11,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { YIELD_SECTION_CONTENT } from "../methodology-content";
+import { YIELD_SECTION_CONTENT } from "@/lib/methodology-content";
 import { YieldMethodologyRelatedLinks, YieldNavTokenMechanismLinks } from "./yield-mechanism-links";
 
 const YIELD_OVERVIEW_PARAGRAPH =

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import type { DdrAssessmentCheckpoint } from "@shared/types/depeg-resolver";
 import { batchExecute } from "./db";
@@ -309,7 +310,7 @@ export async function writeDepegResolverAssessments(
   if (diagnosticRows.length < snapshot.rows.length) {
     const droppedCount = snapshot.rows.length - diagnosticRows.length;
     const sampleRow = snapshot.rows.find((row) => !isDiagnosticAssessmentRow(row));
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[ddr-assessment-store] Dropped ${droppedCount}/${snapshot.rows.length} non-conforming assessment rows (failed isDiagnosticAssessmentRow); sample shape: ${formatNonConformingAssessmentSample(sampleRow)}`,
     );
   }

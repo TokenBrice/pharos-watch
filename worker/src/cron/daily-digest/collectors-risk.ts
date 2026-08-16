@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
@@ -65,7 +66,7 @@ export async function collectSafetyScores(
     const safetyContext = digestSafetyContextFromSource(source);
     if (source.kind !== "v9") {
       markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
-      console.error(
+      logWorkerEventArgs("handler", "error",
         `[daily-digest] Canonical Safety Score V9 unavailable (${source.reason}): ${source.detail}`,
       );
       return {
@@ -143,7 +144,7 @@ export async function collectSafetyScores(
     };
   } catch (error) {
     markCollectorDegraded(degradedReasons, "safety-canonical-snapshot");
-    console.error("[daily-digest] Failed to load canonical safety scores:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to load canonical safety scores:", error);
     return {
       safetyScores: undefined,
       safetyGrades: undefined,
@@ -290,7 +291,7 @@ export async function collectDewsStress(
     }
   } catch (error) {
     markCollectorDegraded(degradedReasons, "dews-stress-query");
-    console.error("[daily-digest] Failed to collect DEWS stress signals:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect DEWS stress signals:", error);
   }
   return undefined;
 }
@@ -414,7 +415,7 @@ export async function collectGradeTransitions(
     }
   } catch (error) {
     markCollectorDegraded(degradedReasons, "grade-transitions-query");
-    console.error("[daily-digest] Failed to collect grade transitions:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect grade transitions:", error);
   }
   return undefined;
 }
@@ -477,7 +478,7 @@ export async function collectYieldAnomalies(
     return candidates.length > 0 ? candidates : undefined;
   } catch (error) {
     markCollectorDegraded(degradedReasons, "yield-anomalies-query");
-    console.error("[daily-digest] Failed to collect yield anomalies:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect yield anomalies:", error);
     return undefined;
   }
 }

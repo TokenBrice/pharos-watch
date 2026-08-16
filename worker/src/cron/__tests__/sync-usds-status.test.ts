@@ -1,11 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { mockFetchRetry } from "../../test-helpers/cron";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
 
 import { syncUsdsStatus } from "../sync-usds-status";
+
+const DEFAULT_USDS_D1_TABLES: MockTableConfig[] = [
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "INSERT INTO cache", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []): MockD1Database {
+  return createMockD1([...tables, ...DEFAULT_USDS_D1_TABLES]);
+}
 
 function getCacheInsert(db: MockD1Database): { sql: string; binds: unknown[] } | undefined {
   return db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "usds-status");

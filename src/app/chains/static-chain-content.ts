@@ -8,7 +8,7 @@ import {
   GOVERNANCE_TAXONOMY_PAGES,
   INFRASTRUCTURE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export interface ChainDirectoryEntry {
   id: string;

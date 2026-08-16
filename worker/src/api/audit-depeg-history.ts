@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { jsonResponse, errorResponse } from "../lib/api-utils";
 import { runTrustedAdminMutation } from "../lib/route-wrappers";
 import { getDepegThresholdBps } from "../lib/constants";
@@ -5,6 +6,7 @@ import { buildInClause } from "../lib/db";
 import { DEPEG_EVENTS_DEPEGROW_COLUMNS, type DepegRow } from "../lib/depeg-helpers";
 import type { PsiDepegEventRow } from "../lib/psi-recompute";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { deriveDepegSignal } from "../lib/depeg-signals";
 import {
   runCoinGeckoAuditBatch,
@@ -249,8 +251,8 @@ function toDeletedEventSummary(event: DepegRow): { id: number; symbol: string; s
 }
 
 function addAffectedDays(affectedDays: Set<number>, startedAt: number, endedAt: number): void {
-  const startDay = Math.floor(startedAt / DAY_SECONDS) * DAY_SECONDS;
-  const endDay = Math.floor(endedAt / DAY_SECONDS) * DAY_SECONDS;
+  const startDay = bucketUnixSecondsToUtcDay(startedAt);
+  const endDay = bucketUnixSecondsToUtcDay(endedAt);
   for (let day = startDay; day <= endDay; day += DAY_SECONDS) {
     affectedDays.add(day);
   }
@@ -334,7 +336,7 @@ async function commitAuditMutation(
     // any downstream PSI repairs in the same commit boundary for admin runs.
     await db.batch(statements);
   } catch (error) {
-    console.error(`[audit] ${failureMessage}:`, error);
+    logWorkerEventArgs("api", "error", `[audit] ${failureMessage}:`, error);
     throw new AuditMutationCommitError(`${failureMessage}; no changes were committed.`);
   }
 
@@ -345,7 +347,7 @@ function planDirectDelete(db: D1Database, events: DepegRow[]): AuditMutationPlan
   const affectedDays = new Set<number>();
   const statements = events.map((event) => {
     addAffectedDays(affectedDays, event.started_at, event.ended_at ?? event.started_at);
-    console.log(`[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
+    logWorkerEventArgs("api", "info", `[audit] Direct delete: ${event.symbol} id=${event.id} peak=${event.peak_deviation_bps}bps`);
     return db.prepare("DELETE FROM depeg_events WHERE id = ?").bind(event.id);
   });
   return { statements, affectedDays };

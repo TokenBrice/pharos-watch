@@ -1,6 +1,7 @@
 import legacyLlamaRedirects from "@shared/data/stablecoins/legacy-llama-redirects.generated.json";
 import canonicalOrder from "@shared/data/stablecoins/canonical-order.json";
 import { isCanonicalStablecoinId } from "@shared/lib/stablecoin-id";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { setYieldWorkbenchFallbackParam } from "@shared/lib/yield-workbench-fallback";
 
 interface StablecoinRouteEnv {
@@ -45,7 +46,7 @@ export function resolveLegacyStablecoinRedirect(
   if (!coinId) return null;
   if (!isCanonicalStablecoinId(coinId)) return null;
 
-  const target = new URL(`/stablecoin/${coinId}/`, url);
+  const target = new URL(buildStablecoinUrl(coinId), url);
   target.search = url.search;
   return target.toString();
 }

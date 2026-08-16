@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
 import {
   resolveOrReject,
@@ -37,7 +38,7 @@ import {
   readMintBurnCronSnapshot,
   resolveFlowUpdatedAt,
   withMintBurnFlowFallback,
-} from "./mint-burn-flows-shared";
+} from "../lib/mint-burn-flows-service";
 import {
   appendSyncWarning,
   buildAggregateQueryParams,
@@ -118,7 +119,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       ? "safety-score-v9-publication"
       : "unavailable";
   const safetyScoreIdentity = classification.kind === "ok" ? classification.classification.safetyScoreIdentity : null;
-  if (classificationWarning) console.warn(`[mint-burn-flows] ${classificationWarning}`);
+  if (classificationWarning) logWorkerEventArgs("api", "warn", `[mint-burn-flows] ${classificationWarning}`);
 
   // Load stablecoins cache for mcap lookup
   const mcapById = new Map<string, number>();
@@ -126,7 +127,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   if (stablecoinsCacheResult.kind !== "ok") {
     const cached = await getCache(db, cacheKey);
     if (cached) {
-      console.error(
+      logWorkerEventArgs("api", "error",
         `[mint-burn-flows] stablecoins cache ${stablecoinsCacheResult.kind} (${stablecoinsCacheResult.reason}), serving fallback cache (${cacheKey})`,
       );
       return reconcileCachedAggregateSafetyResponse(db, cached);

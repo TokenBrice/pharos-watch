@@ -1,9 +1,10 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { normalizeBlacklistSyncStateKey } from "../../lib/db";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { backfillTronFromLedger } from "./amount-recovery";
-import type { BlacklistRunBudget } from "./run-budget";
+import { backfillTronFromLedger } from "../../lib/blacklist/amount-recovery";
+import type { BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { inferBlacklistCursorKind, type BlacklistConfigState } from "./state";
 
 type ProcessedRows = {
@@ -168,12 +169,12 @@ export async function applyTronLedgerMirrorPass(
     const ledgerResult = await backfillTronFromLedger(db, options);
     if (ledgerResult.updated > 0) {
       const suffix = phase === "post-sync" ? " after current-balance sync" : "";
-      console.log(`[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s)${suffix}`);
+      logWorkerEventArgs("handler", "info", `[sync-blacklist] Tron ledger mirror updated ${ledgerResult.updated} row(s)${suffix}`);
     }
     return ledgerResult.updated;
   } catch (err) {
     const prefix = phase === "post-sync" ? "Post-sync " : "";
-    console.warn(`[sync-blacklist] ${prefix}Tron ledger mirror failed:`, err);
+    logWorkerEventArgs("handler", "warn", `[sync-blacklist] ${prefix}Tron ledger mirror failed:`, err);
     return 0;
   }
 }

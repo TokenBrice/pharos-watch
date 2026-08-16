@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
-import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
 import { resetRequestAttributionStateForTests } from "../lib/request-source-attribution";
@@ -53,14 +54,23 @@ async function validKeyDbTables(
   ];
 }
 
-function makeEnv(overrides: Record<string, unknown> = {}) {
-  return {
-    DB: mockD1(),
-    CORS_ORIGIN: "https://pharos.watch",
+type TestEnvOverrides = Omit<NonNullable<Parameters<typeof createWorkerEnv>[0]>, "DB"> & {
+  DB?: MockD1Database;
+};
+
+type TestEnv = Omit<ReturnType<typeof createWorkerEnv>, "DB"> & {
+  DB: MockD1Database;
+};
+
+function makeEnv(overrides: TestEnvOverrides = {}): TestEnv {
+  const db = overrides.DB ?? mockD1();
+  const env = createWorkerEnv({
     SITE_API_SHARED_SECRET: "site-secret",
     API_KEY_HASH_PEPPER: VALID_KEY_PEPPER,
     ...overrides,
-  } as const;
+    DB: db,
+  });
+  return { ...env, DB: db };
 }
 
 describe("worker.fetch", () => {
@@ -82,7 +92,7 @@ describe("worker.fetch", () => {
     });
   });
 
-  async function fetchStablecoinsWithApiKey(method = "GET", database?: D1Database): Promise<Response> {
+  async function fetchStablecoinsWithApiKey(method = "GET", database?: MockD1Database): Promise<Response> {
     const { ctx, waits } = makeExecutionContext();
     const response = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {
@@ -145,7 +155,7 @@ describe("worker.fetch", () => {
       run: () =>
         worker.fetch(
           new Request("https://api.pharos.watch/api/og/stablecoin/%E0%A4%A"),
-          makeEnv() as never,
+          makeEnv(),
           makeExecutionContext().ctx,
         ),
       expected: {
@@ -160,7 +170,7 @@ describe("worker.fetch", () => {
       run: () =>
         worker.fetch(
           new Request("https://api.pharos.watch/api/stablecoins"),
-          makeEnv() as never,
+          makeEnv(),
           makeExecutionContext().ctx,
         ),
       expected: {
@@ -243,7 +253,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "OPTIONS" }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -268,7 +278,7 @@ describe("worker.fetch", () => {
           "Access-Control-Request-Headers": "content-type",
         },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -291,7 +301,7 @@ describe("worker.fetch", () => {
         method: "OPTIONS",
         headers: { Origin: "https://ops.pharos.watch" },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -309,7 +319,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -328,7 +338,7 @@ describe("worker.fetch", () => {
         method: "POST",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -350,7 +360,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -368,7 +378,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/status", {
         method: "GET",
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -397,7 +407,7 @@ describe("worker.fetch", () => {
           "Sec-Fetch-Site": "same-site",
         },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -421,7 +431,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -450,7 +460,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -466,7 +476,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://site-api.pharos.watch/api/stablecoins", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -505,7 +515,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -528,7 +538,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -545,7 +555,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": "invalid-key" },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -561,21 +571,21 @@ describe("worker.fetch", () => {
 
     const listRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/api-key-requests-admin", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
     const rejectRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/reject", {
         method: "POST",
       }),
-      env as never,
+      env,
       ctx,
     );
     const releaseRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/api-key-requests-admin/akr_abc12345/release-claim", {
         method: "POST",
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -593,7 +603,7 @@ describe("worker.fetch", () => {
 
     const badRequestIdRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/api-key-requests-admin/bad!/reject", { method: "POST" }),
-      env as never,
+      env,
       ctx,
     );
     const badApiKeyIdRes = await worker.fetch(
@@ -601,7 +611,7 @@ describe("worker.fetch", () => {
         method: "POST",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -621,7 +631,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -635,7 +645,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://ops-api.pharos.watch/api/status", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -648,12 +658,12 @@ describe("worker.fetch", () => {
 
     const historyRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/public-status-history", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
     const pulseRes = await worker.fetch(
       new Request("https://api.pharos.watch/api/telegram-pulse", { method: "GET" }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -693,7 +703,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
       }),
-      env as never,
+      env,
       ctx,
     );
     const pulseRes = await worker.fetch(
@@ -701,7 +711,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-Pharos-Site-Proxy-Secret": "site-secret" },
       }),
-      env as never,
+      env,
       ctx,
     );
 
@@ -734,7 +744,7 @@ describe("worker.fetch", () => {
         method: "GET",
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -827,7 +837,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -956,7 +966,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1020,7 +1030,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       firstCtx,
     );
     await Promise.all(firstWaits);
@@ -1033,7 +1043,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       secondCtx,
     );
     await Promise.all(secondWaits);
@@ -1122,7 +1132,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1183,7 +1193,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/stablecoins", {
         headers: { "X-API-Key": VALID_API_KEY },
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1198,7 +1208,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/peg-summary"),
-      env as never,
+      env,
       ctx,
     );
 
@@ -1214,7 +1224,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/health"),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1230,7 +1240,7 @@ describe("worker.fetch", () => {
 
     const res = await worker.fetch(
       new Request("https://api.pharos.watch/api/og/stablecoin/usdc-usd-coin"),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1247,7 +1257,7 @@ describe("worker.fetch", () => {
         method: "POST",
         body: "not-json",
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1265,7 +1275,7 @@ describe("worker.fetch", () => {
         method: "POST",
         body: "not-json",
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1283,7 +1293,7 @@ describe("worker.fetch", () => {
         method: "POST",
         body: "not-json",
       }),
-      env as never,
+      env,
       ctx,
     );
     await Promise.all(waits);
@@ -1300,7 +1310,7 @@ describe("worker.fetch", () => {
       new Request("https://api.pharos.watch/api/peg-summary", {
         headers: { "X-API-Key": "not-a-valid-key-format" },
       }),
-      env as never,
+      env,
       ctx,
     );
 

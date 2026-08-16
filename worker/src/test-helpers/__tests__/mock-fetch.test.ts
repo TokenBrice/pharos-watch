@@ -48,12 +48,46 @@ describe("mockFetch helper", () => {
     expect(Object.keys(history[0]!.headers)).toEqual(["a-alpha", "content-type", "x-zebra"]);
   });
 
+  it("can route repeated URLs by request body", async () => {
+    mockFetch([
+      { match: "api.example.test/graphql", matchBody: "PoolQuery", body: { data: "pools" } },
+      { match: "api.example.test/graphql", matchBody: "AmpQuery", body: { data: "amps" } },
+    ], { requireMatch: true });
+
+    const pools = await fetch("https://api.example.test/graphql", {
+      method: "POST",
+      body: JSON.stringify({ query: "PoolQuery" }),
+    });
+    const amps = await fetch("https://api.example.test/graphql", {
+      method: "POST",
+      body: JSON.stringify({ query: "AmpQuery" }),
+    });
+
+    expect(await pools.json()).toEqual({ data: "pools" });
+    expect(await amps.json()).toEqual({ data: "amps" });
+  });
+
   it("throws on unexpected URLs when requireMatch is enabled", async () => {
     mockFetch([], { requireMatch: true });
 
     await expect(fetch("https://api.example.test/missing")).rejects.toThrow(
       "mockFetch: no match for URL: https://api.example.test/missing",
     );
+  });
+
+  it("supports explicit not-found and passthrough unmatched URL policies", async () => {
+    const originalFetch = vi.fn(async () => new Response("upstream", { status: 202 }));
+    vi.stubGlobal("fetch", originalFetch);
+    mockFetch([], { unmatched: "passthrough" });
+
+    const passthrough = await fetch("https://api.example.test/passthrough");
+    expect(passthrough.status).toBe(202);
+    expect(await passthrough.text()).toBe("upstream");
+    expect(originalFetch).toHaveBeenCalledWith(expect.any(Request));
+
+    mockFetch([], { unmatched: "not-found" });
+    const missing = await fetch("https://api.example.test/missing");
+    expect(missing.status).toBe(404);
   });
 
   it("supports exact URL matching in strictUrl mode", async () => {
@@ -124,6 +158,19 @@ describe("mockFetch helper", () => {
 
     await expect(fetch("https://api.example.test/network")).rejects.toBe(networkFailure);
     expect(() => fetchSpy.assertAllOutcomesUsed()).not.toThrow();
+  });
+
+  it("replays a raw response for streaming and non-JSON contracts", async () => {
+    const raw = new Response("rate limited", { status: 429, headers: { "Retry-After": "5" } });
+    mockFetch([{
+      match: "api.example.test/raw",
+      outcomes: [{ response: raw }],
+    }]);
+
+    const response = await fetch("https://api.example.test/raw");
+    expect(response).toBe(raw);
+    expect(response.status).toBe(429);
+    expect(await response.text()).toBe("rate limited");
   });
 
   it("stalls until the request signal aborts", async () => {

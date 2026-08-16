@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { AlchemyLogEntry } from "../../lib/alchemy-logs";
 import { fetchAlchemyLogs, resolveBlockTimestamps } from "../../lib/alchemy-logs";
 import { budgetExhausted, createBudget, decodeUint256AtSlot } from "../../lib/evm-logs";
@@ -279,7 +280,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     apiErrors++;
     summary.errors++;
     summary.failedEventDefs.push(`timestamps:${missingTimestampBlocks.length}`);
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[sync-mint-burn] ${config.symbol} on ${config.chain.chainName}: ` +
       `${missingTimestampBlocks.length}/${timestampRequiredBlocks.length} candidate blocks missing timestamps`,
     );

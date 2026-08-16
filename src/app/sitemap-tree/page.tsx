@@ -16,6 +16,8 @@ import {
 } from "@/lib/nav-config";
 import { COMMAND_PALETTE_EXTRA_PAGES } from "@/components/command-palette-model";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
+import { PUBLIC_ROUTE_INVENTORY } from "@/lib/public-route-inventory";
 
 // WHY: human-readable sitemap-as-content companion to `/sitemap.xml`.
 // Single source of truth for IA: `NAV_GROUPS` + `COMMAND_PALETTE_EXTRA_PAGES`.
@@ -51,8 +53,12 @@ interface TierColumn {
 }
 
 function navToRow(item: NavItem): RouteRow {
+  const [pathname, hash] = item.href.split("#", 2);
+  const href = item.external || !pathname.startsWith("/") || pathname === "/"
+    ? item.href
+    : `${pathname.replace(/\/+$/, "")}/${hash ? `#${hash}` : ""}`;
   return {
-    href: item.href,
+    href,
     label: item.label,
     description: item.description,
     external: item.external,
@@ -187,7 +193,7 @@ const LEARN_GROUP = NAV_GROUPS.find((g) => g.key === "learn");
 const REFERENCE_GROUP = NAV_GROUPS.find((g) => g.key === "reference");
 
 const STABLECOIN_PROFILE_ROWS: readonly RouteRow[] = TRACKED_STABLECOINS.map((coin) => ({
-  href: `/stablecoin/${coin.id}/`,
+  href: buildStablecoinUrl(coin.id),
   label: `${coin.name} (${coin.symbol})`,
   description:
     coin.status === "pre-launch"
@@ -273,6 +279,24 @@ const TIERS: readonly TierColumn[] = [
 const COMPANION_ROWS: readonly RouteRow[] = COMPANION_NAV_ITEMS.map(navToRow);
 const BOTTOM_ROWS: readonly RouteRow[] = BOTTOM_NAV_ITEMS.map(navToRow);
 const UTILITY_ROWS: readonly RouteRow[] = UTILITY_NAV_ITEMS.map(navToRow);
+
+const HUMAN_SITEMAP_LISTED_PATHS = new Set([
+  ...TIERS.flatMap((tier) => [
+    ...tier.primary.map((row) => row.href),
+    ...(tier.sub?.flatMap((group) => group.rows.map((row) => row.href)) ?? []),
+  ]),
+  ...COMPANION_ROWS.map((row) => row.href),
+  ...BOTTOM_ROWS.map((row) => row.href),
+  ...UTILITY_ROWS.map((row) => row.href),
+]);
+
+const INDEXED_ARCHIVE_ROWS: readonly RouteRow[] = PUBLIC_ROUTE_INVENTORY
+  .filter((route) => !HUMAN_SITEMAP_LISTED_PATHS.has(route.href))
+  .map((route) => ({
+    href: route.href,
+    label: route.href === "/" ? "Home" : route.href.split("/").filter(Boolean).at(-1)!.replaceAll("-", " "),
+    description: `${route.kind.replaceAll("-", " ")} route`,
+  }));
 
 const ROW_LINK_CLASS =
   "pharos-focus-ring -mx-2 flex flex-col gap-0.5 rounded-md px-2 py-2 transition-colors hover:bg-muted/40";
@@ -390,6 +414,25 @@ export default function SitemapTreePage() {
           </ul>
         </section>
       )}
+
+      {INDEXED_ARCHIVE_ROWS.length > 0 ? (
+        <section aria-labelledby="sitemap-indexed-archive" className="mt-10 space-y-4 border-t border-border/60 pt-8">
+          <header className="space-y-1">
+            <p className="pharos-kicker">Indexed archive</p>
+            <h2 id="sitemap-indexed-archive" className="pharos-display text-xl font-bold tracking-tight text-foreground">
+              Every remaining public route
+            </h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Derived from the same public route inventory as the XML sitemap, including dated research and archive pages.
+            </p>
+          </header>
+          <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
+            {INDEXED_ARCHIVE_ROWS.map((row) => (
+              <li key={row.href}><RouteRowLink row={row} /></li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </FeaturePageShell>
   );
 }

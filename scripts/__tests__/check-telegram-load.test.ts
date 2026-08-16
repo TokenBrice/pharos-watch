@@ -10,6 +10,7 @@ import {
   findProductionDispatchBreaches,
   findRecapLoadBreaches,
   findTtlMarginBreaches,
+  loadProductionPendingClaimSql,
   runStatusPathBudgetChecks,
   simulateLoadScenarios,
   simulateProductionCalibratedDispatch,
@@ -235,12 +236,22 @@ describe("Telegram query-plan evaluation", () => {
   };
 
   it("keeps only the claim-based pending drain readiness guard", () => {
-    const pendingDrainIds = buildQueryPlanChecks()
-      .filter((check) => check.category === "pending-drain")
-      .map((check) => check.id);
+    const pendingDrainChecks = buildQueryPlanChecks()
+      .filter((check) => check.category === "pending-drain");
+    const pendingDrainIds = pendingDrainChecks.map((check) => check.id);
 
     expect(pendingDrainIds).toContain("pending-claim-ready");
     expect(pendingDrainIds).not.toContain("pending-drain-ready");
+
+    const claimCheck = pendingDrainChecks.find((check) => check.id === "pending-claim-ready");
+    expect(claimCheck?.sql).toBe(loadProductionPendingClaimSql());
+    expect(claimCheck?.sql).toContain("p.delivery_state = 'pending'");
+    expect(claimCheck?.sql).toContain("FROM telegram_alert_job_targets t");
+    expect(claimCheck?.sql).toContain("t.status IN ('sent', 'expired')");
+    expect(claimCheck?.requiredDetails).toEqual([
+      "idx_tpa_delivery_reconcile",
+      "idx_tajt_pending_status",
+    ]);
   });
 
   it("reviews bounded recap planning reads and guarded handoff query plans", () => {

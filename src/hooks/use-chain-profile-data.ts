@@ -6,6 +6,11 @@ import { useChainStablecoins, useChains } from "./use-chains";
 
 type SnapshotConsistency = "matched" | "mismatched" | "unknown";
 
+function chainTotalsMatch(summaryTotalUsd: number, detailTotalUsd: number): boolean {
+  const scale = Math.max(1, Math.abs(summaryTotalUsd), Math.abs(detailTotalUsd));
+  return Math.abs(summaryTotalUsd - detailTotalUsd) <= scale * Number.EPSILON * 8;
+}
+
 export function useChainProfileData(chainId: string) {
   const chainsQuery = useChains();
   const stablecoinsQuery = useChainStablecoins(chainId);
@@ -22,6 +27,8 @@ export function useChainProfileData(chainId: string) {
     stablecoinsQuery.meta != null || stablecoinsQuery.dataUpdatedAt > 0;
   const snapshotConsistency: SnapshotConsistency = hasAuthoritativeSnapshots
     ? chainsSnapshotAt === stablecoinsSnapshotAt
+      && chain != null
+      && chainTotalsMatch(chain.totalUsd, stablecoinsQuery.totalUsd)
       ? "matched"
       : "mismatched"
     : "unknown";

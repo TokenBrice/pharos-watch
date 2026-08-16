@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import { verifyAccessJwt } from "@shared/lib/cloudflare-access-jwt";
 import { errorResponse } from "./api-response";
@@ -186,7 +187,7 @@ function getTimingSafeCompareKey(): Promise<CryptoKey> {
  */
 export async function timingSafeCompare(a: string, b: string): Promise<boolean> {
   if (a.length === 0 || b.length === 0) {
-    console.error("[auth] timingSafeCompare called with empty string — possible misconfiguration");
+    logWorkerEventArgs("lib", "error", "[auth] timingSafeCompare called with empty string — possible misconfiguration");
     return false;
   }
   const encoder = new TextEncoder();

@@ -797,6 +797,33 @@ describe("identifyCoverageGaps", () => {
     );
   });
 
+  it("queues a deterministic override whose source runtime blocks", () => {
+    const stale = identifyStaleAutoLendingOverrides([
+      {
+        pool: "436e4129-667b-44d6-8322-ea59ce9b587c",
+        chain: "Ethereum",
+        project: "aave-v3",
+        symbol: "DLLR",
+        poolMeta: "wstUSR lending market",
+        tvlUsd: 2_000_000,
+        apy: 5,
+        apyBase: 5,
+        apyReward: null,
+        apyMean30d: 5,
+        stablecoin: true,
+        exposure: "single",
+        underlyingTokens: null,
+      },
+    ]);
+
+    expect(stale).toContainEqual(
+      expect.objectContaining({
+        stablecoinId: "dllr-sovryn",
+        reasons: ["blocked-source"],
+      }),
+    );
+  });
+
   it("applies the same supply-relative TVL floor as hourly auto-lending publication", () => {
     const stale = identifyStaleAutoLendingOverrides(
       [

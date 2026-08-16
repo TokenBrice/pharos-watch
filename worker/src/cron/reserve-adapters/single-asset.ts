@@ -1,5 +1,7 @@
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import {
   parseLiveReserveAdapterParams,
   type LiveReserveAdapterParamsByKey,
@@ -87,7 +89,7 @@ async function probeRedemptionCapacity(
   // wall-clock time can straddle a UTC midnight by a few seconds; the cap is
   // enforced on-chain regardless and capacity is additionally floored by the
   // payout balance, so a boundary run misreads the allowance, never the float.
-  const currentDay = Math.floor(Date.now() / 1000 / 86_400);
+  const currentDay = bucketUnixSecondsToUtcDay(Date.now() / 1_000) / DAY_SECONDS;
 
   try {
     const [identityResults, payoutBalanceRaw, dailyLimitRaw, dailyUsedRaw, feeBpsRaw] = await Promise.all([

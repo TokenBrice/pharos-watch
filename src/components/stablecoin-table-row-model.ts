@@ -4,6 +4,7 @@ import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { deviationColorClass } from "@/lib/severity-colors";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { formatNativePrice } from "@shared/lib/format";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
@@ -36,9 +37,8 @@ export function buildStablecoinTableRowModel({
   const pegScore = pegScores?.get(coin.id)?.pegScore ?? null;
   const liquidityScore = dexLiquidity?.[coin.id]?.liquidityScore ?? null;
   const pegRef = getPegReference(coin.pegType, pegRates, meta?.commodityOunces);
-  const absPegDeviationBps = coin.price != null && pegRef > 0
-    ? Math.abs(coin.price / pegRef - 1) * 10_000
-    : null;
+  const depegSignal = coin.price == null ? null : deriveDepegSignal(coin.price, pegRef);
+  const absPegDeviationBps = depegSignal?.absBps ?? null;
   const riskLevel = getStablecoinTableRowRiskLevel(coin, pegScores, reportCards);
   const isOverview = variant === "figmaOverview";
 
@@ -72,9 +72,9 @@ export function buildStablecoinTableRowModel({
     pegRef,
     absPegDeviationBps,
     priceCell: formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", pegRef),
-    pegDeviationColorClass: absPegDeviationBps === null
+    pegDeviationColorClass: depegSignal === null
       ? "text-muted-foreground"
-      : deviationColorClass(absPegDeviationBps),
+      : deviationColorClass(depegSignal.absRawBps ?? depegSignal.absBps),
   };
 }
 

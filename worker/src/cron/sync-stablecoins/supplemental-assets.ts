@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { CIRCUIT_SOURCE, USER_AGENT } from "../../lib/constants";
@@ -42,7 +43,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
 
   const cgAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CG_MCAP);
   if (!cgAllowed) {
-    console.warn("[sync-stablecoins] CoinGecko market-cap circuit open — skipping supplemental mcap fetch");
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] CoinGecko market-cap circuit open — skipping supplemental mcap fetch");
     return {};
   }
 
@@ -57,7 +58,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
   );
 
   if (!result?.response.ok) {
-    console.error(`[sync-stablecoins] CoinGecko batch mcap fetch failed: ${result?.response.status ?? "no response"}`);
+    logWorkerEventArgs("handler", "error", `[sync-stablecoins] CoinGecko batch mcap fetch failed: ${result?.response.status ?? "no response"}`);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
     return {};
   }
@@ -68,7 +69,7 @@ export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSig
     return data;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.error("[sync-stablecoins] CoinGecko batch mcap payload parse failed:", err);
+    logWorkerEventArgs("handler", "error", "[sync-stablecoins] CoinGecko batch mcap payload parse failed:", err);
     await recordOutcomeSafe(db, CIRCUIT_SOURCE.CG_MCAP, false);
     return {};
   }

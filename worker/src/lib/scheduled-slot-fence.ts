@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "./error-utils";
@@ -11,7 +12,6 @@ import {
 } from "./scheduled-slot-reconciliation";
 
 export {
-  cacheKeySegment,
   STALE_SLOT_ABANDONED_EVENT_TYPE,
   staleSlotEventCacheKey,
 } from "./scheduled-slot-reconciliation";
@@ -587,7 +587,7 @@ export async function runScheduledSlotWithFence(
     } catch (err) {
       const error = toErrorMessage(err);
       staleSlotPreSweep = { error };
-      console.warn(`[cron-slot] Failed to pre-sweep stale slots for ${slotKey}:`, err);
+      logWorkerEventArgs("lib", "warn", `[cron-slot] Failed to pre-sweep stale slots for ${slotKey}:`, err);
     }
   }
   const claimResult = await claimScheduledSlotExecution(
@@ -646,7 +646,7 @@ export async function runScheduledSlotWithFence(
       })
       .catch((err) => {
         heartbeatFailures++;
-        console.warn(`[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
+        logWorkerEventArgs("lib", "warn", `[cron-slot] Failed to heartbeat slot ${slotKey}@${opts.slotStartedAt}:`, err);
       })
       .finally(() => {
         heartbeatInFlight = null;
@@ -709,7 +709,7 @@ export async function runScheduledSlotWithFence(
         throw new ScheduledSlotOwnershipLostError(slotKey, opts.slotStartedAt);
       }
     } catch (finishErr) {
-      console.warn(`[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
+      logWorkerEventArgs("lib", "warn", `[cron-slot] Failed to finish slot ${slotKey}@${opts.slotStartedAt}:`, finishErr);
       throw new AggregateError(
         [err, finishErr],
         `Scheduled slot ${slotKey}@${opts.slotStartedAt} failed (${toErrorMessage(err)}) and its terminal state ` +

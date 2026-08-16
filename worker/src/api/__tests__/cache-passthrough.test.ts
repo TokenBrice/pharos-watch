@@ -64,7 +64,7 @@ afterEach(() => {
 
 describe("cache-passthrough: handleStablecoins", () => {
   it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1();
+    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
     const res = await handleStablecoins(emptyDb);
     expect(res.status).toBe(503);
   });
@@ -208,7 +208,7 @@ describe("cache-passthrough: handleStablecoins", () => {
 
 describe("cache-passthrough: handleStablecoinCharts", () => {
   it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1();
+    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
     const res = await handleStablecoinCharts(emptyDb);
     expect(res.status).toBe(503);
   });
@@ -290,7 +290,7 @@ describe("cache-passthrough: handleStablecoinCharts", () => {
 
 describe("cache-passthrough: handleUsdsStatus", () => {
   it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1();
+    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
     const res = await handleUsdsStatus(emptyDb);
     expect(res.status).toBe(503);
   });
@@ -339,7 +339,7 @@ describe("cache-passthrough: handleUsdsStatus", () => {
 
 describe("cache-passthrough: handleBluechipRatings", () => {
   it("returns 503 when cache is empty", async () => {
-    const emptyDb = mockD1();
+    const emptyDb = mockD1([{ match: "FROM cache WHERE key", rows: [] }]);
     const res = await handleBluechipRatings(emptyDb);
     expect(res.status).toBe(503);
   });

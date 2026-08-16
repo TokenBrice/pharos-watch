@@ -16,10 +16,10 @@ import { getGeneratedMarkdownAssetPath } from "@shared/lib/markdown-route-policy
 import { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "@shared/lib/methodology-versions/registry";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
-import digests from "../../data/digests.json";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
+import { DIGEST_DATES } from "@/lib/digest-registry";
 import { INDEXABLE_ROBOTS } from "@/lib/seo-robots";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 interface BuildPageMetadataInput {
   title: string;
@@ -53,10 +53,6 @@ const METHODOLOGY_MARKDOWN_PATHS: ReadonlySet<string> = new Set<string>([
   ...METHODOLOGY_CHANGELOG_SITEMAP_PATHS,
 ]);
 
-const DIGEST_MARKDOWN_DATES: ReadonlySet<string> = new Set(
-  (digests as readonly { date: string }[]).map((digest) => digest.date),
-);
-
 export function normalizeWhitespace(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
@@ -85,7 +81,7 @@ function hasGeneratedMarkdownAsset(pathname: string): boolean {
 
   const digestMatch = pathname.match(/^\/digest\/([^/]+)\/$/);
   if (digestMatch) {
-    return DIGEST_MARKDOWN_DATES.has(decodeURIComponent(digestMatch[1]));
+    return DIGEST_DATES.has(decodeURIComponent(digestMatch[1]));
   }
 
   const docMatch = pathname.match(/^\/docs\/([^/]+)\/$/);

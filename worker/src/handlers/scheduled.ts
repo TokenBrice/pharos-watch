@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, type ScheduledRunnerKey } from "@shared/lib/scheduled-runner-registry";
 import type { Env } from "../lib/env";
@@ -137,7 +138,7 @@ export async function handleScheduledEvent(
   const runner = slotPlan ? SLOT_RUNNER_BY_KEY[slotPlan.runnerKey] : undefined;
   if (!runner || !slotPlan) {
     const error = buildUnknownScheduleError(event.cron);
-    console.error(error.message);
+    logWorkerEventArgs("handler", "error", error.message);
     throw error;
   }
 
@@ -188,11 +189,11 @@ export async function handleScheduledEvent(
   }
 
   if (slotResult.status === "skipped_duplicate") {
-    console.info(`[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
+    logWorkerEventArgs("handler", "info", `[cron-slot] Skipping duplicate slot ${scheduleKey}@${slotStartedAt}`);
     return;
   }
   if (slotResult.status === "skipped_running") {
-    console.info(`[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
+    logWorkerEventArgs("handler", "info", `[cron-slot] Slot already running ${scheduleKey}@${slotStartedAt}`);
     return;
   }
   if (slotResult.resultStatus === "error") {

@@ -1,23 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { StablecoinMeta } from "../../../types";
+import { makeStablecoinMeta as makeCoin } from "../../../test-utils/stablecoin";
 import { resolveMechanismArchetype } from "../resolve-mechanism-archetype";
-
-function makeCoin(overrides: Partial<StablecoinMeta>): StablecoinMeta {
-  return {
-    id: "test-coin",
-    name: "Test Coin",
-    symbol: "TEST",
-    flags: {
-      backing: "rwa-backed",
-      pegCurrency: "USD",
-      governance: "centralized",
-      yieldBearing: false,
-      rwa: false,
-      navToken: false,
-    },
-    ...overrides,
-  } as StablecoinMeta;
-}
 
 function makeRegistry(coins: StablecoinMeta[]): ReadonlyMap<string, StablecoinMeta> {
   return new Map(coins.map((c) => [c.id, c]));

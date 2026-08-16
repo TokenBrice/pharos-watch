@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import {
   isZephyrScannerSupplyId,
@@ -219,19 +220,19 @@ export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<Ze
   );
 
   if (!result?.response.ok) {
-    console.warn(`[zephyr-scanner] Live stats fetch failed (${result?.response.status ?? "no response"})`);
+    logWorkerEventArgs("handler", "warn", `[zephyr-scanner] Live stats fetch failed (${result?.response.status ?? "no response"})`);
     return null;
   }
 
   try {
     const payload = JSON.parse(result.body);
     const stats = parseZephyrProtocolStats(payload);
-    if (!stats) console.warn("[zephyr-scanner] Live stats payload missing positive ZSD circulation");
-    if (stats && !stats.zys) console.warn("[zephyr-scanner] Live stats payload missing positive ZYS circulation or price");
+    if (!stats) logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload missing positive ZSD circulation");
+    if (stats && !stats.zys) logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload missing positive ZYS circulation or price");
     return stats;
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[zephyr-scanner] Live stats payload parse failed:", err);
+    logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload parse failed:", err);
     return null;
   }
 }

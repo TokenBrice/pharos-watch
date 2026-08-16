@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
@@ -317,7 +318,7 @@ export async function queryBlacklistGapMetrics(
 
   const metrics = await queryLiveBlacklistGapMetrics(db, now, options);
   await writeCachedMetrics(db, now, options, metrics).catch((error) => {
-    console.warn("[blacklist-gaps] Failed to write cached metrics:", error);
+    logWorkerEventArgs("lib", "warn", "[blacklist-gaps] Failed to write cached metrics:", error);
   });
   return metrics;
 }

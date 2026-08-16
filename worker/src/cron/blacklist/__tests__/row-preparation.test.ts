@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { makeBlacklistRow } from "../../../test-helpers/__shared/fixtures";
-import type { BlacklistRow } from "../shared";
+import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import {
   buildCurrentBalanceSnapshotRows,
   buildLatestBlacklistRows,
-} from "../row-preparation";
+} from "../../../lib/blacklist/row-preparation";
 
 describe("blacklist row preparation", () => {
   it("preserves same-batch blacklist snapshots before a later release", () => {

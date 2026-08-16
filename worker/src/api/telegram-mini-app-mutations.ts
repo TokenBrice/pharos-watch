@@ -36,7 +36,7 @@ import {
   type TelegramPresetId,
 } from "../lib/telegram-presets";
 import { PAUSE_SENTINEL_TS, SNOOZE_SECONDS } from "../lib/telegram-constants";
-import { isValidIanaTimezone } from "../cron/telegram-quiet-hours";
+import { isValidIanaTimezone } from "../lib/telegram-quiet-hours";
 import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "./telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "./telegram-webhook-settings-mutations";
 import {
@@ -63,7 +63,7 @@ import {
   type WatchlistImportPreview,
 } from "./telegram-store/watchlist-import";
 import { loadSubscriberByChat } from "./telegram-store/subscribers";
-import { setTelegramRecapPreference } from "../cron/telegram-recap-store";
+import { setTelegramRecapPreference } from "../lib/telegram-recap-store";
 
 export type TelegramMiniAppMutationErrorCode =
   | "not-private"

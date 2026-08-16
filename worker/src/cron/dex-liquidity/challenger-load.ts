@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { loadLegacyDexPoolChallengers } from "./challenger-legacy";
 import { isMissingTableError } from "../../lib/db";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
@@ -128,7 +129,7 @@ export async function loadPublishedDexPoolChallengers(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
+      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading challenger snapshots:", msg);
     }
     return legacyQueryFallbackResult("snapshot-query-failed");
   }
@@ -166,7 +167,7 @@ export async function loadPublishedDexPoolChallengers(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[challenger-persistence] Unexpected error loading challenger rows:", msg);
+      logWorkerEventArgs("handler", "error", "[challenger-persistence] Unexpected error loading challenger rows:", msg);
     }
     return legacyQueryFallbackResult("challenger-query-failed");
   }

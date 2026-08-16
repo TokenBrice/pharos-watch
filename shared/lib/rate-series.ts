@@ -1,4 +1,4 @@
-import { DAY_SECONDS } from "./time-constants";
+export { bucketUnixSecondsToUtcDay as bucketTimestampToUtcDay } from "./time-buckets";
 
 export interface TimestampedRatePoint {
   timestamp: number;
@@ -50,8 +50,4 @@ export function mergeDateRates(
     ...(target[date] ?? {}),
     ...rates,
   };
-}
-
-export function bucketTimestampToUtcDay(timestamp: number): number {
-  return Math.floor(timestamp / DAY_SECONDS) * DAY_SECONDS;
 }

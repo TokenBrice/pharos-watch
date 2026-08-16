@@ -36,8 +36,8 @@ import {
   TELEGRAM_BOT_GROUP_COMMANDS,
   TELEGRAM_BOT_NAME,
   TELEGRAM_BOT_SHORT_DESCRIPTION,
-} from "../../shared/lib/telegram-bot-registration";
-import { API_ORIGIN } from "../../shared/lib/runtime-origins";
+} from "@shared/lib/telegram-bot-registration";
+import { API_ORIGIN } from "@shared/lib/runtime-origins";
 import {
   assertCliUsage,
   parseCliInteger,

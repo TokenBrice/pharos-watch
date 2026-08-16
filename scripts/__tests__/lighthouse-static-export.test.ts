@@ -4,7 +4,7 @@ import {
   buildLighthouseArgs,
   createLighthouseChildEnv,
   parseArgs,
-} from "../maintenance/lighthouse-static-export.mjs";
+} from "../maintenance/lighthouse-static-export";
 
 function withEnv(key: string, value: string | undefined, fn: () => void) {
   const previous = process.env[key];

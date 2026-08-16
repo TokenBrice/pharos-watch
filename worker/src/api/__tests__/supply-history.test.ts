@@ -1,7 +1,21 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeSupplyRow } from "../../test-helpers/__shared/fixtures";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSupplyHistory } from "../supply-history";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  const hasCacheFixture = tables.some((table) => table.match.includes("FROM cache"));
+  return baseMockD1(
+    hasCacheFixture
+      ? tables
+      : [...tables, { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null }],
+    options,
+  );
+}
 
 describe("handleSupplyHistory", () => {
   const row = makeSupplyRow();
@@ -27,22 +41,6 @@ describe("handleSupplyHistory", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual([]);
-  });
-
-  it("returns 400 when stablecoin param is missing", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
-    expect(db.getHistory()).toEqual([]);
-  });
-
-  it("returns 404 for unknown stablecoin ID", async () => {
-    const db = mockD1([], { requireMatch: true });
-    const res = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=<script>"));
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
-    expect(db.getHistory()).toEqual([]);
   });
 
   it("rejects out-of-range day windows instead of clamping them", async () => {
@@ -168,4 +166,10 @@ describe("handleSupplyHistory", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM cron_runs"))).toBe(false);
     db.assertAllMatchesUsed();
   });
+});
+
+registerStablecoinParameterContract({
+  name: "supply history",
+  path: "/api/supply-history",
+  invoke: handleSupplyHistory,
 });

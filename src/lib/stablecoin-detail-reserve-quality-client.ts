@@ -8,6 +8,7 @@ import type {
   StablecoinLink,
   StablecoinMeta,
 } from "@shared/types";
+import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 
 /**
  * Client-safe projection of the curated reserve slices' quality attributes
@@ -122,14 +123,6 @@ const HORIZON_TONES: Record<ReserveLiquidityHorizon, SeverityTone> = {
   "seven-days": "watch",
   "over-seven-days": "alert",
   unknown: "neutral",
-};
-
-const RISK_LABELS: Record<ReserveRisk, string> = {
-  "very-low": "Very low",
-  low: "Low",
-  medium: "Medium",
-  high: "High",
-  "very-high": "Very high",
 };
 
 const RISK_FACTOR_LABELS: Record<ReserveRiskFactor, string> = {
@@ -352,7 +345,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
       pct: round1(slice.pct),
       assetClassLabel: slice.assetClass ? ASSET_CLASS_LABELS[slice.assetClass] : null,
       horizonLabel: slice.liquidityHorizon ? HORIZON_LABELS[slice.liquidityHorizon] : null,
-      riskLabel: RISK_LABELS[slice.risk] ?? slice.risk,
+      riskLabel: RESERVE_RISK_PRESENTATION[slice.risk].shortLabel,
       obligor: slice.issuerOrObligor ?? null,
       riskFactorLabels: (slice.riskFactors ?? []).map((factor) => RISK_FACTOR_LABELS[factor] ?? factor),
     })),

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import * as React from "react";
 import satori, { init as initSatori } from "satori/standalone";
 import yogaWasm from "satori/yoga.wasm";
@@ -33,6 +34,11 @@ import { isSafetyScoreV9SnapshotFresh } from "../lib/safety-score-v9-consumer-fr
 
 // Intentional per-isolate cache — WASM init runs once per Worker isolate; module-scope `let` is the documented exception. See docs/worker-infrastructure.md.
 let wasmInitialization: Promise<void> | null = null;
+
+/** @internal Reset isolate-local WASM initialization so test files can share a process. */
+export function resetOgWasmInitializationForTests(): void {
+  wasmInitialization = null;
+}
 
 async function ensureWasm(): Promise<void> {
   if (!wasmInitialization) {
@@ -818,7 +824,7 @@ export async function handleOg(db: D1Database, path: string, method = "GET"): Pr
   try {
     return await route.render(db, capture);
   } catch (err) {
-    console.error("[og] Render error:", err);
+    logWorkerEventArgs("api", "error", "[og] Render error:", err);
     // Render-internal/transient failure (satori throw, resvg WASM crash, missing
     // font, D1 read failure). Permanent errors (unknown coin, malformed input)
     // return their own 4xx earlier and never reach this catch. Use 503 + no-store

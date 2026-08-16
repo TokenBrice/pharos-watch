@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isPoolChallengeEligibleConsensus } from "@shared/lib/pricing-source-policy";
@@ -80,7 +81,7 @@ export async function applyPrimaryPostConsensusHardening(params: {
     challengeValidationContexts,
   );
   if (poolChallengeDowngrades > 0) {
-    console.log(`[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
+    logWorkerEventArgs("handler", "info", `[primary-prices] Pool challenge hardened ${poolChallengeDowngrades} soft-only result(s)`);
   }
 }
 

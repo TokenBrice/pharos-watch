@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import {
   isValidFxRate,
@@ -45,11 +46,11 @@ export async function fetchRealtimeFxRates(
       { timeoutMs: OPEN_EXCHANGE_RATES_REQUEST_TIMEOUT_MS },
     );
     if (!fetchResult) {
-      console.warn("[fx-realtime] Open Exchange Rates returned no response");
+      logWorkerEventArgs("lib", "warn", "[fx-realtime] Open Exchange Rates returned no response");
       return { rates: result, completed: false };
     }
     if (!fetchResult.response.ok) {
-      console.warn(`[fx-realtime] Open Exchange Rates returned ${fetchResult.response.status}`);
+      logWorkerEventArgs("lib", "warn", `[fx-realtime] Open Exchange Rates returned ${fetchResult.response.status}`);
       return { rates: result, completed: true };
     }
     const data = OpenExchangeRatesSchema.parse(fetchResult.body);
@@ -66,7 +67,7 @@ export async function fetchRealtimeFxRates(
     return { rates: result, completed: true };
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[fx-realtime] Fetch failed:", err);
+    logWorkerEventArgs("lib", "warn", "[fx-realtime] Fetch failed:", err);
     return { rates: result, completed: false };
   }
 }

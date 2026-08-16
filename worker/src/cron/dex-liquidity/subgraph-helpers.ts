@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { USER_AGENT } from "../../lib/constants";
 import { throwIfAborted } from "../../lib/abort";
@@ -56,7 +57,7 @@ export async function fetchSubgraphEntities<TEntity>(
       });
       if (!result?.response.ok) {
         if (warnOnFetchFailure) {
-          console.warn(`[dex-liquidity] ${config.sourceLabel} failed for ${config.chain}: ${result?.response.status}`);
+          logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${config.sourceLabel} failed for ${config.chain}: ${result?.response.status}`);
         }
         break;
       }
@@ -66,7 +67,7 @@ export async function fetchSubgraphEntities<TEntity>(
       shouldLogIndex = true;
 
       if (json.errors?.length && warnOnGraphQlErrors) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[dex-liquidity] ${config.sourceLabel} GraphQL errors for ${config.chain}:`,
           json.errors.map((e) => e.message).join("; "),
         );
@@ -93,7 +94,7 @@ export async function fetchSubgraphEntities<TEntity>(
     }
   } catch (err) {
     if (config.signal?.aborted) throw err;
-    console.warn(`[dex-liquidity] ${config.sourceLabel} error for ${config.chain}:`, err);
+    logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${config.sourceLabel} error for ${config.chain}:`, err);
     shouldLogIndex = false;
   }
 

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, relative } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mjs";
+import { collectSourceFiles, resolveSourceRoot } from "../lib/source-files.mts";
 
 let tempDirs: string[] = [];
 

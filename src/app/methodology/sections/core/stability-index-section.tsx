@@ -11,7 +11,7 @@ import {
   MethodologySectionShell,
   WorkedExample,
 } from "../../methodology-shared";
-import { STABILITY_INDEX_SECTION_CONTENT } from "../methodology-content";
+import { STABILITY_INDEX_SECTION_CONTENT } from "@/lib/methodology-content";
 
 const STABILITY_COMPONENT_COLUMNS = [
   { id: "component", header: "Component", cellClassName: "text-foreground" },

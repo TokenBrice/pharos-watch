@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PerAlertTypeDelivery } from "@shared/types/status";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   buildFreshTargetJobIdMap,
   finalizeTelegramAlertJobManifests,
@@ -11,6 +11,18 @@ import {
   recordTelegramAlertTargetStatuses,
 } from "../telegram-alert-target-status";
 import type { RoutedSubscriberAlert } from "../dispatch-telegram-routing";
+
+const DEFAULT_TELEGRAM_ALERT_JOB_D1_TABLES: MockTableConfig[] = [
+  { match: "INSERT INTO telegram_alert_jobs", rows: [] },
+  { match: "INSERT INTO telegram_alert_job_targets", rows: [] },
+  { match: "INSERT OR IGNORE INTO telegram_alert_job_target_items", rows: [] },
+  { match: "SELECT COUNT(*) AS count FROM telegram_alert_job_targets", rows: [], first: null },
+  { match: "UPDATE telegram_alert_jobs", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_ALERT_JOB_D1_TABLES]);
+}
 
 function subscriber(partial: Partial<RoutedSubscriberAlert> = {}): RoutedSubscriberAlert {
   const canonicalHtml = partial.canonicalHtml ?? "<b>USDC depeg</b>";

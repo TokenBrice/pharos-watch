@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleSafetyScoreHistory } from "../safety-score-history";
 
 function makeHistoryRow(
@@ -23,21 +24,6 @@ function makeHistoryRow(
 }
 
 describe("handleSafetyScoreHistory", () => {
-  it("returns 400 when stablecoin param is missing", async () => {
-    const res = await handleSafetyScoreHistory(mockD1([]), new URL("https://x/api/safety-score-history"));
-    expect(res.status).toBe(400);
-    expect(await res.json()).toEqual({ error: "Missing ?stablecoin= parameter" });
-  });
-
-  it("returns 404 for unknown stablecoin ID", async () => {
-    const res = await handleSafetyScoreHistory(
-      mockD1([]),
-      new URL("https://x/api/safety-score-history?stablecoin=DROP TABLE"),
-    );
-    expect(res.status).toBe(404);
-    expect(await res.json()).toEqual({ error: "Unknown stablecoin" });
-  });
-
   it("rejects out-of-range day windows instead of clamping them", async () => {
     const res = await handleSafetyScoreHistory(
       mockD1([]),
@@ -118,4 +104,10 @@ describe("handleSafetyScoreHistory", () => {
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
   });
+});
+
+registerStablecoinParameterContract({
+  name: "safety score history",
+  path: "/api/safety-score-history",
+  invoke: handleSafetyScoreHistory,
 });

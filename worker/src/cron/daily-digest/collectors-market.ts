@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
@@ -166,7 +167,7 @@ export async function collectActiveDepegs(
 
     return collectorOk({ activeDepegCount: withImpact.length, topDepegs, lifecycleFlags });
   } catch (error) {
-    console.error("[daily-digest] Failed to query active depegs:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query active depegs:", error);
     return collectorDegraded({ activeDepegCount: 0, topDepegs: [], lifecycleFlags: [] }, "active-depegs-query");
   }
 }
@@ -203,7 +204,7 @@ export async function collectBlacklistActivity(
       }
     }
   } catch (error) {
-    console.error("[daily-digest] Failed to query blacklist events:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query blacklist events:", error);
     return collectorDegraded(undefined, "blacklist-activity-query");
   }
   return collectorOk(undefined);
@@ -274,7 +275,7 @@ export async function collectSupplyVelocity(
       }
     }
   } catch (error) {
-    console.error("[daily-digest] Failed to compute supply velocity:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to compute supply velocity:", error);
     return collectorDegraded(undefined, "supply-velocity-query");
   }
   return collectorOk(undefined);
@@ -327,7 +328,7 @@ export async function collectResolvedDepegs(
       return candidates;
     }
   } catch (error) {
-    console.error("[daily-digest] Failed to query resolved depegs:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query resolved depegs:", error);
     markCollectorDegraded(degradedReasons, "resolved-depegs-query");
   }
   return undefined;
@@ -396,7 +397,7 @@ export async function collectMintBurnFlows(
       topChains,
     };
   } catch (error) {
-    console.error("[daily-digest] Failed to collect mint-burn flows:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect mint-burn flows:", error);
     markCollectorDegraded(degradedReasons, "mint-burn-gauge-read");
   }
   return undefined;
@@ -454,7 +455,7 @@ export async function collectLiquidityShifts(
     shifts.sort((a, b) => Math.abs(b.scoreDelta) * b.mcapUsd - Math.abs(a.scoreDelta) * a.mcapUsd);
     return shifts.length > 0 ? shifts.slice(0, 5) : undefined;
   } catch (error) {
-    console.error("[daily-digest] Failed to collect liquidity shifts:", error);
+    logWorkerEventArgs("handler", "error", "[daily-digest] Failed to collect liquidity shifts:", error);
     markCollectorDegraded(degradedReasons, "liquidity-shifts-query");
   }
   return undefined;

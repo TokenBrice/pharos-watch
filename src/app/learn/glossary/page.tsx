@@ -10,7 +10,7 @@ import {
   GLOSSARY_LEAD,
   groupGlossaryByLetter,
   type GlossaryEntry,
-} from "./content";
+} from "@/lib/glossary-content";
 
 // Full A-Z jump rail; letters without entries render as disabled placeholders.
 const JUMP_RAIL_ALPHABET = Array.from({ length: 26 }, (_, i) =>

@@ -1,5 +1,5 @@
 import { refreshAggregateMintBurnFlowCache } from "../../api/mint-burn-flows";
-import { MINT_BURN_AGGREGATE_PUBLISH_WINDOWS } from "../../api/mint-burn-flows-shared";
+import { MINT_BURN_AGGREGATE_PUBLISH_WINDOWS } from "../../lib/mint-burn-flows-service";
 import { toErrorMessage } from "../../lib/error-utils";
 import { runMintBurnSlot, type MintBurnSidecarOutcome } from "./mint-burn-slot";
 import type { ScheduledRuntimeContext } from "./context";

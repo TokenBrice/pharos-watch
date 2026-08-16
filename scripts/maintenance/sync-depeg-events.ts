@@ -15,7 +15,7 @@ import type { DepegEvent } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/app/depeg/[event]/config";
+import { hasDedicatedDepegEventPage, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";

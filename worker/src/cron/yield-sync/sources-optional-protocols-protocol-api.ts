@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { type ChainRpcConfig, getChainRpc } from "../../lib/chain-registry";
 import { finiteDecimalNumberFromBigInt } from "../../lib/bigint";
@@ -147,7 +148,7 @@ export async function fetchBimaSusbdSource(signal?: AbortSignal): Promise<Resolv
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));
     }
-    console.warn("[yield] BIMA sUSBD source failed:", error);
+    logWorkerEventArgs("handler", "warn", "[yield] BIMA sUSBD source failed:", error);
     return null;
   }
 }
@@ -238,7 +239,7 @@ export async function fetchHashnoteUsycSource(signal?: AbortSignal): Promise<Res
     };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    console.warn("[yield] Hashnote USYC source failed:", error);
+    logWorkerEventArgs("handler", "warn", "[yield] Hashnote USYC source failed:", error);
     return null;
   }
 }
@@ -285,7 +286,7 @@ export async function fetchOndoUsdyOracleSource(
     };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    console.warn("[yield] Ondo USDY oracle source failed:", error);
+    logWorkerEventArgs("handler", "warn", "[yield] Ondo USDY oracle source failed:", error);
     return null;
   }
 }
@@ -406,7 +407,7 @@ export async function fetchZephyrZysSource(signal?: AbortSignal): Promise<Resolv
     };
   } catch (error) {
     if (signal?.aborted) throw error instanceof Error ? error : new Error(String(error));
-    console.warn("[yield] Zephyr ZYS source failed:", error);
+    logWorkerEventArgs("handler", "warn", "[yield] Zephyr ZYS source failed:", error);
     return null;
   }
 }

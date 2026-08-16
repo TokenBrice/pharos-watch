@@ -18,57 +18,8 @@
  * outbound fetches), so it adds zero connection budget to the trigger.
  */
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
-import {
-  projectDepegOpened,
-  projectDepegPeakWorsened,
-  projectDepegResolved,
-} from "../lib/tape-projectors/depeg";
-import {
-  projectFreezeBlocked,
-  projectFreezeDestroyed,
-  projectFreezeUnblocked,
-} from "../lib/tape-projectors/freeze";
-import {
-  projectScoreDowngraded,
-  projectScoreUpgraded,
-} from "../lib/tape-projectors/score";
-import { projectMethodologyBumps } from "../lib/tape-projectors/methodology";
-import { projectCemeteryEntries } from "../lib/tape-projectors/cemetery";
-import { projectLifecycleFrozen } from "../lib/tape-projectors/lifecycle";
-import { projectPsiBandShifts } from "../lib/tape-projectors/psi";
-import { projectMintBurnLargeFlows } from "../lib/tape-projectors/mint-burn";
-import { projectDewsBandTransitions } from "../lib/tape-projectors/dews";
-import { projectYieldWarningEmitted, projectYieldPysDropped } from "../lib/tape-projectors/yield";
-import type { Projector } from "../lib/tape-projectors/types";
+import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import { throwIfAborted } from "../lib/abort";
-
-export interface ProjectTapeJob {
-  name: string;
-  run: Projector;
-}
-
-/**
- * Canonical ordered list of v1 projector jobs. Exposed so the backfill admin
- * endpoint can dispatch the same code path with operator-supplied overrides.
- */
-export const TAPE_PROJECTOR_JOBS: readonly ProjectTapeJob[] = [
-  { name: "depeg.opened",            run: projectDepegOpened },
-  { name: "depeg.resolved",          run: projectDepegResolved },
-  { name: "depeg.peak_worsened",     run: projectDepegPeakWorsened },
-  { name: "freeze.blocked",          run: projectFreezeBlocked },
-  { name: "freeze.unblocked",        run: projectFreezeUnblocked },
-  { name: "freeze.destroyed",        run: projectFreezeDestroyed },
-  { name: "score.upgraded",          run: projectScoreUpgraded },
-  { name: "score.downgraded",        run: projectScoreDowngraded },
-  { name: "psi.band_changed",        run: projectPsiBandShifts },
-  { name: "dews.band_transitions",   run: projectDewsBandTransitions },
-  { name: "mint_burn.large_flow",    run: projectMintBurnLargeFlows },
-  { name: "yield.warning_emitted",   run: projectYieldWarningEmitted },
-  { name: "yield.pys_dropped",       run: projectYieldPysDropped },
-  { name: "methodology.bumped",      run: projectMethodologyBumps },
-  { name: "cemetery.entry.added",    run: projectCemeteryEntries },
-  { name: "lifecycle.tracked.frozen", run: projectLifecycleFrozen },
-];
 
 export async function projectTape(
   db: D1Database,

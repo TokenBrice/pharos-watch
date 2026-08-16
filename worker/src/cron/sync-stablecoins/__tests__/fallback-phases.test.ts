@@ -107,6 +107,27 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
+  it("uses the canonical peggedREAL type for BRL fallback assets", () => {
+    const assets = buildFallbackAssetsFromCoinGecko({
+      syncStartSec: NOW_SEC,
+      cgData: {
+        "fixture-brl": { usd: 0.18, usd_market_cap: 5_000_000 },
+      },
+      stablecoins: [{
+        id: "fixture-brl",
+        name: "Fixture BRL",
+        symbol: "FBRL",
+        geckoId: "fixture-brl",
+        flags: { pegCurrency: "BRL", backing: "fiat-backed" },
+      }],
+    });
+
+    expect(assets[0]).toMatchObject({
+      pegType: "peggedREAL",
+      circulating: { peggedREAL: 5_000_000 },
+    });
+  });
+
   it("keeps insufficient fallback metadata in no-write degraded mode", () => {
     const result = buildInsufficientFallbackResult(2);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

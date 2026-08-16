@@ -23,12 +23,13 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - uses: ./.github/actions/setup-workspace
       - id: classify
         env:
           DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DEPLOY_EVENT_NAME: push
           DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/ci/classify-deploy-changes.mjs >> "$GITHUB_OUTPUT"
+        run: node --import tsx scripts/ci/classify-deploy-changes.ts >> "$GITHUB_OUTPUT"
 
   static:
     name: Adaptive static checks

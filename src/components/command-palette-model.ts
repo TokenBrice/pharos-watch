@@ -12,7 +12,7 @@ import {
 import { NAV_ITEMS } from "@/lib/nav-config";
 import type { NavItem } from "@/lib/nav-config";
 import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { CHAIN_META, getActiveChainIds } from "@shared/lib/chains";
 import { PEG_TAXONOMY_PAGES } from "@/lib/peg-taxonomy";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";

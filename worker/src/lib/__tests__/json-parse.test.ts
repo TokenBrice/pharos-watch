@@ -37,7 +37,6 @@ describe("json parse helpers", () => {
     expect(parsed.ok).toBe(false);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[json-parse] Failed to parse JSON (test-context):"),
-      expect.any(String),
     );
   });
 

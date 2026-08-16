@@ -3,7 +3,7 @@ import {
   LIQUIDITY_METHODOLOGY_VERSION_LABEL,
 } from "@shared/lib/methodology-versions/constants";
 import { MethodologySectionShell } from "../../methodology-shared";
-import { LIQUIDITY_SECTION_CONTENT } from "../methodology-content";
+import { LIQUIDITY_SECTION_CONTENT } from "@/lib/methodology-content";
 import { LiquidityTechnicalDetails } from "./liquidity-technical-details";
 import { LiquidityOverview, LiquidityPreconditions } from "./liquidity-overview";
 import { LiquidityPoolMatchingDetails } from "./liquidity-pool-matching-details";

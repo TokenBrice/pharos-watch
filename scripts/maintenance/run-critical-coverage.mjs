@@ -20,4 +20,4 @@ function run(cmd, args) {
 }
 
 run(localBin("vitest"), withCiVitestArgs(buildCriticalCoverageArgs(process.argv.slice(2))));
-run("node", ["scripts/ci/check-critical-coverage.mjs"]);
+run("node", ["--import", "tsx", "scripts/ci/check-critical-coverage.ts"]);

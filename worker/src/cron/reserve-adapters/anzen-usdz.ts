@@ -19,6 +19,14 @@ import {
 } from "./helpers";
 import { runAdapterIo } from "./concurrency";
 import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import {
+  addressObservation,
+  customObservation,
+  executeEvmObservationPlan,
+  rawObservation,
+  uint256Observation,
+  type AnyEvmObservationField,
+} from "./evm-observation-plan";
 
 const ADAPTER_KEY = "anzen-usdz";
 const SPCT_POOL_CONTRACT = "0xf30a29F1C540724Fd8c5c4Be1AF604a6C6800D29";
@@ -110,7 +118,7 @@ interface ChainObservation {
   decimals: number;
   endpoint: string | null;
   codeHash: string;
-  values: Map<string, `0x${string}`>;
+  values: ReadonlyMap<string, `0x${string}`>;
 }
 
 interface LayerZeroMetadata {
@@ -144,46 +152,69 @@ function encodeAddressCall(selector: string, address: string): string {
   return `${selector}${encodeAddress(address)}`;
 }
 
-function wordCall(label: string, contract: string, data: string, allowFailure = false) {
-  return { label, contract, data, allowFailure } as const;
-}
-
 function getAdapterRpcUrls(chain: SupportedSupplyChain): string[] {
   const registered = getPublicFallbackRpcUrls(chain);
   if (chain !== "ethereum") return registered;
   return Array.from(new Set([registered[0], ANZEN_ETHEREUM_FALLBACK_RPC_URL].filter((url): url is string => Boolean(url))));
 }
 
-function buildStateCalls(chain: SupportedSupplyChain, usdz: string) {
-  const calls = [
-    wordCall("usdz:total-supply", usdz, TOTAL_SUPPLY_SELECTOR),
-    wordCall("usdz:decimals", usdz, DECIMALS_SELECTOR),
-    wordCall("usdz:symbol", usdz, SYMBOL_SELECTOR),
-    wordCall("usdz:endpoint", usdz, USDZ_ENDPOINT_SELECTOR, true),
+function buildStateFields(chain: SupportedSupplyChain, usdz: string) {
+  const fields: AnyEvmObservationField[] = [
+    uint256Observation({
+      label: "usdz:total-supply",
+      contract: usdz,
+      data: TOTAL_SUPPLY_SELECTOR,
+      verify: (value) => value > 0n ? null : "total supply is not positive",
+    }),
+    uint256Observation({
+      label: "usdz:decimals",
+      contract: usdz,
+      data: DECIMALS_SELECTOR,
+      verify: (value) => value === BigInt(EXPECTED_DEPLOYMENTS[chain].decimals)
+        ? null
+        : "token decimals drifted",
+    }),
+    customObservation({
+      label: "usdz:symbol",
+      contract: usdz,
+      data: SYMBOL_SELECTOR,
+      decode: (raw) => decodeString(raw, `${chain} symbol()`),
+      verify: (value) => value === "USDz" ? null : "token symbol drifted",
+    }),
+    addressObservation({
+      label: "usdz:endpoint",
+      contract: usdz,
+      data: USDZ_ENDPOINT_SELECTOR,
+      allowFailure: true,
+      optional: true,
+      verify: (value) => (chain !== "ethereum" && chain !== "base") || value === LAYERZERO_ENDPOINT
+        ? null
+        : "LayerZero endpoint drifted",
+    }),
   ];
-  if (chain !== "ethereum") return calls;
+  if (chain !== "ethereum") return fields;
 
-  calls.push(
-    wordCall("usdz:total-pooled-spct", usdz, "0x8abb1eb4"),
-    wordCall("usdz:spct", usdz, USDZ_SPCT_SELECTOR),
-    wordCall("usdz:usdc", usdz, USDZ_USDC_SELECTOR),
-    wordCall("usdz:oracle", usdz, USDZ_ORACLE_SELECTOR),
-    wordCall("usdz:paused", usdz, PAUSED_SELECTOR),
-    wordCall("usdz:collateral-rate", usdz, USDZ_COLLATERAL_RATE_SELECTOR),
-    wordCall("usdz:mode", usdz, USDZ_MODE_SELECTOR),
-    wordCall("usdz:redeem-fee-rate", usdz, REDEEM_FEE_RATE_SELECTOR),
-    wordCall("usdz:fee-coefficient", usdz, FEE_COEFFICIENT_SELECTOR),
-    wordCall("spct:balance-of-usdz", SPCT_POOL_CONTRACT, encodeAddressCall(BALANCE_OF_SELECTOR, usdz)),
-    wordCall("spct:reserve-usd", SPCT_POOL_CONTRACT, SPCT_RESERVE_USD_SELECTOR),
-    wordCall("spct:paused", SPCT_POOL_CONTRACT, PAUSED_SELECTOR),
-    wordCall("spct:redeem-fee-rate", SPCT_POOL_CONTRACT, REDEEM_FEE_RATE_SELECTOR),
-    wordCall("spct:fee-coefficient", SPCT_POOL_CONTRACT, FEE_COEFFICIENT_SELECTOR),
-    wordCall("spct:usdz-whitelisted", SPCT_POOL_CONTRACT, encodeAddressCall(SPCT_IS_WHITELIST_SELECTOR, usdz)),
-    wordCall("usdc:spct-balance", USDC_CONTRACT, encodeAddressCall(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT)),
-    wordCall("usdc:usdz-balance", USDC_CONTRACT, encodeAddressCall(BALANCE_OF_SELECTOR, usdz)),
-    wordCall("oracle:price", SPCT_PRICE_ORACLE_CONTRACT, ORACLE_GET_PRICE_SELECTOR),
+  fields.push(
+    rawObservation({ label: "usdz:total-pooled-spct", contract: usdz, data: "0x8abb1eb4" }),
+    rawObservation({ label: "usdz:spct", contract: usdz, data: USDZ_SPCT_SELECTOR }),
+    rawObservation({ label: "usdz:usdc", contract: usdz, data: USDZ_USDC_SELECTOR }),
+    rawObservation({ label: "usdz:oracle", contract: usdz, data: USDZ_ORACLE_SELECTOR }),
+    rawObservation({ label: "usdz:paused", contract: usdz, data: PAUSED_SELECTOR }),
+    rawObservation({ label: "usdz:collateral-rate", contract: usdz, data: USDZ_COLLATERAL_RATE_SELECTOR }),
+    rawObservation({ label: "usdz:mode", contract: usdz, data: USDZ_MODE_SELECTOR }),
+    rawObservation({ label: "usdz:redeem-fee-rate", contract: usdz, data: REDEEM_FEE_RATE_SELECTOR }),
+    rawObservation({ label: "usdz:fee-coefficient", contract: usdz, data: FEE_COEFFICIENT_SELECTOR }),
+    rawObservation({ label: "spct:balance-of-usdz", contract: SPCT_POOL_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, usdz) }),
+    rawObservation({ label: "spct:reserve-usd", contract: SPCT_POOL_CONTRACT, data: SPCT_RESERVE_USD_SELECTOR }),
+    rawObservation({ label: "spct:paused", contract: SPCT_POOL_CONTRACT, data: PAUSED_SELECTOR }),
+    rawObservation({ label: "spct:redeem-fee-rate", contract: SPCT_POOL_CONTRACT, data: REDEEM_FEE_RATE_SELECTOR }),
+    rawObservation({ label: "spct:fee-coefficient", contract: SPCT_POOL_CONTRACT, data: FEE_COEFFICIENT_SELECTOR }),
+    rawObservation({ label: "spct:usdz-whitelisted", contract: SPCT_POOL_CONTRACT, data: encodeAddressCall(SPCT_IS_WHITELIST_SELECTOR, usdz) }),
+    rawObservation({ label: "usdc:spct-balance", contract: USDC_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, SPCT_POOL_CONTRACT) }),
+    rawObservation({ label: "usdc:usdz-balance", contract: USDC_CONTRACT, data: encodeAddressCall(BALANCE_OF_SELECTOR, usdz) }),
+    rawObservation({ label: "oracle:price", contract: SPCT_PRICE_ORACLE_CONTRACT, data: ORACLE_GET_PRICE_SELECTOR }),
   );
-  return calls;
+  return fields;
 }
 
 function decodeString(raw: `0x${string}` | undefined, label: string): string {
@@ -197,25 +228,25 @@ function decodeString(raw: `0x${string}` | undefined, label: string): string {
   }
 }
 
-function requireWord(values: Map<string, `0x${string}`>, label: string): `0x${string}` {
+function requireWord(values: ReadonlyMap<string, `0x${string}`>, label: string): `0x${string}` {
   const value = values.get(label);
   if (!value) throw new Error(`${ADAPTER_KEY} ${label} read failed`);
   return value;
 }
 
-function requireUint(values: Map<string, `0x${string}`>, label: string): bigint {
+function requireUint(values: ReadonlyMap<string, `0x${string}`>, label: string): bigint {
   const value = decodeUint256Word(requireWord(values, label));
   if (value == null) throw new Error(`${ADAPTER_KEY} ${label} returned malformed data`);
   return value;
 }
 
-function requireBool(values: Map<string, `0x${string}`>, label: string): boolean {
+function requireBool(values: ReadonlyMap<string, `0x${string}`>, label: string): boolean {
   const value = decodeStrictBoolWord(requireWord(values, label));
   if (value == null) throw new Error(`${ADAPTER_KEY} ${label} returned malformed bool`);
   return value;
 }
 
-function requireAddress(values: Map<string, `0x${string}`>, label: string): string {
+function requireAddress(values: ReadonlyMap<string, `0x${string}`>, label: string): string {
   const value = decodeStrictAddressWord(requireWord(values, label));
   if (!value) throw new Error(`${ADAPTER_KEY} ${label} returned malformed address`);
   return value.toLowerCase();
@@ -236,55 +267,6 @@ function combinedRedeemFeeBps(
   return Number(((denominator - retained) * 10_000n + denominator / 2n) / denominator);
 }
 
-function decodeChainObservation(
-  chain: SupportedSupplyChain,
-  contract: { address: string; decimals: number },
-  code: unknown,
-  aggregate: unknown,
-  calls: ReturnType<typeof buildStateCalls>,
-): ChainObservation {
-  if (typeof code !== "string" || !/^0x[0-9a-f]+$/i.test(code) || code === "0x") {
-    throw new Error(`${ADAPTER_KEY} ${chain} runtime code is unavailable`);
-  }
-  const codeHash = keccak256(code as `0x${string}`).toLowerCase();
-  if (codeHash !== EXPECTED_DEPLOYMENTS[chain].runtimeCodeHash) {
-    throw new Error(`${ADAPTER_KEY} ${chain} runtime code hash drifted`);
-  }
-  if (typeof aggregate !== "string") throw new Error(`${ADAPTER_KEY} ${chain} state batch is unavailable`);
-  const decoded = decodeMulticall3Aggregate3Result(
-    aggregate as `0x${string}`,
-    calls.map((call) => call.label),
-  );
-  if (!decoded || decoded.length !== calls.length) throw new Error(`${ADAPTER_KEY} ${chain} state batch is malformed`);
-  const values = new Map<string, `0x${string}`>();
-  for (const result of decoded) {
-    if (!result.success && result.label !== "usdz:endpoint") {
-      throw new Error(`${ADAPTER_KEY} ${chain} ${result.label} call failed`);
-    }
-    if (result.success) values.set(result.label, result.returnData);
-  }
-  const rawSupply = requireUint(values, "usdz:total-supply");
-  const decimalsRaw = requireUint(values, "usdz:decimals");
-  const symbol = decodeString(values.get("usdz:symbol"), `${chain} symbol()`);
-  const endpoint = values.has("usdz:endpoint") ? requireAddress(values, "usdz:endpoint") : null;
-  if (rawSupply <= 0n || decimalsRaw !== BigInt(contract.decimals) || symbol !== "USDz") {
-    throw new Error(`${ADAPTER_KEY} ${chain} USDz identity or supply is invalid`);
-  }
-  if ((chain === "ethereum" || chain === "base") && endpoint !== LAYERZERO_ENDPOINT) {
-    throw new Error(`${ADAPTER_KEY} ${chain} LayerZero endpoint drifted (${endpoint ?? "missing"})`);
-  }
-  return {
-    chain,
-    address: contract.address.toLowerCase(),
-    rawSupply,
-    symbol,
-    decimals: Number(decimalsRaw),
-    endpoint,
-    codeHash,
-    values,
-  };
-}
-
 async function readChain(
   chain: SupportedSupplyChain,
   contract: { address: string; decimals: number },
@@ -292,7 +274,7 @@ async function readChain(
   deadlineMs: number,
   ctx?: AdapterContext,
 ): Promise<ChainObservation> {
-  const stateCalls = buildStateCalls(chain, contract.address);
+  const stateFields = buildStateFields(chain, contract.address);
   const rpcOptions = {
     signal,
     timeoutMs: RPC_REQUEST_TIMEOUT_MS,
@@ -315,11 +297,11 @@ async function readChain(
       const state = await fetchEvmCallHexAtBlock(
         chain,
         MULTICALL3_ADDRESS,
-        encodeMulticall3Aggregate3CallData(stateCalls.map((call) => ({
-          label: call.label,
-          target: call.contract,
-          callData: call.data,
-          allowFailure: call.allowFailure,
+        encodeMulticall3Aggregate3CallData(stateFields.map((field) => ({
+          label: field.label,
+          target: field.contract,
+          callData: field.data,
+          allowFailure: field.allowFailure,
         }))),
         "latest",
         rpcOptions,
@@ -336,7 +318,46 @@ async function readChain(
       throw new Error(`${ADAPTER_KEY} Ethereum supporting contract code hash drifted`);
     }
   }
-  return decodeChainObservation(chain, contract, code, aggregate, stateCalls);
+  if (typeof aggregate !== "string") throw new Error(`${ADAPTER_KEY} ${chain} state batch is unavailable`);
+  const decoded = decodeMulticall3Aggregate3Result(
+    aggregate as `0x${string}`,
+    stateFields.map((field) => field.label),
+  );
+  const snapshot = await executeEvmObservationPlan({
+    adapterKey: `${ADAPTER_KEY}:${chain}`,
+    fields: stateFields,
+    checks: [{
+      label: "runtime-code",
+      observe: async () => code,
+      verify: (value) => {
+        if (typeof value !== "string" || !/^0x[0-9a-f]+$/i.test(value) || value === "0x") {
+          return "runtime code is unavailable";
+        }
+        return keccak256(value as `0x${string}`).toLowerCase() === EXPECTED_DEPLOYMENTS[chain].runtimeCodeHash
+          ? null
+          : "runtime code hash drifted";
+      },
+      metadata: {
+        key: "runtimeCodeHash",
+        project: (value) => keccak256(value as `0x${string}`).toLowerCase(),
+      },
+    }],
+    read: async () => decoded,
+  });
+  const rawSupply = snapshot.values["usdz:total-supply"] as bigint;
+  const decimalsRaw = snapshot.values["usdz:decimals"] as bigint;
+  const symbol = snapshot.values["usdz:symbol"] as string;
+  const endpoint = snapshot.values["usdz:endpoint"] as string | null;
+  return {
+    chain,
+    address: contract.address.toLowerCase(),
+    rawSupply,
+    symbol,
+    decimals: Number(decimalsRaw),
+    endpoint,
+    codeHash: snapshot.metadata.runtimeCodeHash as string,
+    values: snapshot.rawByLabel,
+  };
 }
 
 async function fetchLayerZeroMetadata(signal: AbortSignal, ctx?: AdapterContext): Promise<LayerZeroMetadata> {
@@ -370,7 +391,7 @@ async function fetchLayerZeroMetadata(signal: AbortSignal, ctx?: AdapterContext)
   return response;
 }
 
-function observeAnzenRedemption(values: Map<string, `0x${string}`>): AnzenRedemptionProbe {
+function observeAnzenRedemption(values: ReadonlyMap<string, `0x${string}`>): AnzenRedemptionProbe {
   if (requireAddress(values, "usdz:usdc") !== USDC_CONTRACT) throw new Error(`${ADAPTER_KEY} usdc() identity drifted`);
   if (requireAddress(values, "usdz:spct") !== SPCT_POOL_CONTRACT.toLowerCase()) throw new Error(`${ADAPTER_KEY} spct() identity drifted`);
   if (requireAddress(values, "usdz:oracle") !== SPCT_PRICE_ORACLE_CONTRACT) throw new Error(`${ADAPTER_KEY} oracle() identity drifted`);

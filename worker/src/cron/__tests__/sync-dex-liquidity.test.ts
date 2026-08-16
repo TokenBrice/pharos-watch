@@ -1121,7 +1121,7 @@ describe("dex liquidity scoring stage cycle", () => {
     await runDexLiquidityScoringCycle(db, "graph-key");
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback",
+      expect.stringContaining("[dex-liquidity] Stablecoins cache unavailable for tracked quote pricing and market cap data; using reference-only / absolute fallback"),
     );
   });
 

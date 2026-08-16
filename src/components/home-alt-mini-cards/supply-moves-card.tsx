@@ -9,7 +9,7 @@ import { QueryStateNotice } from "@/components/query-state-notice";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import { getCirculatingRaw, getPrevWeekRaw } from "@shared/lib/supply";

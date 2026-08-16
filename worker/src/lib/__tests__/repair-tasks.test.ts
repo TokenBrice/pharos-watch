@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
@@ -14,6 +14,20 @@ import {
 } from "../repair-tasks";
 
 const NOW = 1_775_900_000;
+
+const REPAIR_TASK_RUNNER_TABLES: MockTableConfig[] = [
+  { match: "INSERT INTO worker_repair_tasks", rows: [] },
+  { match: "UPDATE worker_repair_tasks", rows: [], runMeta: { changes: 1 } },
+  { match: "FROM worker_repair_tasks", rows: [] },
+  { match: "INSERT INTO depeg_resolver_event_repair_authorization_consumptions", rows: [] },
+  { match: "INSERT INTO depeg_resolver_incident_event_links", rows: [] },
+  { match: "INSERT INTO depeg_resolver_incident_revisions", rows: [] },
+  { match: "UPDATE depeg_resolver_incidents", rows: [] },
+];
+
+function mockRepairD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...REPAIR_TASK_RUNNER_TABLES]);
+}
 
 interface SqliteD1 extends D1Database {
   sqlite: DatabaseSync;
@@ -116,7 +130,7 @@ describe("repair tasks", () => {
   });
 
   it("dual-writes current DDR repair debt and closes stale DDR tasks", async () => {
-    const db = mockD1();
+    const db = mockRepairD1();
 
     const result = await syncDdrRepairDebtTasks(
       db,
@@ -197,7 +211,7 @@ describe("repair tasks", () => {
   });
 
   it("summarizes open repair debt by kind", async () => {
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "FROM worker_repair_tasks",
         rows: [
@@ -242,7 +256,7 @@ describe("repair tasks", () => {
   });
 
   it("reports an empty execution run without claiming rows", async () => {
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "COUNT(*) AS due_count",
         rows: [],
@@ -280,7 +294,7 @@ describe("repair tasks", () => {
   });
 
   it("gates claims behind the kill switch while keeping backlog counts observable", async () => {
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "COUNT(*) AS due_count",
         rows: [],
@@ -313,7 +327,7 @@ describe("repair tasks", () => {
       subject_id: String(index + 1),
       payload_json: JSON.stringify({ eventId: index + 1 }),
     }));
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "COUNT(*) AS due_count",
         rows: [],
@@ -352,7 +366,7 @@ describe("repair tasks", () => {
   });
 
   it("backs off a claimed task when execution fails", async () => {
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "COUNT(*) AS due_count",
         rows: [],
@@ -392,7 +406,7 @@ describe("repair tasks", () => {
   });
 
   it("executes a T1.2-safe task through authorizations, ordered lineage, and a guarded pointer update", async () => {
-    const db = mockD1([
+    const db = mockRepairD1([
       {
         match: "COUNT(*) AS due_count",
         rows: [],

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { isRecord } from "@shared/lib/type-guards";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { rethrowIfAborted } from "./abort";
@@ -386,7 +387,7 @@ export async function fetchCurrentNativePegQuotes(
           if (signal?.aborted) {
             throw error instanceof Error ? error : new Error(String(error));
           }
-          console.warn(
+          logWorkerEventArgs("lib", "warn",
             `[native-peg-quotes] CoinGecko ${pegCurrency} quote fetch failed for ${uniqueGeckoIds.join(",")}:`,
             error,
           );

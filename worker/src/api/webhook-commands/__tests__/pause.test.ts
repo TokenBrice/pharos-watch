@@ -1,10 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { PAUSE_SENTINEL_TS } from "../../../lib/telegram-constants";
 import type { WebhookCommandContext } from "../context";
 import { handlePause } from "../pause";
 
 type InlineButton = { text?: string; web_app?: { url?: string } };
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+  ], options);
+}
 
 function makeContext(overrides: Partial<WebhookCommandContext> = {}): WebhookCommandContext {
   return {

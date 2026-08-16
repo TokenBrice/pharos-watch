@@ -8,7 +8,7 @@ import type { ChainStablecoin } from "@/hooks/use-chains";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { logosById } from "@/lib/logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import type { ChainRouteViewModel } from "./view-model";
 

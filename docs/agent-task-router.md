@@ -9,7 +9,7 @@ The machine-readable routing source of truth is [doc-ownership.json](./doc-owner
 From the repository root, run:
 
 ```bash
-node scripts/ci/pharos-change-contract.mjs --markdown
+node --import tsx scripts/ci/pharos-change-contract.ts --markdown
 ```
 
 Use `--staged` when the intended change is staged but not committed. The command reports:

@@ -7,7 +7,7 @@ import { PEG_ANCHORS } from "@/lib/alt-peg-emblems";
 import { arrangeClusterCoins, resolvePackedCoinOverlaps, type PackingInput } from "@/lib/alt-peg-packing";
 import { coinEmblemSize, FIAT_MAP_SIZE_CEIL, SKY_COHORT_SIZE_CEIL } from "@/lib/alt-peg-sizing";
 import { logosById } from "@/lib/logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export interface HeroCoin {
   id: string;

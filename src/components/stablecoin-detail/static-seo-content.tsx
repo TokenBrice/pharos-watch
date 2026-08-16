@@ -20,7 +20,7 @@ import {
   buildInfrastructureTaxonomyUrl,
 } from "@/lib/stablecoin-taxonomy-urls";
 import { stripTermMarkup } from "@/lib/term-markup";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import { ListingStateBanner } from "@/components/stablecoin-detail/listing-state-banner";
 

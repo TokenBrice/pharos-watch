@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRaw } from "@shared/lib/supply";
 import type { ActivePriceCoverageGap } from "@shared/types/status";
@@ -344,7 +345,7 @@ export async function loadPreviousStablecoinActivePriceCoverage(
     ).bind(beforeStartedAt).first<{ metadata: string }>();
     return row?.metadata ? parsePreviousCoverageMetadata(row.metadata) : null;
   } catch (error) {
-    console.warn("[sync-stablecoins] Failed to load previous active price coverage:", error);
+    logWorkerEventArgs("lib", "warn", "[sync-stablecoins] Failed to load previous active price coverage:", error);
     return null;
   }
 }

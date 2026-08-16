@@ -94,7 +94,7 @@ describe("validateTelegramMiniAppInitData", () => {
     });
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith("[telegram-mini-app-auth] novel chat_type received: business");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("[telegram-mini-app-auth] novel chat_type received: business"));
   });
 
   it("rejects tampered fields", async () => {

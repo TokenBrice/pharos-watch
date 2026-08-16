@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import type { ResolvedCoin } from "../lib/telegram-alerts";
 import { dedupeCoins } from "../lib/telegram-coin-dedupe";
 import { isDepegStepValue } from "../lib/telegram-constants";
@@ -20,7 +21,7 @@ import { SETUP_PENDING_ACTION_TYPE, STABLECOIN_BY_ID } from "./telegram-webhook-
 function logPendingParseWarning(pending: PendingDisambiguationRow, field: string, error: unknown): void {
   const actionType = pending.action_type ?? "unknown";
   const message = toErrorMessage(error);
-  console.warn(
+  logWorkerEventArgs("api", "warn",
     `[telegram-webhook] malformed pending field action=${actionType} ambiguous=${pending.ambiguous_ticker} field=${field} error=${message}`,
   );
 }
@@ -251,7 +252,7 @@ export function parsePendingDisambiguation(
 
   const actionType = parsePendingActionType(pending.action_type ?? "subscribe");
   if (!actionType) {
-    console.warn(
+    logWorkerEventArgs("api", "warn",
       `[telegram-webhook] malformed pending action_type ambiguous=${pending.ambiguous_ticker} value=${String(pending.action_type)}`,
     );
     return null;

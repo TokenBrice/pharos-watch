@@ -1,4 +1,4 @@
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 
 export type SupplementalOnChainSupplySource = "onchain-total-supply" | "onchain-circulating-supply";
 
@@ -9,7 +9,7 @@ export interface OnChainSupplyExclusionConfig {
   historicalBackfillStartDay?: number;
 }
 
-const USG_TANGENT_BACKFILL_START_DAY = Math.floor(Date.UTC(2026, 4, 7) / 1000 / DAY_SECONDS) * DAY_SECONDS;
+const USG_TANGENT_BACKFILL_START_DAY = startOfUtcDaySec(new Date(Date.UTC(2026, 4, 7)));
 
 export const CURATED_ONCHAIN_SUPPLY_EXCLUSIONS: Record<string, OnChainSupplyExclusionConfig> = {
   // Tangent mints USG inventory to PegKeeper contracts that deposit/withdraw

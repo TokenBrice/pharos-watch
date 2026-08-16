@@ -17,13 +17,24 @@ import { formatElapsedSeconds, formatPercentFromRatio } from "@shared/lib/format
 import { DDR_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import {
   DDRR_PUBLIC_WARNING,
-  type DdrrActualOutcome,
   type DdrrDurationReview,
   type DdrrResponse,
   type DdrrRow,
   type DdrrSummary,
   type DdrrVerdictReview,
 } from "@shared/types/depeg-resolver-review";
+import {
+  DDR_COVERAGE_LABELS,
+  DDR_COVERAGE_TONES,
+  DDR_DURATION_LABELS,
+  DDR_OUTCOME_LABELS,
+  DDR_VERDICT_LABELS,
+  DDR_VERDICT_TONES,
+  ddrSourceEventStateToActualOutcome,
+  formatDdrSignedDuration,
+  isDdrScoredVerdict,
+  type DdrrCoverageState,
+} from "@/lib/depeg-resolver-review-presentation";
 
 interface DepegResolverReviewerModuleProps {
   data: DdrrResponse | undefined;
@@ -31,8 +42,6 @@ interface DepegResolverReviewerModuleProps {
   logos?: Record<string, string>;
 }
 
-type DdrrCoverageState =
-  Exclude<DdrrRow["predictionState"], "frozen">;
 type DdrrHeadlineMetrics = DdrrSummary["headline"];
 type CoverageMetricKey =
   | "scoreableCoveragePct"
@@ -47,90 +56,8 @@ const ROW_DISPLAY_LIMIT = 8;
 /** Track-record timeline node cap — enough to read the streak without clutter. */
 const TIMELINE_NODE_LIMIT = 36;
 
-const VERDICT_LABELS: Record<DdrrVerdictReview, string> = {
-  correct_recoverable: "Correct recoverable",
-  correct_terminal: "Correct terminal",
-  false_terminal: "False terminal",
-  false_recoverable: "False recoverable",
-  risk_noted_terminal: "Risk noted",
-  unscored_insufficient_signal: "Unscored",
-  pending: "Pending",
-  data_issue: "Data issue",
-};
-
-const VERDICT_STYLES: Record<DdrrVerdictReview, string> = {
-  correct_recoverable: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  correct_terminal: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
-  false_terminal: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  false_recoverable: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  risk_noted_terminal: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  unscored_insufficient_signal: "border-border bg-muted text-muted-foreground",
-  pending: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  data_issue: "border-border bg-muted text-muted-foreground",
-};
-
-const OUTCOME_LABELS: Record<DdrrActualOutcome, string> = {
-  recovered: "recovered",
-  terminal: "terminal observed",
-  orphan_closed: "closed without recovery",
-  still_open: "still open",
-  source_missing: "source missing",
-  data_issue: "data issue",
-  invalidated: "invalidated",
-};
-
-const DURATION_LABELS: Record<DdrrDurationReview, string> = {
-  inside_band: "inside band",
-  faster_than_band: "faster than band",
-  slower_than_band: "slower than band",
-  median_late_by: "late vs median",
-  median_early_by: "early vs median",
-  median_exact: "exact median",
-  duration_unscored: "unscored",
-  data_issue: "data issue",
-};
-
-const COVERAGE_LABELS: Record<DdrrCoverageState, string> = {
-  pending_lock: "pending lock",
-  lock_deferred: "lock deferred",
-  data_quality_gap: "data quality gap",
-  orphan_closed: "orphan closed",
-  publication_retry_pending: "publication retry",
-  resolved_before_prediction: "resolved before lock",
-  terminal_before_prediction: "terminal before lock",
-  missed_lock_recovered: "missed recovered",
-  missed_lock_terminal: "missed terminal",
-  publication_failed: "publication failed",
-  no_call: "no-call",
-  invalidated: "invalidated",
-};
-
-const COVERAGE_STYLES: Record<DdrrCoverageState, string> = {
-  pending_lock: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400",
-  lock_deferred: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
-  data_quality_gap: "border-border bg-muted text-muted-foreground",
-  orphan_closed: "border-border bg-muted text-muted-foreground",
-  publication_retry_pending: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-400",
-  resolved_before_prediction: "border-border bg-background text-muted-foreground",
-  terminal_before_prediction: "border-border bg-background text-muted-foreground",
-  missed_lock_recovered: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  missed_lock_terminal: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  publication_failed: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-  no_call: "border-border bg-muted text-muted-foreground",
-  invalidated: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
-};
-
-/** Verdict reviews that count as a real, scored result (vs. still maturing). */
-const SCORED_VERDICTS = new Set<DdrrVerdictReview>([
-  "correct_recoverable",
-  "correct_terminal",
-  "false_terminal",
-  "false_recoverable",
-  "risk_noted_terminal",
-]);
-
 function isScored(row: DdrrRow): boolean {
-  return row.kind === "prediction_review" && SCORED_VERDICTS.has(row.verdictReview);
+  return row.kind === "prediction_review" && isDdrScoredVerdict(row.verdictReview);
 }
 
 function isTrackRecordRow(row: DdrrRow): boolean {
@@ -140,13 +67,6 @@ function isTrackRecordRow(row: DdrrRow): boolean {
 function formatPercent(value: number | null): string {
   if (value == null || !Number.isFinite(value)) return "N/A";
   return formatPercentFromRatio(value, Number.isInteger(value * 100) ? 0 : 1);
-}
-
-function formatSignedDuration(seconds: number | null): string {
-  if (seconds == null || !Number.isFinite(seconds)) return "N/A";
-  const rounded = Math.round(seconds);
-  if (rounded === 0) return "0s";
-  return `${rounded > 0 ? "+" : "−"}${formatElapsedSeconds(Math.abs(rounded))}`;
 }
 
 function getCoverageState(row: DdrrRow): DdrrCoverageState | null {
@@ -168,28 +88,11 @@ function getDurationReview(row: DdrrRow): DdrrDurationReview {
   return "duration_unscored";
 }
 
-function sourceEventStateToActualOutcome(sourceEventState: DdrrRow["sourceEventState"]): DdrrActualOutcome {
-  switch (sourceEventState) {
-    case "active":
-      return "still_open";
-    case "missing":
-      return "source_missing";
-    case "recovered":
-    case "terminal":
-    case "orphan_closed":
-    case "data_issue":
-    case "invalidated":
-      return sourceEventState;
-  }
-  const exhaustive: never = sourceEventState;
-  return exhaustive;
-}
-
-function getActualOutcome(row: DdrrRow): DdrrActualOutcome {
+function getActualOutcome(row: DdrrRow) {
   if (row.kind === "prediction_review" || row.kind === "no_call_review") {
     return row.actual.kind;
   }
-  return sourceEventStateToActualOutcome(row.sourceEventState);
+  return ddrSourceEventStateToActualOutcome(row.sourceEventState);
 }
 
 function getRowContextLabel(row: DdrrRow): string {
@@ -316,8 +219,8 @@ function TrackRecordTimeline({ rows }: { rows: DdrrRow[] }) {
             className={cn("absolute h-2 w-2 -translate-x-1/2 rounded-full", tone.dot, tone.pos)}
             style={{ left: `${left}%` }}
             title={`${row.symbol} · ${
-              coverageState ? COVERAGE_LABELS[coverageState] : VERDICT_LABELS[getVerdictReview(row)]
-            } · ${OUTCOME_LABELS[getActualOutcome(row)]}`}
+              coverageState ? DDR_COVERAGE_LABELS[coverageState] : DDR_VERDICT_LABELS[getVerdictReview(row)]
+            } · ${DDR_OUTCOME_LABELS[getActualOutcome(row)]}`}
             aria-hidden="true"
           />
         );
@@ -487,12 +390,12 @@ function VersionAccuracyStrip({ summary }: { summary: DdrrSummary }) {
               className="hidden w-24 shrink-0 text-right font-mono text-[10px] tabular-nums text-muted-foreground sm:inline"
               aria-label={
                 segment.meanSignedDurationErrorSec != null
-                  ? `${segment.major}: mean duration miss ${formatSignedDuration(segment.meanSignedDurationErrorSec)}`
+                  ? `${segment.major}: mean duration miss ${formatDdrSignedDuration(segment.meanSignedDurationErrorSec)}`
                   : undefined
               }
             >
               {segment.meanSignedDurationErrorSec != null
-                ? `${formatSignedDuration(segment.meanSignedDurationErrorSec)} ±${formatElapsedSeconds(
+                ? `${formatDdrSignedDuration(segment.meanSignedDurationErrorSec)} ±${formatElapsedSeconds(
                     Math.round(segment.meanAbsoluteDurationErrorSec ?? 0),
                   )} miss`
                 : "— miss"}
@@ -541,7 +444,7 @@ function CalibrationLedger({ summary, rows }: { summary: DdrrSummary; rows: read
             {durationScored > 0 ? (
               <>
                 <span className="font-mono text-2xl font-semibold tabular-nums text-foreground">
-                  {formatSignedDuration(metrics.meanSignedDurationErrorSec)}
+                  {formatDdrSignedDuration(metrics.meanSignedDurationErrorSec)}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   mean miss · ±
@@ -678,12 +581,12 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
   const durationReview = getDurationReview(row);
   const actualOutcome = getActualOutcome(row);
   const signedDurationErrorSec = getSignedDurationError(row);
-  const verdictLabel = coverageState ? COVERAGE_LABELS[coverageState] : VERDICT_LABELS[verdictReview];
-  const verdictStyle = coverageState ? COVERAGE_STYLES[coverageState] : VERDICT_STYLES[verdictReview];
+  const verdictLabel = coverageState ? DDR_COVERAGE_LABELS[coverageState] : DDR_VERDICT_LABELS[verdictReview];
+  const verdictStyle = coverageState ? DDR_COVERAGE_TONES[coverageState] : DDR_VERDICT_TONES[verdictReview];
   const durationText =
     signedDurationErrorSec == null
-      ? DURATION_LABELS[durationReview]
-      : `${formatSignedDuration(signedDurationErrorSec)} ${DURATION_LABELS[durationReview]}`;
+      ? DDR_DURATION_LABELS[durationReview]
+      : `${formatDdrSignedDuration(signedDurationErrorSec)} ${DDR_DURATION_LABELS[durationReview]}`;
 
   // Two stacked lines on mobile (identity never shrinks to nothing), one row on sm+.
   return (
@@ -707,7 +610,7 @@ function ReviewRow({ row, logos }: { row: DdrrRow; logos?: Record<string, string
         {verdictLabel}
       </Badge>
       <span className="justify-self-start font-mono text-[10px] uppercase tracking-wide text-muted-foreground sm:col-start-2 sm:row-start-1 sm:justify-self-end sm:text-right">
-        {getRowContextLabel(row)} · {OUTCOME_LABELS[actualOutcome]}
+        {getRowContextLabel(row)} · {DDR_OUTCOME_LABELS[actualOutcome]}
       </span>
       <span className="justify-self-end font-mono text-[11px] tabular-nums text-muted-foreground sm:col-start-4 sm:row-start-1 sm:whitespace-nowrap">
         {durationText}

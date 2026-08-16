@@ -2,8 +2,9 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
-import { CASE_STUDY_LIST } from "../../src/app/learn/case-studies/content";
+import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
 import {
   enforceCommittedArtifactSources,
@@ -14,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "../..");
 const APP_DIR = join(__dirname, "../../src/app");
 const STABLECOIN_COINS_DIR = join(__dirname, "../../shared/data/stablecoins/coins");
-const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/app/learn/case-studies/content");
+const CASE_STUDY_CONTENT_DIR = join(__dirname, "../../src/lib/case-studies");
 const BLOG_POSTS_DIR = join(__dirname, "../../src/data/blog/posts");
 const OUTPUT = join(__dirname, "../../src/generated/sitemap-dates.json");
 const OUTPUT_TYPES = join(__dirname, "../../src/generated/sitemap-dates.json.d.ts");
@@ -41,7 +42,7 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/learn/case-studies/case-study-json-ld.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-page-shell.tsx"),
   join(__dirname, "../../src/app/learn/case-studies/case-study-timeline.tsx"),
-  join(__dirname, "../../src/app/learn/case-studies/content/types.ts"),
+  join(__dirname, "../../src/lib/case-studies/types.ts"),
 ];
 const BLOG_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
@@ -52,6 +53,7 @@ const BLOG_DETAIL_SHARED_SOURCES = [
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
 const GIT_DATE_SCAN_PATHS = [
   "src/app",
+  "src/lib/case-studies",
   "src/data/blog",
   "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",
@@ -164,7 +166,7 @@ function addStablecoinDetailDates(dates: Record<string, string>): void {
     if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
     const filePath = join(STABLECOIN_COINS_DIR, entry.name);
     const id = readStablecoinId(filePath);
-    dates[`/stablecoin/${id}/`] = latestIso(getLastModified(filePath), sharedLastModified);
+    dates[buildStablecoinUrl(id)] = latestIso(getLastModified(filePath), sharedLastModified);
   }
 }
 

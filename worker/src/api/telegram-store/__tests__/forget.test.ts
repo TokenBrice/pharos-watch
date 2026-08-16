@@ -2,9 +2,59 @@ import { describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as baseMockD1 } from "../../../test-helpers/__shared/mock-d1";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../forget";
+
+function mockD1(
+  tables: Parameters<typeof baseMockD1>[0] = [],
+  options: Parameters<typeof baseMockD1>[1] = {},
+) {
+  return baseMockD1([
+    ...tables,
+    { match: "DELETE FROM telegram_subscriptions", rows: [] },
+    { match: "DELETE FROM telegram_preset_subscriptions", rows: [] },
+    { match: "UPDATE telegram_subscribers", rows: [] },
+    { match: "DELETE FROM telegram_pending_disambiguation", rows: [] },
+    { match: "DELETE FROM telegram_pending_alerts", rows: [] },
+    { match: "DELETE FROM telegram_recap_targets", rows: [] },
+    { match: "DELETE FROM telegram_recap_preferences", rows: [] },
+    { match: "DELETE FROM telegram_freeze_alert_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_source_resolution_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_target_plan_items", rows: [] },
+    { match: "DELETE FROM telegram_alert_job_targets", rows: [] },
+    { match: "DELETE FROM telegram_alert_job_target_items", rows: [] },
+    { match: "DELETE FROM telegram_alert_target_plans", rows: [] },
+    { match: "DELETE FROM telegram_alert_planning_subscribers", rows: [] },
+    { match: "DELETE FROM telegram_transport_failure_observations", rows: [] },
+    { match: "DELETE FROM telegram_alert_dead_letters", rows: [] },
+    { match: "DELETE FROM telegram_chat_delivery_diagnostics", rows: [] },
+    { match: "DELETE FROM telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscribers", rows: [] },
+    { match: "INSERT INTO telegram_subscriptions", rows: [] },
+    { match: "INSERT INTO telegram_preset_subscriptions", rows: [] },
+    { match: "INSERT OR IGNORE INTO telegram_pending_disambiguation", rows: [] },
+    { match: "INSERT INTO telegram_chat_delivery_diagnostics", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_freeze_alert_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_pending_alerts", rows: [] },
+    { match: "UPDATE telegram_pending_alerts", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_job_targets", rows: [] },
+    { match: "UPDATE telegram_alert_job_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_job_target_items", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_source_resolution_targets", rows: [] },
+    { match: "UPDATE telegram_alert_source_resolution_targets", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_alert_planning_subscribers", rows: [] },
+    { match: "UPDATE telegram_alert_planning_subscribers", rows: [] },
+    { match: "UPDATE telegram_alert_target_plans", rows: [] },
+    { match: "UPDATE OR IGNORE telegram_transport_failure_observations", rows: [] },
+    { match: "UPDATE telegram_transport_failure_observations", rows: [] },
+    { match: "UPDATE telegram_alert_dead_letters", rows: [] },
+    { match: "UPDATE telegram_processed_updates", rows: [] },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "INSERT INTO cache", rows: [] },
+    { match: "DELETE FROM cache", rows: [] },
+  ], options);
+}
 
 function setupChatMigrationSqlite(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();

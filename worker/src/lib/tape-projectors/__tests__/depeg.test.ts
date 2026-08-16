@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { projectDepegOpened, projectDepegResolved } from "../depeg";
 
 const SEC = 1_700_000_000;
 const MATCH_DEPEG_EVENTS = "FROM depeg_events";
+const TAPE_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
+}
 
 function depegRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -53,7 +61,7 @@ describe("depeg projector", () => {
       ...limitedRows,
       depegRow({ id: 3, stablecoin_id: "dai-makerdao" }),
     ];
-    const db = mockD1([
+    const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
       { match: MATCH_DEPEG_EVENTS, matchBinds: [0, 2], rows: limitedRows },
       { match: MATCH_DEPEG_EVENTS, matchBinds: [0, SEC], rows: expandedRows },
@@ -75,7 +83,7 @@ describe("depeg projector", () => {
       ...limitedRows,
       depegRow({ id: 12, ended_at: SEC + 900, recovery_price: 1, close_reason: "recovered-native" }),
     ];
-    const db = mockD1([
+    const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
       { match: MATCH_DEPEG_EVENTS, matchBinds: [0, 2], rows: limitedRows },
       { match: MATCH_DEPEG_EVENTS, matchBinds: [0, SEC + 900], rows: expandedRows },

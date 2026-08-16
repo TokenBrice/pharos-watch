@@ -11,13 +11,18 @@ import {
   fetchEvmMulticall3Aggregate3AtBlock,
   fetchEvmStorageAtBlock,
   type EvmBlockHeader,
-  type EvmMulticall3Call,
-  type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import { encodeAddress } from "../../lib/evm-selectors";
-import { decodeStrictAddressWord, decodeUint256Word } from "./abi-decode";
+import { decodeStrictAddressWord } from "./abi-decode";
 import { runAdapterIo } from "./concurrency";
-import { multicallResultByLabel } from "./onchain-identity";
+import {
+  addressObservation,
+  boolObservation,
+  executeEvmObservationPlan,
+  rawObservation,
+  uint256Observation,
+  type EvmObservationTransportCall,
+} from "./evm-observation-plan";
 import { normalizeSlices, decimalNumberFromBigInt } from "./slice-math";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -88,53 +93,6 @@ export interface XdaiBridgeObservation {
 
 function encodeAddressCall(selector: string, address: string): `0x${string}` {
   return `${selector}${encodeAddress(address)}` as `0x${string}`;
-}
-
-function call(label: string, contract: string, data: string): EvmMulticall3Call {
-  return { label, target: contract, callData: data, allowFailure: true };
-}
-
-function requireResult(results: readonly EvmMulticall3Result[], label: string): `0x${string}` {
-  const raw = multicallResultByLabel(results, label);
-  if (raw == null) throw new Error(`${ADAPTER_KEY}: ${label} returned no successful payload`);
-  return raw;
-}
-
-function requireUint(results: readonly EvmMulticall3Result[], label: string): bigint {
-  const value = decodeUint256Word(requireResult(results, label));
-  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed uint256 payload`);
-  return value;
-}
-
-function requireAddress(results: readonly EvmMulticall3Result[], label: string): string {
-  const value = decodeStrictAddressWord(requireResult(results, label));
-  if (value == null) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed address payload`);
-  return value.toLowerCase();
-}
-
-function requireBool(results: readonly EvmMulticall3Result[], label: string): boolean {
-  const value = requireUint(results, label);
-  if (value !== 0n && value !== 1n) throw new Error(`${ADAPTER_KEY}: ${label} returned malformed bool payload`);
-  return value === 1n;
-}
-
-function requireBridgeMode(results: readonly EvmMulticall3Result[], label: string): void {
-  const raw = requireResult(results, label);
-  if (!/^0x[0-9a-fA-F]{64}$/.test(raw) || raw.slice(2, 10).toLowerCase() !== "18762d46") {
-    throw new Error(`${ADAPTER_KEY}: ${label} identity mismatch`);
-  }
-}
-
-function requireExactAddress(actual: string, expected: string, label: string): void {
-  if (actual.toLowerCase() !== expected.toLowerCase()) {
-    throw new Error(`${ADAPTER_KEY}: ${label} identity mismatch (${actual} != ${expected})`);
-  }
-}
-
-function requireDecimals(results: readonly EvmMulticall3Result[], label: string): void {
-  if (requireUint(results, label) !== 18n) {
-    throw new Error(`${ADAPTER_KEY}: ${label} decimals drifted from reviewed 18 decimals`);
-  }
 }
 
 function ratioFromBigInts(numerator: bigint, denominator: bigint, label: string): number {
@@ -332,29 +290,30 @@ async function alignFinalizedBlocks(
   return ethereumIsNewer ? [low, gnosisAnchor] : [ethereumAnchor, low];
 }
 
-async function readMulticall(
+function pinnedMulticallReader(
   chain: string,
-  calls: readonly EvmMulticall3Call[],
   block: XdaiBridgeBlock,
   params: XdaiBridgeParams,
   signal: AbortSignal,
   ctx: AdapterContext | undefined,
   deadlineMs: number,
-): Promise<EvmMulticall3Result[]> {
-  const results = await runAdapterIo(
+): (calls: readonly EvmObservationTransportCall[]) => ReturnType<typeof fetchEvmMulticall3Aggregate3AtBlock> {
+  return (calls) => runAdapterIo(
     ctx,
     `${ADAPTER_KEY}:${chain}:multicall:${calls.length}`,
     () => fetchEvmMulticall3Aggregate3AtBlock(
       chain,
-      calls,
+      calls.map((entry) => ({
+        label: entry.label,
+        target: entry.contract,
+        callData: entry.data,
+        allowFailure: entry.allowFailure,
+      })),
       block.number,
       addressRpcOptions(chain, params, signal, ctx, deadlineMs),
     ),
     { signal },
   );
-  if (results == null) throw new Error(`${ADAPTER_KEY}: ${chain} multicall unavailable`);
-  if (results.length !== calls.length) throw new Error(`${ADAPTER_KEY}: ${chain} multicall result count mismatch`);
-  return results;
 }
 
 async function requireCode(
@@ -406,105 +365,80 @@ async function readForeignBridgeOtherSide(
   return address.toLowerCase();
 }
 
-function ethereumCalls(params: XdaiBridgeParams): EvmMulticall3Call[] {
+function expectedAddress(actual: string, expected: string, label: string): string | null {
+  return actual === expected.toLowerCase() ? null : `${label} identity mismatch (${actual} != ${expected})`;
+}
+
+function bridgeModeObservation<const Label extends string>(label: Label, contract: string) {
+  return rawObservation({
+    label,
+    contract,
+    data: SELECTORS.getBridgeMode,
+    allowFailure: true,
+    verify: (raw) => /^0x[0-9a-fA-F]{64}$/.test(raw) && raw.slice(2, 10).toLowerCase() === "18762d46"
+      ? null
+      : "bridge mode identity mismatch",
+  });
+}
+
+function decimalsObservation<const Label extends string>(label: Label, contract: string) {
+  return uint256Observation({
+    label,
+    contract,
+    data: SELECTORS.decimals,
+    allowFailure: true,
+    verify: (value) => value === 18n ? null : "decimals drifted from reviewed 18 decimals",
+  });
+}
+
+function ethereumFields(params: XdaiBridgeParams) {
   const bridge = params.foreignBridgeAddress;
   const usds = params.usdsAddress;
   const susds = params.susdsAddress;
   return [
-    call("foreign-daiToken", bridge, SELECTORS.daiToken),
-    call("foreign-sDaiToken", bridge, SELECTORS.sDaiToken),
-    call("foreign-erc20token", bridge, SELECTORS.erc20token),
-    call("foreign-interestEnabled", bridge, encodeAddressCall(SELECTORS.isInterestEnabled, usds)),
-    call("foreign-investedAmount", bridge, encodeAddressCall(SELECTORS.investedAmount, usds)),
-    call("foreign-bridgeMode", bridge, SELECTORS.getBridgeMode),
-    call("usds-balance", usds, encodeAddressCall(SELECTORS.balanceOf, bridge)),
-    call("usds-decimals", usds, SELECTORS.decimals),
-    call("susds-balance", susds, encodeAddressCall(SELECTORS.balanceOf, bridge)),
-    call("susds-asset", susds, SELECTORS.asset),
-    call("susds-decimals", susds, SELECTORS.decimals),
-    call("susds-maxWithdraw", susds, encodeAddressCall(SELECTORS.maxWithdraw, bridge)),
-    call("dai-balance", params.daiAddress, encodeAddressCall(SELECTORS.balanceOf, bridge)),
-    call("dai-decimals", params.daiAddress, SELECTORS.decimals),
-    call("sdai-balance", params.sdaiAddress, encodeAddressCall(SELECTORS.balanceOf, bridge)),
-    call("sdai-decimals", params.sdaiAddress, SELECTORS.decimals),
-  ];
+    addressObservation({ label: "foreign-daiToken", contract: bridge, data: SELECTORS.daiToken, allowFailure: true,
+      verify: (value) => expectedAddress(value, usds, "foreign.daiToken()") }),
+    addressObservation({ label: "foreign-sDaiToken", contract: bridge, data: SELECTORS.sDaiToken, allowFailure: true,
+      verify: (value) => expectedAddress(value, susds, "foreign.sDaiToken()") }),
+    addressObservation({ label: "foreign-erc20token", contract: bridge, data: SELECTORS.erc20token, allowFailure: true,
+      verify: (value) => expectedAddress(value, usds, "foreign.erc20token()") }),
+    boolObservation({ label: "foreign-interestEnabled", contract: bridge,
+      data: encodeAddressCall(SELECTORS.isInterestEnabled, usds), allowFailure: true,
+      verify: (value) => value ? null : "foreign bridge interest wiring is disabled for USDS" }),
+    uint256Observation({ label: "foreign-investedAmount", contract: bridge,
+      data: encodeAddressCall(SELECTORS.investedAmount, usds), allowFailure: true }),
+    bridgeModeObservation("foreign-bridgeMode", bridge),
+    uint256Observation({ label: "usds-balance", contract: usds,
+      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+    decimalsObservation("usds-decimals", usds),
+    uint256Observation({ label: "susds-balance", contract: susds,
+      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+    addressObservation({ label: "susds-asset", contract: susds, data: SELECTORS.asset, allowFailure: true,
+      verify: (value) => expectedAddress(value, usds, "sUSDS.asset()") }),
+    decimalsObservation("susds-decimals", susds),
+    uint256Observation({ label: "susds-maxWithdraw", contract: susds,
+      data: encodeAddressCall(SELECTORS.maxWithdraw, bridge), allowFailure: true }),
+    uint256Observation({ label: "dai-balance", contract: params.daiAddress,
+      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+    decimalsObservation("dai-decimals", params.daiAddress),
+    uint256Observation({ label: "sdai-balance", contract: params.sdaiAddress,
+      data: encodeAddressCall(SELECTORS.balanceOf, bridge), allowFailure: true }),
+    decimalsObservation("sdai-decimals", params.sdaiAddress),
+  ] as const;
 }
 
-function susdsConversionCall(
-  params: XdaiBridgeParams,
-  susdsShares: bigint,
-): EvmMulticall3Call {
-  return call(
-    "susds-convertToAssets",
-    params.susdsAddress,
-    `${SELECTORS.convertToAssets}${susdsShares.toString(16).padStart(64, "0")}`,
-  );
-}
-
-function gnosisCalls(params: XdaiBridgeParams): EvmMulticall3Call[] {
+function gnosisFields(params: XdaiBridgeParams) {
   const home = params.homeBridgeAddress;
   return [
-    call("home-blockReward", home, SELECTORS.blockRewardContract),
-    call("home-usdsDeposit", home, SELECTORS.usdsDepositContract),
-    call("home-bridgeMode", home, SELECTORS.getBridgeMode),
-    call("mintedTotallyByBridge", params.blockRewardAddress, encodeAddressCall(SELECTORS.mintedTotallyByBridge, home)),
-    call("totalBurntCoins", home, SELECTORS.totalBurntCoins),
-  ];
-}
-
-function validateIdentities(
-  ethereum: readonly EvmMulticall3Result[],
-  gnosis: readonly EvmMulticall3Result[],
-  params: XdaiBridgeParams,
-): void {
-  requireExactAddress(requireAddress(ethereum, "foreign-daiToken"), params.usdsAddress, "foreign.daiToken()");
-  requireExactAddress(requireAddress(ethereum, "foreign-sDaiToken"), params.susdsAddress, "foreign.sDaiToken()");
-  requireExactAddress(requireAddress(ethereum, "foreign-erc20token"), params.usdsAddress, "foreign.erc20token()");
-  requireExactAddress(requireAddress(gnosis, "home-blockReward"), params.blockRewardAddress, "home block-reward wiring");
-  requireExactAddress(requireAddress(gnosis, "home-usdsDeposit"), params.usdsDepositContractAddress, "home USDS deposit wiring");
-  requireBridgeMode(ethereum, "foreign-bridgeMode");
-  requireBridgeMode(gnosis, "home-bridgeMode");
-  requireExactAddress(requireAddress(ethereum, "susds-asset"), params.usdsAddress, "sUSDS.asset()");
-  requireDecimals(ethereum, "usds-decimals");
-  requireDecimals(ethereum, "susds-decimals");
-  requireDecimals(ethereum, "dai-decimals");
-  requireDecimals(ethereum, "sdai-decimals");
-  if (!requireBool(ethereum, "foreign-interestEnabled")) {
-    throw new Error(`${ADAPTER_KEY}: foreign bridge interest wiring is disabled for USDS`);
-  }
-}
-
-function readObservation(
-  ethereum: readonly EvmMulticall3Result[],
-  gnosis: readonly EvmMulticall3Result[],
-  ethereumBlock: XdaiBridgeBlock,
-  gnosisBlock: XdaiBridgeBlock,
-): XdaiBridgeObservation {
-  const minted = requireUint(gnosis, "mintedTotallyByBridge");
-  const burnt = requireUint(gnosis, "totalBurntCoins");
-  if (burnt > minted) throw new Error(`${ADAPTER_KEY}: burnt xDAI exceeds minted xDAI`);
-
-  const liquidUsds = requireUint(ethereum, "usds-balance");
-  const susdsShares = requireUint(ethereum, "susds-balance");
-  const susdsAssets = requireUint(ethereum, "susds-convertToAssets");
-  const susdsMaxWithdraw = requireUint(ethereum, "susds-maxWithdraw");
-  if (susdsShares > 0n && susdsAssets === 0n) {
-    throw new Error(`${ADAPTER_KEY}: sUSDS convertToAssets() returned zero for nonzero shares`);
-  }
-
-  return {
-    ethereumBlock,
-    gnosisBlock,
-    liquidUsds,
-    susdsShares,
-    susdsAssets,
-    susdsMaxWithdraw,
-    investedUsds: requireUint(ethereum, "foreign-investedAmount"),
-    interestEnabled: requireBool(ethereum, "foreign-interestEnabled"),
-    legacyDai: requireUint(ethereum, "dai-balance"),
-    legacySdai: requireUint(ethereum, "sdai-balance"),
-    outstanding: minted - burnt,
-  };
+    addressObservation({ label: "home-blockReward", contract: home, data: SELECTORS.blockRewardContract,
+      allowFailure: true, verify: (value) => expectedAddress(value, params.blockRewardAddress, "home block-reward wiring") }),
+    addressObservation({ label: "home-usdsDeposit", contract: home, data: SELECTORS.usdsDepositContract,
+      allowFailure: true, verify: (value) => expectedAddress(value, params.usdsDepositContractAddress, "home USDS deposit wiring") }),
+    bridgeModeObservation("home-bridgeMode", home),
+    uint256Observation({ label: "mintedTotallyByBridge", contract: params.blockRewardAddress,
+      data: encodeAddressCall(SELECTORS.mintedTotallyByBridge, home), allowFailure: true }),
+    uint256Observation({ label: "totalBurntCoins", contract: home, data: SELECTORS.totalBurntCoins, allowFailure: true }),
+  ] as const;
 }
 
 function adaptXdaiBridgeResponse(
@@ -663,31 +597,58 @@ export async function fetchXdaiBridgeReserves(
     throw new Error(`${ADAPTER_KEY}: cross-chain finalized block timestamp skew ${timestampSkewSec}s exceeds ${maxCrossChainSkewSec}s`);
   }
 
-  const [ethereumResults, gnosisResults] = await Promise.all([
-    readMulticall(ETHEREUM_CHAIN, ethereumCalls(params), ethereumBlock, params, signal, ctx, deadlineMs),
-    readMulticall(GNOSIS_CHAIN, gnosisCalls(params), gnosisBlock, params, signal, ctx, deadlineMs),
+  const [ethereum, gnosis] = await Promise.all([
+    executeEvmObservationPlan({
+      adapterKey: `${ADAPTER_KEY}:${ETHEREUM_CHAIN}`,
+      fields: ethereumFields(params),
+      anchor: {
+        observe: async () => ethereumBlock,
+        metadata: (block) => ({ ethereumBlock: block }),
+      },
+      read: (calls, block) => pinnedMulticallReader(
+        ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs,
+      )(calls),
+    }),
+    executeEvmObservationPlan({
+      adapterKey: `${ADAPTER_KEY}:${GNOSIS_CHAIN}`,
+      fields: gnosisFields(params),
+      anchor: {
+        observe: async () => gnosisBlock,
+        metadata: (block) => ({ gnosisBlock: block }),
+      },
+      read: (calls, block) => pinnedMulticallReader(
+        GNOSIS_CHAIN, block, params, signal, ctx, deadlineMs,
+      )(calls),
+    }),
   ]);
-  validateIdentities(ethereumResults, gnosisResults, params);
-  requireExactAddress(
-    await readForeignBridgeOtherSide(params, ethereumBlock, signal, ctx, deadlineMs),
+  const foreignBridgeOtherSide = await readForeignBridgeOtherSide(params, ethereumBlock, signal, ctx, deadlineMs);
+  const storageIdentityError = expectedAddress(
+    foreignBridgeOtherSide,
     params.homeBridgeAddress,
     "foreign bridge storage wiring",
   );
+  if (storageIdentityError) throw new Error(`${ADAPTER_KEY}: ${storageIdentityError}`);
 
   // ERC-4626 conversion must use the exact shares read in the same pinned
   // Ethereum snapshot. A second tiny multicall keeps the argument dynamic
   // without falling back to a latest-state call.
-  const susdsShares = requireUint(ethereumResults, "susds-balance");
-  const conversionResults = await readMulticall(
-    ETHEREUM_CHAIN,
-    [susdsConversionCall(params, susdsShares)],
-    ethereumBlock,
-    params,
-    signal,
-    ctx,
-    deadlineMs,
-  );
-  const allEthereumResults = [...ethereumResults, ...conversionResults];
+  const susdsShares = ethereum.values["susds-balance"];
+  const conversion = await executeEvmObservationPlan({
+    adapterKey: `${ADAPTER_KEY}:${ETHEREUM_CHAIN}:susds-conversion`,
+    fields: [uint256Observation({
+      label: "susds-convertToAssets",
+      contract: params.susdsAddress,
+      data: `${SELECTORS.convertToAssets}${susdsShares.toString(16).padStart(64, "0")}`,
+      allowFailure: true,
+      verify: (value) => susdsShares > 0n && value === 0n
+        ? "sUSDS convertToAssets() returned zero for nonzero shares"
+        : null,
+    })] as const,
+    anchor: { observe: async () => ethereumBlock },
+    read: (calls, block) => pinnedMulticallReader(
+      ETHEREUM_CHAIN, block, params, signal, ctx, deadlineMs,
+    )(calls),
+  });
 
   await Promise.all([
     ...[
@@ -704,7 +665,22 @@ export async function fetchXdaiBridgeReserves(
     ].map((address) => requireCode(GNOSIS_CHAIN, address, gnosisBlock, params, signal, ctx, deadlineMs)),
   ]);
 
-  const observation = readObservation(allEthereumResults, gnosisResults, ethereumBlock, gnosisBlock);
+  const minted = gnosis.values.mintedTotallyByBridge;
+  const burnt = gnosis.values.totalBurntCoins;
+  if (burnt > minted) throw new Error(`${ADAPTER_KEY}: burnt xDAI exceeds minted xDAI`);
+  const observation: XdaiBridgeObservation = {
+    ethereumBlock,
+    gnosisBlock,
+    liquidUsds: ethereum.values["usds-balance"],
+    susdsShares,
+    susdsAssets: conversion.values["susds-convertToAssets"],
+    susdsMaxWithdraw: ethereum.values["susds-maxWithdraw"],
+    investedUsds: ethereum.values["foreign-investedAmount"],
+    interestEnabled: ethereum.values["foreign-interestEnabled"],
+    legacyDai: ethereum.values["dai-balance"],
+    legacySdai: ethereum.values["sdai-balance"],
+    outstanding: minted - burnt,
+  };
   await Promise.all([
     recheckBlockHash(ETHEREUM_CHAIN, ethereumBlock, params, signal, ctx, deadlineMs),
     recheckBlockHash(GNOSIS_CHAIN, gnosisBlock, params, signal, ctx, deadlineMs),

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
-import type { ScreenerRow, ScreenerSortKey } from "@/app/screener/screener-filters";
+import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
 
 const row: ScreenerRow = {

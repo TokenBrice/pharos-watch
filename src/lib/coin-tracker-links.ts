@@ -7,7 +7,7 @@
  * coin filtering fall back to the canonical stablecoin profile route, so the
  * lateral graph stays unbroken.
  */
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export type TrackerKind =
   | "stablecoin-profile"

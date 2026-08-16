@@ -6,7 +6,7 @@ import {
   DEPENDENCY_AUDIT_EXCEPTION_REGISTRY,
   runFullLockfileDependencyAudit,
   verifyDependencyAuditReport,
-} from "../ci/verify-dependency-audit.mjs";
+} from "../ci/verify-dependency-audit.ts";
 import { buildPrStaticCheckPlan } from "../maintenance/run-pr-static-checks.mjs";
 
 type AuditVulnerability = {

@@ -8,7 +8,7 @@ import {
 import { YIELD_HISTORY_MAX_DAYS } from "@shared/lib/yield-history-policy";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { YieldSafetySnapshotMeta, YieldSourceInputMeta } from "@shared/types/yield";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
@@ -43,6 +43,30 @@ function resolveMigrationPath(file: string): string {
 }
 
 const FIXED_NOW = new Date("2026-03-26T12:00:00.000Z");
+
+const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
+  { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
+  { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
+  { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
+  { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
+  { match: "pharos:yield-sync:history-retention-delete", rows: [] },
+  { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
+  { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+  { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
+  { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
+  { match: "ranked_linked_generations", rows: [] },
+  { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },
+  { match: "INSERT OR REPLACE INTO yield_data", rows: [] },
+  { match: "INSERT OR IGNORE INTO yield_history", rows: [] },
+  { match: "INSERT OR REPLACE INTO yield_source_decisions", rows: [] },
+  { match: "INSERT OR REPLACE INTO yield_source_decision_alternatives", rows: [] },
+  { match: "INSERT OR REPLACE INTO yield_publication_generations", rows: [] },
+  { match: "UPDATE yield_publication_generations", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_YIELD_PUBLICATION_D1_TABLES]);
+}
 
 function makeBenchmarkMeta(): ParsedYieldBenchmarkMeta {
   return {
@@ -793,6 +817,15 @@ describe("publishYieldCoordinatorResults", () => {
       { match: "DELETE FROM yield_history", rows: [] },
       { match: "DELETE FROM yield_source_decisions", rows: [] },
       { match: "DELETE FROM yield_source_decision_alternatives", rows: [] },
+      { match: "pharos:yield-sync:daily-history-materialize", rows: [] },
+      { match: "pharos:yield-sync:stale-yield-data-delete", rows: [] },
+      { match: "pharos:yield-sync:yield-data-existing-ids", rows: [], first: null },
+      { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [] },
+      { match: "pharos:yield-sync:history-retention-delete", rows: [] },
+      { match: "pharos:yield-sync:daily-history-retention-delete", rows: [] },
+      { match: "pharos:yield-sync:decision-retention-delete", rows: [] },
+      { match: "ranked_linked_generations", rows: [] },
+      { match: "INSERT INTO cache", rows: [], runMeta: { changes: cacheWriteChanges } },
     ]);
   }
 

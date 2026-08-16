@@ -1,21 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createBudget } from "../../../lib/evm-logs";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
-import { type BlacklistRunBudget } from "../run-budget";
+import { type BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
 
 vi.mock("../../../lib/blacklist-current-balances", () => ({
   upsertBlacklistCurrentBalance: vi.fn(),
 }));
 
-vi.mock("../balance-providers", () => ({
+vi.mock("../../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenCurrentBalance: vi.fn(),
   fetchTronTokenCurrentBalance: vi.fn(),
 }));
 
-import { syncCurrentBalanceCacheForRows } from "../current-balance-cache";
+import { syncCurrentBalanceCacheForRows } from "../../../lib/blacklist/current-balance-cache";
 import { upsertBlacklistCurrentBalance } from "../../../lib/blacklist-current-balances";
-import { fetchEvmTokenCurrentBalance } from "../balance-providers";
+import { fetchEvmTokenCurrentBalance } from "../../../lib/blacklist/balance-providers";
 
 const ethereumConfig: ContractEventConfig = {
   configKey: "ethereum-0xdac17f958d2ee523a2206206994597c13d831ec7",

@@ -6,6 +6,7 @@ import {
   GT_CHAIN_MAP,
   getActiveChainIds,
   getChainResilienceTier,
+  normalizeChainId,
   resolveChainId,
 } from "@shared/lib/chains";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -88,6 +89,29 @@ describe("resolveChainId", () => {
     expect(resolveChainId("ZKsync Era")).toBe("zksync");
     expect(resolveChainId("Abcore")).toBe("abcore");
     expect(resolveChainId("edgeX L1")).toBe("edgechain");
+  });
+});
+
+describe("normalizeChainId", () => {
+  it("trims and resolves canonical keys, display names, and aliases case-insensitively", () => {
+    expect(normalizeChainId(" Ethereum ")).toBe("ethereum");
+    expect(normalizeChainId(" OP Mainnet ")).toBe("optimism");
+    expect(normalizeChainId(" HYPERLIQUID-L1 ")).toBe("hyperliquid");
+  });
+
+  it("resolves numeric EVM IDs through the precomputed reverse index", () => {
+    expect(resolveChainId(1)).toBe("ethereum");
+    expect(normalizeChainId(42161)).toBe("arbitrum");
+    expect(resolveChainId(999_999_999)).toBeNull();
+    expect(normalizeChainId(999_999_999)).toBe("999999999");
+  });
+
+  it("retains unknown labels in one normalized form and rejects blank or non-finite input", () => {
+    expect(resolveChainId(" New Chain ")).toBeNull();
+    expect(normalizeChainId(" New Chain ")).toBe("new chain");
+    expect(normalizeChainId("   ")).toBeNull();
+    expect(normalizeChainId(null)).toBeNull();
+    expect(normalizeChainId(Number.NaN)).toBeNull();
   });
 });
 

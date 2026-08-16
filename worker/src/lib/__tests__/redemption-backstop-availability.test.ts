@@ -323,7 +323,10 @@ describe("wave2 redemption exit-route embeds", () => {
     expect(config).toBeDefined();
 
     const entry = await buildRedemptionBackstopEntry(
-      mockD1(),
+      mockD1([
+        { match: "FROM reserve_sync_state", rows: [] },
+        { match: "FROM reserve_composition", rows: [] },
+      ]),
       "usda-avalon",
       config!,
       50_000_000,

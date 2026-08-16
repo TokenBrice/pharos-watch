@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
 import { batchExecute } from "../lib/db";
 import { throwIfAborted } from "../lib/abort";
@@ -266,7 +267,7 @@ export async function recordDeferredTail(
             signal,
           );
         } catch (cursorError) {
-          console.warn("[sync-live-reserves] Failed to mark deferred cursor incomplete:", cursorError);
+          logWorkerEventArgs("handler", "warn", "[sync-live-reserves] Failed to mark deferred cursor incomplete:", cursorError);
         }
       }
       throw new Error(`Failed to record deferred reserve tail state: ${message}`);

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { batchExecute } from "../../lib/db";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
@@ -79,13 +80,13 @@ export async function upsertStagedPools(db: D1Database, pools: StagedPool[], sig
 
   const validPools = pools.filter((pool) => {
     if (!isValidStagedPoolId(pool.poolId)) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[dex-discovery] rejected malformed pool_id: ${JSON.stringify(pool.poolId)} (stablecoin=${pool.stablecoinId})`,
       );
       return false;
     }
     if (!hasValidStagedPoolTvl(pool)) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[dex-discovery] rejected staged pool with invalid tvl_usd=${String(pool.tvlUsd)} (pool=${pool.poolId}, stablecoin=${pool.stablecoinId})`,
       );
       return false;

@@ -14,6 +14,7 @@ import {
   ScheduledCheckpointOwnershipLostError,
   setScheduledCheckpointChildDisposition,
 } from "../scheduled-recovery-checkpoint";
+import { LIVE_RESERVE_RECOVERY_DOMAIN_POLICY } from "../../cron/live-reserve-recovery-checkpoint";
 
 const CHILD_JOBS = [
   "sync-live-reserves",
@@ -84,6 +85,7 @@ describe("scheduled recovery checkpoint", () => {
       slotStartedAt: 1_000,
       job: "sync-live-reserves",
       childJobs: CHILD_JOBS,
+      domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
       nowSec: 1_100,
     });
 
@@ -710,6 +712,7 @@ describe("scheduled recovery checkpoint", () => {
       job: "sync-live-reserves",
       childJobs: CHILD_JOBS,
       expectedQueueHash: "queue-current",
+      domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
       nowSec: 9_100,
     });
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ComparisonTable } from "@/components/comparison-table";
 import type { StablecoinData } from "@shared/types";
-import { makeStablecoin } from "@/test/fixtures/stablecoins";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 vi.mock("next/link", async () => {

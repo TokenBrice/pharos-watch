@@ -1,6 +1,6 @@
 import { batchExecute } from "../../lib/db";
 import { throwIfAborted } from "../../lib/abort";
-import type { BlacklistRow } from "./shared";
+import type { BlacklistRow } from "../../lib/blacklist/shared";
 
 export async function insertBlacklistRows(db: D1Database, rows: BlacklistRow[], signal?: AbortSignal): Promise<number> {
   throwIfAborted(signal);

@@ -14,7 +14,7 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "scripts/maintenance/generate-markdown-exports.ts",
   "scripts/maintenance/generate-openapi-spec.ts",
   "scripts/maintenance/generate-postman-collection.ts",
-  "scripts/maintenance/serve-static-export.mjs",
+  "scripts/maintenance/serve-static-export.ts",
   "scripts/maintenance/sync-depeg-events.ts",
   "scripts/maintenance/sync-digests.ts",
   "scripts/maintenance/wait-pages-release-marker.mjs",
@@ -53,7 +53,7 @@ export const DEPLOY_IMPACT_REGISTRY = {
       ".github/workflows/deploy-cloudflare.yml",
       "package-lock.json",
       "package.json",
-      "scripts/ci/classify-deploy-changes.mjs",
+      "scripts/ci/classify-deploy-changes.ts",
       "scripts/lib/automation-registry.mjs",
       "scripts/lib/deploy-impact.mjs",
     ],
@@ -95,31 +95,6 @@ export const DEPLOY_IMPACT_REGISTRY = {
     sharedExcludedPrefixes: ["shared/data/funding/", "shared/lib/selector/"],
   },
 };
-
-export function findDuplicateDeployImpactExactPaths(registry = DEPLOY_IMPACT_REGISTRY) {
-  const groups = [
-    ["fullDeployInfra", registry.fullDeployInfra.exactPaths],
-    ["fullDeployGuardrails", registry.fullDeployGuardrails.exactPaths],
-    ["pages", registry.pages.exactPaths],
-    ["pages.workflowOnlyExactPaths", registry.pages.workflowOnlyExactPaths],
-    ["worker", registry.worker.exactPaths],
-    ["worker.sharedExcludedPaths", registry.worker.sharedExcludedPaths],
-    ["workerRelease.excludedPaths", registry.workerRelease.excludedPaths],
-    ["workerRelease", registry.workerRelease.exactPaths],
-    ["workerRelease.sharedExcludedPaths", registry.workerRelease.sharedExcludedPaths],
-  ];
-
-  return groups.flatMap(([group, paths]) => {
-    const seen = new Set();
-    return paths
-      .filter((path) => {
-        if (seen.has(path)) return true;
-        seen.add(path);
-        return false;
-      })
-      .map((path) => `${group}:${path}`);
-  });
-}
 
 function generatedArtifact(definition) {
   return {
@@ -169,11 +144,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
     bootstrap: true,
-    outputPaths: ["src/app/learn/case-studies/content/client-index.ts"],
+    outputPaths: ["src/lib/case-study-client-index.ts"],
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
-    sourcePaths: ["src/app/learn/case-studies/content/**"],
+    sourcePaths: ["src/lib/case-studies/**"],
   }),
   generatedArtifact({
     id: "docs-metadata",
@@ -200,7 +175,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
-    sourcePaths: ["data/depeg-events.json", "src/app/depeg/[event]/config.ts"],
+    sourcePaths: ["data/depeg-events.json", "src/lib/depeg-event-config.ts"],
   }),
   generatedArtifact({
     id: "homepage-bootstrap",
@@ -357,7 +332,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-llms-txt.ts",
-    sourcePaths: ["data/digests.json", "docs/*.md", "shared/lib/public-docs.ts", "src/app/learn/**"],
+    sourcePaths: [
+      "data/digests.json",
+      "docs/*.md",
+      "shared/lib/public-docs.ts",
+      "src/lib/case-studies/**",
+      "src/lib/glossary-content.ts",
+      "src/lib/mechanism-explainers/**",
+    ],
   }),
   generatedArtifact({
     id: "api-reference",
@@ -388,7 +370,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-learn-images.ts",
-    sourcePaths: ["src/app/learn/mechanisms/**"],
+    sourcePaths: [
+      "src/components/stablecoin-detail/mechanism-diagrams/**",
+      "src/lib/mechanism-explainer-registry.ts",
+    ],
   }),
   generatedArtifact({
     id: "og-case-studies",
@@ -399,7 +384,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-case-studies.ts",
-    sourcePaths: ["data/logos.json", "public/datasets/stablecoin-cemetery.json", "src/app/learn/case-studies/**"],
+    sourcePaths: ["data/logos.json", "public/datasets/stablecoin-cemetery.json", "src/lib/case-studies/**"],
   }),
 ];
 
@@ -476,21 +461,6 @@ export function selectGeneratedArtifacts({ bootstrap = false, only = [], phases 
 }
 
 /** @param {{ bootstrap?: boolean, check?: boolean, only?: string[], phases?: number[], skip?: string[] }} [options] */
-export function buildGeneratedArtifactCommands({
-  bootstrap = false,
-  check = false,
-  only = [],
-  phases = [],
-  skip = [],
-} = {}) {
-  return selectGeneratedArtifacts({ bootstrap, only, phases, skip }).map((artifact) => {
-    if (check && artifact.checkCommand) {
-      return artifact.checkCommand;
-    }
-    return artifact.command;
-  });
-}
-
 /** @param {{ bootstrap?: boolean, check?: boolean, only?: string[], phases?: number[], skip?: string[] }} [options] */
 export function buildGeneratedArtifactPhases({
   bootstrap = false,

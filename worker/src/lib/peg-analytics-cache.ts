@@ -1,6 +1,8 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCache } from "./db-cache";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { PegSummaryCoin } from "@shared/types/market";
 import type { PegAnalyticsSnapshot } from "./peg-analytics";
 import { toErrorMessage } from "./error-utils";
@@ -53,7 +55,7 @@ export async function publishPegAnalyticsCache(
   db: D1Database,
   pegAnalytics: Pick<PegAnalyticsSnapshot, "nowSec" | "allEvents" | "pegDataById">,
 ): Promise<boolean> {
-  const todayStartSec = Math.floor(pegAnalytics.nowSec / DAY_SECONDS) * DAY_SECONDS;
+  const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
   const yesterdayStartSec = todayStartSec - DAY_SECONDS;
   let depegEventsToday = 0;
   let depegEventsYesterday = 0;
@@ -71,7 +73,7 @@ export async function publishPegAnalyticsCache(
     });
     return true;
   } catch (error) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       "[peg-analytics-cache] publish failed (read paths fall back to direct compute):",
       toErrorMessage(error),
     );

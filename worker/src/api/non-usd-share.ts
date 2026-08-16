@@ -2,7 +2,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_AGGREGATE_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/aggregate-registry";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { addFreshnessHeaders, jsonResponseWithHeaders, parseClampedIntegerParam } from "../lib/api-utils";
+import { addFreshnessHeaders, jsonResponseWithHeaders, parseQueryParams } from "../lib/api-utils";
 import { CACHE_PROFILES } from "../lib/constants";
 import { getCompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 
@@ -65,9 +65,17 @@ async function readRows(
 }
 
 export const handleNonUsdShare = async (db: D1Database, url: URL): Promise<Response> => {
-    const days = parseClampedIntegerParam(url.searchParams.get("days"), DEFAULT_DAYS, MIN_DAYS, MAX_DAYS, {
-      zeroAsDefault: true,
+    const params = parseQueryParams(url.searchParams, {
+      days: {
+        type: "int",
+        default: DEFAULT_DAYS,
+        min: MIN_DAYS,
+        max: MAX_DAYS,
+        rangePolicy: "reject",
+      },
     });
+    if (params instanceof Response) return params;
+    const { days } = params;
     const cutoff = Math.floor(Date.now() / 1000) - days * DAY_SECONDS;
 
     const completedSnapshot = await getCompletedSupplySnapshot(db);

@@ -89,6 +89,12 @@ describe("loadPriceValidationReferences", () => {
           updated_at: nowSec - 300,
         },
       },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
+      },
     ]);
 
     const result = await loadPriceValidationReferences(db);
@@ -109,6 +115,12 @@ describe("loadPriceValidationReferences", () => {
           value: JSON.stringify({ peggedEUR: 1.08 }),
           updated_at: nowSec - (8 * 3600),
         },
+      },
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-rates-meta"],
+        rows: [],
+        first: null,
       },
     ]);
 
@@ -159,8 +171,7 @@ describe("loadPriceValidationReferences", () => {
       updatedAt: null,
     });
     expect(warnSpy).toHaveBeenCalledWith(
-      "[price-validation] Failed to load FX validation references; falling back to static references",
-      error,
+      expect.stringContaining("[price-validation] Failed to load FX validation references; falling back to static references"),
     );
     warnSpy.mockRestore();
   });

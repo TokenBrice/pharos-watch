@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import GlossaryPage from "../page";
-import { GLOSSARY_ENTRIES } from "../content";
+import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 import { extractJsonLd } from "@/test/json-ld";
 
 vi.mock("next/font/local", () => ({

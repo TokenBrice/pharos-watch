@@ -16,7 +16,7 @@ import {
   RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
   RECOMMENDED_SETUP_START_PAYLOAD,
-} from "./telegram-route-constants";
+} from "@/lib/telegram-route-constants";
 import {
   TELEGRAM_MINI_APP_PAYLOAD_PATTERN,
   TELEGRAM_START_PAYLOAD_MAX_LENGTH,

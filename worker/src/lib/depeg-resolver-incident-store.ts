@@ -1,6 +1,6 @@
 import { DDR_PUBLIC_PREDICTION_DELAY_SEC, DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
 import { stableJsonStringifyV1 } from "@shared/lib/depeg-resolver/hash";
-import { runChunkedInRead } from "./db";
+import { executeAtomicBatch, runChunkedInRead } from "./db";
 import { authorizeEventRepair, consumeEventRepairAuthorization } from "./depeg-resolver-repair-store";
 import {
   DDR_LOCK_AUDIT_INSERT_COLUMNS_SQL,
@@ -709,7 +709,7 @@ async function insertNewIncident(
         ),
     );
   }
-  await db.batch(statements);
+  await executeAtomicBatch(db, statements);
 }
 
 async function linkUnsealedNearbyIncident(
@@ -845,7 +845,7 @@ ${DDR_INCIDENT_MEMBERSHIP_LOCK_PROJECTION}
     ? "pre-lock closed incident resurrected with nearby event"
     : "pre-lock nearby event adopted as current incident source";
   try {
-    await db.batch([
+    await executeAtomicBatch(db, [
       db
         .prepare(
           `INSERT INTO depeg_resolver_incident_event_links
@@ -1109,9 +1109,9 @@ async function linkSealedNearbyIncidentTail(
 
   // The two authorize/consume pairs above must run sequentially because the
   // INSERTs/UPDATE below depend on their generated authorization ids. Those
-  // three mechanical writes are atomic via db.batch(); the residual partial-
+  // three mechanical writes are atomic via executeAtomicBatch(); the residual partial-
   // state window is between authorization consumption and this batch.
-  await db.batch([
+  await executeAtomicBatch(db, [
     db
       .prepare(
         `INSERT INTO depeg_resolver_incident_event_links
@@ -1345,7 +1345,7 @@ export async function recordLockDeferral(db: D1Database, input: RecordLockDeferr
 
   const createdAt = input.createdAt ?? input.runAt;
   const reason = input.reason ?? null;
-  await db.batch([
+  await executeAtomicBatch(db, [
     db
       .prepare(
         `INSERT INTO depeg_resolver_prediction_lock_state
@@ -1461,5 +1461,5 @@ export async function recordLockOpportunity(
         ...bindLockMetadata(input),
       ),
   );
-  await db.batch(statements);
+  await executeAtomicBatch(db, statements);
 }

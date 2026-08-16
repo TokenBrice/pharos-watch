@@ -6,6 +6,7 @@ import {
   type PsiUniverseCache,
 } from "./psi-history-universe";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_PSI_ELIGIBLE_IDS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
@@ -59,7 +60,7 @@ function computeHistoricalEventBps(
       peakDeviationBps != null && Math.abs(historicalBps) > Math.abs(peakDeviationBps)
         ? peakDeviationBps
         : historicalBps;
-    const eventStartDay = Math.floor(event.started_at / DAY_SECONDS) * DAY_SECONDS;
+    const eventStartDay = bucketUnixSecondsToUtcDay(event.started_at);
     const dayEnd = day + DAY_SECONDS;
     const withinPeakFloorWindow = day - eventStartDay < HISTORICAL_PEAK_FLOOR_WINDOW_DAYS * DAY_SECONDS;
     const persistsMateriallyPastUtcClose =

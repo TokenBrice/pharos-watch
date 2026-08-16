@@ -2,7 +2,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { buildStaticContentSecurityPolicy } from "../../shared/lib/site-csp";
+import { buildStaticContentSecurityPolicy } from "@shared/lib/site-csp";
 
 const HEADERS_PATH = resolve(process.cwd(), "public/_headers");
 const CSP_HEADER_NAME = "Content-Security-Policy:";

@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { createStaticExportServer, resolveMissingYieldWorkbenchLocation } from "../maintenance/serve-static-export.mjs";
+import { createStaticExportServer, resolveMissingYieldWorkbenchLocation } from "../maintenance/serve-static-export";
 
 const roots: string[] = [];
 const servers: Server[] = [];

@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MetricStatCard } from "@/components/metric-stat-card";
+import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-stat-card";
 import { cn } from "@/lib/utils";
 import type { BlacklistStatusBucket } from "@/lib/blacklist-status-buckets";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
@@ -114,17 +114,24 @@ export function BlacklistStats({
           </CardContent>
         </Card>
       ) : null}
-      <MetricStatCard
-        title="Unfreezable Market Share"
-        value={unfreezableMarketShareValue}
-        subtext={unfreezableMarketShareSubtext}
-        className="sm:col-span-2"
-        contentClassName="pt-1"
-        valueClassName="pharos-numeric text-4xl font-semibold leading-none sm:text-5xl"
-        subtextClassName="mt-2 text-sm text-muted-foreground"
-        onClick={canDrillIntoUnfreezable ? onUnfreezableSelect : undefined}
-        actionLabel="Show unfreezable stablecoins"
-      />
+      {canDrillIntoUnfreezable && onUnfreezableSelect ? (
+        <InteractiveMetricStatCard
+          title="Unfreezable Market Share"
+          value={unfreezableMarketShareValue}
+          subtext={unfreezableMarketShareSubtext}
+          className="sm:col-span-2"
+          onClick={onUnfreezableSelect}
+          actionLabel="Show unfreezable stablecoins"
+        />
+      ) : (
+        <MetricStatCard
+          title="Unfreezable Market Share"
+          value={unfreezableMarketShareValue}
+          subtext={unfreezableMarketShareSubtext}
+          variant="hero"
+          className="sm:col-span-2"
+        />
+      )}
       <MetricStatCard
         title="Tracked Frozen Total"
         value={formatCurrency(trackedFrozenTotal)}

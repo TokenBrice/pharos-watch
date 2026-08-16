@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { batchExecute } from "../db";
 import { throwIfAborted } from "../abort";
 import { collectAffectedHours, recalcAffectedHours } from "./persistence";
@@ -51,7 +52,7 @@ export async function sweepRecentRoundtrips(
 
   const saturated = candidates.length === SWEEP_LIMIT;
   if (saturated) {
-    console.warn(`[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
+    logWorkerEventArgs("lib", "warn", `[roundtrip-sweep] Hit limit (${SWEEP_LIMIT}), backlog may remain`);
   }
 
   const affectedHours = collectAffectedHours(candidates);

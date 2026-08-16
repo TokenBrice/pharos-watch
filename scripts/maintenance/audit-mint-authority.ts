@@ -3,8 +3,8 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import type { ContractDeployment, StablecoinMeta } from "../../shared/types";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { ContractDeployment, StablecoinMeta } from "@shared/types";
 import { runAsMain, toPositiveInt } from "../lib/coverage-audit-cli";
 
 const DEFAULT_OUTPUT_DIR = "agents/mint-authority-candidates";
@@ -251,7 +251,11 @@ function resolveSelectedCoins(options: AuditMintAuthorityOptions): StablecoinMet
 function assertSafeOutputDir(cwd: string, outputDir: string): string {
   const target = resolve(cwd, outputDir);
   const stablecoinDataRoot = resolve(REPO_ROOT, "shared/data/stablecoins");
-  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, target);
+  const normalizedOutputDir = outputDir.replaceAll("\\", "/");
+  const safetyTarget = normalizedOutputDir.startsWith("@shared/")
+    ? resolve(REPO_ROOT, "shared", normalizedOutputDir.slice("@shared/".length))
+    : target;
+  const pathFromStablecoinDataRoot = relative(stablecoinDataRoot, safetyTarget);
   const isStablecoinDataPath =
     pathFromStablecoinDataRoot === "" ||
     (!!pathFromStablecoinDataRoot &&

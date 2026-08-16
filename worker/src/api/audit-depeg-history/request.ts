@@ -1,4 +1,4 @@
-import { errorResponse, parseQueryParams } from "../../lib/api-utils";
+import { errorResponse, methodNotAllowedResponse, parseQueryParams } from "../../lib/api-utils";
 
 export type RepairMode = "synthetic-splits" | "contradictory-recovery-price";
 
@@ -62,9 +62,9 @@ export function parseAuditRequest(url: URL, request?: Request): ParsedAuditReque
   const dryRun = url.searchParams.get("dry-run") === "true";
   const method = request?.method ?? "GET";
   if (method === "GET" && !dryRun) {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed. GET supports dry-run=true only; use POST for mutations." }),
-      { status: 405, headers: { "Content-Type": "application/json", Allow: "POST" } },
+    return methodNotAllowedResponse(
+      "Method not allowed. GET supports dry-run=true only; use POST for mutations.",
+      ["POST"],
     );
   }
 

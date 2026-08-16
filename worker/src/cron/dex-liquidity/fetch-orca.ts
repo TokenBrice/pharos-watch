@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   DIRECT_API_POOL_MIN_TVL_USD,
   makeDexApiFetchResult,
@@ -280,10 +281,10 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
   }
 
   if (results.length > 0) {
-    console.log(`[fetch-orca] Fetched ${results.length} pools`);
+    logWorkerEventArgs("handler", "info", `[fetch-orca] Fetched ${results.length} pools`);
   }
   for (const error of errors) {
-    console.warn("[fetch-orca]", error);
+    logWorkerEventArgs("handler", "warn", "[fetch-orca]", error);
   }
   return makeDexApiFetchResult(results, {
     ok: results.length > 0,

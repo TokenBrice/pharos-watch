@@ -4,7 +4,9 @@ import { loadBlacklistReconciliationStatus } from "../blacklist-reconciliation-s
 
 describe("loadBlacklistReconciliationStatus", () => {
   it("returns a neutral not-run status before the guarded action", async () => {
-    const status = await loadBlacklistReconciliationStatus(mockD1());
+    const status = await loadBlacklistReconciliationStatus(mockD1([
+      { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+    ]));
     expect(status).toMatchObject({
       status: "not-run",
       expectedEventCount: 0,

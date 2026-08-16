@@ -1,4 +1,4 @@
-import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import type { SupplyHistoryPoint } from "@shared/types";
 import type { ApiMeta } from "@/lib/api";
 import type {
   MintAuthorityDetailViewModel,
@@ -158,7 +158,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   prevMonth: number | null;
   performanceVsUsd1y: number | null;
   pegRef: number;
-  deviationBps: number;
+  deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   isNavToken: boolean;

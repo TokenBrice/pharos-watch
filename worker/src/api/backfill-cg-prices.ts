@@ -1,5 +1,5 @@
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { cgUrl, cgHeaders } from "../lib/coingecko";
 import { USER_AGENT } from "../lib/constants";
 import { batchExecute } from "../lib/db";
@@ -98,14 +98,14 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
       // Build maps: date -> price, date -> market_cap (normalized to UTC midnight)
       const priceByDate = new Map<number, number>();
       for (const point of mergedPrices) {
-        const snapshotDate = Math.floor(point.timestamp / DAY_SECONDS) * DAY_SECONDS;
+        const snapshotDate = bucketUnixSecondsToUtcDay(point.timestamp);
         priceByDate.set(snapshotDate, point.price);
       }
 
       const mcapByDate = new Map<number, number>();
       for (const [ts, mcap] of cgMarketCaps) {
         if (mcap <= 0) continue;
-        const snapshotDate = Math.floor(ts / 1000 / DAY_SECONDS) * DAY_SECONDS;
+        const snapshotDate = bucketUnixMillisecondsToUtcDay(ts) / 1000;
         mcapByDate.set(snapshotDate, mcap);
       }
 

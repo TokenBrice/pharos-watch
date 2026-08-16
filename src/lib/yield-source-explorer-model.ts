@@ -1,4 +1,4 @@
-import { inferLaneConfidenceTier } from "@/app/yield/source-board-model";
+import { inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import {
   YIELD_SOURCE_CONFIDENCE_ORDER,
   classifyYieldSourceDepth,

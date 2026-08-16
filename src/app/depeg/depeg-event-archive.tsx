@@ -4,11 +4,11 @@ import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
   DEPEG_EVENT_ENTRIES,
   type DepegEventEntry,
-} from "@/app/depeg/[event]/page-data";
+} from "@/lib/depeg-event-page-data";
 import {
   MIN_DEPEG_PAGE_DEVIATION_BPS,
   getPeakDeviationMagnitudeBps,
-} from "@/app/depeg/[event]/config";
+} from "@/lib/depeg-event-config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
 

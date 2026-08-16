@@ -1,7 +1,7 @@
 import {
   projectTelegramRecapTerminalOutcome,
   type TelegramRecapTerminalOutcome,
-} from "../telegram-recap-store";
+} from "../../lib/telegram-recap-store";
 import type { DeadLetterPendingRow, PendingAlertRow } from "./types";
 
 type RecapPendingRow = Pick<

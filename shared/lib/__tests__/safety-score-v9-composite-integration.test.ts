@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { V9ScoringInput, V9StructuralSignal } from "../../types/safety-score-v9";
-import { scoreV9Input } from "../safety-score-v9/formula";
+import { scoreV9Input, type V9AggregationStrategy } from "../safety-score-v9/formula";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 
 function signal(overrides: Partial<V9StructuralSignal> = {}): V9StructuralSignal {
@@ -41,6 +41,43 @@ function input(overrides: Partial<V9ScoringInput> = {}): V9ScoringInput {
 }
 
 describe("Safety Score v9 continuous composite and scoped risk integration", () => {
+  it("accepts a counterfactual aggregation strategy without changing the default", () => {
+    const scoringInput = input({ pillars: { backing: 50, exit: 80, control: 100 } });
+    const baseline = scoreV9Input(scoringInput, V9_CANDIDATE_POLICY_V1);
+    let receivedHeadroom: number | null = null;
+    const weightedMean: V9AggregationStrategy = (pillars, weights, policyHeadroom) => {
+      receivedHeadroom = policyHeadroom;
+      const score = pillars.backing * weights.backing
+        + pillars.exit * weights.exit
+        + pillars.control * weights.control;
+      return {
+        method: "smooth-bounded-headroom",
+        score,
+        weightedQuality: score,
+        weakestPillar: "backing",
+        weakestScore: pillars.backing,
+      };
+    };
+    const counterfactual = scoreV9Input(
+      scoringInput,
+      V9_CANDIDATE_POLICY_V1,
+      [],
+      0,
+      false,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      weightedMean,
+    );
+
+    expect(receivedHeadroom).toBe(20);
+    expect(counterfactual.finalScore).toBe(73);
+    expect(counterfactual.finalScore).not.toBe(baseline.finalScore);
+  });
+
   it("does not fall when the identity of the weakest pillar crosses", () => {
     const before = scoreV9Input(
       input({ pillars: { backing: 100, exit: 50, control: 49.9 } }),

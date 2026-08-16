@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-utils";
@@ -136,7 +137,7 @@ export async function resolveMetalReferenceRates(
       if (peerMedian) {
         const divergence = relativeDivergence(candidateRate, peerMedian.rate);
         if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {
-          console.warn(
+          logWorkerEventArgs("lib", "warn",
             `[sync-fx-rates] Rejected gold-api.com ${pegKey} rate ${candidateRate} because it diverged ` +
             `${Number((divergence * 100).toFixed(1))}% from commodity peer median ${peerMedian.rate}`,
           );
@@ -167,16 +168,16 @@ export async function resolveMetalReferenceRates(
       : validatePayloadWithSchema(MetalPriceSchema, silverPayload, "sync-fx-rates:silver");
 
     if (!goldValidation.ok) {
-      console.warn(`[sync-fx-rates] Gold payload invalid: ${goldValidation.issues}`);
+      logWorkerEventArgs("lib", "warn", `[sync-fx-rates] Gold payload invalid: ${goldValidation.issues}`);
     }
     if (!silverValidation.ok) {
-      console.warn(`[sync-fx-rates] Silver payload invalid: ${silverValidation.issues}`);
+      logWorkerEventArgs("lib", "warn", `[sync-fx-rates] Silver payload invalid: ${silverValidation.issues}`);
     }
 
     resolvedByPeg.peggedGOLD = resolveMetal("peggedGOLD", goldValidation.ok ? goldValidation.data.price : undefined) ?? undefined;
     resolvedByPeg.peggedSILVER = resolveMetal("peggedSILVER", silverValidation.ok ? silverValidation.data.price : undefined) ?? undefined;
   } catch (err) {
-    console.warn("[sync-fx-rates] Gold/silver API failed, falling back to peer median or cached values:", err);
+    logWorkerEventArgs("lib", "warn", "[sync-fx-rates] Gold/silver API failed, falling back to peer median or cached values:", err);
     resolvedByPeg.peggedGOLD = resolvePeerMedian("peggedGOLD") ?? resolveCached("peggedGOLD") ?? undefined;
     resolvedByPeg.peggedSILVER = resolvePeerMedian("peggedSILVER") ?? resolveCached("peggedSILVER") ?? undefined;
   }

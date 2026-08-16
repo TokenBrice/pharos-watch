@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { sumPegBuckets } from "@shared/lib/supply";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
@@ -53,13 +54,13 @@ async function fetchCapRedeemQuote(
     extraRpcUrls: getPublicFallbackRpcUrls(ETHEREUM_CHAIN),
   });
   if (!quoteHex) {
-    console.warn(`[authoritative-price-sources] cusd-cap: RPC returned null`);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] cusd-cap: RPC returned null`);
     return null;
   }
 
   const outputAmount = decodeUint256WordBigInt(quoteHex, 0);
   if (outputAmount == null || outputAmount <= 0n) {
-    console.warn(`[authoritative-price-sources] cusd-cap: contract returned zero or invalid output`);
+    logWorkerEventArgs("lib", "warn", `[authoritative-price-sources] cusd-cap: contract returned zero or invalid output`);
     return null;
   }
 

@@ -83,7 +83,6 @@ describe("readCachedJson", () => {
     }
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[cache] Failed to parse persisted JSON (status:stablecoins); count=1:"),
-      expect.any(String),
     );
     expect(getCacheJsonParseFailureCountersForTests()["status:stablecoins"]?.count).toBe(1);
   });
@@ -95,7 +94,6 @@ describe("readCachedJson", () => {
 
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining("[cache] Failed to parse persisted JSON (daily-digest:input); count=1:"),
-      expect.any(String),
     );
     expect(getCacheJsonParseFailureCountersForTests()["daily-digest:input"]?.count).toBe(1);
   });
@@ -1272,7 +1270,7 @@ describe("buildCacheStatuses", () => {
       });
       expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using table fallback");
       expect(infoSpy).toHaveBeenCalledWith(
-        "[api-freshness] dex-liquidity: freshness sentinel lookup failed; using table fallback",
+        expect.stringContaining("[api-freshness] dex-liquidity: freshness sentinel lookup failed; using table fallback"),
       );
     } finally {
       infoSpy.mockRestore();
@@ -1342,7 +1340,7 @@ describe("buildCacheStatuses", () => {
       });
       expect(warnings).toContain("dex-liquidity: freshness sentinel lookup failed; using cron fallback");
       expect(infoSpy).toHaveBeenCalledWith(
-        "[api-freshness] dex-liquidity: freshness sentinel lookup failed; using cron fallback",
+        expect.stringContaining("[api-freshness] dex-liquidity: freshness sentinel lookup failed; using cron fallback"),
       );
     } finally {
       infoSpy.mockRestore();
@@ -1390,8 +1388,7 @@ describe("buildCacheStatuses", () => {
         message: "cron lookup failed",
       });
       expect(warnSpy).toHaveBeenCalledWith(
-        "[api-freshness] Failed to read producer cron fallbacks",
-        expect.any(Error),
+        expect.stringContaining("[api-freshness] Failed to read producer cron fallbacks"),
       );
     } finally {
       warnSpy.mockRestore();

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildWorkerLogRecord, logWorkerEvent } from "../structured-log";
+import { buildWorkerLogRecord, logWorkerEvent, logWorkerEventArgs } from "../structured-log";
 
 describe("structured worker logging", () => {
   afterEach(() => {
@@ -99,6 +99,24 @@ describe("structured worker logging", () => {
       event: "edge_cache_write_failed",
       route: "/api/status",
       message: "Edge cache write failed",
+    });
+  });
+
+  it("preserves console-style severity, errors, and supplemental context", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const error = new Error("provider failed");
+
+    logWorkerEventArgs("handler", "error", "Refresh failed", { provider: "upstream" }, error);
+
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const record = JSON.parse(String(errorSpy.mock.calls[0]?.[0]));
+    expect(record).toMatchObject({
+      scope: "handler",
+      level: "error",
+      message: "Refresh failed",
+      errorName: "Error",
+      errorMessage: "provider failed",
+      metadata: { arguments: [{ provider: "upstream" }] },
     });
   });
 });

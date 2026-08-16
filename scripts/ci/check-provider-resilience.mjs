@@ -2,8 +2,8 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { reportViolations } from "../lib/report-violations.mjs";
-import { collectSourceFiles, runAsCli } from "../lib/source-files.mjs";
+import { reportViolations } from "../lib/report-violations.mts";
+import { collectSourceFiles, runAsCli } from "../lib/source-files.mts";
 import {
   PROVIDER_RESILIENCE_REGISTRY,
   REQUIRED_PROVIDER_SURFACE_FAMILIES,

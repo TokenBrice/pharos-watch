@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { round1 } from "@shared/lib/math";
@@ -31,7 +32,7 @@ import {
 import { markCollectorDegraded } from "./collectors-shared";
 import type { DepegLifecycleFlag } from "../../lib/depeg-lifecycle";
 import { buildRecentDigestMeta, type RecentDigestMetaEntry } from "./runtime-helpers";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./shared";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../../lib/digest-sql-filters";
 import { buildEditorialCandidates } from "./editorial-candidates";
 import { buildStandingConditions, collectCauseContext } from "./cause-context";
 import { buildDigestIntelligence, parseStoredDigestInput } from "./digest-intelligence";
@@ -115,7 +116,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (stablecoinsCacheResult.kind !== "ok") {
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       `[daily-digest] stablecoins cache unavailable (${stablecoinsCacheResult.reason}), skipping regeneration`,
     );
     return {
@@ -262,7 +263,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   if (currentPsiSource) {
     const parsed = tryParseJson(currentPsiSource.components, {
       context: "daily-digest PSI components",
-      onFailure: (failure) => console.warn("[daily-digest] Failed to parse PSI components JSON:", failure.message),
+      onFailure: (failure) => logWorkerEventArgs("handler", "warn", "[daily-digest] Failed to parse PSI components JSON:", failure.message),
     });
     parsedComponents = parsed as typeof parsedComponents;
   }

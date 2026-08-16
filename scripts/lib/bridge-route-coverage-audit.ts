@@ -1,5 +1,5 @@
-import { isActiveStablecoinMeta } from "../../shared/lib/stablecoins/status";
-import type { BridgeRouteDeployment, BridgeRouteScope, StablecoinMeta } from "../../shared/types/core";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
+import type { BridgeRouteDeployment, BridgeRouteScope, StablecoinMeta } from "@shared/types/core";
 
 export interface BridgeRouteCoverageCoinRow {
   coinId: string;

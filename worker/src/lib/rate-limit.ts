@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { bytesToHex } from "./hash";
 import type { MinimalD1Database } from "./minimal-d1";
 
@@ -63,7 +64,7 @@ export async function reserveFeedbackRateLimit(
       .run()
       .then(() => {})
       .catch((e) => {
-        console.warn("[feedback] rate-limit prune failed:", e);
+        logWorkerEventArgs("lib", "warn", "[feedback] rate-limit prune failed:", e);
       }),
   );
 

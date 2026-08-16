@@ -1,9 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockD1Database } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { projectFreezeBlocked } from "../freeze";
 
 const SEC = 1_700_000_000;
 const MATCH_BLACKLIST_EVENTS = "FROM blacklist_events";
+const TAPE_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...TAPE_WRITE_TABLES]);
+}
 
 function blacklistRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -48,7 +56,7 @@ describe("freeze projector", () => {
       ...limitedRows,
       blacklistRow({ id: "freeze-c", rowid: 3 }),
     ];
-    const db = mockD1([
+    const db = mockTapeD1([
       { match: "FROM cache WHERE key", rows: [] },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [0, "blacklist", 2], rows: limitedRows },
       { match: MATCH_BLACKLIST_EVENTS, matchBinds: [0, SEC, "blacklist"], rows: expandedRows },

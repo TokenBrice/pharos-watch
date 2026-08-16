@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { DepegEvent } from "@shared/types/market";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
@@ -133,7 +134,7 @@ export async function loadActiveIncidentProjections(
   } catch (err) {
     const msg = toErrorMessage(err);
     if (!isMissingTableError(err)) {
-      console.error("[depeg-event-projection] Unexpected error loading active incident projections:", msg);
+      logWorkerEventArgs("lib", "error", "[depeg-event-projection] Unexpected error loading active incident projections:", msg);
     }
     return { projections: new Map(), available: false };
   }

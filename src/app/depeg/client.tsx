@@ -24,7 +24,7 @@ import { DepegResolverReviewerModule } from "@/components/depeg-resolver-reviewe
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatElapsedSeconds } from "@shared/lib/format";

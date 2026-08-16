@@ -10,11 +10,11 @@ import {
   type DdrrV2NoCallReviewRow,
   type DdrrV2PredictionReviewRow,
   type DdrrVerdictReview,
-} from "../../shared/types/depeg-resolver-review";
-import type { DdrFactor, DdrFactorCode, DdrFactorSeverity } from "../../shared/types/depeg-resolver";
-import { summarizeDdrrMetrics } from "../../shared/lib/depeg-resolver-review";
-import { mean, median } from "../../shared/lib/stats";
-import { formatPercentFromRatio } from "../../shared/lib/format";
+} from "@shared/types/depeg-resolver-review";
+import type { DdrFactor, DdrFactorCode, DdrFactorSeverity } from "@shared/types/depeg-resolver";
+import { summarizeDdrrMetrics } from "@shared/lib/depeg-resolver-review";
+import { mean, median } from "@shared/lib/stats";
+import { formatPercentFromRatio } from "@shared/lib/format";
 import {
   PROD_ORIGIN,
   fetchJson,

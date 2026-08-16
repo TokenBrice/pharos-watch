@@ -105,7 +105,7 @@ function makeMintBurnAssessmentDb(
     },
   ];
   const timestampLookup: MockTableConfig = {
-    match: "SELECT MAX(started_at) as started_at FROM cron_runs WHERE job = ? AND status = 'ok'",
+    match: "MAX(started_at)",
     matchBinds: ["sync-mint-burn"],
     rows: [],
     ...(options.latestSuccessfulSyncError
@@ -113,7 +113,7 @@ function makeMintBurnAssessmentDb(
       : { first: { started_at: latestSuccessfulSyncAt } }),
   };
   const rowCountLookup: MockTableConfig = {
-    match: "item_count, metadata",
+    match: "item_count",
     matchBinds: ["mint-burn-growth-watchdog"],
     rows: [],
     ...(options.rowCountError
@@ -127,7 +127,12 @@ function makeMintBurnAssessmentDb(
   };
 
   return mockD1([
+    { match: "SELECT 1", rows: [], first: { value: 1 } },
     { match: "cache WHERE key IN", rows: cacheRows },
+    { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
+    { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+    { match: "GROUP BY job", rows: [] },
     { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
     {
       match: "SELECT status",
@@ -137,6 +142,7 @@ function makeMintBurnAssessmentDb(
     },
     timestampLookup,
     rowCountLookup,
+    { match: "FROM cron_runs", rows: [], first: null },
   ]);
 }
 
@@ -146,6 +152,14 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     const db = mockD1([
       { match: "SELECT 1", rows: [], first: { value: 1 } },
       { match: "cache WHERE key IN", rows: [{ key: "stablecoins", updated_at: nowSec - 60 }] },
+      { match: "FROM cron_runs", rows: [], first: null },
+      { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 } },
+      { match: "SELECT status", matchBinds: ["sync-mint-burn"], rows: [], first: null },
+      { match: "MAX(started_at)", rows: [], first: null },
+      { match: "item_count", rows: [], first: null },
+      { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
+      { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
     ]);
 
     const result = await assessPublicHealth(db, nowSec, { logPrefix: "test" });

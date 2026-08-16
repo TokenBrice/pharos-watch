@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { LiveWatcherCount } from "./live-watcher-count";
-import { SETUP_DEEP_LINK } from "./telegram-route-constants";
+import { SETUP_DEEP_LINK } from "@/lib/telegram-route-constants";
 import { TELEGRAM_ACTIONS, TELEGRAM_COMMAND_COUNT } from "./telegram-content";
 
 const PROSE_LINK_CLASS =

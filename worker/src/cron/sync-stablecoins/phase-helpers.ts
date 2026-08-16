@@ -1,9 +1,10 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { sumPegBuckets } from "@shared/lib/supply";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
-import { startOfUtcDaySec } from "../../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import type { PeggedAsset } from "./enrich-prices";
 import { parseStablecoinsCachePayload } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";
@@ -285,7 +286,7 @@ export async function detectPriceStaleness(
 
   const previousData = parseStablecoinsCachePayload(previousCache.value);
   if (!previousData) {
-    console.warn("[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
+    logWorkerEventArgs("handler", "warn", "[sync-stablecoins] Failed to parse previous stablecoins cache in staleness check");
     return { state: "check-failed", reason: "malformed-previous-cache" };
   }
 

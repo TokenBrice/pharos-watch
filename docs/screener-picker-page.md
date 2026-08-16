@@ -6,7 +6,7 @@ Route contract for `/screener/picker/`, the noindex profile-driven stablecoin sh
 
 - Shell and metadata: `src/app/screener/picker/page.tsx`
 - Client orchestration: `src/app/screener/picker/client.tsx`
-- URL/wizard state: `src/app/screener/picker/selector-state.ts`
+- URL/wizard state: `src/lib/selector-state.ts`
 - Result composition and handoff: `src/app/screener/picker/result-pane.tsx`, `handoff.ts`
 - Wizard/result components: `src/components/selector/`
 - Engine and data adapter: `shared/lib/selector/`

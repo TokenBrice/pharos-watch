@@ -1,4 +1,4 @@
-import type { SupplyHistoryPoint } from "@/hooks/use-stablecoins";
+import type { SupplyHistoryPoint } from "@shared/types";
 import { CRON_24H, CRON_RESERVE_SYNC } from "@/lib/cron-intervals";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import {
@@ -52,7 +52,7 @@ export interface DetailMarketSnapshot {
 
 export interface DetailPegPriceSnapshot {
   pegRef: number;
-  deviationBps: number;
+  deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;

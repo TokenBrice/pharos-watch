@@ -250,6 +250,10 @@ function cacheRows(payload: DdrResponse) {
         },
       ],
     },
+    { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+    { match: "FROM depeg_resolver_prediction_errata", rows: [] },
+    { match: "FROM depeg_resolver_prediction_lock_state", rows: [] },
+    { match: "FROM depeg_events WHERE id IN", rows: [] },
   ];
 }
 
@@ -301,8 +305,8 @@ describe("handleDepegResolver", () => {
     vi.setSystemTime(2_000_000 * 1000);
     const payload = snapshot(1_998_000, 1_999_000);
     const db = mockD1([
-      ...cacheRows(payload),
       { match: "FROM depeg_events WHERE id IN", rows: [{ id: 1, ended_at: 1_999_500 }] },
+      ...cacheRows(payload),
     ]);
 
     const res = await handleDepegResolver(db);
@@ -319,7 +323,6 @@ describe("handleDepegResolver", () => {
     const payload = snapshot(1_998_000, 2_001_000);
     const rowHash = payload.rows[0].prediction.rowHash;
     const db = mockD1([
-      ...cacheRows(payload),
       {
         match: "FROM depeg_resolver_prediction_errata",
         rows: [
@@ -339,6 +342,7 @@ describe("handleDepegResolver", () => {
           },
         ],
       },
+      ...cacheRows(payload),
     ]);
 
     const res = await handleDepegResolver(db);
@@ -414,7 +418,6 @@ describe("handleDepegResolver", () => {
     };
     const payload = snapshot(computedAt, 2_001_000, [pendingRow]);
     const db = mockD1([
-      ...cacheRows(payload),
       {
         match: "FROM depeg_resolver_prediction_lock_state",
         rows: [
@@ -445,6 +448,7 @@ describe("handleDepegResolver", () => {
           },
         ],
       },
+      ...cacheRows(payload),
     ]);
 
     const res = await handleDepegResolver(db);
@@ -471,8 +475,8 @@ describe("handleDepegResolver", () => {
     latest.rows[0].prediction.publicationSnapshotToken = "ddrpub_002";
     latest._meta.basePayloadHash = computeDdrManifestBasePayloadHash(latest);
     const db = mockD1([
-      ...cacheRows(cached),
       { match: "FROM depeg_resolver_publication_snapshots", rows: [manifestRow(latest, 2)] },
+      ...cacheRows(cached),
     ]);
 
     const res = await handleDepegResolver(db);
@@ -530,6 +534,10 @@ describe("handleDepegResolver", () => {
           },
         ],
       },
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "FROM depeg_resolver_publication_snapshots", rows: [] },
+      { match: "FROM depeg_resolver_prediction_errata", rows: [] },
+      { match: "FROM depeg_events WHERE id IN", rows: [] },
     ]);
 
     const res = await handleDepegResolver(db);

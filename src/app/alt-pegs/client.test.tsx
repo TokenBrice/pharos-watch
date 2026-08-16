@@ -3,7 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
-import { makeStablecoin } from "@/test/fixtures/stablecoins";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
 const refetchMock = vi.fn();
 

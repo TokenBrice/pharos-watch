@@ -13,13 +13,13 @@
  * See `docs/process/boundary-waivers.md` for rationale, mitigations, and the
  * retirement assessment.
  */
-import { ACTIVE_IDS, FROZEN_IDS, FROZEN_STABLECOINS } from "../../shared/lib/stablecoins/registry";
-import { FROZEN_SNAPSHOTS_BY_ID } from "../../shared/lib/stablecoins/frozen-snapshots";
-import { DEAD_STABLECOINS } from "../../shared/lib/dead-stablecoins";
+import { ACTIVE_IDS, FROZEN_IDS, FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 // Independent registries that the freeze runbook requires us to clean up.
 import { MINT_BURN_CONFIG_SPECS } from "../../worker/src/lib/mint-burn-contracts-data";
 import { CONTRACT_CONFIGS } from "../../worker/src/lib/blacklist-contracts";
-import { BLUECHIP_SLUG_MAP } from "../../shared/lib/bluechip-slugs";
+import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 // Raw pool map — `yield-config.ts` re-exports this with no frozen filter,
 // so the raw module is the source of truth for "is this id present?".
 import { YIELD_POOL_MAP } from "../../worker/src/cron/yield-config-pools";

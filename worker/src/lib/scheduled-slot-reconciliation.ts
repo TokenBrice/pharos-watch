@@ -6,6 +6,8 @@ import {
 import type { CronScheduleKey } from "@shared/lib/cron-jobs";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome } from "./producer-history";
+import { cronEventCacheKey, logCronEvent } from "./cron-logger";
+
 
 export interface StaleSlotExecutionArtifact {
   slot_key: string;
@@ -62,16 +64,8 @@ export const STALE_SLOT_ABANDONED_EVENT_TYPE = "scheduled-slot-abandoned";
  */
 export const STALE_SLOT_ERROR = "scheduled slot heartbeat stale; marked expired by later invocation";
 
-export function cacheKeySegment(value: string): string {
-  const normalized = value
-    .toLowerCase()
-    .replace(/[^a-z0-9:-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return (normalized || "unknown").slice(0, 96);
-}
-
 export function staleSlotEventCacheKey(scheduleKey: string): string {
-  return `cron:event:${cacheKeySegment(scheduleKey)}:${cacheKeySegment(STALE_SLOT_ABANDONED_EVENT_TYPE)}`;
+  return cronEventCacheKey(scheduleKey, STALE_SLOT_ABANDONED_EVENT_TYPE);
 }
 
 async function listProgressRowsForStaleSlot(
@@ -578,8 +572,7 @@ async function writeStaleSlotEventMarker(
   nowSec: number,
   reconciliation: StaleSlotReconciliationSummary,
 ): Promise<void> {
-  const record = {
-    event: "cron_event",
+  await logCronEvent(db, {
     job: slot.slot_key,
     eventType: STALE_SLOT_ABANDONED_EVENT_TYPE,
     severity: "error",
@@ -593,19 +586,7 @@ async function writeStaleSlotEventMarker(
       reconciledAt: nowSec,
       staleSlotReconciliation: reconciliation,
     },
-    recordedAt: nowSec,
-  };
-  try {
-    await runWithOverloadRetry(() =>
-      db
-        .prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
-        .bind(staleSlotEventCacheKey(slot.slot_key), JSON.stringify(record), nowSec)
-        .run(),
-    );
-    console.error(`[cron-event:${slot.slot_key}] ${STALE_SLOT_ABANDONED_EVENT_TYPE}: ${record.message}`);
-  } catch (err) {
-    console.warn(`[cron-slot] Failed to persist stale slot marker for ${slot.slot_key}@${slot.slot_started_at}:`, err);
-  }
+  });
 }
 
 /** Reconcile durable child artifacts and record the corresponding operator event as one internal stage. */

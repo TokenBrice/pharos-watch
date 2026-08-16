@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { buildInClause } from "./db";
 import { CACHE_FRESHNESS_THRESHOLDS } from "./constants";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "./dex-liquidity";
@@ -22,6 +23,10 @@ import {
 } from "./freshness-sentinels";
 import { toErrorMessage } from "./error-utils";
 import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
+import {
+  API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+  measureFreshnessAge,
+} from "./api-freshness-age";
 
 export { addFreshnessHeaders } from "./api-freshness-headers";
 
@@ -82,11 +87,17 @@ const TABLE_FRESHNESS_FALLBACK_QUERIES: Partial<Record<FreshnessSentinelBackedCa
 };
 
 export function buildFreshnessMeta(updatedAt: number, maxAgeSec: number): FreshnessMeta {
-  const age = Math.floor(Date.now() / 1000) - updatedAt;
+  const { ageSeconds, futureSkewSeconds } = measureFreshnessAge(
+    Date.now() / 1000,
+    updatedAt,
+    API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
+  );
   return {
     updatedAt,
-    ageSeconds: age,
-    status: classifyFreshnessRatio(age / maxAgeSec),
+    ageSeconds,
+    status: futureSkewSeconds > API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC
+      ? "degraded"
+      : classifyFreshnessRatio(ageSeconds / maxAgeSec),
   };
 }
 
@@ -158,7 +169,7 @@ async function loadProducerCronFallbacks(
       errorMessage: null,
     };
   } catch (error) {
-    console.warn("[api-freshness] Failed to read producer cron fallbacks", error);
+    logWorkerEventArgs("lib", "warn", "[api-freshness] Failed to read producer cron fallbacks", error);
     return {
       timestampsByKey: new Map(),
       errorMessage: toErrorMessage(error),
@@ -238,7 +249,7 @@ async function resolveSentinelBackedFreshness(params: {
           ...(sentinelFailureSource ? { failureSource: sentinelFailureSource } : {}),
           ...(sentinelValidation?.reason ? { sentinelValidationReason: sentinelValidation.reason } : {}),
         });
-        console.info(`[api-freshness] ${warning}`);
+        logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
       } else {
         diagnostics.push({
           key: params.key,
@@ -282,7 +293,7 @@ async function resolveSentinelBackedFreshness(params: {
         : undefined;
     if (warning) {
       warnings.push(warning);
-      console.info(`[api-freshness] ${warning}`);
+      logWorkerEventArgs("lib", "info", `[api-freshness] ${warning}`);
     }
     diagnostics.push({
       key: params.key,
@@ -507,7 +518,7 @@ export async function getLatestSuccessfulCronTimestampResult(
       status: "missing",
     };
   } catch (error) {
-    console.warn(`[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
+    logWorkerEventArgs("lib", "warn", `[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
     return {
       timestamp: null,
       status: "lookup_failed",

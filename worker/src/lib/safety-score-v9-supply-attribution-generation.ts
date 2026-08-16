@@ -7,6 +7,7 @@ import {
   type SupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { getCirculatingRaw } from "@shared/lib/supply";
 import { z } from "zod";
 import { SafetyScoreV9SupplyAttributionSchema } from "./report-cards-fixed-input";
 import {
@@ -255,9 +256,7 @@ function aggregateSupplyUsd(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
   assetId: string,
 ): number {
-  return Object.values(
-    fixedInput.aggregateCirculatingById[assetId]?.circulating ?? {},
-  ).reduce((sum, value) => sum + value, 0);
+  return getCirculatingRaw(fixedInput.aggregateCirculatingById[assetId] ?? {});
 }
 
 export function computeSafetyScoreV9SupplyAttributionGenerationId(

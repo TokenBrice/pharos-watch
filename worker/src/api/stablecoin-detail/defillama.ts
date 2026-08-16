@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { z } from "zod";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE } from "../../lib/constants";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
@@ -161,7 +162,7 @@ export function normalizeDefiLlamaDetailBody(
     const issues = schemaResult.error.issues
       .map((i) => `${i.path.map(String).join(".")}: ${i.message}`)
       .join(", ");
-    console.warn(`[defillama-detail] Response schema mismatch: ${issues}`);
+    logWorkerEventArgs("api", "warn", `[defillama-detail] Response schema mismatch: ${issues}`);
   }
 
   const curatedAddress = getCuratedPrimaryAddress(meta);

@@ -82,7 +82,7 @@ describe("frozen fixture — end-to-end", () => {
   });
 
   it("DEWS prune preserves the fixture coin", async () => {
-    const { computeStressSignalPruneIds } = await import("../cron/dews/persistence");
+    const { computeStressSignalPruneIds } = await import("../lib/dews/persistence");
     const result = computeStressSignalPruneIds(
       new Set(["fixture-frozen", "zombie"]),
       new Set(),

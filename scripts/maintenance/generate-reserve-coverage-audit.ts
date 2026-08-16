@@ -1,15 +1,15 @@
 #!/usr/bin/env tsx
 
 import { resolve } from "node:path";
-import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "../../shared/lib/live-reserve-adapters-definitions";
+import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters-definitions";
 import {
   ACTIVE_STABLECOINS,
   FROZEN_STABLECOINS,
   PRE_LAUNCH_STABLECOINS,
   TRACKED_STABLECOINS,
-} from "../../shared/lib/stablecoins/registry";
-import type { LiveReserveEvidenceClass } from "../../shared/types/live-reserves";
-import type { ReserveSlice, StablecoinMeta } from "../../shared/types";
+} from "@shared/lib/stablecoins/registry";
+import type { LiveReserveEvidenceClass } from "@shared/types/live-reserves";
+import type { ReserveSlice, StablecoinMeta } from "@shared/types";
 import {
   buildMarketCapMapFromStablecoins,
   formatUsd,

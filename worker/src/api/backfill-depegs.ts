@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { jsonResponse } from "../lib/api-utils";
 import { selectBackfillCoins } from "../lib/backfill-query";
@@ -130,7 +131,7 @@ export async function applyBackfillEvents(
           toErrorMessage(error),
         ).run();
       } catch (markError) {
-        console.error(`[backfill-depegs] failed to mark incomplete run ${run.runId}:`, markError);
+        logWorkerEventArgs("api", "error", `[backfill-depegs] failed to mark incomplete run ${run.runId}:`, markError);
       }
     }
     throw error;

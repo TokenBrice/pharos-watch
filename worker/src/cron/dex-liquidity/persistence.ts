@@ -1,6 +1,8 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   ExitRouteObservationCoverageSchema,
@@ -1043,7 +1045,7 @@ export async function persistScores(
     } catch (err) {
       rethrowIfAborted(err, signal);
       orphanCleanupFailed = true;
-      console.warn("[dex-liquidity] Failed to check for orphaned rows:", err);
+      logWorkerEventArgs("handler", "warn", "[dex-liquidity] Failed to check for orphaned rows:", err);
     }
     await flushPendingCleanupStatements();
 
@@ -1072,7 +1074,7 @@ export async function persistScores(
   }
   const retention = await pruneOldDexLiquidityGenerations(db, nowSec, signal);
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[dex-liquidity] Published ${currentGenerationRows} current rows from ${generationId} (${activeMetricsCount} active with data, ${placeholderCount} zero, ${inactiveMetricIdsSkipped.length} inactive skipped, 1 global)`,
   );
   return {
@@ -1096,7 +1098,7 @@ export async function writeHistoricalSnapshots(
   signal?: AbortSignal,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<HistoricalSnapshotWriteResult> {
-  const todayMidnight = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS; // epoch seconds at UTC midnight
+  const todayMidnight = bucketUnixSecondsToUtcDay(nowSec);
   const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
   const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
   const incomingScoredIds = new Set(activeScoreMap.keys());
@@ -1211,7 +1213,7 @@ export async function writeHistoricalSnapshots(
     ];
     await executeAtomicBatch(db, replacementStatements, { signal });
     await pruneHistory();
-    console.log(
+    logWorkerEventArgs("handler", "info",
       `[dex-liquidity] Reconciled daily snapshot (${existingCount}/${existingScored} -> ${snapshotRows.length}/${targetScoredIds.size}, incoming=${incomingScored}) for ${new Date(todayMidnight * 1000).toISOString().slice(0, 10)}`,
     );
     return {
@@ -1223,7 +1225,7 @@ export async function writeHistoricalSnapshots(
     };
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.warn("[dex-liquidity] Daily snapshot failed:", err);
+    logWorkerEventArgs("handler", "warn", "[dex-liquidity] Daily snapshot failed:", err);
     return {
       snapshotRowsWritten: 0,
       skipped: false,

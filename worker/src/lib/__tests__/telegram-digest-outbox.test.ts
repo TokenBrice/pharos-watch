@@ -160,6 +160,25 @@ describe("Telegram digest outbox", () => {
     expect(loadEdition(sqlite)).toMatchObject({ state: "sent", attempts: 2 });
   });
 
+  it("keeps a due retry queued when the authoritative fresh-delivery permit is paused", async () => {
+    const { sqlite, db } = createHarness();
+    await enqueueDaily(db);
+    const nowSec = Math.floor(Date.now() / 1000);
+    sqlite.prepare(
+      `INSERT INTO telegram_delivery_pauses
+         (mode, generation, expires_at, reason, actor, created_at, updated_at)
+       VALUES ('fresh', 1, ?, 'operator maintenance', 'test', ?, ?)`,
+    ).run(nowSec + 300, nowSec, nowSec);
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const summary = await drainTelegramDigestOutbox(db, creds);
+
+    expect(summary).toMatchObject({ due: 1, attempted: 0, sent: 0, skipped: 1 });
+    expect(loadEdition(sqlite)).toMatchObject({ state: "pending", attempts: 0 });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("resumes a split appendix from the first unconfirmed chunk without replaying accepted chunks", async () => {
     const { sqlite, db } = createHarness();
     const successActions = [{ key: "telegram:appendix-pointer", value: "large-edition" }];
@@ -280,9 +299,10 @@ describe("Telegram digest outbox", () => {
       delivery_owner: "new-owner",
       delivery_generation: 2,
     });
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Could not persist ambiguity"),
-    );
+    expect(JSON.parse(String(errorSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "telegram_digest_ambiguity_persistence_lost",
+      metadata: { editionKey: "daily:2026-07-10" },
+    });
   });
 
   it("keeps confirmed permanent rejection distinct from ambiguous execution", async () => {

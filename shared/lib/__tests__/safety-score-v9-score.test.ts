@@ -60,6 +60,27 @@ const ROOT_BOUNDED_UNCERTAINTY: V9BoundedUncertaintyAttribution = {
 };
 
 describe("scoreV9EvaluatedAsset", () => {
+  it("threads an optional counterfactual aggregation strategy", () => {
+    const trace = scoreV9EvaluatedAsset(
+      input({ pillars: { backing: pillar(50), exit: pillar(80), control: pillar(100) } }),
+      V9_CANDIDATE_POLICY_V1,
+      (pillars, weights) => {
+        const score = pillars.backing * weights.backing
+          + pillars.exit * weights.exit
+          + pillars.control * weights.control;
+        return {
+          method: "smooth-bounded-headroom",
+          score,
+          weightedQuality: score,
+          weakestPillar: "backing",
+          weakestScore: pillars.backing,
+        };
+      },
+    );
+
+    expect(trace.finalScore).toBe(73);
+  });
+
   it("binds the score to fact, policy, build, clock, and source identities", () => {
     const trace = scoreV9EvaluatedAsset(input(), V9_CANDIDATE_POLICY_V1);
     expect(trace).toMatchObject({

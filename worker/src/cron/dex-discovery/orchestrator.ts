@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -448,13 +449,13 @@ export async function syncDexDiscovery(
           // already supersedes old empty evidence and correctly leaves this as
           // a discovery deferral rather than mislabeling a D1 failure as a
           // provider outage.
-          console.warn("[dex-discovery] Persistence failed for", candidate.stablecoinId, persistErr);
+          logWorkerEventArgs("handler", "warn", "[dex-discovery] Persistence failed for", candidate.stablecoinId, persistErr);
           failedCoins.push(candidate.stablecoinId);
           failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(persistErr);
         }
       } catch (err) {
         rethrowIfAborted(err, signal);
-        console.warn("[dex-discovery]", candidate.stablecoinId, err);
+        logWorkerEventArgs("handler", "warn", "[dex-discovery]", candidate.stablecoinId, err);
         failedCoins.push(candidate.stablecoinId);
         failedCoinErrors[candidate.stablecoinId] = summarizeDiscoveryError(err);
         deploymentOutcomesWritten += await fenceFailedDiscoveryAttempt(
@@ -483,7 +484,7 @@ export async function syncDexDiscovery(
           try {
             await updateDiscoveryMeta(db, candidate.stablecoinId, 0, nowSec, signal);
           } catch (err) {
-            console.warn(`[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${toErrorMessage(err)}`);
+            logWorkerEventArgs("handler", "warn", `[dex-discovery] Failed to update discovery meta for ${candidate.stablecoinId}: ${toErrorMessage(err)}`);
           }
         }
       }

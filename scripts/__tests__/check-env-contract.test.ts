@@ -9,7 +9,7 @@ import {
   parseWorkerEnvInterfaceBindings,
   parseWorkerEnvInterfaceKeys,
   parseWranglerWorkerConfigBindings,
-} from "../ci/check-env-contract.mjs";
+} from "../ci/check-env-contract";
 
 function withTempEnvSource(source: string): string {
   const dir = mkdtempSync(join(tmpdir(), "pharos-env-contract-"));

@@ -20,6 +20,9 @@ describe("cleanupStaleLiveReserveArtifacts", () => {
         match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
         rows: staleBreakerKeys.map((key) => ({ key })),
       },
+      { match: "DELETE FROM reserve_sync_state", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM reserve_composition", rows: [], runMeta: { changes: 1 } },
+      { match: "DELETE FROM cache WHERE key", rows: [], runMeta: { changes: 1 } },
     ]);
 
     const result = await cleanupStaleLiveReserveArtifacts(db, [], new Set());
@@ -37,4 +40,3 @@ describe("cleanupStaleLiveReserveArtifacts", () => {
     );
   });
 });
-

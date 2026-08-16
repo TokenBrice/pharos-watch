@@ -129,6 +129,12 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.sql).toContain("ended_at IS NULL");
   });
 
+  it("rejects malformed active booleans instead of silently treating them as false", async () => {
+    const res = await handleDepegEvents(mockD1([]), new URL("https://x/api/depeg-events?active=yes"));
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toEqual({ error: "Invalid active: must be true or false" });
+  });
+
   it("excludes superseded rows from active DDR incident repairs", async () => {
     const db = mockD1([
       { match: "COUNT", rows: [{ total: 1 }] },

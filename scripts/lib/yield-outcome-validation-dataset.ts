@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { PYS_MAX_SOURCE_RISK_PENALTY } from "../../shared/lib/yield-scoring";
+import { PYS_MAX_SOURCE_RISK_PENALTY } from "@shared/lib/yield-scoring";
 import { z } from "zod";
 
 export const YIELD_OUTCOME_DATASET_SCHEMA_VERSION = 1 as const;

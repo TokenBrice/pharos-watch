@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { throwIfAborted } from "../../lib/abort";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
@@ -108,11 +109,11 @@ export async function fetchPrimaryPrices(
     const withDl = plan.candidates.filter((asset) => dlListPrices.has(asset.id)).length;
     const withoutDl = plan.candidates.length - withDl;
     if (withoutDl > 0) {
-      console.log(`[primary-prices] DL list coverage: ${withDl}/${plan.candidates.length} (${withoutDl} missing)`);
+      logWorkerEventArgs("handler", "info", `[primary-prices] DL list coverage: ${withDl}/${plan.candidates.length} (${withoutDl} missing)`);
     }
   }
 
-  console.log(
+  logWorkerEventArgs("handler", "info",
     `[primary-prices] ${stats.attempted} assets: ${stats.high} high, ${stats.singleSource} single-source, ${stats.low} low confidence`,
   );
 

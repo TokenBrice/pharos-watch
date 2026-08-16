@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { buildPageMetadata } from "@/lib/page-metadata";
-import { CASE_STUDIES, CASE_STUDY_LIST, getCaseStudy } from "../content";
+import { CASE_STUDIES, CASE_STUDY_LIST, getCaseStudy } from "@/lib/case-studies";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { CaseStudyBody } from "../case-study-body";
 import { LearnPageShell } from "../../_shared/learn-page-shell";

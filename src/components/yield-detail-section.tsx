@@ -19,7 +19,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
@@ -400,7 +400,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ·
         </span>
         <Link
-          href={`${buildStablecoinUrl(stablecoinId)}yield/#warning-signals`}
+          href={buildStablecoinUrl(stablecoinId, "yield/#warning-signals")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Warning timeline
@@ -409,7 +409,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ·
         </span>
         <Link
-          href={`${buildStablecoinUrl(stablecoinId)}yield/#source-switches`}
+          href={buildStablecoinUrl(stablecoinId, "yield/#source-switches")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Source switches
@@ -418,7 +418,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
           ·
         </span>
         <Link
-          href={`${buildStablecoinUrl(stablecoinId)}yield/#source-comparison`}
+          href={buildStablecoinUrl(stablecoinId, "yield/#source-comparison")}
           className="pharos-focus-ring rounded-sm underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           Source comparison
@@ -427,7 +427,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-border/50 pt-3 text-xs text-muted-foreground">
         <Link
-          href={`${buildStablecoinUrl(stablecoinId)}yield/`}
+          href={buildStablecoinUrl(stablecoinId, "yield/")}
           className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm font-medium underline-offset-4 transition-colors hover:text-foreground hover:underline"
         >
           View full yield analysis

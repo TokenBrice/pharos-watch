@@ -108,42 +108,68 @@ function hasCoherentClSpotPrice(
   return Number.isFinite(outputValueRatio) && outputValueRatio <= DEX_MEASURED_MAX_FAVORABLE_OUTPUT_RATIO;
 }
 
-export function buildPancakeMeasuredExecutionTargets(input: {
+interface TwoTokenTargetBuilderInput {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
-}): Map<string, DexMeasuredExecutionTarget> {
+}
+
+interface TwoTokenPoolMaterialization {
+  adapterProfileId: string;
+  protocol: string;
+  feePips?: number;
+}
+
+function buildTwoTokenMeasuredExecutionTargets(
+  input: TwoTokenTargetBuilderInput,
+  spec: {
+    source: DexApiPool["source"];
+    materializePool(input: {
+      pool: DexApiPool;
+      chain: string;
+      poolAddress: `0x${string}`;
+      tokenAddresses: [`0x${string}`, `0x${string}`];
+    }): TwoTokenPoolMaterialization | null;
+    validateTokens?(tokens: DexApiPool["tokens"]): boolean;
+    hasCoherentSpot?(input: {
+      pool: DexApiPool;
+      inputIndex: number;
+      inputReferencePriceUsd: number;
+      outputReferencePriceUsd: number;
+    }): boolean;
+  },
+): Map<string, DexMeasuredExecutionTarget> {
   const targets = new Map<string, DexMeasuredExecutionTarget>();
   for (const pool of input.pools) {
-    if (pool.source !== "pancakeswap" || pool.tokens.length !== 2) continue;
+    if (pool.source !== spec.source || pool.tokens.length !== 2) continue;
     const poolAddress = canonicalEvmAddress(pool.poolAddress);
     const tokenAddresses = pool.tokens.map((token) => canonicalEvmAddress(token.address));
-    const feePips = pool.feeRate == null ? null : Math.round(pool.feeRate * 1_000_000);
     if (
-      !poolAddress ||
+      poolAddress == null ||
       tokenAddresses.some((address) => address == null) ||
-      feePips == null ||
-      !Number.isInteger(feePips) ||
-      feePips <= 0 ||
-      feePips > 1_000_000 ||
       !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0
-    )
-      continue;
+      pool.tvlUsd <= 0 ||
+      (spec.validateTokens && !spec.validateTokens(pool.tokens))
+    ) continue;
     const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
-    const poolId = canonicalExitRouteAssetKey(pool.chain, poolAddress);
+    if (canonicalTokens[0] === canonicalTokens[1]) continue;
+    const chain = canonicalExitRouteChain(pool.chain);
+    const materialization = spec.materializePool({ pool, chain, poolAddress, tokenAddresses: canonicalTokens });
+    if (materialization == null) continue;
+    const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
+
     for (let inputIndex = 0; inputIndex < 2; inputIndex += 1) {
-      const tokenIn = pool.tokens[inputIndex]!;
-      const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(pool.chain, tokenIn.address));
-      if (!stablecoinId) continue;
       const outputIndex = inputIndex === 0 ? 1 : 0;
+      const tokenIn = pool.tokens[inputIndex]!;
       const tokenOut = pool.tokens[outputIndex]!;
+      const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenIn.address));
+      if (!stablecoinId) continue;
       const inputPrice = getTokenReferenceUsdPrice(
         tokenIn,
-        pool.chain,
+        chain,
         input.chainAddressToId,
         input.symbolToChainScopedIds,
         input.validationReferences,
@@ -151,35 +177,39 @@ export function buildPancakeMeasuredExecutionTargets(input: {
       );
       const outputPrice = getTokenReferenceUsdPrice(
         tokenOut,
-        pool.chain,
+        chain,
         input.chainAddressToId,
         input.symbolToChainScopedIds,
         input.validationReferences,
         input.stablecoinPriceById,
       );
       if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
-      if (!hasCoherentPancakeSpotPrice(pool, inputIndex, inputPrice, outputPrice)) continue;
-      const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(pool.chain, tokenOut.address));
+      if (spec.hasCoherentSpot && !spec.hasCoherentSpot({
+        pool,
+        inputIndex,
+        inputReferencePriceUsd: inputPrice,
+        outputReferencePriceUsd: outputPrice,
+      })) continue;
+      const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
       if (outputStablecoinId === stablecoinId) continue;
-      const adapterProfileId = "pancakeswap-v3-quoter-v2";
       const targetId = buildDexMeasuredExecutionTargetId({
-        adapterProfileId,
+        adapterProfileId: materialization.adapterProfileId,
         stablecoinId,
-        chain: canonicalExitRouteChain(pool.chain),
-        protocol: "pancakeswap",
+        chain,
+        protocol: materialization.protocol,
         poolId,
         tokenInAddress: canonicalTokens[inputIndex]!,
         tokenOutAddress: canonicalTokens[outputIndex]!,
         poolTokenAddresses: canonicalTokens,
-        feePips,
+        ...(materialization.feePips != null ? { feePips: materialization.feePips } : {}),
       });
       const target: DexMeasuredExecutionTarget = {
         schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
         targetId,
         stablecoinId,
-        adapterProfileId,
-        protocol: "pancakeswap",
-        chain: canonicalExitRouteChain(pool.chain),
+        adapterProfileId: materialization.adapterProfileId,
+        protocol: materialization.protocol,
+        chain,
         poolId,
         poolTokenAddresses: canonicalTokens,
         tokenIn: {
@@ -196,7 +226,7 @@ export function buildPancakeMeasuredExecutionTargets(input: {
           referencePriceUsd: outputPrice,
           ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
         },
-        feePips,
+        ...(materialization.feePips != null ? { feePips: materialization.feePips } : {}),
         retainedTvlUsd: pool.tvlUsd,
         retainedPoolPriceUsd: inputPrice,
         capturedAt: input.capturedAt,
@@ -207,6 +237,27 @@ export function buildPancakeMeasuredExecutionTargets(input: {
   return targets;
 }
 
+export function buildPancakeMeasuredExecutionTargets(input: {
+  pools: readonly DexApiPool[];
+  chainAddressToId: Map<string, string>;
+  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
+  validationReferences?: PriceValidationReferences;
+  stablecoinPriceById?: Map<string, number>;
+  capturedAt: number;
+}): Map<string, DexMeasuredExecutionTarget> {
+  return buildTwoTokenMeasuredExecutionTargets(input, {
+    source: "pancakeswap",
+    materializePool: ({ pool }) => {
+      const feePips = pool.feeRate == null ? null : Math.round(pool.feeRate * 1_000_000);
+      return feePips != null && Number.isInteger(feePips) && feePips > 0 && feePips <= 1_000_000
+        ? { adapterProfileId: "pancakeswap-v3-quoter-v2", protocol: "pancakeswap", feePips }
+        : null;
+    },
+    hasCoherentSpot: ({ pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd }) =>
+      hasCoherentPancakeSpotPrice(pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd),
+  });
+}
+
 export function buildFluidMeasuredExecutionTargets(input: {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
@@ -215,102 +266,18 @@ export function buildFluidMeasuredExecutionTargets(input: {
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
 }): Map<string, DexMeasuredExecutionTarget> {
-  const targets = new Map<string, DexMeasuredExecutionTarget>();
-  for (const pool of input.pools) {
-    if (pool.source !== "fluid" || pool.tokens.length !== 2) continue;
-    const poolAddress = canonicalEvmAddress(pool.poolAddress);
-    const tokenAddresses = pool.tokens.map((token) => canonicalEvmAddress(token.address));
-    if (
-      !poolAddress ||
-      tokenAddresses.some((address) => address == null) ||
-      !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0
-    )
-      continue;
-    const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
-    if (canonicalTokens[0] === canonicalTokens[1]) continue;
-    const chain = canonicalExitRouteChain(pool.chain);
-    if (getFluidResolverDeployment(chain) == null) continue;
-    const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
-
-    for (let inputIndex = 0; inputIndex < 2; inputIndex += 1) {
-      const tokenIn = pool.tokens[inputIndex]!;
-      const stablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenIn.address));
-      if (!stablecoinId) continue;
-      const outputIndex = inputIndex === 0 ? 1 : 0;
-      const tokenOut = pool.tokens[outputIndex]!;
-      if (
-        !tokenIn.symbol.trim() ||
-        !tokenOut.symbol.trim() ||
-        !Number.isInteger(tokenIn.decimals) ||
-        tokenIn.decimals < 0 ||
-        tokenIn.decimals > 255 ||
-        !Number.isInteger(tokenOut.decimals) ||
-        tokenOut.decimals < 0 ||
-        tokenOut.decimals > 255
-      )
-        continue;
-      const inputPrice = getTokenReferenceUsdPrice(
-        tokenIn,
-        chain,
-        input.chainAddressToId,
-        input.symbolToChainScopedIds,
-        input.validationReferences,
-        input.stablecoinPriceById,
-      );
-      const outputPrice = getTokenReferenceUsdPrice(
-        tokenOut,
-        chain,
-        input.chainAddressToId,
-        input.symbolToChainScopedIds,
-        input.validationReferences,
-        input.stablecoinPriceById,
-      );
-      if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
-      const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
-      if (outputStablecoinId === stablecoinId) continue;
-      const adapterProfileId = "fluid-resolver-measured";
-      const targetId = buildDexMeasuredExecutionTargetId({
-        adapterProfileId,
-        stablecoinId,
-        chain,
-        protocol: "fluid",
-        poolId,
-        tokenInAddress: canonicalTokens[inputIndex]!,
-        tokenOutAddress: canonicalTokens[outputIndex]!,
-        poolTokenAddresses: canonicalTokens,
-      });
-      const target: DexMeasuredExecutionTarget = {
-        schemaVersion: DEX_MEASURED_TARGET_SCHEMA_VERSION,
-        targetId,
-        stablecoinId,
-        adapterProfileId,
-        protocol: "fluid",
-        chain,
-        poolId,
-        poolTokenAddresses: canonicalTokens,
-        tokenIn: {
-          address: canonicalTokens[inputIndex]!,
-          symbol: tokenIn.symbol.trim(),
-          decimals: tokenIn.decimals,
-          referencePriceUsd: inputPrice,
-          trackedAssetId: stablecoinId,
-        },
-        tokenOut: {
-          address: canonicalTokens[outputIndex]!,
-          symbol: tokenOut.symbol.trim(),
-          decimals: tokenOut.decimals,
-          referencePriceUsd: outputPrice,
-          ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
-        },
-        retainedTvlUsd: pool.tvlUsd,
-        retainedPoolPriceUsd: inputPrice,
-        capturedAt: input.capturedAt,
-      };
-      targets.set(buildMeasuredPoolDirectionKey(stablecoinId, poolId), target);
-    }
-  }
-  return targets;
+  return buildTwoTokenMeasuredExecutionTargets(input, {
+    source: "fluid",
+    materializePool: ({ chain }) => getFluidResolverDeployment(chain) == null
+      ? null
+      : { adapterProfileId: "fluid-resolver-measured", protocol: "fluid" },
+    validateTokens: (tokens) => tokens.every((token) =>
+      token.symbol.trim().length > 0 &&
+      Number.isInteger(token.decimals) &&
+      token.decimals >= 0 &&
+      token.decimals <= 255
+    ),
+  });
 }
 
 interface ClMeasuredExecutionTargetInput {

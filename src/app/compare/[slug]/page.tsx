@@ -27,7 +27,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import { PEG_SLUGS } from "@/lib/peg-landing";
 import { buildSlugPageMetadata, buildSlugStaticParams, resolveSlugPage } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 
 export function generateStaticParams() {
   return buildSlugStaticParams("slug", STATIC_COMPARISON_PAGES);

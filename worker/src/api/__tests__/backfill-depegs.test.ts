@@ -111,6 +111,7 @@ describe("handleBackfillDepegs", () => {
 
   it("records complete replay runs and inserts provenance for backfill rows", async () => {
     const db = mockD1([
+      { match: "FROM depeg_events e", rows: [] },
       { match: "INSERT INTO depeg_backfill_runs", rows: [] },
       { match: "DELETE FROM depeg_events", rows: [] },
       { match: "INSERT INTO depeg_events", rows: [] },
@@ -161,6 +162,7 @@ describe("handleBackfillDepegs", () => {
 
   it("marks replay runs incomplete when chunked inserts fail", async () => {
     const db = mockD1([
+      { match: "FROM depeg_events e", rows: [] },
       { match: "INSERT INTO depeg_backfill_runs", rows: [] },
       { match: "DELETE FROM depeg_events", rows: [] },
       { match: "INSERT INTO depeg_events", rows: [], throwError: new Error("chunk failed") },

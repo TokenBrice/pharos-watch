@@ -29,7 +29,7 @@ import {
   type ScreenerFilters,
   type ScreenerRow,
   type ScreenerSortKey,
-} from "@/app/screener/screener-filters";
+} from "@/lib/screener-filters";
 import {
   CLIENT_ACTIVE_META_BY_ID,
   CLIENT_TRACKED_STABLECOINS,

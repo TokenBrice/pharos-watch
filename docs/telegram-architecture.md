@@ -196,7 +196,7 @@ Admin recovery paths preserve the same effect and queue boundaries. Broadcast is
 - `worker/src/cron/telegram-alert-target-plans.ts`, `telegram-alert-target-plans/*`, `telegram-alert-target-plan-contract.ts` (planning ownership, frozen subscriber ledger, rendered plans/items/pages, bounded expiry, delivery-open and pending handoff)
 - `worker/src/cron/telegram-alert-job-target-outcomes.ts` (exclusive final-state projection and job counter reconciliation)
 - `worker/src/cron/telegram-alert-snapshots.ts`, `telegram-alert-changes.ts`, `telegram-alert-context.ts`, `telegram-alert-safety-reasons.ts`, `telegram-alert-jobs.ts`, `telegram-alert-target-status.ts`, `telegram-alert-target-effects.ts` (snapshot I/O, diff producers, alert context/reason builders, durable job manifests, per-target audit and fresh-effect fencing)
-- `worker/src/cron/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
+- `worker/src/lib/telegram-quiet-hours.ts` (quiet-hours predicate; shared with Callback routing for the `tz:*` validation only)
 - `worker/src/cron/telegram-degradation-watchdog.ts` (post-dispatch one-shot operator alerts on degraded delivery; same five-minute lane)
 - `worker/src/handlers/scheduled/five-minute-telegram.ts` (token-aware five-minute orchestration: dispatch when configured, token-independent watchdog/cleanup/pulse, then all four serial registration checks)
 - `worker/src/cron/telegram-inactive-cleanup.ts`, `telegram-retention-cleanup.ts` (daily 03:00 UTC housekeeping jobs)
@@ -331,7 +331,7 @@ The provenance correction required no D1 migration because these two tables and 
 - `worker/src/api/telegram-mini-app.ts`
 - `worker/src/api/telegram-mini-app-state.ts`
 - `worker/src/api/telegram-mini-app-mutations.ts`
-- `worker/src/cron/telegram-recap-store.ts` (shared generation-fenced recap preference mutation)
+- `worker/src/lib/telegram-recap-store.ts` (shared generation-fenced recap preference mutation)
 - `worker/src/lib/telegram-mini-app-auth.ts`
 - `shared/lib/telegram-mini-app-contract.ts`
 - `shared/lib/telegram-mini-app-catalog.ts`

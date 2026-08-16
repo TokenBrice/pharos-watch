@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
@@ -7,7 +8,7 @@ import { buildSyncMetadata } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap } from "./supplemental-assets/onchain-supply";
-import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
+import { pegTypeKey, toPositiveFiniteNumber } from "./supplemental-assets/shared";
 import type {
   FallbackIntakeInput,
   FallbackIntakeOutput,
@@ -45,7 +46,7 @@ export function buildFallbackAssetsFromCoinGecko(
     const mcap = input.cgData[meta.geckoId]?.usd_market_cap;
     if (!mcap || mcap <= 0) continue;
 
-    const pKey = `pegged${meta.flags.pegCurrency}`;
+    const pKey = pegTypeKey(meta);
     const price = input.cgData[meta.geckoId]?.usd ?? null;
 
     assets.push({
@@ -82,7 +83,7 @@ export async function runFallbackIntakePhase(
   const assets = buildFallbackAssetsFromCoinGecko(input);
 
   if (assets.length < MIN_VALID_ASSET_COUNT) {
-    console.error(
+    logWorkerEventArgs("handler", "error",
       `[sync-stablecoins] CG fallback only got ${assets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
     );
     return buildInsufficientFallbackResult(assets.length);
@@ -119,7 +120,7 @@ export async function overlayFallbackCuratedAggregateSupply(
     const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal);
     if (!onChainMcap?.chainCirculating) continue;
 
-    const pegKey = `pegged${meta.flags.pegCurrency}`;
+    const pegKey = pegTypeKey(meta);
     asset.circulating = { [pegKey]: onChainMcap.mcap };
     asset.supplySource = onChainMcap.supplySource;
     asset.chainCirculating = Object.fromEntries(

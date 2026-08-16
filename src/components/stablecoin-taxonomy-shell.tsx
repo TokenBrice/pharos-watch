@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import type { BreadcrumbItem } from "@/components/breadcrumb-json-ld";
-import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 
 type TaxonomyShellCoin = {
@@ -98,17 +98,8 @@ export function StablecoinTaxonomyShell({
                       },
                     }
                   : {}),
-                entries: coins.map((coin) => {
-                  const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
-
-                  return {
-                    item: {
-                      "@type": "WebPage",
-                      "@id": url,
-                      name: `${coin.name} (${coin.symbol})`,
-                      url,
-                    },
-                  };
+                entries: buildStablecoinItemListEntries(coins, {
+                  resolveUrl: (coin) => `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
                 }),
               }),
             ),

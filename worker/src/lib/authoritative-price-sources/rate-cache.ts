@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../structured-log";
 import { isMissingTableError } from "../db";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC, type CachedVaultRate } from "./helpers";
 
@@ -11,7 +12,7 @@ interface VaultRateRow {
 
 function tolerateRateTableError(error: unknown): void {
   if (!isMissingTableError(error)) {
-    console.warn("[authoritative-price-sources] vault rate cache unavailable; continuing without it:", error);
+    logWorkerEventArgs("lib", "warn", "[authoritative-price-sources] vault rate cache unavailable; continuing without it:", error);
   }
 }
 

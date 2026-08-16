@@ -8,7 +8,7 @@ import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { UpcomingClient } from "@/components/upcoming-client";
 import aiSummaries from "@data/ai-summaries.json";
 

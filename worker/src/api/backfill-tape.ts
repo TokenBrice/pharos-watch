@@ -21,7 +21,7 @@ import { toErrorMessage } from "../lib/error-utils";
  */
 import { errorResponse, jsonResponse } from "../lib/api-utils";
 import { runAdminJob, readAdminIntegerParam } from "../lib/admin-job";
-import { TAPE_PROJECTOR_JOBS } from "../cron/project-tape";
+import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import type { ProjectorOptions } from "../lib/tape-projectors/types";
 
 const DEFAULT_MAX_ROWS = 5_000;

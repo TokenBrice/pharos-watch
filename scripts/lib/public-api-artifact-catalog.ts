@@ -1,5 +1,6 @@
-import { getEndpointDefinitionByKey, type EndpointKey } from "../../shared/lib/api-endpoints/definitions";
-import { BLACKLIST_STABLECOINS } from "../../shared/types/market";
+import { getEndpointDefinitionByKey, type EndpointKey } from "@shared/lib/api-endpoints/definitions";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import type { PublicApiResponseSchemaName } from "./public-api-response-schemas";
 
 export type QueryParamType = "string" | "integer" | "number" | "boolean";
 
@@ -18,7 +19,7 @@ export interface PublicApiArtifactEndpoint {
   description: string;
   tags: readonly string[];
   security?: "apiKey" | "none";
-  responseSchema?: string;
+  responseSchema?: PublicApiResponseSchemaName;
   parameters?: readonly PublicApiArtifactParameter[];
   postman?: PostmanRequestConfig | readonly PostmanRequestConfig[];
 }
@@ -65,6 +66,20 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
   "Status",
   "Reserves",
 ] as const;
+
+/**
+ * Existing public endpoints whose response is still documented as JsonValue.
+ * New endpoints fail closed in publicArtifact() until they either register a
+ * canonical Zod response schema or are deliberately added to this debt list.
+ */
+export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
+  "stablecoin-detail",
+  "stablecoin-summary",
+  "non-usd-share",
+  "snapshots-index",
+  "snapshot-day",
+  "snapshot-coin",
+]);
 
 export const POSTMAN_FOLDERS: readonly { name: PostmanFolderName; description: string }[] = [
   {
@@ -188,6 +203,12 @@ function publicArtifact<const T extends PublicArtifactInput<EndpointKey>>(
   if (!definition || definition.adminRequired || definition.methods.length !== 1 || definition.methods[0] !== "GET") {
     throw new Error(`Public artifact endpoint "${artifact.key}" must use a non-admin GET definition`);
   }
+  const intentionallyGeneric = OPENAPI_JSON_VALUE_ENDPOINT_KEYS.has(artifact.key);
+  if ((artifact.responseSchema === undefined) !== intentionallyGeneric) {
+    throw new Error(
+      `Public artifact endpoint "${artifact.key}" must have exactly one response contract: a canonical Zod response schema or an explicit JsonValue debt entry`,
+    );
+  }
   return {
     ...artifact,
     path: definition.path.replace(
@@ -204,6 +225,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Health check",
     description: "No-key health check for the public API host.",
     tags: ["Health"],
+    responseSchema: "HealthResponse",
     postman: {
       folder: "Getting started",
       noAuth: true,
@@ -214,6 +236,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "List stablecoins",
     description: "Current stablecoin list with supply, price, peg, chain distribution, and freshness headers.",
     tags: ["Stablecoins"],
+    responseSchema: "StablecoinListResponse",
     postman: {
       folder: "Getting started",
       name: "Stablecoins list",
@@ -244,6 +267,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Stablecoin reserves",
     description: "Live or fallback reserve composition for live-reserve-enabled assets.",
     tags: ["Stablecoins", "Reserves"],
+    responseSchema: "StablecoinReservesResponse",
     parameters: [STABLECOIN_ID_PARAM],
     postman: {
       folder: "Getting started",
@@ -255,6 +279,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Stablecoin charts",
     description: "Historical total supply chart data.",
     tags: ["Stablecoins", "History"],
+    responseSchema: "StablecoinChartResponse",
     postman: {
       folder: "Getting started",
     },
@@ -264,6 +289,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Peg summary",
     description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary.",
     tags: ["Peg Monitoring"],
+    responseSchema: "PegSummaryResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -273,6 +299,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Depeg incidents",
     description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by stablecoin.",
     tags: ["Peg Monitoring"],
+    responseSchema: "DepegEventsResponse",
     parameters: [
       STABLECOIN_QUERY_PARAM,
       LIMIT_PARAM,
@@ -318,6 +345,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description:
       "Materialized chronological feed of typed events (depeg, freeze, score) backed by the tape_events table. Supports filtering by type, coin, severity floor, and time window, plus keyset pagination.",
     tags: ["Risk"],
+    responseSchema: "TapeEventsResponse",
     parameters: [
       {
         name: "type",
@@ -402,6 +430,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "USDS freeze status",
     description: "Sky/USDS protocol status, including whether the freeze module is currently active.",
     tags: ["Risk"],
+    responseSchema: "UsdsStatusResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -411,6 +440,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Bluechip ratings",
     description: "Safety ratings from bluechip.org for covered stablecoins.",
     tags: ["Risk"],
+    responseSchema: "BluechipRatingsResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -420,6 +450,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "DEX liquidity",
     description: "DEX liquidity scores, top pools, chain/protocol breakdowns, and quality metadata.",
     tags: ["Liquidity"],
+    responseSchema: "DexLiquidityResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -429,6 +460,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "DEX liquidity history",
     description: "Historical liquidity-score data for a stablecoin.",
     tags: ["Liquidity", "History"],
+    responseSchema: "DexLiquidityHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, DEX_LIQUIDITY_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
@@ -452,6 +484,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description:
       "Per active confirmed depeg: a mechanistic resolution outlook (terminal vs recoverable) and a stratified empirical duration estimate with per-horizon resolution likelihood.",
     tags: ["Risk", "Peg Monitoring"],
+    responseSchema: "DdrResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -462,6 +495,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description:
       "Review of stored DDR predictions against later depeg-event outcomes, including recovery-likelihood accuracy and observed-minus-predicted recovery duration error.",
     tags: ["Risk", "Peg Monitoring"],
+    responseSchema: "DdrrResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -471,6 +505,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Redemption backstops",
     description: "Modeled issuer/protocol redemption routes and effective-exit scoring for configured assets.",
     tags: ["Risk", "Reserves"],
+    responseSchema: "RedemptionBackstopsResponse",
     postman: {
       folder: "Risk and market structure",
     },
@@ -480,6 +515,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Stress signals",
     description: "DEWS-style stress signals for the stablecoin universe or one selected asset.",
     tags: ["Risk", "Peg Monitoring"],
+    responseSchema: "StressSignalsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, DAYS_PARAM],
     postman: {
       folder: "Risk and market structure",
@@ -491,6 +527,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Pharos Stability Index",
     description: "Latest Pharos Stability Index with optional detail payload and history.",
     tags: ["Risk"],
+    responseSchema: "StabilityIndexResponse",
     parameters: [
       {
         name: "detail",
@@ -511,6 +548,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Blacklist events",
     description: "Freeze and blacklist events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
     tags: ["Blacklist"],
+    responseSchema: "BlacklistResponse",
     parameters: [
       BLACKLIST_STABLECOIN_SYMBOL_QUERY_PARAM,
       {
@@ -589,6 +627,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Blacklist summary",
     description: "Blacklist summary statistics, chart data, chain options, manifest-derived coverage metadata, and freeze-ledger data-quality context. Prefer tracked freeze-ledger fields over legacy active-state fields for public frozen exposure.",
     tags: ["Blacklist"],
+    responseSchema: "BlacklistSummaryResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },
@@ -598,6 +637,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Mint and burn flows",
     description: "Mint/burn flow aggregates for the selected window.",
     tags: ["Flows"],
+    responseSchema: "MintBurnFlowsResponse",
     parameters: [STABLECOIN_QUERY_PARAM, HOURS_PARAM],
     postman: {
       folder: "Flows, blacklist, yield, and chains",
@@ -609,6 +649,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Mint and burn events",
     description: "Individual mint/burn events for supported stablecoins.",
     tags: ["Flows"],
+    responseSchema: "MintBurnEventsResponse",
     parameters: [
       REQUIRED_STABLECOIN_QUERY_PARAM,
       {
@@ -755,6 +796,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Chains",
     description: "Chain-level stablecoin aggregates with Chain Health Scores.",
     tags: ["Chains"],
+    responseSchema: "ChainsResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },
@@ -775,6 +817,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Supply history",
     description: "Historical supply series for a stablecoin.",
     tags: ["History"],
+    responseSchema: "SupplyHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
@@ -787,6 +830,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Safety score history",
     description: "Long-range safety-score history for a stablecoin.",
     tags: ["Risk", "History"],
+    responseSchema: "SafetyScoreHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
@@ -800,6 +844,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     description:
       "Boundary-aware safety-score history with full score-model identity and transition kinds; the legacy endpoint remains the V8 compatibility projection.",
     tags: ["Risk", "History"],
+    responseSchema: "SafetyScoreHistoryV2Response",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SAFETY_SCORE_HISTORY_DAYS_PARAM],
     postman: {
       folder: "Historical data",
@@ -812,6 +857,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Daily digest",
     description: "Latest AI-generated stablecoin market digest.",
     tags: ["Digest"],
+    responseSchema: "DailyDigestResponse",
     postman: {
       folder: "Historical data",
       order: 5,
@@ -823,6 +869,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Digest archive",
     description: "Archive of daily and weekly digests.",
     tags: ["Digest"],
+    responseSchema: "DigestArchiveResponse",
     postman: {
       folder: "Historical data",
       order: 6,
@@ -833,6 +880,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Digest snapshot",
     description: "Build-time digest context snapshot for a specific digest date.",
     tags: ["Digest"],
+    responseSchema: "DigestSnapshotResponse",
     parameters: [
       {
         name: "date",
@@ -912,6 +960,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Public status history",
     description: "Public status timeline for the Pharos system.",
     tags: ["Status"],
+    responseSchema: "PublicStatusHistoryResponse",
     parameters: [
       LIMIT_PARAM,
       {
@@ -931,6 +980,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     summary: "Telegram pulse",
     description: "Lightweight public telemetry for Telegram alert surfaces.",
     tags: ["Status"],
+    responseSchema: "TelegramPulseResponse",
     postman: {
       folder: "Flows, blacklist, yield, and chains",
     },

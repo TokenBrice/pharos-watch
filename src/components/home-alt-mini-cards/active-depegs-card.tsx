@@ -10,7 +10,7 @@ import { usePegSummary } from "@/hooks/api-hooks";
 import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { useFlashOnChange } from "@/hooks/use-flash-on-change";
 import { useLogos } from "@/hooks/use-logos";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
 import { resolveQueryViewState } from "@/lib/query-view-state";

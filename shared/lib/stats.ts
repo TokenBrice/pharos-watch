@@ -2,6 +2,27 @@ function finiteSorted(values: readonly number[]): number[] {
   return values.filter(Number.isFinite).sort((left, right) => left - right);
 }
 
+declare const ratioUnit: unique symbol;
+
+/** A unit-explicit ratio where 1 represents 100%. Ratios may exceed the 0-1 fraction range. */
+export type Ratio = number & { readonly [ratioUnit]: "ratio" };
+
+/** Numerator divided by denominator on the ratio scale (1 = 100%). */
+export function ratio(numerator: number, denominator: number): Ratio | null {
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
+  return (numerator / denominator) as Ratio;
+}
+
+/** Relative change on the ratio scale: `(current - previous) / previous`. */
+export function relativeChangeRatio(current: number, previous: number): Ratio | null {
+  return ratio(current - previous, previous);
+}
+
+/** Convert a ratio to a 0-100 percentage at a presentation or serialization boundary. */
+export function ratioToPercentage(value: Ratio): number {
+  return value * 100;
+}
+
 /**
  * Arithmetic mean of finite samples. Returns null when there are no finite samples.
  */
@@ -21,6 +42,33 @@ export function median(values: readonly number[]): number | null {
   const middle = Math.floor(samples.length / 2);
   if (samples.length % 2 === 1) return samples[middle];
   return (samples[middle - 1] + samples[middle]) / 2;
+}
+
+export interface WeightedMedianPoint {
+  value: number;
+  weight: number;
+}
+
+/**
+ * Discrete weighted median of finite values with positive finite weights.
+ * Returns the first value whose cumulative weight reaches half the total,
+ * preserving lower-median semantics at an exact 50% boundary.
+ */
+export function weightedMedian(points: readonly WeightedMedianPoint[]): number | null {
+  const samples = points
+    .filter(({ value, weight }) => Number.isFinite(value) && Number.isFinite(weight) && weight > 0)
+    .sort((left, right) => left.value - right.value);
+  if (samples.length === 0) return null;
+
+  const totalWeight = samples.reduce((sum, sample) => sum + sample.weight, 0);
+  if (!Number.isFinite(totalWeight)) return null;
+  const halfWeight = totalWeight / 2;
+  let cumulativeWeight = 0;
+  for (const sample of samples) {
+    cumulativeWeight += sample.weight;
+    if (cumulativeWeight >= halfWeight) return sample.value;
+  }
+  return samples[samples.length - 1]?.value ?? null;
 }
 
 /**
@@ -62,6 +110,6 @@ export function percentileLinear(values: readonly number[], percentile: number):
  * Returns null when either input is non-finite or the denominator is zero.
  */
 export function pct(numerator: number, denominator: number): number | null {
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
-  return (numerator / denominator) * 100;
+  const value = ratio(numerator, denominator);
+  return value == null ? null : ratioToPercentage(value);
 }

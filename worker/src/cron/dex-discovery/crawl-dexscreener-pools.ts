@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ContractDeployment } from "@shared/types/core";
 import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
@@ -210,7 +211,7 @@ export async function crawlDexScreenerPoolsStage({
         const baseAddr = canonicalExitRouteScopedId(chain, pair.baseToken?.address ?? "");
         const quoteAddr = canonicalExitRouteScopedId(chain, pair.quoteToken?.address ?? "");
         if (!poolAddress || !dexId || !baseAddr || !quoteAddr) {
-          console.warn(`[dex-discovery] dexscreener malformed pair for ${chain}:${address}`, {
+          logWorkerEventArgs("handler", "warn", `[dex-discovery] dexscreener malformed pair for ${chain}:${address}`, {
             pairAddress: pair.pairAddress ?? null,
             dexId: pair.dexId ?? null,
             baseToken: pair.baseToken?.address ?? null,
@@ -277,7 +278,7 @@ export async function crawlDexScreenerPoolsStage({
       });
     } catch (err) {
       if (context.signal?.aborted) throw err;
-      console.warn(`[dex-discovery] dexscreener error for ${chain}:${address}`, err);
+      logWorkerEventArgs("handler", "warn", `[dex-discovery] dexscreener error for ${chain}:${address}`, err);
       providerChecks.push({
         chain,
         address,

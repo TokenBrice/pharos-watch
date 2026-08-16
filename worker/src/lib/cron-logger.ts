@@ -12,9 +12,6 @@ import {
 import {
   runWithOverloadRetry,
 } from "./d1-overload-retry";
-import {
-  cacheKeySegment,
-} from "./scheduled-slot-fence";
 import { setCache } from "./db-cache";
 import {
   recordProducerOutcome,
@@ -142,7 +139,19 @@ const MAX_CRON_EVENT_MESSAGE_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_STRING_CHARS = 500;
 const MAX_CRON_EVENT_METADATA_KEYS = 30;
 const MAX_CRON_EVENT_METADATA_ARRAY_ITEMS = 20;
-const MAX_CRON_EVENT_METADATA_DEPTH = 3;
+const MAX_CRON_EVENT_METADATA_DEPTH = 4;
+
+function cacheKeySegment(value: string): string {
+  const normalized = value
+    .toLowerCase()
+    .replace(/[^a-z0-9:-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return (normalized || "unknown").slice(0, 96);
+}
+
+export function cronEventCacheKey(job: string, eventType: string): string {
+  return `${CRON_EVENT_CACHE_PREFIX}:${cacheKeySegment(job)}:${cacheKeySegment(eventType)}`;
+}
 
 function boundCronEventMetadataValue(value: unknown, depth: number): unknown {
   if (value == null || typeof value === "number" || typeof value === "boolean") {
@@ -223,7 +232,7 @@ export async function logCronEvent(db: D1Database, event: CronEventInput): Promi
   };
   writeCronEventConsole(record);
 
-  const cacheKey = `${CRON_EVENT_CACHE_PREFIX}:${cacheKeySegment(record.job)}:${cacheKeySegment(record.eventType)}`;
+  const cacheKey = cronEventCacheKey(record.job, record.eventType);
   try {
     await setCache(db, cacheKey, JSON.stringify(record));
   } catch (err) {

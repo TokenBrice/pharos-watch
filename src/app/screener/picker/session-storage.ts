@@ -10,7 +10,7 @@ import {
   SELECTOR_STATE_DEFAULTS,
   type SelectorStep,
   type SelectorWizardState,
-} from "./selector-state";
+} from "@/lib/selector-state";
 import { venueFromInput } from "./handoff";
 
 const SESSION_RESULT_STORAGE_KEY = "pharos.selector.sessionResult.v1";

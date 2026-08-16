@@ -6,7 +6,7 @@
 // on *any* `@/` or `src/` specifier, not the enumerable `src/lib/*` shapes the
 // ESLint block lists — plus the waiver registry and its cross-checks.
 import { readFileSync } from "node:fs";
-import { collectSourceFiles } from "../lib/source-files.mjs";
+import { collectSourceFiles } from "../lib/source-files.mts";
 
 const WORKER_SRC_DIR = "worker/src";
 const ESLINT_CONFIG_PATH = "eslint.config.mjs";

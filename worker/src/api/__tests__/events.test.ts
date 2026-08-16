@@ -306,6 +306,32 @@ describe("handleEvents", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects unknown typed coin, peg-currency, and chain filters before querying", async () => {
+    for (const query of [
+      "coin=not-a-stablecoin",
+      "pegCurrency=NOPE",
+      "chain=not-a-chain",
+    ]) {
+      const res = await handleEvents(mockD1([]), new URL(`https://x/api/events?${query}`));
+      expect(res.status, query).toBeGreaterThanOrEqual(400);
+      expect(res.status, query).toBeLessThan(500);
+    }
+  });
+
+  it("normalizes allowed peg-currency and chain filters through canonical registries", async () => {
+    const db = mockD1([
+      { match: "FROM tape_events", rows: [] },
+      { match: "cron_runs", rows: [], first: { started_at: SEC } },
+    ]) as MockD1Database;
+    const res = await handleEvents(
+      db,
+      new URL("https://x/api/events?coin=usdt-tether&pegCurrency=eur&chain=Ethereum"),
+    );
+    expect(res.status).toBe(200);
+    const dataQuery = db.getHistory().find((entry) => entry.sql.includes("FROM tape_events"));
+    expect(dataQuery?.binds).toEqual(expect.arrayContaining(["usdt-tether", "EUR", "ethereum"]));
+  });
+
   it("applies q as a parameterized LIKE across title/summary/coin_id", async () => {
     const db = mockD1([
       { match: "FROM tape_events", rows: [makeRow()] },

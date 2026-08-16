@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   buildPriceValidationContext,
   type PriceValidationContext,
@@ -355,7 +356,7 @@ export function prevalidatePrices(input: {
       previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
     });
     if (!decision.accepted) {
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[sync-stablecoins] ${logLabel} for ${asset.symbol} (id=${asset.id}): ` +
         `$${asset.price} (${decision.reason})`,
       );
@@ -406,7 +407,7 @@ export function applyConsensusResults(input: {
       });
 
       if (rejectionReason) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync-stablecoins] Rejected primary consensus price for ${asset.symbol} (id=${asset.id}): ` +
             `$${primaryPriceResult.price} from ${primaryPriceResult.source} (${rejectionReason})`,
         );
@@ -464,7 +465,7 @@ export function applyProtocolPriceOverrides(input: {
         syncStartSec,
         reason: decision.reason,
       });
-      console.warn(
+      logWorkerEventArgs("handler", "warn",
         `[sync-stablecoins] Rejected protocol-backed override for ${asset.symbol} (id=${asset.id}): ` +
         `$${override.price} (${decision.reason})`,
       );
@@ -474,7 +475,7 @@ export function applyProtocolPriceOverrides(input: {
     if (asset.price != null && asset.price > 0 && override.price > 0) {
       const divergenceBps = Math.abs(Math.round(((override.price / asset.price) - 1) * 10000));
       if (divergenceBps > 100) {
-        console.warn(
+        logWorkerEventArgs("handler", "warn",
           `[sync] Protocol override for ${asset.symbol} diverges ${divergenceBps}bps from consensus ` +
           `(override=$${override.price.toFixed(4)}, consensus=$${asset.price.toFixed(4)})`,
         );

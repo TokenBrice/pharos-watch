@@ -1,12 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { mockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../../test-helpers/sqlite-d1";
 import { writeDewsPublishedGeneration } from "../../dews-publication-pointer";
 import { projectDewsEscalated, projectDewsDeescalated, projectDewsBandTransitions } from "../dews";
 import { createLatestSchemaSqlite } from "../../../test-helpers/latest-schema-sqlite";
 
 const SEC = 1_700_000_000;
+const TAPE_WRITE_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []): MockD1Database {
+  return createMockD1([...tables, ...TAPE_WRITE_TABLES]);
+}
 
 const MATCH_FETCH_SAMPLES = "WHERE computed_at > ?";
 const MATCH_PRIOR_BAND = "pharos:tape:dews-prior-band-seek";

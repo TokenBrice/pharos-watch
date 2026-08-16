@@ -99,6 +99,25 @@ export interface AbandonedCheckpointPreparation {
   currentDomainAttemptId: string | null;
 }
 
+export interface ScheduledRecoveryDomainPolicy {
+  reconcileAbandonedAttempt?: (
+    db: D1Database,
+    checkpoint: ScheduledRecoveryCheckpoint,
+    context: { timestamp: number; error: string; reason: "platform-abandoned" },
+  ) => Promise<void>;
+  buildIncompatibleRetirementStatements?: (
+    db: D1Database,
+    checkpoint: ScheduledRecoveryCheckpoint,
+    context: {
+      timestamp: number;
+      error: string;
+      expectedQueueHash: string;
+      checkpointRetiredExistsSql: string;
+      checkpointRetiredExistsBinds: readonly unknown[];
+    },
+  ) => readonly D1PreparedStatement[];
+}
+
 export type ScheduledChildPrerequisites = Readonly<
   Partial<Record<string, readonly string[]>>
 >;
@@ -508,69 +527,13 @@ async function loadCompletedCronJobsForSlot(
   return completed;
 }
 
-async function clearExactAbandonedReserveAttempt(
-  db: D1Database,
-  checkpoint: Pick<ScheduledRecoveryCheckpoint, "currentItemKey" | "currentDomainAttemptId">,
-  timestamp: number,
-): Promise<number> {
-  if (!checkpoint.currentItemKey || !checkpoint.currentDomainAttemptId) return 0;
-  const metadata = JSON.stringify({
-    reason: "platform-abandoned",
-    failureCategory: "platform-abandoned",
-    reconciledAt: timestamp,
-  });
-  const results = await runWithOverloadRetry(() =>
-    db.batch([
-      db
-        .prepare(
-          `INSERT OR IGNORE INTO reserve_sync_attempt_history (
-             stablecoin_id, attempted_at, adapter_key, breaker_key, attempt_id,
-             status, warnings, warning_count, last_error, metadata
-           )
-           SELECT stablecoin_id, COALESCE(last_attempted_at, ?), adapter_key, breaker_key,
-                  pending_attempt_id, 'error', NULL, 0, ?, ?
-             FROM reserve_sync_state
-            WHERE stablecoin_id = ?
-              AND pending_attempt_id = ?
-              AND last_attempt_id = ?`,
-        )
-        .bind(
-          timestamp,
-          PLATFORM_ABANDONED_ERROR,
-          metadata,
-          checkpoint.currentItemKey,
-          checkpoint.currentDomainAttemptId,
-          checkpoint.currentDomainAttemptId,
-        ),
-      db
-        .prepare(
-          `UPDATE reserve_sync_state
-              SET pending_attempt_id = NULL,
-                  last_status = 'error',
-                  last_error = ?,
-                  metadata = ?
-            WHERE stablecoin_id = ?
-              AND pending_attempt_id = ?
-              AND last_attempt_id = ?`,
-        )
-        .bind(
-          PLATFORM_ABANDONED_ERROR,
-          metadata,
-          checkpoint.currentItemKey,
-          checkpoint.currentDomainAttemptId,
-          checkpoint.currentDomainAttemptId,
-        ),
-    ]),
-  );
-  return (results[1] as D1Result | undefined)?.meta.changes ?? 0;
-}
-
 async function prepareCheckpointAttemptForRecovery(
   db: D1Database,
   checkpoint: ScheduledRecoveryCheckpoint,
   childJobs: readonly string[],
   childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
+  domainPolicy?: ScheduledRecoveryDomainPolicy,
 ): Promise<AbandonedCheckpointPreparation | null> {
   const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt, childJobs);
   const abandonedChildDispositions = { ...checkpoint.childDispositions };
@@ -659,7 +622,11 @@ async function prepareCheckpointAttemptForRecovery(
   );
   if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) return null;
 
-  await clearExactAbandonedReserveAttempt(db, checkpoint, timestamp);
+  await domainPolicy?.reconcileAbandonedAttempt?.(db, checkpoint, {
+    timestamp,
+    error: PLATFORM_ABANDONED_ERROR,
+    reason: "platform-abandoned",
+  });
   return {
     abandonedAttemptNo: checkpoint.attemptNo,
     recoveryAttemptNo,
@@ -676,6 +643,7 @@ export async function prepareScheduledCheckpointRecoveryForSlot(
     job: string;
     childJobs: readonly string[];
     childPrerequisites?: ScheduledChildPrerequisites;
+    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
   },
 ): Promise<AbandonedCheckpointPreparation | null> {
@@ -693,6 +661,7 @@ export async function prepareScheduledCheckpointRecoveryForSlot(
     input.childJobs,
     input.childPrerequisites,
     timestamp,
+    input.domainPolicy,
   );
 }
 
@@ -805,6 +774,7 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
     job: string;
     childJobs: readonly string[];
     expectedQueueHash: string;
+    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
     limit?: number;
   },
@@ -882,7 +852,11 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
           timestamp,
         ),
     ];
-    if (checkpoint.currentItemKey && checkpoint.currentDomainAttemptId) {
+    if (
+      checkpoint.currentItemKey
+      && checkpoint.currentDomainAttemptId
+      && input.domainPolicy?.buildIncompatibleRetirementStatements
+    ) {
       const retiredCheckpointExistsSql = `EXISTS (
         SELECT 1
           FROM worker_scheduled_checkpoints
@@ -896,58 +870,13 @@ export async function retireIncompatibleScheduledCheckpointRecoveries(
         QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
         timestamp,
       ];
-      const metadata = JSON.stringify({
-        reason: "queue-hash-drift",
-        failureCategory: "platform-abandoned",
+      statements.push(...input.domainPolicy.buildIncompatibleRetirementStatements(db, checkpoint, {
+        timestamp,
+        error: QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
         expectedQueueHash: input.expectedQueueHash,
-        checkpointQueueHash: checkpoint.queueHash,
-        reconciledAt: timestamp,
-      });
-      statements.push(
-        db
-          .prepare(
-            `INSERT OR IGNORE INTO reserve_sync_attempt_history (
-               stablecoin_id, attempted_at, adapter_key, breaker_key, attempt_id,
-               status, warnings, warning_count, last_error, metadata
-             )
-             SELECT stablecoin_id, COALESCE(last_attempted_at, ?), adapter_key, breaker_key,
-                    pending_attempt_id, 'error', NULL, 0, ?, ?
-               FROM reserve_sync_state
-              WHERE stablecoin_id = ?
-                AND pending_attempt_id = ?
-                AND last_attempt_id = ?
-                AND ${retiredCheckpointExistsSql}`,
-          )
-          .bind(
-            timestamp,
-            QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-            metadata,
-            checkpoint.currentItemKey,
-            checkpoint.currentDomainAttemptId,
-            checkpoint.currentDomainAttemptId,
-            ...retirementBinds,
-          ),
-        db
-          .prepare(
-            `UPDATE reserve_sync_state
-                SET pending_attempt_id = NULL,
-                    last_status = 'error',
-                    last_error = ?,
-                    metadata = ?
-              WHERE stablecoin_id = ?
-                AND pending_attempt_id = ?
-                AND last_attempt_id = ?
-                AND ${retiredCheckpointExistsSql}`,
-          )
-          .bind(
-            QUEUE_HASH_DRIFT_RETIREMENT_ERROR,
-            metadata,
-            checkpoint.currentItemKey,
-            checkpoint.currentDomainAttemptId,
-            checkpoint.currentDomainAttemptId,
-            ...retirementBinds,
-          ),
-      );
+        checkpointRetiredExistsSql: retiredCheckpointExistsSql,
+        checkpointRetiredExistsBinds: retirementBinds,
+      }));
     }
     const results = await runWithOverloadRetry(() => db.batch(statements));
     if (((results[0] as D1Result | undefined)?.meta.changes ?? 0) !== 1) continue;
@@ -971,6 +900,7 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
     childPrerequisites?: ScheduledChildPrerequisites;
     expectedQueueHash: string;
     staleAfterSec: number;
+    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
     limit?: number;
   },
@@ -988,6 +918,7 @@ export async function prepareEligibleScheduledCheckpointRecoveries(
       job: input.job,
       childJobs: input.childJobs,
       childPrerequisites: input.childPrerequisites,
+      domainPolicy: input.domainPolicy,
       nowSec: inspection.observedAt,
     });
     if (result) prepared.push(result);
@@ -1002,6 +933,7 @@ async function requeueExpiredRecoveries(
   childPrerequisites: ScheduledChildPrerequisites | undefined,
   timestamp: number,
   expectedQueueHash?: string,
+  domainPolicy?: ScheduledRecoveryDomainPolicy,
 ): Promise<void> {
   const queueHashPredicate = expectedQueueHash ? " AND queue_hash = ?" : "";
   const rows = await runWithOverloadRetry(() =>
@@ -1024,6 +956,7 @@ async function requeueExpiredRecoveries(
       childJobs,
       childPrerequisites,
       timestamp,
+      domainPolicy,
     );
   }
 }
@@ -1037,6 +970,7 @@ export async function claimNextScheduledCheckpointRecovery(
     owner: string;
     leaseSec: number;
     expectedQueueHash?: string;
+    domainPolicy?: ScheduledRecoveryDomainPolicy;
     nowSec?: number;
   },
 ): Promise<ScheduledRecoveryCheckpoint | null> {
@@ -1048,6 +982,7 @@ export async function claimNextScheduledCheckpointRecovery(
     input.childPrerequisites,
     timestamp,
     input.expectedQueueHash,
+    input.domainPolicy,
   );
   const queueHashPredicate = input.expectedQueueHash ? " AND queue_hash = ?" : "";
   const rows = await runWithOverloadRetry(() =>
@@ -1067,7 +1002,11 @@ export async function claimNextScheduledCheckpointRecovery(
   for (const row of rows.results ?? []) {
     const checkpoint = mapCheckpointRow(row);
     if (input.expectedQueueHash && checkpoint.queueHash !== input.expectedQueueHash) continue;
-    await clearExactAbandonedReserveAttempt(db, checkpoint, timestamp);
+    await input.domainPolicy?.reconcileAbandonedAttempt?.(db, checkpoint, {
+      timestamp,
+      error: PLATFORM_ABANDONED_ERROR,
+      reason: "platform-abandoned",
+    });
     const leaseUntil = timestamp + Math.max(60, input.leaseSec);
     const result = await runWithOverloadRetry(() =>
       db

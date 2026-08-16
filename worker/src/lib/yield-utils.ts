@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { toErrorMessage } from "./error-utils";
 export function buildOnChainSourceKey(stablecoinId: string): string {
   return `onchain:${stablecoinId}`;
@@ -22,12 +23,12 @@ export function parseYieldWarningSignals(raw: unknown): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) {
-      console.warn("[yield-sync] warning_signals is not an array:", typeof parsed);
+      logWorkerEventArgs("lib", "warn", "[yield-sync] warning_signals is not an array:", typeof parsed);
       return [];
     }
     return parsed.filter((value): value is string => typeof value === "string");
   } catch (e) {
-    console.warn("[yield-sync] failed to parse warning_signals:", toErrorMessage(e));
+    logWorkerEventArgs("lib", "warn", "[yield-sync] failed to parse warning_signals:", toErrorMessage(e));
     return [];
   }
 }

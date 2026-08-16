@@ -8,7 +8,7 @@ import {
   type RoutedSubscriberAlert,
 } from "./dispatch-telegram-routing";
 import { hasEscalation } from "./dispatch-telegram-predicates";
-import { isQuietHoursActive } from "./telegram-quiet-hours";
+import { isQuietHoursActive } from "../lib/telegram-quiet-hours";
 
 export { pruneOverflowPlanBacklogForChat } from "../lib/telegram-overflow-plan-cache";
 

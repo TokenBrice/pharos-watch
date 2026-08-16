@@ -21,7 +21,7 @@ import { LearnHero } from "../_shared/learn-hero";
 import { LearnPageShell } from "../_shared/learn-page-shell";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { MechanismComparisonMatrix } from "./comparison-matrix";
-import { ARCHETYPE_CONTENT } from "./content";
+import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 
 const FEATURED_MECHANISM_PATHS: ReadonlyArray<{
   archetype: MechanismArchetype;

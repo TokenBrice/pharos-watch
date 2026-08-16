@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
+import ts from "typescript";
 
 import {
   ADMIN_PENDING_TTL_SECONDS,
@@ -41,7 +42,7 @@ import {
   simulateTelegramRecapLoadScenarios,
   type TelegramRecapLoadScenarioResult,
 } from "../lib/telegram-recap-load-scenarios";
-import { TELEGRAM_RECAP_TAPE_PAGE_LIMIT } from "../../shared/lib/telegram-recap-policy";
+import { TELEGRAM_RECAP_TAPE_PAGE_LIMIT } from "@shared/lib/telegram-recap-policy";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 export {
@@ -263,6 +264,57 @@ export function evaluateQueryPlan(check: QueryPlanCheckDefinition, details: stri
   };
 }
 
+const TELEGRAM_PENDING_DRAIN_SOURCE_PATH = resolve(
+  process.cwd(),
+  "worker/src/cron/telegram-pending/drain.ts",
+);
+
+export function extractProductionPendingClaimSql(sourceText: string): string {
+  const sourceFile = ts.createSourceFile(
+    TELEGRAM_PENDING_DRAIN_SOURCE_PATH,
+    sourceText,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const matches: string[] = [];
+
+  function visit(node: ts.Node, insideTargetFunction = false): void {
+    const isTargetFunction = ts.isFunctionDeclaration(node)
+      && node.name?.text === "selectPendingClaimCandidateIds";
+    const inTarget = insideTargetFunction || isTargetFunction;
+
+    if (
+      inTarget
+      && ts.isCallExpression(node)
+      && ts.isPropertyAccessExpression(node.expression)
+      && node.expression.name.text === "prepare"
+      && node.arguments.length === 1
+    ) {
+      const [argument] = node.arguments;
+      if (ts.isNoSubstitutionTemplateLiteral(argument) || ts.isStringLiteral(argument)) {
+        matches.push(argument.text);
+      }
+    }
+
+    ts.forEachChild(node, (child) => visit(child, inTarget));
+  }
+
+  visit(sourceFile);
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one static SQL prepare() call in selectPendingClaimCandidateIds(), found ${matches.length}.`,
+    );
+  }
+  return matches[0]!;
+}
+
+export function loadProductionPendingClaimSql(): string {
+  return extractProductionPendingClaimSql(
+    readFileSync(TELEGRAM_PENDING_DRAIN_SOURCE_PATH, "utf8"),
+  );
+}
+
 export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
   const activeSubscriptionCountsSql = `SELECT chat_id,
         SUM(
@@ -398,21 +450,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
     {
       id: "pending-claim-ready",
       category: "pending-drain",
-      sql: `SELECT p.id, p.chat_id, p.message_html
-         FROM telegram_pending_alerts p
-        WHERE COALESCE(p.expires_at, p.created_at + ?) > ?
-          AND (p.not_before_at IS NULL OR p.not_before_at <= ?)
-          AND (? IS NULL OR COALESCE(p.priority, ?) <= ?)
-          AND (
-            p.processing_owner IS NULL
-            OR p.processing_expires_at IS NULL
-            OR p.processing_expires_at <= ?
-          )
-        ORDER BY COALESCE(p.priority, ?) ASC,
-                 COALESCE(p.not_before_at, p.created_at) ASC,
-                 p.created_at ASC,
-                 p.chunk_index ASC
-        LIMIT ?`,
+      sql: loadProductionPendingClaimSql(),
       binds: [
         PENDING_TTL_SECONDS,
         1_800_000_000,
@@ -424,8 +462,8 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
         LEGACY_PENDING_PRIORITY,
         PENDING_DRAIN_ATTEMPTS_PER_RUN,
       ],
-      requiredDetails: ["idx_tpa_ready", "idx_tpa_not_before"],
-      note: "Mirrors selectPendingClaimCandidateIds() in telegram-pending/drain.ts (migration 0124 claim columns). SQLite serves this via a multi-index OR on idx_tpa_ready/idx_tpa_not_before rather than idx_tpa_claim_ready; this guards the claim drain against a regression to a full table scan once the 0124 schema is loaded.",
+      requiredDetails: ["idx_tpa_delivery_reconcile", "idx_tajt_pending_status"],
+      note: "Executes the SQL from selectPendingClaimCandidateIds() in telegram-pending/drain.ts. SQLite uses the delivery-state reconciliation index for pending candidates and the target status index for the terminal-target dedupe exclusion; this guards the production claim drain against a regression to a full table scan.",
     },
     {
       id: "pending-backoff-aggregate",
@@ -616,7 +654,7 @@ export function buildQueryPlanChecks(): QueryPlanCheckDefinition[] {
 const MIN_TELEGRAM_PLAN_MIGRATIONS = 1;
 
 function selectTelegramPlanMigrations(migrationsDir: string): string[] {
-  // Mirrors getMigrationFiles() in check-worker-migrations.mjs, inlined to
+  // Mirrors getMigrationFiles() in check-worker-migrations.ts, inlined to
   // avoid pulling that module's top-level await into this tsx-transformed CLI.
   return readdirSync(migrationsDir)
     .filter((file) => file.endsWith(".sql"))

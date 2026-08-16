@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
 import { formatCurrency } from "@shared/lib/format";
 import { FROZEN_IDS, FROZEN_META_BY_ID, TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -127,7 +128,7 @@ function parseSnapshotKeys(raw: string): Set<string> | null {
     }
     return new Set(parsed);
   } catch (err) {
-    console.warn("[telegram-digest-appendices] ignored invalid snapshot:", err);
+    logWorkerEventArgs("lib", "warn", "[telegram-digest-appendices] ignored invalid snapshot:", err);
     return null;
   }
 }

@@ -19,6 +19,7 @@ import {
   type OnchainMulticall3Call,
 } from "./helpers";
 import { decodeAbiWordAt, decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { executeEvmObservationPlan, rawObservation } from "./evm-observation-plan";
 
 interface RiverTimeseriesPoint {
   chainId?: number;
@@ -142,16 +143,31 @@ interface RiverRedemptionProbe {
   droppedChains: string[];
 }
 
-function readMulticallResults(
-  results: Awaited<ReturnType<typeof fetchOnchainMulticall3>>,
-): Map<string, `0x${string}`> | null {
-  if (!results) return null;
-  const byLabel = new Map<string, `0x${string}`>();
-  for (const result of results) {
-    if (!result.success) return null;
-    byLabel.set(result.label, result.returnData);
-  }
-  return byLabel;
+async function executeRiverObservation(
+  calls: readonly OnchainMulticall3Call[],
+  chain: string,
+  signal: AbortSignal,
+  ctx: AdapterContext | undefined,
+  rpcUrl: string,
+): Promise<ReadonlyMap<string, `0x${string}`>> {
+  const observation = await executeEvmObservationPlan({
+    adapterKey: `river-protocol-info:${chain}`,
+    fields: calls.map((entry) => rawObservation({
+      label: entry.label,
+      contract: entry.contract,
+      data: entry.data,
+      allowFailure: entry.allowFailure,
+    })),
+    read: (planCalls) => fetchOnchainMulticall3({
+      calls: planCalls,
+      chain,
+      signal,
+      ctx,
+      rpcUrl,
+      timeoutMs: 12_000,
+    }),
+  });
+  return observation.rawByLabel;
 }
 
 /**
@@ -188,10 +204,7 @@ async function probeRiverChain(
         allowFailure: true,
       });
     }
-    const appResults = readMulticallResults(
-      await fetchOnchainMulticall3({ calls: appCalls, chain, signal, ctx, rpcUrl, timeoutMs: 12_000 }),
-    );
-    if (!appResults) return null;
+    const appResults = await executeRiverObservation(appCalls, chain, signal, ctx, rpcUrl);
 
     if (decodeStrictAddressWord(appResults.get("app:debt-token")) !== satUsdAddress.toLowerCase()) return null;
 
@@ -214,10 +227,7 @@ async function probeRiverChain(
       { label: `branch:mcr:${index}`, contract: troveManager, data: MCR_SELECTOR },
       { label: `branch:sunsetting:${index}`, contract: troveManager, data: SUNSETTING_SELECTOR },
     ]);
-    const branchResults = readMulticallResults(
-      await fetchOnchainMulticall3({ calls: branchCalls, chain, signal, ctx, rpcUrl, timeoutMs: 12_000 }),
-    );
-    if (!branchResults) return null;
+    const branchResults = await executeRiverObservation(branchCalls, chain, signal, ctx, rpcUrl);
 
     let maxRateRaw = 0n;
     let maxMcrRaw = 0n;

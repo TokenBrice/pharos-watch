@@ -12,7 +12,7 @@ vi.mock("../../../lib/abort", async (importOriginal) => {
 
 import { fetchTronEventsIncremental } from "../tron-source";
 import { createBudget, type RateLimitedFetch } from "../../../lib/evm-logs";
-import type { BlacklistRunBudget } from "../run-budget";
+import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 
 const noopLimiter: RateLimitedFetch = (fn) => fn();
 

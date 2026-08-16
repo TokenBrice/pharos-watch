@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { SUBGRAPH_PER_CHAIN_TIMEOUT_MS } from "./constants";
 import {
@@ -36,7 +37,7 @@ export async function runSubgraphFamily<TEntity, TLookups>(
 
   if (!params.graphApiKey) {
     if (params.missingApiKeyMessage) {
-      console.log(params.missingApiKeyMessage);
+      logWorkerEventArgs("handler", "info", params.missingApiKeyMessage);
     }
     return lookups;
   }
@@ -57,16 +58,16 @@ export async function runSubgraphFamily<TEntity, TLookups>(
         );
         params.handleResult(lookups, chain, result);
         if (result.shouldLogIndex && params.buildChainSummary) {
-          console.log(params.buildChainSummary(chain, result));
+          logWorkerEventArgs("handler", "info", params.buildChainSummary(chain, result));
         }
       } catch (error) {
         if (params.signal?.aborted) throw error;
-        console.warn(`[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
+        logWorkerEventArgs("handler", "warn", `[dex-liquidity] ${params.familyLabel} ${chain} failed (non-fatal):`, error);
       }
     },
     { signal: params.signal },
   );
 
-  console.log(params.buildFinalSummary(lookups));
+  logWorkerEventArgs("handler", "info", params.buildFinalSummary(lookups));
   return lookups;
 }

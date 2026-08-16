@@ -31,6 +31,14 @@ export type DdrrSnapshotCacheLoadResult = VersionedSnapshotCacheLoadResult<
 
 const DDRR_SNAPSHOT_CACHE_OPTIONS: VersionedSnapshotCacheOptions<DdrrResponse, DdrrSnapshotCacheFailureReason> = {
   cacheKey: DDRR_SNAPSHOT_CACHE_KEY,
+  retention: {
+    storage: "d1-kv",
+    schemaId: "depeg-resolver-review:snapshot-envelope",
+    ttlSec: null,
+    maxEntries: 1,
+    stale: "accept",
+    invalid: "retain",
+  },
   label: "depeg-resolver-review",
   generation: DDRR_SNAPSHOT_CACHE_GENERATION,
   methodologyVersion: DDR_METHODOLOGY_VERSION,

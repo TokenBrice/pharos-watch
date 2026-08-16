@@ -56,7 +56,7 @@ describe("processPoolMetrics", () => {
   });
 
   it("reports a malformed upstream pool and keeps processing later pools", () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const symbolToIds = new Map<string, string[]>([["USDC", ["usdc-circle"]]]);
     const symbolToChainScopedIds = buildSymbolToChainScopedIds(symbolToIds, ["ethereum"]);
 
@@ -95,7 +95,7 @@ describe("processPoolMetrics", () => {
     const { metrics } = result;
     expect(metrics.get("usdc-circle")?.topPools).toHaveLength(1);
     expect(metrics.get("usdc-circle")?.topPools[0]?.poolId).toBe("ethereum:0xvalid");
-    expect(logSpy).toHaveBeenCalledWith("[dex-liquidity] Matched 1 stablecoins with DEX liquidity");
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-liquidity] Matched 1 stablecoins with DEX liquidity"));
   });
 
   it("rethrows internal processing exceptions", () => {
@@ -566,7 +566,7 @@ describe("processPoolMetrics", () => {
     }).metrics;
 
     expect(warnSpy).toHaveBeenCalledWith(
-      "[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run",
+      expect.stringContaining("[dex-liquidity] DEX project index is empty — project whitelist filter disabled for this run"),
     );
     expect(metrics.get("usdt-tether")?.poolCount).toBe(1);
     expect(metrics.get("usdc-circle")?.poolCount).toBe(1);

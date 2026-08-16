@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { AdapterResult, ReserveAdapterDefinition } from "./reserve-adapters/index";
@@ -151,7 +152,7 @@ export async function syncReserveCoin(args: {
     }
 
     if (!adapter) {
-      console.warn(`[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
+      logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Unknown adapter "${config.adapter}" for ${coin.id}`);
       await recordFailure("error", `Unknown adapter: ${config.adapter}`, "unknown-adapter");
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
@@ -169,13 +170,13 @@ export async function syncReserveCoin(args: {
     });
     if (!validation.valid) {
       const message = validation.warnings.map((warning) => warning.message).join("; ");
-      console.warn(`[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
+      logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter output invalid for ${coin.id}: ${message}`);
       await recordFailure("error", `Validation failed: ${message}`, "validation-failed", validation.warnings, { durationMs });
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
 
     if (result.slices.length === 0) {
-      console.warn(`[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
+      logWorkerEventArgs("handler", "warn", `[sync-live-reserves] Adapter returned empty slices for ${coin.id}`);
       await recordFailure("error", "Adapter returned zero reserve slices", "empty-slices", [], { durationMs });
       return timedResult({ breakerKey, status: "failed", breakerOutcome: false, warningMessages: [], hasWarnings: false });
     }
@@ -249,7 +250,7 @@ export async function syncReserveCoin(args: {
       finalizeSucceeded = finalizeResult.finalized;
       if (finalizeResult.finalized && !finalizeResult.historyRecorded) {
         historyWriteFailed = finalizeResult.historyError ?? "unknown history write failure";
-        console.warn(`[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
+        logWorkerEventArgs("handler", "warn", `[sync-live-reserves] History write failed after authoritative success for ${coin.id}: ${historyWriteFailed}`);
       }
     } catch (error) {
       const timeoutMessage = `D1 write timeout for ${coin.id}`;
@@ -265,13 +266,13 @@ export async function syncReserveCoin(args: {
           compositionRecord.attemptId,
         )
       ) {
-        console.warn(`[sync-live-reserves] ${timeoutMessage}; authoritative success confirmed by readback`);
+        logWorkerEventArgs("handler", "warn", `[sync-live-reserves] ${timeoutMessage}; authoritative success confirmed by readback`);
         finalizeSucceeded = true;
         historyWriteFailed = "D1 write timed out after authoritative success readback";
       }
 
       if (!finalizeSucceeded) {
-        console.warn(`[sync-live-reserves] ${timeoutMessage}; clearing pending attempt authority`);
+        logWorkerEventArgs("handler", "warn", `[sync-live-reserves] ${timeoutMessage}; clearing pending attempt authority`);
         await recordFailure("error", timeoutMessage, "storage-write-timeout", warnings, {
           uncertainWrite: true,
           durationMs,
@@ -308,7 +309,7 @@ export async function syncReserveCoin(args: {
       hasWarnings: warningMessages.length > 0,
     });
   } catch (error) {
-    console.error(`[sync-live-reserves] Failed for ${coin.id}:`, error);
+    logWorkerEventArgs("handler", "error", `[sync-live-reserves] Failed for ${coin.id}:`, error);
     const extras: Record<string, unknown> = {};
     let attemptFailureSummaries: ReserveAttemptFailureSummary[] | undefined;
     if (isReserveAdapterAttemptChainError(error)) {

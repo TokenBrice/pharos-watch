@@ -1,4 +1,4 @@
-import { STABLECOIN_SOURCE_DOMAIN_VALUES, type StablecoinSourceDomain } from "../../shared/lib/stablecoins/schema";
+import { STABLECOIN_SOURCE_DOMAIN_VALUES, type StablecoinSourceDomain } from "@shared/lib/stablecoins/schema";
 import {
   assertCliUsage,
   parseStrictCliArgs,

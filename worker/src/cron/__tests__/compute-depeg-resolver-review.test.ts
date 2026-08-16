@@ -7,10 +7,10 @@ import {
 import { DdrrResponseSchema } from "@shared/types/depeg-resolver-review";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
-  buildEmptyDdrrSummary,
   buildDepegResolverReviewSnapshot,
   computeAndStoreDepegResolverReview,
 } from "../compute-depeg-resolver-review";
+import { buildEmptyDdrrSummary } from "../../lib/depeg-resolver-review-response";
 import type { DdrV2StoreContracts } from "../compute-depeg-resolver";
 
 afterEach(() => {
@@ -106,7 +106,15 @@ function coverageIncidents(count: number) {
  * case shows only its event rows plus whatever extra tables it needs.
  */
 function reviewDb(eventRows: Record<string, unknown>[], extra: MockTableConfig[] = []) {
-  return mockD1([{ match: "FROM depeg_events", rows: eventRows }, ...extra]);
+  return mockD1([
+    { match: "FROM depeg_events", rows: eventRows },
+    ...extra,
+    {
+      match: "FROM tape_events",
+      rows: [],
+      first: null,
+    },
+  ]);
 }
 
 function incident(overrides: Record<string, unknown> = {}) {

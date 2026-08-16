@@ -1171,7 +1171,9 @@ describe("handleYieldRankings", () => {
   });
 
   it("returns 503 when cache is empty", async () => {
-    const res = await handleYieldRankings(mockD1());
+    const res = await handleYieldRankings(mockD1([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+    ]));
     expect(res.status).toBe(503);
   });
 

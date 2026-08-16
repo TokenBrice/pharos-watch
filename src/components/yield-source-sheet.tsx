@@ -22,7 +22,7 @@ import {
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldDecisionLedgerCard } from "@/components/yield-decision-ledger-card";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { trackEvent } from "@/lib/analytics";
 import {
   formatEvidenceCompleteness,
@@ -83,7 +83,10 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, onOpenCh
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
   const deepDiveSearch = hasAlternateSelected ? new URLSearchParams({ sources: selectedSourceKey }).toString() : "";
-  const deepDiveHref = `${buildStablecoinUrl(ranking.id)}yield/${deepDiveSearch ? `?${deepDiveSearch}` : ""}`;
+  const deepDiveHref = buildStablecoinUrl(
+    ranking.id,
+    `yield/${deepDiveSearch ? `?${deepDiveSearch}` : ""}`,
+  );
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);

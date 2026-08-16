@@ -1,4 +1,5 @@
 import type { DdrCoinStructural } from "@shared/lib/depeg-resolver";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { bytesToHex } from "../../lib/hash";
 import { toErrorMessage } from "../../lib/error-utils";
 import { throwIfAborted } from "../../lib/abort";
@@ -16,10 +17,6 @@ import type { DdrEventDbRow } from "./types";
 
 export function abortIf(signal: AbortSignal | undefined, _label: string): void {
   throwIfAborted(signal);
-}
-
-function pegCurrencyFromPegType(pegType: string): string {
-  return pegType.startsWith("pegged") ? pegType.slice("pegged".length) : "USD";
 }
 
 export interface DdrV9DependencyCard {
@@ -119,7 +116,7 @@ export function fallbackStructural(id: string, symbol: string, pegType: string):
     id,
     symbol,
     name: symbol,
-    pegCurrency: pegCurrencyFromPegType(pegType),
+    pegCurrency: getPegTaxonomyByType(pegType)?.currency ?? "USD",
     governance: "centralized",
   };
 }
@@ -194,7 +191,7 @@ export function toCanonicalIncidentInput(row: DdrEventDbRow): DdrCanonicalIncide
     eventId: row.id,
     stablecoinId: row.stablecoin_id,
     symbol: row.symbol,
-    pegCurrency: pegCurrencyFromPegType(row.peg_type),
+    pegCurrency: getPegTaxonomyByType(row.peg_type)?.currency ?? "USD",
     direction: toDirection(row.direction),
     startedAt: row.started_at,
     endedAt: row.ended_at,
@@ -219,7 +216,7 @@ export function fallbackIncidentForEvent(row: DdrEventDbRow): DdrCanonicalIncide
     eventId: row.id,
     currentEventId: row.id,
     stablecoinId: row.stablecoin_id,
-    pegCurrency: pegCurrencyFromPegType(row.peg_type),
+    pegCurrency: getPegTaxonomyByType(row.peg_type)?.currency ?? "USD",
     direction: toDirection(row.direction),
     startedAt: row.started_at,
     eligibleAt: eligibleAt(row.started_at),

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { z } from "zod";
 import { getCache } from "./db-cache";
 import { decodeCachedJson } from "./cache-json";
@@ -90,7 +91,7 @@ function validateAndFilterArray(rawArray: unknown[]): { assets: StablecoinData[]
   }
 
   if (validated.length < rawArray.length) {
-    console.warn(`[stablecoins-cache] Filtered ${rawArray.length - validated.length} malformed entries`);
+    logWorkerEventArgs("lib", "warn", `[stablecoins-cache] Filtered ${rawArray.length - validated.length} malformed entries`);
   }
 
   return {

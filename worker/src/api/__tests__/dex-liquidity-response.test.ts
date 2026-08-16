@@ -3,7 +3,7 @@ import {
   buildDexDeploymentCoverage,
   normalizeTopPools,
   selectTrendBaseline,
-} from "../dex-liquidity-response";
+} from "../../lib/dex-liquidity-response";
 
 describe("normalizeTopPools", () => {
   it("strips dead per-pool fields and preserves allowed keys", () => {

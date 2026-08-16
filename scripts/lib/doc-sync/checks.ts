@@ -14,17 +14,17 @@ import {
   CIRCUIT_PROBE_INTERVAL_SEC,
   FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
   FEEDBACK_RATE_LIMIT_WINDOW_SEC,
-} from "../../../shared/lib/ops-limits";
+} from "@shared/lib/ops-limits";
 import {
   DEWS_SIGNAL_WEIGHTS,
   DEWS_THREAT_BANDS,
-} from "../../../shared/lib/dews-config";
-import { HEALTH_METHODOLOGY_VERSION } from "../../../shared/lib/chain-health";
+} from "@shared/lib/dews-config";
+import { HEALTH_METHODOLOGY_VERSION } from "@shared/lib/chain-health";
 import {
   DURABILITY_COMPONENT_WEIGHTS,
   LIQUIDITY_SCORE_WEIGHTS,
   type LiquidityScoreComponentKey,
-} from "../../../shared/lib/liquidity-score-weights";
+} from "@shared/lib/liquidity-score-weights";
 import {
   DEPEG_CONFIRMATION_SUPPLY_THRESHOLD,
   DEPEG_EXTREME_MOVE_BPS,
@@ -36,22 +36,22 @@ import {
   DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
   DEPEG_THRESHOLD_BPS,
   DEPEG_THRESHOLD_BPS_NON_USD,
-} from "../../../shared/lib/depeg-config";
-import { STATUS_BLACKLIST_THRESHOLDS } from "../../../shared/lib/status-thresholds";
+} from "@shared/lib/depeg-config";
+import { STATUS_BLACKLIST_THRESHOLDS } from "@shared/lib/status-thresholds";
 import {
   API_FRESHNESS_MAX_AGE_SEC,
   CACHE_FRESHNESS_LANES,
-} from "../../../shared/lib/api-freshness";
-import { THREAT_BAND_HEX } from "../../../shared/lib/classification";
+} from "@shared/lib/api-freshness";
+import { THREAT_BAND_HEX } from "@shared/lib/classification";
 import {
   BLACKLIST_TRACKER_METHODOLOGY_VERSION,
   DEPEG_DEWS_METHODOLOGY_VERSION,
   PSI_METHODOLOGY_VERSION,
   SAFETY_SCORE_METHODOLOGY_VERSION,
   YIELD_METHODOLOGY_VERSION,
-} from "../../../shared/lib/methodology-versions/constants";
-import { V9_CANDIDATE_POLICY_V1 } from "../../../shared/lib/safety-score-v9/policy";
-import { REDEMPTION_BACKSTOP_CONFIGS } from "../../../shared/lib/redemption-backstops";
+} from "@shared/lib/methodology-versions/constants";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstops";
 import {
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
   METHODOLOGY_DOC_VERSION_CHECKS,
@@ -61,7 +61,7 @@ import {
   ISOLATE_LOCAL_STATE_DOC_END,
   ISOLATE_LOCAL_STATE_DOC_START,
   renderIsolateLocalStateDocumentation,
-} from "../../../shared/lib/isolate-local-state-registry";
+} from "@shared/lib/isolate-local-state-registry";
 
 function checkMethodologyVersions(failures: Failure[]): void {
   for (const check of METHODOLOGY_DOC_VERSION_CHECKS) {

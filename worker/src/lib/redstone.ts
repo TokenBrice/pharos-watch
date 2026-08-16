@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   REDSTONE_PROVIDER_AUDIT_CONFIG,
   REDSTONE_SYMBOL_CONFIG,
@@ -105,7 +106,7 @@ async function fetchRedstoneBatch(
     { timeoutMs: REDSTONE_REQUEST_TIMEOUT_MS },
   );
   if (!result?.response.ok) {
-    console.warn(`[redstone] API returned ${result?.response.status ?? "no response"} for batch: ${symbolsParam}`);
+    logWorkerEventArgs("lib", "warn", `[redstone] API returned ${result?.response.status ?? "no response"} for batch: ${symbolsParam}`);
     return { results, transportOk: false };
   }
 
@@ -122,7 +123,7 @@ async function fetchRedstoneBatch(
         : null;
     const nowSec = Math.floor(Date.now() / 1000);
     if (timestampSec == null || nowSec - timestampSec > REDSTONE_MAX_STALENESS_SEC) {
-      console.warn(`[redstone] Skipping stale or timestamp-less price for ${apiSym}`);
+      logWorkerEventArgs("lib", "warn", `[redstone] Skipping stale or timestamp-less price for ${apiSym}`);
       continue;
     }
 
@@ -135,14 +136,14 @@ async function fetchRedstoneBatch(
       }
     }
     if (venues.size === 0) {
-      console.warn(`[redstone] Skipping ${apiSym}: no per-venue breakdown`);
+      logWorkerEventArgs("lib", "warn", `[redstone] Skipping ${apiSym}: no per-venue breakdown`);
       continue;
     }
 
     const venuePrices = [...venues.values()];
     const derivedPrice = median(venuePrices);
     if (derivedPrice == null || !Number.isFinite(derivedPrice) || derivedPrice <= 0) {
-      console.warn(`[redstone] Skipping ${apiSym}: unusable venue median`);
+      logWorkerEventArgs("lib", "warn", `[redstone] Skipping ${apiSym}: unusable venue median`);
       continue;
     }
 
@@ -222,15 +223,15 @@ export async function fetchRedstonePrices(
       }
     }
 
-    console.log(
+    logWorkerEventArgs("lib", "info",
       `[redstone] requested ${requestedSymbols.length}, returned ${results.size}, recovered ${recoveredCount} via solo retry`,
     );
     if (results.size === 0) {
-      console.warn(`[redstone] Requested ${requestedSymbols.length} symbols but got 0 usable results`);
+      logWorkerEventArgs("lib", "warn", `[redstone] Requested ${requestedSymbols.length} symbols but got 0 usable results`);
     }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
-    console.warn("[redstone] Fetch failed:", err);
+    logWorkerEventArgs("lib", "warn", "[redstone] Fetch failed:", err);
     return { kind: "upstream-error", value: results, reason: toErrorMessage(err) };
   }
 

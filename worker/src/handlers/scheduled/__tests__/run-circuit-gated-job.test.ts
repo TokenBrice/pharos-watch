@@ -69,7 +69,12 @@ describe("runCircuitGatedLeasedScheduledJob", () => {
     expect(result).toBeNull();
     expect(runLeasedCron).not.toHaveBeenCalled();
     expect(recordOutcomeDecision).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith("DEX circuit open");
+    expect(JSON.parse(String(warnSpy.mock.calls[0]?.[0]))).toMatchObject({
+      event: "scheduled_job_circuit_open",
+      message: "DEX circuit open",
+      job: "sync-dex-liquidity",
+      provider: "dex-liquidity",
+    });
     const { logSkippedCronRun } = await import("../preflight-skip");
     expect(logSkippedCronRun).toHaveBeenCalledWith(expect.anything(), {
       job: "sync-dex-liquidity",

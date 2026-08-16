@@ -1,4 +1,4 @@
-import type { RedemptionBackstopConfig } from "../../shared/lib/redemption-backstop-configs/shared";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
 
 export function resolveStaticCostScore(config: RedemptionBackstopConfig): number {
   if (config.costModel.kind === "dynamic-or-unclear") {

@@ -4,21 +4,22 @@ import { describe, expect, it } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import {
   CASE_STUDY_LIST,
+  CASE_STUDY_OUTCOME_COUNTS,
   CASE_STUDIES,
   caseStudySlugForEvent,
-} from "../content";
+} from "@/lib/case-studies";
 import {
   CASE_STUDY_CLIENT_BY_CEMETERY_ID,
   CASE_STUDY_CLIENT_BY_COIN_ID,
   CASE_STUDY_EVENT_WINDOWS,
   caseStudySlugForEvent as clientCaseStudySlugForEvent,
-} from "../content/client-index";
-import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "../content/event-window-resolver";
-import type { CaseStudy } from "../content/types";
+} from "@/lib/case-study-client-index";
+import { resolveCaseStudySlugForEvent as resolveCaseStudySlugForEventFromWindows } from "@/lib/case-study-event-window";
+import type { CaseStudy } from "@/lib/case-studies/types";
 
 const COINS_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
 const CEMETERY_PATH = join(process.cwd(), "public/datasets/stablecoin-cemetery.json");
-const CONTENT_DIR = join(process.cwd(), "src/app/learn/case-studies/content");
+const CONTENT_DIR = join(process.cwd(), "src/lib/case-studies");
 const KNOWN_INTERNAL_ROUTES = new Set([
   "/about/",
   "/api/",
@@ -126,6 +127,15 @@ function isKnownInternalRoute(href: string): boolean {
 }
 
 describe("case-study content", () => {
+  it("derives the shared outcome totals from the canonical registry", () => {
+    expect(Object.values(CASE_STUDY_OUTCOME_COUNTS).reduce((sum, count) => sum + count, 0)).toBe(CASE_STUDY_LIST.length);
+    for (const outcome of VALID_OUTCOMES) {
+      expect(CASE_STUDY_OUTCOME_COUNTS[outcome as keyof typeof CASE_STUDY_OUTCOME_COUNTS]).toBe(
+        CASE_STUDY_LIST.filter((study) => study.outcome === outcome).length,
+      );
+    }
+  });
+
   it("ships one study per content module with unique slugs", () => {
     expect(CASE_STUDY_LIST).toHaveLength(CONTENT_MODULE_SLUGS.length);
     expect(new Set(CASE_STUDY_LIST.map((study) => study.slug)).size).toBe(CASE_STUDY_LIST.length);

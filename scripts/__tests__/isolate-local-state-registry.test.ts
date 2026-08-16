@@ -7,7 +7,7 @@ import {
 import {
   ISOLATE_LOCAL_STATE_REGISTRY,
   renderIsolateLocalStateDocumentation,
-} from "../../shared/lib/isolate-local-state-registry";
+} from "@shared/lib/isolate-local-state-registry";
 
 const root = resolve(import.meta.dirname, "../..");
 

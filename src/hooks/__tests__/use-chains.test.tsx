@@ -104,4 +104,50 @@ describe("useChains", () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.isError).toBe(false);
   });
+
+  it("excludes non-core, frozen, and untracked rows from the canonical active-core chain universe", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          {
+            id: "usdc-circle",
+            name: "USD Coin",
+            symbol: "USDC",
+            price: 1,
+            chainCirculating: { ethereum: { current: 100 } },
+          },
+          {
+            id: "ausdt-tether-alloy",
+            name: "Alloy USDT",
+            symbol: "aUSDT",
+            price: 1,
+            frozen: true,
+            chainCirculating: { ethereum: { current: 200 } },
+          },
+          {
+            id: "aa-falconx-mev-capital",
+            name: "AA FalconX MEV Capital",
+            symbol: "AAfMEV",
+            price: 1,
+            chainCirculating: { ethereum: { current: 250 } },
+          },
+          {
+            id: "untracked-defillama-row",
+            name: "Untracked",
+            symbol: "UNKNOWN",
+            price: 1,
+            chainCirculating: { ethereum: { current: 300 } },
+          },
+        ],
+      },
+      isLoading: false,
+      isError: false,
+    });
+
+    const { result } = renderHook(() => useChainStablecoins("ethereum"));
+
+    expect(result.current.totalUsd).toBe(100);
+    expect(result.current.coins.map((coin) => coin.id)).toEqual(["usdc-circle"]);
+    expect(result.current.coins[0]?.chainShare).toBe(1);
+  });
 });

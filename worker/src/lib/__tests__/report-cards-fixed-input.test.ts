@@ -609,6 +609,12 @@ describe("retained v3 fixed report-card input", () => {
     const tampered = JSON.parse(entry.value) as { payloadSha256: string };
     tampered.payloadSha256 = "0".repeat(64);
     await expect(parseReportCardsFixedInputCacheValue(JSON.stringify(tampered))).rejects.toThrow("checksum mismatch");
+
+    const corruptLength = JSON.parse(entry.value) as { uncompressedBytes: number };
+    corruptLength.uncompressedBytes = 1;
+    await expect(parseReportCardsFixedInputCacheValue(JSON.stringify(corruptLength))).rejects.toThrow(
+      "exceeds its declared uncompressed byte length",
+    );
   });
 
   it("binds the fixed-input envelope to its upstream publication identity", async () => {

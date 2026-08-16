@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import type { ZodType } from "zod";
 import { D1_INT32_MAX } from "./d1-constants";
 import { getCache, getCacheUpdatedAt, setCacheIfNewer } from "./db-cache";
@@ -35,7 +36,7 @@ function recordJsonParseFailure(context: string, message: string): void {
     if (oldest === undefined) break;
     counters.delete(oldest);
   }
-  console.warn(`[cache] Failed to parse persisted JSON (${context}); count=${counters.get(context)?.count ?? 1}:`, message);
+  logWorkerEventArgs("lib", "warn", `[cache] Failed to parse persisted JSON (${context}); count=${counters.get(context)?.count ?? 1}:`, message);
 }
 
 export function getCacheJsonParseFailureCountersForTests(): Record<string, { count: number; lastMessage: string }> {
@@ -131,7 +132,7 @@ async function getResponseReadyCache(
   try {
     return await getCache(db, getResponseReadyCacheKey(cacheKey));
   } catch (error) {
-    console.warn(
+    logWorkerEventArgs("lib", "warn",
       `[cache] Failed to read response-ready companion for "${cacheKey}":`,
       toErrorMessage(error),
     );
@@ -159,7 +160,7 @@ function decodeResponseReadyCacheBody(
     envelope.schemaId !== expectedSchemaId ||
     typeof envelope.body !== "string"
   ) {
-    console.warn(`[cache] Ignoring response-ready companion for "${cacheKey}" with missing or mismatched schema marker`);
+    logWorkerEventArgs("lib", "warn", `[cache] Ignoring response-ready companion for "${cacheKey}" with missing or mismatched schema marker`);
     return null;
   }
 

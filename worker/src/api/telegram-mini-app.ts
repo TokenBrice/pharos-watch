@@ -14,7 +14,7 @@ import {
   type TelegramMiniAppVersionCompatibility,
 } from "@shared/lib/telegram-mini-app-contract";
 import { TELEGRAM_MINI_APP_CATALOG } from "@shared/lib/telegram-mini-app-catalog";
-import { jsonResponse } from "../lib/api-utils";
+import { jsonResponse, readRequestTextBounded } from "../lib/api-utils";
 import type { JsonResponseOptions } from "../lib/api-response";
 import {
   TelegramMiniAppAuthError,
@@ -134,48 +134,15 @@ function miniAppErrorHandler<T extends unknown[]>(endpoint: string, handler: Min
   };
 }
 
-function rejectOversizedBody(request: Request): Response | null {
-  const header = request.headers.get("content-length");
-  if (header == null) return null;
-  const length = Number(header);
-  if (!Number.isFinite(length)) return null;
-  if (length > MAX_REQUEST_BODY_BYTES) {
-    return miniAppError(413, "body-too-large", "Request body too large");
-  }
-  return null;
-}
-
 async function readBoundedRequestText(request: Request): Promise<string | Response> {
-  const headerRejection = rejectOversizedBody(request);
-  if (headerRejection) return headerRejection;
-  if (!request.body) return "";
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let totalBytes = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      if (!value) continue;
-      totalBytes += value.byteLength;
-      if (totalBytes > MAX_REQUEST_BODY_BYTES) {
-        await reader.cancel().catch(() => undefined);
-        return miniAppError(413, "body-too-large", "Request body too large");
-      }
-      chunks.push(value);
-    }
-  } catch {
-    return miniAppError(400, "validation-error", "Invalid Mini App request body");
-  }
-
-  const bytes = new Uint8Array(totalBytes);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(bytes);
+  const text = await readRequestTextBounded(request, MAX_REQUEST_BODY_BYTES, {
+    bodyTooLargeMessage: "Request body too large",
+    invalidJsonMessage: "Invalid Mini App request body",
+  });
+  if (!(text instanceof Response)) return text;
+  return text.status === 413
+    ? miniAppError(413, "body-too-large", "Request body too large")
+    : miniAppError(400, "validation-error", "Invalid Mini App request body");
 }
 
 async function parseMiniAppRequestJson<T>(

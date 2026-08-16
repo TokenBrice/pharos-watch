@@ -10,7 +10,7 @@
 - **Shared helpers + section metadata:** `src/app/methodology/methodology-shared.tsx`
 - **Section composition module:** `src/app/methodology/sections/index.tsx` (single ordered `MethodologySections` list)
 - **Composite section body:** `src/app/methodology/sections/core-sections-pricing.tsx`
-- **Shared section summary/markdown registry:** `src/app/methodology/sections/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
+- **Shared section summary/markdown registry:** `src/lib/methodology-content.ts` (non-React section ids, titles, and markdown-export summaries)
 - **Per-section body modules:** `src/app/methodology/sections/core/*.tsx` and `src/app/methodology/sections/monitoring/*.tsx`
 - **Navigation model:** `METHODOLOGY_SECTIONS` + `LongformScrollspyNav`
 - **Mode switching:** `MethodologyModeToggle`; mobile renders the toggle inside the hero guide card, `md+` renders it in the jump rail. It and the inline `ShowYourWorkToggle` adopt the `pharos-toggle-pill` control language (design-canon grammar alignment, 2026-07-01); `ShowYourWorkToggle` is shared, so the pill classes are passed additively from `page.tsx` and its other consumers are unchanged.
@@ -53,7 +53,7 @@ When changing any methodology surface, update the runtime implementation, the de
 
 1. Runtime implementation (source file above).
 2. Detailed methodology doc (`docs/*.md` for that system).
-3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/app/methodology/sections/methodology-content.ts`. Use `src/app/methodology/sections/index.tsx` only when changing section composition or order.
+3. `/methodology` page copy and worked examples in the relevant section body module under `src/app/methodology/sections/core/` or `src/app/methodology/sections/monitoring/`. If the markdown export summary should also change, update the matching entry in `src/lib/methodology-content.ts`. Use `src/app/methodology/sections/index.tsx` only when changing section composition or order.
 
 If a versioned methodology changes, add the entry under `shared/data/methodology-changelogs/`, update the corresponding domain module under `shared/lib/methodology-versions/`, and bump the shared constant when applicable so badges and changelog links stay consistent.
 
@@ -146,7 +146,7 @@ Score-card containers (Report Card, DEWS, Liquidity, PSI, Redemption Backstop, C
 ## Verification Shortcuts
 
 - **Pricing pipeline source weights / consensus threshold:** `worker/src/cron/sync-stablecoins/enrich-prices.ts`, `worker/src/lib/price-consensus.ts`
-- **Safety Score V9 pillar weights / peg multiplier:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, loaded by `shared/lib/safety-score-v9/policy.ts` and evaluated under `shared/lib/safety-score-v9/`
+- **Safety Score V9 pillar weights / peg multiplier / score-bearing gates:** `shared/data/safety-score-v9/methodology-policy-candidate-v1.json` plus `shared/lib/safety-score-v9/score-bearing-gates-policy.ts`, loaded and jointly digested by `shared/lib/safety-score-v9/policy.ts` and evaluated under `shared/lib/safety-score-v9/`
 - **Mint component weights / caps / posture bands:** `shared/lib/safety-score-v9/control.ts`, `shared/lib/safety-score-v9/mint-posture.ts`
 - **PSI caps, formula, and bands:** `worker/src/lib/stability-index.ts`
 - **Liquidity component weights:** `shared/lib/liquidity-score-weights.ts`, `worker/src/cron/dex-liquidity/pool-helpers.ts`

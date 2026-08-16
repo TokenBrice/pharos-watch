@@ -2,8 +2,8 @@
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
-import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mjs";
-import { reportViolations } from "../lib/report-violations.mjs";
+import { getVerifiedDocFiles, splitLines } from "../lib/doc-files.mts";
+import { reportViolations } from "../lib/report-violations.mts";
 
 const repoRoot = process.cwd();
 const verifiedDocFiles = getVerifiedDocFiles(repoRoot);

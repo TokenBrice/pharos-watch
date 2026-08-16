@@ -116,9 +116,9 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
       {/* Summary Stats */}
       <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-6">
         <MetricStatCard
+          variant="compact"
           title="Total DEX TVL"
           value={formatCurrency(stats.totalTvl)}
-          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext={
             <>
               Across all tracked stablecoins
@@ -132,18 +132,17 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               )}
             </>
           }
-          subtextClassName="text-sm text-muted-foreground"
         />
 
         <MetricStatCard
+          variant="compact"
           title="24h DEX Volume"
           value={formatCurrency(stats.totalVol)}
-          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext="Trading volume today"
-          subtextClassName="text-sm text-muted-foreground"
         />
 
         <MetricStatCard
+          variant="compact"
           title={<MethodologyLabel topic="liquidityScore">Avg Liq Score</MethodologyLabel>}
           value={
             <>
@@ -151,34 +150,30 @@ export function LiquidityStats({ stats, liquidityMap }: LiquidityStatsProps) {
               <span className="text-lg text-muted-foreground">/100</span>
             </>
           }
-          valueClassName={`pharos-numeric text-2xl font-extrabold tracking-tight ${getScoreColor(stats.avgScore)}`}
+          valueClassName={getScoreColor(stats.avgScore)}
           subtext="Mean score of active coins"
-          subtextClassName="text-sm text-muted-foreground"
         />
 
         <MetricStatCard
+          variant="compact"
           title={<MethodologyLabel topic="liquidityScore">Covered on DEX</MethodologyLabel>}
           value={stats.withLiquidity}
-          valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
           subtext={`${stats.highConfidenceCoverage} primary/mixed · ${stats.fallbackCoverage} fallback · of ${stats.totalTracked}`}
-          subtextClassName="text-sm text-muted-foreground"
         />
         {stats.avgBalance != null && (
           <MetricStatCard
+            variant="compact"
             title="Avg Pool Balance"
             value={`${stats.avgBalance}%`}
-            valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
             subtext="TVL-weighted average"
-            subtextClassName="text-sm text-muted-foreground"
           />
         )}
         {stats.avgOrganic != null && (
           <MetricStatCard
+            variant="compact"
             title="Organic Liquidity"
             value={`${stats.avgOrganic}%`}
-            valueClassName="pharos-numeric text-2xl font-extrabold tracking-tight"
             subtext="Fee-based vs incentivized"
-            subtextClassName="text-sm text-muted-foreground"
           />
         )}
       </div>

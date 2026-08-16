@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { getConfiguredRedemptionBackstopIds, getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import { REDEMPTION_SEVERE_ACTIVE_DEPEG_BPS } from "@shared/lib/report-card-active-depeg";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -122,7 +123,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     latestUpdatedAt = dexSnapshot.latestUpdatedAt;
   } catch (error) {
     const message = toErrorMessage(error);
-    console.warn("[sync-redemption-backstops] DEX liquidity preload failed; continuing without DEX input:", error);
+    logWorkerEventArgs("handler", "warn", "[sync-redemption-backstops] DEX liquidity preload failed; continuing without DEX input:", error);
     preloadWarnings.push(`dex-liquidity:${message}`);
   }
 
@@ -131,7 +132,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
     reserveSnapshotMetadataById = await loadReserveSnapshotMetadataMap(db, configuredIds);
   } catch (error) {
     const message = toErrorMessage(error);
-    console.warn(
+    logWorkerEventArgs("handler", "warn",
       "[sync-redemption-backstops] Reserve metadata preload failed; live capacity will fail closed to static/fallback rows:",
       error,
     );
@@ -147,12 +148,12 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
   // see the native capture at `worker/src/lib/safety-score-v9-capture.ts`.
   let liquidityStale = false;
   if (latestUpdatedAt == null) {
-    console.warn("[sync-redemption-backstops] Liquidity data is missing");
+    logWorkerEventArgs("handler", "warn", "[sync-redemption-backstops] Liquidity data is missing");
     liquidityStale = true;
   } else {
     const ageSec = now - latestUpdatedAt;
     if (ageSec > DEX_LIQUIDITY_FRESHNESS_SEC) {
-      console.warn(`[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
+      logWorkerEventArgs("handler", "warn", `[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
       liquidityStale = true;
     }
   }
@@ -186,7 +187,7 @@ export async function syncRedemptionBackstops(db: D1Database, signal: AbortSigna
 
       if (resolved) snapshots.push(resolved);
     } catch (error) {
-      console.error(`[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
+      logWorkerEventArgs("handler", "error", `[sync-redemption-backstops] Failed for ${stablecoinId}:`, error);
       failedIds.push(stablecoinId);
       const config = configById.get(stablecoinId);
       if (config) {

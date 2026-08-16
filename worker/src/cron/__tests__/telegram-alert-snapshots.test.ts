@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1 as createMockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   buildDewsSnapshot,
   buildDewsAlertableSnapshot,
@@ -15,6 +15,14 @@ import {
   type DewsRow,
   type ActiveDepegRow,
 } from "../telegram-alert-snapshots";
+
+const DEFAULT_TELEGRAM_SNAPSHOT_D1_TABLES: MockTableConfig[] = [
+  { match: "INSERT OR REPLACE INTO cache", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables, ...DEFAULT_TELEGRAM_SNAPSHOT_D1_TABLES]);
+}
 
 afterEach(() => {
   vi.useRealTimers();

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -51,9 +51,23 @@ function stablecoinPayload(count = 2): string {
   });
 }
 
+const EMPTY_PUBLICATION_TABLES: MockTableConfig[] = [
+  { match: "FROM dex_liquidity_publication_generations", rows: [], first: null },
+  { match: "FROM yield_publication_generations", rows: [], first: null },
+  { match: "FROM surface_publication_generations", rows: [], first: null },
+  { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "SELECT updated_at FROM cache WHERE key = ?", rows: [], first: null },
+  { match: "pharos:stress-signals:published-exact", rows: [] },
+  { match: "FROM stability_index_samples", rows: [], first: null },
+];
+
+function mockPublicationD1(tables: MockTableConfig[] = []): MockD1Database {
+  return mockD1([...tables, ...EMPTY_PUBLICATION_TABLES]);
+}
+
 describe("loadPublicationHealth", () => {
   it("maps existing DEX and yield publication ledgers into shared surface health", async () => {
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM dex_liquidity_publication_generations\n        ORDER BY started_at DESC",
         rows: [],
@@ -177,7 +191,7 @@ describe("loadPublicationHealth", () => {
   });
 
   it("projects stablecoins from the generic surface publication table when migrated rows exist", async () => {
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM surface_publication_generations\n          WHERE surface = ?\n          ORDER BY started_at DESC",
         matchBinds: ["stablecoins"],
@@ -259,7 +273,7 @@ describe("loadPublicationHealth", () => {
 
   it("derives stablecoins publication health from the canonical cache before generic writes exist", async () => {
     const updatedAt = NOW - 120;
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM cache WHERE key = ?",
         rows: [
@@ -309,7 +323,7 @@ describe("loadPublicationHealth", () => {
 
   it("keeps successful surfaces when one surface query throws", async () => {
     const updatedAt = NOW - 120;
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM yield_publication_generations",
         rows: [],
@@ -354,7 +368,7 @@ describe("loadPublicationHealth", () => {
 
   it("falls back to the canonical stablecoins cache when the generic surface table is absent", async () => {
     const updatedAt = NOW - 180;
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM surface_publication_generations",
         rows: [],
@@ -419,7 +433,7 @@ describe("loadPublicationHealth", () => {
       { stablecoin_id: "usdc-circle", score: 10, band: "CALM", signals_json: "{}", computed_at: dewsAt },
       { stablecoin_id: "usdt-tether", score: 20, band: "WATCH", signals_json: "{}", computed_at: dewsAt },
     ];
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "pharos:stress-signals:published-exact",
         matchBinds: [dewsAt],
@@ -500,7 +514,7 @@ describe("loadPublicationHealth", () => {
       }),
       updated_at: dewsAt,
     };
-    const db = mockD1([
+    const db = mockPublicationD1([
       {
         match: "FROM cache WHERE key = ?",
         matchBinds: ["dews:published-generation"],
@@ -525,7 +539,7 @@ describe("loadPublicationHealth", () => {
   });
 
   it("returns present surfaces with null generation details when ledgers are empty", async () => {
-    const health = await loadPublicationHealth(mockD1(), NOW);
+    const health = await loadPublicationHealth(mockPublicationD1(), NOW);
 
     expect(health.surfaces["dex-liquidity"]).toMatchObject({
       lastAttemptedGeneration: null,

@@ -666,6 +666,54 @@ describe("depeg direction glyphs", () => {
     expect(line).toContain("Price: €0.9840 (peg: €1.00)");
   });
 
+  it("uses the canonical peg taxonomy for expanded fiat and commodity symbols", () => {
+    const chf = formatDepegTriggeredLine({
+      stablecoinId: "vchf-vnx",
+      symbol: "VCHF",
+      direction: "below",
+      deviationBps: 200,
+      price: 0.98,
+      pegReference: 1,
+      priceCurrency: "CHF",
+    });
+    const brl = formatDepegTriggeredLine({
+      stablecoinId: "brl-example",
+      symbol: "BRL",
+      direction: "below",
+      deviationBps: 200,
+      price: 0.98,
+      pegReference: 1,
+      priceCurrency: "BRL",
+    });
+    const gold = formatDepegTriggeredLine({
+      stablecoinId: "xaut-tether",
+      symbol: "XAUT",
+      direction: "below",
+      deviationBps: 200,
+      price: 3_500,
+      pegReference: 3_550,
+      priceCurrency: "GOLD",
+    });
+
+    expect(chf).toContain("Price: ₣0.9800 (peg: ₣1.00)");
+    expect(brl).toContain("Price: R$0.9800 (peg: R$1.00)");
+    expect(gold).toContain("Price: $3500.0000 (peg: $3550.00)");
+  });
+
+  it("keeps an ISO-style fallback for unknown external currencies", () => {
+    const line = formatDepegTriggeredLine({
+      stablecoinId: "external",
+      symbol: "EXT",
+      direction: "below",
+      deviationBps: 200,
+      price: 0.98,
+      pegReference: 1,
+      priceCurrency: "xyz",
+    });
+
+    expect(line).toContain("Price: XYZ 0.9800 (peg: XYZ 1.00)");
+  });
+
   it("prefixes worsening lines with the same direction glyph", () => {
     const below = formatDepegWorseningLine({
       stablecoinId: "usdc-circle",

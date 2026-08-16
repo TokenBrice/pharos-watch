@@ -17,12 +17,14 @@ vi.stubGlobal("fetch", fetchSpy);
 
 stubCryptoForAuth();
 
-const { logWorkerEventMock } = vi.hoisted(() => ({
+const { logWorkerEventMock, logWorkerEventArgsMock } = vi.hoisted(() => ({
   logWorkerEventMock: vi.fn(),
+  logWorkerEventArgsMock: vi.fn(),
 }));
 
 vi.mock("../../lib/structured-log", () => ({
   logWorkerEvent: logWorkerEventMock,
+  logWorkerEventArgs: logWorkerEventArgsMock,
 }));
 
 const { handleFeedback } = await import("../feedback");
@@ -135,6 +137,7 @@ describe("handleFeedback", () => {
   beforeEach(() => {
     fetchSpy.mockReset();
     logWorkerEventMock.mockReset();
+    logWorkerEventArgsMock.mockReset();
   });
 
   it("returns 400 for invalid JSON body", async () => {

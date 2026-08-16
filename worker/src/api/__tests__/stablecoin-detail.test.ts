@@ -54,7 +54,7 @@ vi.mock("../../lib/fetch-retry", () => ({
   fetchTextWithRetry: fetchTextWithRetryMock,
 }));
 
-const { handleStablecoinDetail } = await import("../stablecoin-detail");
+const { handleStablecoinDetail, resetStablecoinDetailStateForTests } = await import("../stablecoin-detail");
 
 type TestExecutionContext = ExecutionContext & {
   waitUntilPromises: Promise<unknown>[];
@@ -88,6 +88,7 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
 
 describe("handleStablecoinDetail", () => {
   beforeEach(() => {
+    resetStablecoinDetailStateForTests();
     fetchSpy.mockReset();
     fetchWithRetryMock.mockReset().mockImplementation(async (url, init, _maxRetries, options) => {
       try {
@@ -248,7 +249,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("returns 502 when upstream fails and no cache exists", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
@@ -411,6 +415,32 @@ describe("handleStablecoinDetail", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("starts fresh single-flight coordination after isolate-local state is reset", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([{
+      match: "cache",
+      rows: [],
+      first: { value: cachedValue, updated_at: now - 900 },
+    }]);
+    const resolvers: Array<(response: Response) => void> = [];
+    fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => {
+      resolvers.push(resolve);
+    }));
+
+    const ctxA = makeCtx();
+    const ctxB = makeCtx();
+    await handleStablecoinDetail(db, "usdt-tether", ctxA);
+    resetStablecoinDetailStateForTests();
+    await handleStablecoinDetail(db, "usdt-tether", ctxB);
+
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2));
+    for (const resolve of resolvers) {
+      resolve(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
+    }
+    await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
+  });
+
   it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {
     const staleCachedValue = makeDLDetailBody({ tokens: [
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
@@ -477,7 +507,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("does not claim a detail cache generation before a fresh body is ready", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockResolvedValueOnce(new Response("upstream unavailable", { status: 503 }));
 
@@ -490,7 +523,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("passes the CoinGecko API key through the commodity detail path", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
 
     fetchSpy.mockImplementation(async (url: RequestInfo | URL) => {
       const value = String(url);
@@ -554,7 +590,10 @@ describe("handleStablecoinDetail", () => {
   });
 
   it("returns 502 for commodity branch upstream parse failure without stale cache", async () => {
-    const db = mockD1([{ match: "cache", rows: [] }]);
+    const db = mockD1([
+      { match: "cache", rows: [] },
+      { match: "FROM supply_history", rows: [] },
+    ]);
     fetchSpy
       .mockResolvedValueOnce(new Response("{", { status: 200 })) // DL coins chart invalid JSON
       .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }));

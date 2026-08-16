@@ -7,7 +7,7 @@ import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { buildStablecoinDetailMetadata } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import StablecoinDetailClient from "./client";

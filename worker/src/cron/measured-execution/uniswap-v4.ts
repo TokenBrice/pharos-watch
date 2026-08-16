@@ -9,7 +9,6 @@ import {
 } from "viem/utils";
 
 import {
-  DEX_MEASURED_MAX_COST_BPS,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
   type DexMeasuredExecutionUniswapV4PoolProof,
@@ -24,11 +23,11 @@ import {
 } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-  type DexMeasuredExecutionBudgetStopReason,
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { MAX_UINT128, rawAmountToUsd, usdToRawAmount } from "./fixed-point";
+import { MAX_UINT128, usdToRawAmount } from "./fixed-point";
+import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
 
 export const UNISWAP_V4_ADAPTER_PROFILE_ID = "uniswap-v4-hook-free-quoter-v1";
 export const UNISWAP_V4_HOOK_FREE_ADDRESS =
@@ -580,12 +579,6 @@ export interface UniswapV4QuoteOutcome {
   failureReason?: string;
 }
 
-interface AdaptiveUniswapV4ChunkResult {
-  results: EvmMulticall3Result[];
-  transportFailureLabels: string[];
-  budgetStopReasonsByLabel: Map<string, DexMeasuredExecutionBudgetStopReason>;
-}
-
 function encodeUniswapV4Quote(
   target: DexMeasuredExecutionTarget,
   amountInRaw: bigint,
@@ -648,36 +641,15 @@ function decodeQuotePoint(
       functionName: "quoteExactInputSingle",
       data: result.returnData,
     });
-    const inputUsd = rawAmountToUsd(
-      request.amountInRaw,
-      request.target.tokenIn.decimals,
-      request.target.tokenIn.referencePriceUsd,
-    );
-    const outputUsd = rawAmountToUsd(
+    return materializeEvmQuotePoint({
+      amountInRaw: request.amountInRaw,
       amountOutRaw,
-      request.target.tokenOut.decimals,
-      request.target.tokenOut.referencePriceUsd,
-    );
-    if (
-      !Number.isFinite(inputUsd) ||
-      inputUsd <= 0 ||
-      !Number.isFinite(outputUsd) ||
-      outputUsd < 0
-    ) {
-      return null;
-    }
-    const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-    return {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData.toLowerCase(),
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
+      callData: request.callData,
+      returnData: result.returnData,
+      tokenIn: request.target.tokenIn,
+      tokenOut: request.target.tokenOut,
       adapterMetadata: { gasEstimate: gasEstimate.toString() },
-    };
+    });
   } catch {
     return null;
   }
@@ -687,129 +659,16 @@ function buildRevertedPoint(
   request: EncodedUniswapV4QuoteRequest,
   result: EvmMulticall3Result,
 ): DexMeasuredRawQuotePoint {
-  return {
-    amountInRaw: request.amountInRaw.toString(),
-    amountOutRaw: "0",
-    callData: request.callData.toLowerCase(),
-    returnData: result.returnData.toLowerCase() as `0x${string}`,
-    inputUsd: rawAmountToUsd(
-      request.amountInRaw,
-      request.target.tokenIn.decimals,
-      request.target.tokenIn.referencePriceUsd,
-    ),
-    outputUsd: 0,
-    costBps: 10_000,
-    passesCostBound: false,
+  return materializeEvmQuotePoint({
+    amountInRaw: request.amountInRaw,
+    amountOutRaw: 0n,
+    callData: request.callData,
+    returnData: result.returnData,
+    tokenIn: request.target.tokenIn,
+    tokenOut: request.target.tokenOut,
     reverted: true,
     adapterMetadata: { executionReverted: true },
-  };
-}
-
-async function executeAdaptiveUniswapV4Chunk(input: {
-  chain: string;
-  calls: readonly EvmMulticall3Call[];
-  blockNumber: number;
-  chainRpcs: Map<string, ChainRpcConfig>;
-  signal?: AbortSignal;
-  rpcBudget?: DexMeasuredExecutionRpcBudget;
-}): Promise<AdaptiveUniswapV4ChunkResult> {
-  if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.chain)) {
-    return {
-      results: input.calls.map((call) => ({
-        label: call.label,
-        success: false,
-        returnData: "0x",
-      })),
-      transportFailureLabels: input.calls.map((call) => call.label),
-      budgetStopReasonsByLabel: new Map(),
-    };
-  }
-
-  let budgetStopReason: DexMeasuredExecutionBudgetStopReason | null = null;
-  const results = await fetchEvmMulticall3Aggregate3AtBlock(
-    input.chain,
-    input.calls,
-    input.blockNumber,
-    {
-      chainRpcs: input.chainRpcs,
-      signal: input.signal,
-      timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs } : {}),
-      ...(input.rpcBudget
-        ? {
-            beforeRequest: () => {
-              const consumed = input.rpcBudget!.tryConsume();
-              if (!consumed) budgetStopReason = input.rpcBudget!.stopReason;
-              return consumed;
-            },
-          }
-        : {}),
-      maxRetries: 0,
-      gas: UNISWAP_V4_MULTICALL_GAS,
-      multicallBatchSize: input.calls.length,
-    },
-  );
-  if (results != null) {
-    input.rpcBudget?.recordChainResult(input.chain, true);
-    return {
-      results,
-      transportFailureLabels: [],
-      budgetStopReasonsByLabel: new Map(),
-    };
-  }
-  if (
-    budgetStopReason == null &&
-    input.rpcBudget &&
-    Date.now() >= input.rpcBudget.deadlineMs
-  ) {
-    budgetStopReason = "runtime-deadline-exceeded";
-  }
-  if (budgetStopReason != null) {
-    return {
-      results: input.calls.map((call) => ({
-        label: call.label,
-        success: false,
-        returnData: "0x",
-      })),
-      transportFailureLabels: input.calls.map((call) => call.label),
-      budgetStopReasonsByLabel: new Map(
-        input.calls.map((call) => [call.label, budgetStopReason!]),
-      ),
-    };
-  }
-  if (input.calls.length === 1) {
-    input.rpcBudget?.recordChainResult(input.chain, false);
-    return {
-      results: [{
-        label: input.calls[0]!.label,
-        success: false,
-        returnData: "0x",
-      }],
-      transportFailureLabels: [input.calls[0]!.label],
-      budgetStopReasonsByLabel: new Map(),
-    };
-  }
-
-  const midpoint = Math.ceil(input.calls.length / 2);
-  const left = await executeAdaptiveUniswapV4Chunk({
-    ...input,
-    calls: input.calls.slice(0, midpoint),
-  });
-  const right = await executeAdaptiveUniswapV4Chunk({
-    ...input,
-    calls: input.calls.slice(midpoint),
-  });
-  return {
-    results: [...left.results, ...right.results],
-    transportFailureLabels: [
-      ...left.transportFailureLabels,
-      ...right.transportFailureLabels,
-    ],
-    budgetStopReasonsByLabel: new Map([
-      ...left.budgetStopReasonsByLabel,
-      ...right.budgetStopReasonsByLabel,
-    ]),
-  };
+  })!;
 }
 
 export async function quoteUniswapV4Requests(input: {
@@ -829,78 +688,79 @@ export async function quoteUniswapV4Requests(input: {
         }
       : { targetId: request.target.targetId, inputUsd: request.inputUsd },
   );
-  const valid = encoded.filter((request): request is EncodedUniswapV4QuoteRequest => request != null);
-  const byChain = new Map<string, EncodedUniswapV4QuoteRequest[]>();
-  for (const request of valid) {
-    const rows = byChain.get(request.target.chain) ?? [];
-    rows.push(request);
-    byChain.set(request.target.chain, rows);
-  }
-  for (const [chain, requests] of byChain) {
-    for (let offset = 0; offset < requests.length; offset += UNISWAP_V4_MULTICALL_BATCH_SIZE) {
-      throwIfAborted(input.signal);
-      const chunk = requests.slice(offset, offset + UNISWAP_V4_MULTICALL_BATCH_SIZE);
-      const adaptive = await executeAdaptiveUniswapV4Chunk({
-        chain,
-        calls: chunk.map((request) => ({
+  const plans = encoded.flatMap((request) => request ? [{
+    ...request,
+    chain: request.target.chain,
+    blockNumber: input.blockNumber,
+    call: {
           label: request.label,
           target: request.endpointAddress,
           callData: request.callData,
           allowFailure: true,
-        })),
-        blockNumber: input.blockNumber,
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
-      });
-      const byLabel = new Map(adaptive.results.map((result) => [result.label, result]));
-      const transportFailureLabels = new Set(adaptive.transportFailureLabels);
-      for (const request of chunk) {
-        const result = byLabel.get(request.label);
-        const budgetStopReason = adaptive.budgetStopReasonsByLabel.get(request.label);
-        if (budgetStopReason) {
-          outcomes[request.index] = {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            failureReason: budgetStopReason,
-          };
-        } else if (!result || transportFailureLabels.has(request.label)) {
-          outcomes[request.index] = {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            failureReason: "quoter-rpc-unavailable",
-          };
-        } else if (!result.success) {
-          outcomes[request.index] =
-            result.returnData === "0x"
-              ? {
-                  targetId: request.target.targetId,
-                  inputUsd: request.inputUsd,
-                  failureReason: "quoter-empty-revert",
-                }
-              : {
-                  targetId: request.target.targetId,
-                  inputUsd: request.inputUsd,
-                  point: buildRevertedPoint(request, result),
-                };
-        } else {
-          const point = decodeQuotePoint(request, result);
-          outcomes[request.index] = point
+    },
+  }] : []);
+  return executeEvmQuotePlan({
+    plans,
+    outcomes,
+    chainRpcs: input.chainRpcs,
+    signal: input.signal,
+    rpcBudget: input.rpcBudget,
+    spec: {
+      batchSize: UNISWAP_V4_MULTICALL_BATCH_SIZE,
+      executeMulticall: ({ chain, calls, blockNumber, chainRpcs, signal, rpcBudget, onBudgetStop }) =>
+        fetchEvmMulticall3Aggregate3AtBlock(chain, calls, blockNumber, {
+          chainRpcs,
+          signal,
+          timeoutMs: DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
+          ...(rpcBudget ? { deadlineMs: rpcBudget.deadlineMs } : {}),
+          ...(rpcBudget ? { beforeRequest: () => {
+            const consumed = rpcBudget.tryConsume();
+            const reason = rpcBudget.stopReason;
+            if (!consumed && reason) onBudgetStop?.(reason);
+            return consumed;
+          } } : {}),
+          maxRetries: 0,
+          gas: UNISWAP_V4_MULTICALL_GAS,
+          multicallBatchSize: calls.length,
+        }),
+      adaptive: {
+        failedAttemptAccounting: "single-call",
+        unattemptedResult: "failure-result",
+      },
+      materializeTransportFailure: (request, reason) => ({
+        targetId: request.target.targetId,
+        inputUsd: request.inputUsd,
+        failureReason: reason ?? "quoter-rpc-unavailable",
+      }),
+      resolveResult: (request, result) => {
+        if (!result.success) {
+          return result.returnData === "0x"
             ? {
                 targetId: request.target.targetId,
                 inputUsd: request.inputUsd,
-                point,
+                failureReason: "quoter-empty-revert",
               }
             : {
                 targetId: request.target.targetId,
                 inputUsd: request.inputUsd,
-                failureReason: "quoter-invalid-result",
+                point: buildRevertedPoint(request, result),
               };
         }
-      }
-    }
-  }
-  return outcomes;
+        const point = decodeQuotePoint(request, result);
+        return point
+          ? {
+                targetId: request.target.targetId,
+                inputUsd: request.inputUsd,
+                point,
+            }
+          : {
+                targetId: request.target.targetId,
+                inputUsd: request.inputUsd,
+                failureReason: "quoter-invalid-result",
+            };
+      },
+    },
+  });
 }
 
 function validatePoolManagerCall(

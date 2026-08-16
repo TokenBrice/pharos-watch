@@ -2,7 +2,7 @@
 
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mjs";
+import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import { localBin } from "../lib/local-bin.mjs";
 
 const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;

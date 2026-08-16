@@ -15,6 +15,7 @@ import { runSingleScheduledJob } from "./slot-groups";
 import { sweepStaleScheduledSlotExecutions } from "../../lib/scheduled-slot-fence";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
+import { LIVE_RESERVE_RECOVERY_DOMAIN_POLICY } from "../../cron/live-reserve-recovery-checkpoint";
 
 type ReserveRecoveryMode = "off" | "shadow" | "reconcile" | "recover";
 
@@ -70,6 +71,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     job: RECOVERY_CHECKPOINT_JOB,
     childJobs: LIVE_RESERVE_SLOT_JOBS,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
     limit: 5,
   });
   const preparation = await prepareEligibleScheduledCheckpointRecoveries(runtime.db, {
@@ -79,6 +81,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     childPrerequisites: LIVE_RESERVE_CHILD_PREREQUISITES,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
     staleAfterSec: RECOVERY_STALE_AFTER_SEC,
+    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
     limit: 1,
   });
   if (mode === "reconcile") {
@@ -114,6 +117,7 @@ async function runReserveRecovery(runtime: ScheduledRuntimeContext, signal: Abor
     owner: runtime.invocationId ?? createLeaseOwner("reserve-recovery"),
     leaseSec: RECOVERY_LEASE_SEC,
     expectedQueueHash: LIVE_RESERVE_QUEUE_HASH,
+    domainPolicy: LIVE_RESERVE_RECOVERY_DOMAIN_POLICY,
   });
   if (!checkpoint) {
     return {

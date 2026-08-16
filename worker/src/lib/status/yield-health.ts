@@ -19,7 +19,7 @@ import {
   REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
   SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
 } from "../../cron/yield-sync/supplemental-source-families";
-import { getBoolean, getNumber, getObject, getString } from "../../cron/dews/source-state/legacy-bridge";
+import { getBoolean, getNumber, getObject, getString } from "../dews/source-state/legacy-bridge";
 import { safeJsonParse } from "../api-cache-read";
 import {
   classifyYieldBenchmarkFreshness,

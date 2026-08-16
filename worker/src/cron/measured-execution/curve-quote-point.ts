@@ -1,7 +1,6 @@
-import { DEX_MEASURED_MAX_COST_BPS } from "@shared/types/measured-execution";
 import type { EvmMulticall3Result } from "../../lib/evm-rpc";
 import type { DexMeasuredRawQuotePoint } from "./profiles";
-import { rawAmountToUsdOrNull as rawAmountToUsd } from "./fixed-point";
+import { materializeEvmQuotePoint } from "./evm-quote-plan";
 
 interface CurveMeasuredQuoteToken {
   decimals: number;
@@ -35,31 +34,14 @@ export function decodeCurveMeasuredRawQuotePoint<TFailure extends string>(input:
   if (!result.success) return { failureReason: failureReasons.poolRevert };
   const amountOutRaw = decodeAmountOutRaw(result.returnData);
   if (amountOutRaw == null) return { failureReason: failureReasons.malformedPoolReturn };
-  const inputUsd = rawAmountToUsd(
-    request.amountInRaw,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  const outputUsd = rawAmountToUsd(
+  const point = materializeEvmQuotePoint({
+    amountInRaw: request.amountInRaw,
     amountOutRaw,
-    request.target.tokenOut.decimals,
-    request.target.tokenOut.referencePriceUsd,
-  );
-  if (inputUsd == null || inputUsd <= 0 || outputUsd == null) {
-    return { failureReason: failureReasons.malformedPoolReturn };
-  }
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    point: {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData,
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
-      adapterMetadata,
-    },
-  };
+    callData: request.callData,
+    returnData: result.returnData,
+    tokenIn: request.target.tokenIn,
+    tokenOut: request.target.tokenOut,
+    adapterMetadata,
+  });
+  return point ? { point } : { failureReason: failureReasons.malformedPoolReturn };
 }

@@ -4,7 +4,7 @@ import type { V9Grade } from "./safety-score-v9";
  * The published grade bands. Single definition — `shared/lib/report-card-core.ts`
  * re-exports this table as `GRADE_THRESHOLDS` rather than restating it.
  */
-export const V9_GRADE_THRESHOLDS = [
+const V9_GRADE_THRESHOLDS = [
   { grade: "A+", min: 87 },
   { grade: "A", min: 83 },
   { grade: "A-", min: 80 },

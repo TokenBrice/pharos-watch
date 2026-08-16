@@ -17,9 +17,15 @@ import {
   reserveInfoWarning,
   unverifiedFreshnessMetadata,
   verifiedFreshnessMetadata,
-  type OnchainMulticall3Call,
 } from "./helpers";
-import { decodeStrictAddressWord, decodeStrictBoolWord, decodeUint256Word } from "./abi-decode";
+import { decodeUint256Word } from "./abi-decode";
+import {
+  addressObservation,
+  boolObservation,
+  customObservation,
+  executeEvmObservationPlan,
+  uint256Observation,
+} from "./evm-observation-plan";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
 
 interface InfiniFiFarm {
@@ -314,18 +320,6 @@ function decodeInt256Word(raw: string | null | undefined): bigint | null {
   return unsigned >= 1n << 255n ? unsigned - (1n << 256n) : unsigned;
 }
 
-function readMulticallResults(
-  results: Awaited<ReturnType<typeof fetchOnchainMulticall3>>,
-): Map<string, `0x${string}`> | null {
-  if (!results) return null;
-  const byLabel = new Map<string, `0x${string}`>();
-  for (const result of results) {
-    if (!result.success) return null;
-    byLabel.set(result.label, result.returnData);
-  }
-  return byLabel;
-}
-
 /**
  * Same-run read of the iUSD redemption route. Every read is resolved from the
  * Gateway's own address registry rather than pinned, and the run is dropped
@@ -339,72 +333,95 @@ async function probeInfiniFiRedeemRoute(
   const chain = "ethereum";
   const rpcUrl = getPublicRpcUrl(chain);
   if (!rpcUrl) return null;
-  const multicall = (calls: OnchainMulticall3Call[]) =>
+  const read = (calls: Parameters<typeof fetchOnchainMulticall3>[0]["calls"]) =>
     fetchOnchainMulticall3({ calls, chain, signal, ctx, rpcUrl, timeoutMs: ROUTE_PROBE_TIMEOUT_MS });
 
   try {
-    const gateway = readMulticallResults(await multicall([
-      { label: "gateway:paused", contract: INFINIFI_GATEWAY, data: PAUSED_SELECTOR },
-      { label: "gateway:redeem-controller", contract: INFINIFI_GATEWAY, data: GATEWAY_REDEEM_CONTROLLER_CALLDATA },
-      { label: "gateway:yield-sharing", contract: INFINIFI_GATEWAY, data: GATEWAY_YIELD_SHARING_CALLDATA },
-      { label: "gateway:receipt-token", contract: INFINIFI_GATEWAY, data: GATEWAY_RECEIPT_TOKEN_CALLDATA },
-    ]));
-    if (!gateway) return null;
+    const gateway = await executeEvmObservationPlan({
+      adapterKey: "infinifi-redemption-gateway",
+      fields: [
+        boolObservation({ label: "gateway:paused", contract: INFINIFI_GATEWAY, data: PAUSED_SELECTOR }),
+        addressObservation({
+          label: "gateway:redeem-controller",
+          contract: INFINIFI_GATEWAY,
+          data: GATEWAY_REDEEM_CONTROLLER_CALLDATA,
+          verify: (value) => value === ZERO_ADDRESS ? "redeem controller is the zero address" : null,
+        }),
+        addressObservation({
+          label: "gateway:yield-sharing",
+          contract: INFINIFI_GATEWAY,
+          data: GATEWAY_YIELD_SHARING_CALLDATA,
+          verify: (value) => value === ZERO_ADDRESS ? "yield sharing is the zero address" : null,
+        }),
+        addressObservation({
+          label: "gateway:receipt-token",
+          contract: INFINIFI_GATEWAY,
+          data: GATEWAY_RECEIPT_TOKEN_CALLDATA,
+          verify: (value) => value === INFINIFI_RECEIPT_TOKEN ? null : "receipt-token identity drifted",
+        }),
+      ] as const,
+      read,
+    });
+    const gatewayPaused = gateway.values["gateway:paused"];
+    const redeemController = gateway.values["gateway:redeem-controller"];
+    const yieldSharing = gateway.values["gateway:yield-sharing"];
 
-    const gatewayPaused = decodeStrictBoolWord(gateway.get("gateway:paused"));
-    const redeemController = decodeStrictAddressWord(gateway.get("gateway:redeem-controller"));
-    const yieldSharing = decodeStrictAddressWord(gateway.get("gateway:yield-sharing"));
-    if (gatewayPaused == null || !redeemController || !yieldSharing) return null;
-    if (redeemController === ZERO_ADDRESS || yieldSharing === ZERO_ADDRESS) return null;
-    if (decodeStrictAddressWord(gateway.get("gateway:receipt-token")) !== INFINIFI_RECEIPT_TOKEN) return null;
+    const controller = await executeEvmObservationPlan({
+      adapterKey: "infinifi-redemption-controller",
+      fields: [
+        boolObservation({ label: "rc:paused", contract: redeemController, data: PAUSED_SELECTOR }),
+        addressObservation({
+          label: "rc:asset-token",
+          contract: redeemController,
+          data: ASSET_TOKEN_SELECTOR,
+          verify: (value) => value === INFINIFI_ASSET_TOKEN ? null : "asset-token identity drifted",
+        }),
+        addressObservation({ label: "rc:hook", contract: redeemController, data: BEFORE_REDEEM_HOOK_SELECTOR }),
+        uint256Observation({ label: "rc:queue-length", contract: redeemController, data: QUEUE_LENGTH_SELECTOR }),
+        uint256Observation({ label: "rc:enqueued", contract: redeemController, data: TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR }),
+        uint256Observation({ label: "rc:pending-claims", contract: redeemController, data: TOTAL_PENDING_CLAIMS_SELECTOR }),
+        uint256Observation({ label: "rc:liquidity", contract: redeemController, data: LIQUIDITY_SELECTOR }),
+        uint256Observation({
+          label: "rc:receipt-to-asset",
+          contract: redeemController,
+          data: `${RECEIPT_TO_ASSET_SELECTOR}${encodeUint256(10n ** BigInt(INFINIFI_RECEIPT_DECIMALS))}`,
+          verify: (value) => value > 0n ? null : "receipt-to-asset rate is not positive",
+        }),
+        boolObservation({ label: "ys:paused", contract: yieldSharing, data: PAUSED_SELECTOR }),
+        customObservation({
+          label: "ys:unaccrued-yield",
+          contract: yieldSharing,
+          data: UNACCRUED_YIELD_SELECTOR,
+          decode: (raw, label) => {
+            const value = decodeInt256Word(raw);
+            if (value == null) throw new Error(`${label} returned malformed int256 data`);
+            return value;
+          },
+        }),
+      ] as const,
+      read,
+    });
 
-    const controller = readMulticallResults(await multicall([
-      { label: "rc:paused", contract: redeemController, data: PAUSED_SELECTOR },
-      { label: "rc:asset-token", contract: redeemController, data: ASSET_TOKEN_SELECTOR },
-      { label: "rc:hook", contract: redeemController, data: BEFORE_REDEEM_HOOK_SELECTOR },
-      { label: "rc:queue-length", contract: redeemController, data: QUEUE_LENGTH_SELECTOR },
-      { label: "rc:enqueued", contract: redeemController, data: TOTAL_ENQUEUED_REDEMPTIONS_SELECTOR },
-      { label: "rc:pending-claims", contract: redeemController, data: TOTAL_PENDING_CLAIMS_SELECTOR },
-      { label: "rc:liquidity", contract: redeemController, data: LIQUIDITY_SELECTOR },
-      {
-        label: "rc:receipt-to-asset",
-        contract: redeemController,
-        data: `${RECEIPT_TO_ASSET_SELECTOR}${encodeUint256(10n ** BigInt(INFINIFI_RECEIPT_DECIMALS))}`,
-      },
-      { label: "ys:paused", contract: yieldSharing, data: PAUSED_SELECTOR },
-      { label: "ys:unaccrued-yield", contract: yieldSharing, data: UNACCRUED_YIELD_SELECTOR },
-    ]));
-    if (!controller) return null;
-
-    const controllerPaused = decodeStrictBoolWord(controller.get("rc:paused"));
-    const yieldSharingPaused = decodeStrictBoolWord(controller.get("ys:paused"));
-    const unaccruedYield = decodeInt256Word(controller.get("ys:unaccrued-yield"));
-    const queueLengthRaw = decodeUint256Word(controller.get("rc:queue-length"));
-    const enqueuedRaw = decodeUint256Word(controller.get("rc:enqueued"));
-    const pendingClaimsRaw = decodeUint256Word(controller.get("rc:pending-claims"));
-    const liquidityRaw = decodeUint256Word(controller.get("rc:liquidity"));
-    const receiptToAssetRaw = decodeUint256Word(controller.get("rc:receipt-to-asset"));
-    if (
-      controllerPaused == null || yieldSharingPaused == null || unaccruedYield == null
-      || queueLengthRaw == null || enqueuedRaw == null || pendingClaimsRaw == null
-      || liquidityRaw == null || receiptToAssetRaw == null || receiptToAssetRaw <= 0n
-    ) {
-      return null;
-    }
-    if (decodeStrictAddressWord(controller.get("rc:asset-token")) !== INFINIFI_ASSET_TOKEN) return null;
+    const controllerPaused = controller.values["rc:paused"];
+    const yieldSharingPaused = controller.values["ys:paused"];
+    const unaccruedYield = controller.values["ys:unaccrued-yield"];
+    const queueLengthRaw = controller.values["rc:queue-length"];
+    const enqueuedRaw = controller.values["rc:enqueued"];
+    const pendingClaimsRaw = controller.values["rc:pending-claims"];
+    const liquidityRaw = controller.values["rc:liquidity"];
+    const receiptToAssetRaw = controller.values["rc:receipt-to-asset"];
 
     // The hook is optional in the controller; when set, its own pause reverts
     // redeem() before any liquidity is reached.
-    const hook = decodeStrictAddressWord(controller.get("rc:hook"));
-    if (hook == null) return null;
+    const hook = controller.values["rc:hook"];
     let hookPaused: boolean | null = null;
     if (hook !== ZERO_ADDRESS) {
-      const hookResults = readMulticallResults(await multicall([
-        { label: "hook:paused", contract: hook, data: PAUSED_SELECTOR },
-      ]));
-      if (!hookResults) return null;
-      hookPaused = decodeStrictBoolWord(hookResults.get("hook:paused"));
-      if (hookPaused == null) return null;
+      const hookObservation = await executeEvmObservationPlan({
+        adapterKey: "infinifi-redemption-hook",
+        fields: [boolObservation({ label: "hook:paused", contract: hook, data: PAUSED_SELECTOR })] as const,
+        read,
+      });
+      hookPaused = hookObservation.values["hook:paused"];
     }
 
     return {

@@ -2,7 +2,7 @@ import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1, type MockD1Database } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { handleBackfillTape } from "../backfill-tape";
-import { TAPE_PROJECTOR_JOBS } from "../../cron/project-tape";
+import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 
 stubCryptoForAuth();
 
@@ -18,7 +18,14 @@ function emptyDb(): MockD1Database {
     { match: "ended_at IS NULL", rows: [] },
     { match: "started_at > ?", rows: [] },
     { match: "ended_at IS NOT NULL AND ended_at > ?", rows: [] },
+    { match: "ended_at > ? AND source = 'live'", rows: [] },
     { match: "FROM blacklist_events", rows: [] },
+    { match: "FROM mint_burn_events", rows: [] },
+    { match: "FROM stress_signals", rows: [] },
+    { match: "FROM stability_index_samples", rows: [] },
+    { match: "FROM yield_history", rows: [] },
+    { match: "FROM yield_source_decisions", rows: [] },
+    { match: "FROM safety_score_history_v2", rows: [] },
     { match: "FROM safety_grade_history", rows: [] },
     // first-observation projectors look at tape_events; mark every entry as
     // already-emitted by handing back a wildcard row per query.

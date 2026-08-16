@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { drainResponseBody } from "./response-body";
 
@@ -92,7 +93,7 @@ export function buildTweetText(digestTitle: string, digestText: string, editionN
   const tagged = injectCashtags(text);
   const fittedText = truncateToFit(tagged, available);
   if (fittedText !== tagged) {
-    console.warn(`[twitter] Tweet truncated: ${tagged.length} chars -> ${fittedText.length} chars (limit ${available})`);
+    logWorkerEventArgs("lib", "warn", `[twitter] Tweet truncated: ${tagged.length} chars -> ${fittedText.length} chars (limit ${available})`);
   }
   return `${titlePrefix}${fittedText}`;
 }
@@ -132,5 +133,5 @@ export async function postDigestTweet(
 ): Promise<void> {
   const tweetText = buildTweetText(digestTitle, digestText, editionNumber);
   await postTweet(tweetText, creds);
-  console.log(`[twitter] Posted digest tweet (${tweetText.length} chars)`);
+  logWorkerEventArgs("lib", "info", `[twitter] Posted digest tweet (${tweetText.length} chars)`);
 }

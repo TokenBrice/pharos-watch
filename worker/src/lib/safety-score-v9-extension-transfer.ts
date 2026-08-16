@@ -3,16 +3,12 @@ import { resolveChainId } from "@shared/lib/chains";
 import { V9_ACCESS_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/access-posture";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  CanonicalChainIdSchema,
+  CanonicalTextSchema,
+} from "@shared/types/safety-score-v9-fact-input-primitives";
 import { z } from "zod";
 
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
-const CanonicalChainIdSchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Chain ID must be a canonical lowercase identifier",
-);
 const TransferPostureSchema = z.enum(["permissionless", "restrictable", "permissioned"]);
 const TransferSourceSchema = z.object({ label: CanonicalTextSchema, url: z.string().url() }).strict();
 

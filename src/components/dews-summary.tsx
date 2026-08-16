@@ -6,7 +6,7 @@ import { useStressSignals } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { cn } from "@/lib/utils";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatCompactUsd } from "@shared/lib/format";
 import { THREAT_BAND_HEX, THREAT_BAND_LABELS } from "@shared/lib/classification";
 import { getCirculatingRaw } from "@shared/lib/supply";

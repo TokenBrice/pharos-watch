@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReserveTreemap } from "@/components/reserve-treemap";
+import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
 import type { ReserveSlice } from "@shared/types";
 
 const SLICE = (name: string, pct: number, risk: ReserveSlice["risk"]): ReserveSlice => ({ name, pct, risk });
@@ -41,5 +42,12 @@ describe("ReserveTreemap", () => {
     expect(html).not.toContain(">Low Risk<");
     expect(html.match(/rounded-\[2px\]/g)).toHaveLength(3);
     expect(html).toContain("justify-start");
+  });
+
+  it("reads compact and standalone reserve-risk labels from the shared classification owner", () => {
+    expect(RESERVE_RISK_PRESENTATION["very-low"]).toEqual({
+      shortLabel: "Very low",
+      longLabel: "Very Low Risk",
+    });
   });
 });

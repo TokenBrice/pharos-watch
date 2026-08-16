@@ -1,5 +1,6 @@
 import { RedemptionBackstopDetailsSchema, type RedemptionBackstopEntry } from "@shared/types/redemption";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { batchExecute } from "./db";
 import { toErrorMessage } from "./error-utils";
@@ -546,7 +547,7 @@ export async function upsertRedemptionBackstopSnapshots(
 
   const runId = options?.runId ?? createRedemptionBackstopRunId();
   const startedAt = Math.floor(Date.now() / 1000);
-  const snapshotDate = Math.floor(Date.now() / 1000 / DAY_SECONDS) * DAY_SECONDS;
+  const snapshotDate = bucketUnixMillisecondsToUtcDay(Date.now()) / 1000;
   const expectedCount = options?.expectedCount ?? records.length;
   const attemptedCount = records.length;
   let runStarted = false;

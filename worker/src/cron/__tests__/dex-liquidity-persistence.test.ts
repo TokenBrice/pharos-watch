@@ -891,7 +891,7 @@ describe("dex-liquidity persistence", () => {
   it("reconciles missing historical snapshots and backfills placeholder rows", async () => {
     const nowMs = Date.UTC(2026, 0, 1, 12);
     vi.spyOn(Date, "now").mockReturnValue(nowMs);
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const logSpy = vi.spyOn(console, "info").mockImplementation(() => {});
 
     const result = await writeHistoricalSnapshots(
       makeDb({
@@ -976,7 +976,7 @@ describe("dex-liquidity persistence", () => {
 
     expect(batchExecute).not.toHaveBeenCalled();
     expect(executeAtomicBatch).not.toHaveBeenCalled();
-    expect(warnSpy).toHaveBeenCalledWith("[dex-liquidity] Daily snapshot failed:", expect.any(Error));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[dex-liquidity] Daily snapshot failed:"));
   });
 });
 

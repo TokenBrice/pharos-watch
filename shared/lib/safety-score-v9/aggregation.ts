@@ -11,6 +11,12 @@ export interface V9WeakestPathAggregationTrace {
   weakestScore: number;
 }
 
+export type V9AggregationStrategy = (
+  pillars: V9AggregationPillars,
+  weights: V9AggregationWeights,
+  policyHeadroom: number,
+) => V9WeakestPathAggregationTrace;
+
 const PILLARS: readonly V9QualityPillar[] = ["backing", "exit", "control"];
 const SCORE_MIN = 0;
 const SCORE_MAX = 100;

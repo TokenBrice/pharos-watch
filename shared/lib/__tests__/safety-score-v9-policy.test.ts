@@ -12,9 +12,11 @@ import {
   assertV9ReasonCodesRegistered,
   assertV9UnresolvedFactsMatchPolicy,
   assertV9ValidatedPolicyEnvelope,
+  getV9ScoreBearingGatesPolicy,
   loadV9MethodologyPolicy,
   resolveV9ReasonPolicy,
 } from "../safety-score-v9/policy";
+import { V9_SCORE_BEARING_GATES_POLICY_V922 } from "../safety-score-v9/score-bearing-gates-policy";
 import { V9_BOUNDED_ATTRIBUTION_REASON_CODES } from "../../types/safety-score-v9-public";
 
 function candidateClone(): V9MethodologyPolicy {
@@ -67,7 +69,10 @@ describe("Safety Score v9 methodology policy", () => {
     // mechanisms (95) from privileged internal pricing (45); reviewed
     // not-applicable paths emit no scored component.
     expect(V9_CANDIDATE_POLICY_V1.semanticDigest).toBe(
-      "43ce2b262d68e82e13982140f6a96c32a0c6345309eebdc684a7641e5c572128",
+      "ade82a02e49a24484ecdb4b6f668794420e1c4b25bf0a80ba5f2130a3ebe64cf",
+    );
+    expect(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1)).toEqual(
+      V9_SCORE_BEARING_GATES_POLICY_V922,
     );
     const cdpPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.backing.structural.cdp;
     expect(cdpPolicy.instantaneousCollateralShock).toBe(0.5);
@@ -77,6 +82,45 @@ describe("Safety Score v9 methodology policy", () => {
       ratification: "owner-ratified",
     });
     expect(Object.isFrozen(V9_CANDIDATE_POLICY_V1.policy.semantic.formula)).toBe(true);
+    expect(Object.isFrozen(getV9ScoreBearingGatesPolicy(V9_CANDIDATE_POLICY_V1).evidenceExpiry)).toBe(true);
+  });
+
+  it("changes the semantic digest for every formerly external score-bearing gate family", () => {
+    const loadChangedGates = (change: (gates: typeof V9_SCORE_BEARING_GATES_POLICY_V922) => void) => {
+      const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
+      change(gates);
+      return loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest;
+    };
+
+    expect(loadChangedGates((gates) => { gates.withhold.maxScoreExclusive = 54; }))
+      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(loadChangedGates((gates) => { gates.danger.fGatePegMultiplierFloor = 0.79; }))
+      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(loadChangedGates((gates) => { gates.danger.dangerOnlyGrades = ["D", "F"]; }))
+      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(loadChangedGates((gates) => { gates.control.materialBridgeHighShareThreshold = 0.24; }))
+      .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+
+    for (const field of Object.keys(V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry) as
+      (keyof typeof V9_SCORE_BEARING_GATES_POLICY_V922.evidenceExpiry)[]) {
+      expect(loadChangedGates((gates) => { gates.evidenceExpiry[field] += 1; }), field)
+        .not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    }
+  });
+
+  it("lets policy-only replay change a danger gate without editing production scoring", () => {
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
+    gates.danger.withholdPegMultiplierFloor = 0.84;
+    const policy = loadV9MethodologyPolicy(candidateClone(), gates);
+    expect(getV9ScoreBearingGatesPolicy(policy).danger.withholdPegMultiplierFloor).toBe(0.84);
+    expect(policy.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it("keeps a gate policy version relabel digest-neutral", () => {
+    const gates = structuredClone(V9_SCORE_BEARING_GATES_POLICY_V922);
+    gates.methodologyVersion = "9.22";
+    expect(loadV9MethodologyPolicy(candidateClone(), gates).semanticDigest)
+      .toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
   it("makes object order and set-like array order digest-neutral", () => {

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { COMMODITY_MEDIAN_EXCLUDES } from "@shared/lib/peg-rates";
 import { isCommodityPeg } from "@shared/lib/filter-tags";
@@ -85,13 +86,13 @@ export async function fetchHistoricalFxRates(
       { timeoutMs: 30_000 },
     );
     if (!fetchResult?.response.ok) {
-      console.error(`[backfill-depegs] Frankfurter API returned ${fetchResult?.response.status ?? "no response"}`);
+      logWorkerEventArgs("lib", "error", `[backfill-depegs] Frankfurter API returned ${fetchResult?.response.status ?? "no response"}`);
       return {};
     }
     const raw = fetchResult.body;
     const parsed = FrankfurterTimeSeriesSchema.safeParse(raw);
     if (!parsed.success) {
-      console.warn("[backfill-depegs] Frankfurter validation failed:", parsed.error.message);
+      logWorkerEventArgs("lib", "warn", "[backfill-depegs] Frankfurter validation failed:", parsed.error.message);
       return {};
     }
     const data = parsed.data;
@@ -119,7 +120,7 @@ export async function fetchHistoricalFxRates(
     return result;
   } catch (err) {
     rethrowIfAborted(err, signal);
-    console.error(`[backfill-depegs] FX fetch failed:`, err);
+    logWorkerEventArgs("lib", "error", `[backfill-depegs] FX fetch failed:`, err);
     return {};
   }
 }
@@ -143,14 +144,14 @@ async function fetchHistoricalSecondaryFxDay(date: string, signal?: AbortSignal)
     );
   }
   if (!result?.response.ok) {
-    console.warn(`[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
+    logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX API returned ${result?.response.status ?? "no response"} for ${date}`);
     return null;
   }
 
   const raw = JSON.parse(result.body) as unknown;
   const parsed = SecondaryFxResponseSchema.safeParse(raw);
   if (!parsed.success) {
-    console.warn(`[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
+    logWorkerEventArgs("lib", "warn", `[backfill-depegs] secondary FX validation failed for ${date}: ${parsed.error.message}`);
     return null;
   }
   return parsed.data.usd ?? null;
@@ -267,7 +268,7 @@ export async function buildCommodityMedianSeriesFromCg(
   for (const peg of ["GOLD", "SILVER"] as const) {
     const tokenCount = sources.filter((source) => source.peg === peg).length;
     if (tokenCount > 0) {
-      console.log(`[backfill-depegs] Commodity median (${peg}): ${result[peg].length} daily points from ${tokenCount} tokens`);
+      logWorkerEventArgs("lib", "info", `[backfill-depegs] Commodity median (${peg}): ${result[peg].length} daily points from ${tokenCount} tokens`);
     }
   }
 

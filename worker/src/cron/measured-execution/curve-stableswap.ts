@@ -32,6 +32,7 @@ import {
 } from "./profiles";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
+import { executeEvmQuotePlan } from "./evm-quote-plan";
 
 const CURVE_STABLESWAP_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -678,52 +679,41 @@ export function createCurveStableSwapQuoteExecutor(dependencies: CurveStableSwap
       eligibility: prepared[index]!.eligibility,
       ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
     }));
-    const valid = prepared.flatMap((entry) => entry.encoded ? [entry.encoded] : []);
-    for (let offset = 0; offset < valid.length; offset += CURVE_MULTICALL_BATCH_SIZE) {
-      throwIfAborted(input.signal);
-      const chunk = valid.slice(offset, offset + CURVE_MULTICALL_BATCH_SIZE);
-      const chain = chunk[0]!.policy.chain;
-      if (input.rpcBudget && !input.rpcBudget.canRequestChain(chain)) {
-        for (const request of chunk) {
-          outcomes[request.index] = {
-            targetId: request.target.targetId,
-            inputUsd: request.inputUsd,
-            blockNumber: request.blockNumber,
-            eligibility: request.eligibility,
-            failureReason: input.rpcBudget.stopReason ?? "rpc-failure",
-          };
-        }
-        continue;
-      }
-      const results = await dependencies.executeMulticall({
-        chain,
-        calls: chunk.map((request) => ({
-          label: request.label,
-          target: request.endpointAddress,
-          callData: request.callData,
-          allowFailure: true,
-        })),
-        blockNumber: chunk[0]!.blockNumber,
-        chainRpcs: input.chainRpcs,
-        signal: input.signal,
-        rpcBudget: input.rpcBudget,
-      });
-      input.rpcBudget?.recordChainResult(chain, results != null);
-      const byLabel = new Map((results ?? []).map((result) => [result.label, result]));
-      for (const request of chunk) {
-        const result = byLabel.get(request.label);
-        outcomes[request.index] = {
+    const plans = prepared.flatMap((entry) => entry.encoded ? [{
+      ...entry.encoded,
+      chain: entry.encoded.policy.chain,
+      call: {
+        label: entry.encoded.label,
+        target: entry.encoded.endpointAddress,
+        callData: entry.encoded.callData,
+        allowFailure: true,
+      },
+    }] : []);
+    return executeEvmQuotePlan({
+      plans,
+      outcomes,
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      rpcBudget: input.rpcBudget,
+      spec: {
+        batchSize: CURVE_MULTICALL_BATCH_SIZE,
+        executeMulticall: dependencies.executeMulticall,
+        resolveResult: (request, result) => ({
           targetId: request.target.targetId,
           inputUsd: request.inputUsd,
           blockNumber: request.blockNumber,
           eligibility: request.eligibility,
-          ...(result
-            ? decodeCurveStableSwapQuotePoint(request, result)
-            : { failureReason: input.rpcBudget?.stopReason ?? "rpc-failure" }),
-        };
-      }
-    }
-    return outcomes;
+          ...decodeCurveStableSwapQuotePoint(request, result),
+        }),
+        materializeTransportFailure: (request, reason) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          eligibility: request.eligibility,
+          failureReason: reason ?? "rpc-failure",
+        }),
+      },
+    });
   };
 }
 

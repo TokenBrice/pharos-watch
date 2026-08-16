@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLogos } from "@/hooks/use-logos";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { formatSignedCompactUsd } from "@shared/lib/format";
-import { buildStablecoinUrl } from "@/lib/urls";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 
 interface Mover {

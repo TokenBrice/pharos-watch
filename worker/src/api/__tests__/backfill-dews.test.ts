@@ -3,7 +3,11 @@ import { mockD1 } from "../../test-helpers/__shared/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 
 vi.mock("@shared/lib/peg-rates", () => ({
-  derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1 } })),
+  derivePegRates: vi.fn(() => ({
+    rates: { peggedUSD: 1 },
+    sources: { peggedUSD: "native-usd" },
+    counts: { peggedUSD: 1 },
+  })),
 }));
 
 vi.mock("../../lib/dews", () => ({
@@ -40,13 +44,30 @@ vi.mock("../../lib/stablecoins-cache", () => ({
           chainCirculating: {},
           chains: ["ethereum"],
         },
+        {
+          id: "not-psi-eligible",
+          name: "Excluded fixture",
+          symbol: "NOPE",
+          geckoId: "excluded-fixture",
+          pegType: "peggedUSD",
+          pegMechanism: "fiat",
+          price: 1,
+          priceSource: "cache",
+          priceConfidence: "high",
+          circulating: { ethereum: 1_000_000 },
+          circulatingPrevDay: { ethereum: 1_000_000 },
+          circulatingPrevWeek: { ethereum: 1_000_000 },
+          circulatingPrevMonth: { ethereum: 1_000_000 },
+          chainCirculating: {},
+          chains: ["ethereum"],
+        },
       ],
       fxFallbackRates: {},
     },
   })),
 }));
 
-vi.mock("../../cron/dews/source-state", () => ({
+vi.mock("../../lib/dews/source-state", () => ({
   loadDewsSourceState: vi.fn(async () => ({
     dexLiqRows: { results: [] },
     dexLiqMap: new Map(),
@@ -89,7 +110,7 @@ vi.mock("../../cron/dews/source-state", () => ({
   })),
 }));
 
-vi.mock("../../cron/dews/scoring", () => ({
+vi.mock("../../lib/dews/scoring", () => ({
   buildDewsScoringResult: vi.fn(() => ({
     results: [
       { stablecoinId: "usdt-tether", score: 67, band: "WARNING", signals: {} },
@@ -100,7 +121,7 @@ vi.mock("../../cron/dews/scoring", () => ({
   })),
 }));
 
-vi.mock("../../cron/compute-dews", () => ({
+vi.mock("../../lib/dews/service", () => ({
   computeAndStoreDEWS: vi.fn(async () => ({
     itemCount: 2,
     status: "degraded",
@@ -115,8 +136,8 @@ vi.mock("../../cron/compute-dews", () => ({
 }));
 
 import { computeDEWS } from "../../lib/dews";
-import { buildDewsScoringResult } from "../../cron/dews/scoring";
-import { computeAndStoreDEWS } from "../../cron/compute-dews";
+import { buildDewsScoringResult } from "../../lib/dews/scoring";
+import { computeAndStoreDEWS } from "../../lib/dews/service";
 import { handleBackfillDEWS } from "../backfill-dews";
 
 stubCryptoForAuth();
@@ -192,7 +213,7 @@ describe("handleBackfillDEWS", () => {
     expect(body.error).toContain("dry-run=true");
   });
 
-  it("previews current DEWS refresh candidates in dry-run mode", async () => {
+  it("uses the producer's eligible asset universe and peg-reference provenance in refresh previews", async () => {
     const db = mockD1();
     const request = makeApiRequest("/api/backfill-dews?repair=refresh-current&dry-run=true", { adminKey: "secret" });
 
@@ -209,6 +230,14 @@ describe("handleBackfillDEWS", () => {
     expect(body.preview.targetStablecoinIds).toEqual(["usdt-tether", "usdc-circle"]);
     expect(body.preview.insufficientDataCount).toBe(1);
     expect(buildDewsScoringResult).toHaveBeenCalledTimes(1);
+    expect(buildDewsScoringResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assetById: new Map([["usdt-tether", expect.objectContaining({ id: "usdt-tether" })]]),
+        pegRates: { peggedUSD: 1 },
+        pegRateSources: { peggedUSD: "native-usd" },
+        pegRateContributorCounts: { peggedUSD: 1 },
+      }),
+    );
   });
 
   it("executes current DEWS refresh on POST repair", async () => {

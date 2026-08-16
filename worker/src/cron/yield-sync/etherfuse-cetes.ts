@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 import {
   ETHERFUSE_CETES_BOND_PAGE_URL,
   USER_AGENT,
@@ -153,7 +154,7 @@ export async function fetchEtherfuseCetesIssuance(params: {
     if (signal?.aborted) {
       throw error instanceof Error ? error : new Error(String(error));
     }
-    console.warn("[yield] Etherfuse CETES source failed:", error);
+    logWorkerEventArgs("handler", "warn", "[yield] Etherfuse CETES source failed:", error);
     return null;
   }
 }

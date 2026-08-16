@@ -1,3 +1,4 @@
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { derivePegRates, getPegReference, type PegRateSource } from "@shared/lib/peg-rates";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types";
 interface PegReferenceInputs {
@@ -24,23 +25,19 @@ export function deriveSupplyFromMarketCap(
   return marketCapUsd / priceUsd;
 }
 
-function hasPositivePegReference(pegReference: number): boolean {
-  return Number.isFinite(pegReference) && pegReference > 0;
-}
-
 export function deriveDeviationBps(
   priceUsd: number | null | undefined,
   pegReference: number,
-): number {
-  if (priceUsd == null || !hasPositivePegReference(pegReference)) return 0;
-  return Math.round(((priceUsd - pegReference) / pegReference) * 10_000);
+): number | null {
+  if (priceUsd == null) return null;
+  return deriveDepegSignal(priceUsd, pegReference)?.bps ?? null;
 }
 
 export function deriveGaugeDeviationBps(
-  deviationBps: number,
+  deviationBps: number | null,
   isNavToken: boolean,
 ): number {
-  return isNavToken ? 0 : deviationBps;
+  return isNavToken ? 0 : deviationBps ?? 0;
 }
 
 export function derivePegReferenceContext({

@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { isMissingTableError } from "./db";
 
 export const BINANCE_ENVIRONMENT_BLOCK_TTL_SEC = 6 * 60 * 60;
@@ -18,7 +19,7 @@ interface ProviderRuntimeStateRow {
 
 function tolerateStateTableError(error: unknown): void {
   if (!isMissingTableError(error)) {
-    console.warn("[pricing-provider-state] runtime state unavailable; using stateless fallback");
+    logWorkerEventArgs("lib", "warn", "[pricing-provider-state] runtime state unavailable; using stateless fallback");
   }
 }
 

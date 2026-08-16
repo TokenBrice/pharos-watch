@@ -9,7 +9,7 @@ import type {
   ChartAnnotationKind,
 } from "@shared/types/chart-annotation";
 import { getCuratedAnnotations } from "@shared/data/annotations/curated-annotations";
-import { caseStudySlugForEvent } from "@/app/learn/case-studies/content/client-index";
+import { caseStudySlugForEvent } from "@/lib/case-study-client-index";
 import { DAY_MS } from "@/lib/constants";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 import { isChartAnnotationsEnabled } from "@/lib/feature-flags";

@@ -1,10 +1,11 @@
+import { logWorkerEventArgs } from "./structured-log";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   classifyPegClass,
   HARDCODED_PRICE_BOUNDS,
-  normalizePegTypeFromCurrency,
   type PegClass,
 } from "@shared/lib/peg-price-bounds";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getFxReferenceTypeFromState, loadFxRateState } from "./fx-rate-state";
 import { sanitizeRecordValues } from "./normalizers";
 
@@ -17,7 +18,7 @@ export type PriceValidationMode =
 export type PriceReferenceType = "fresh" | "stale" | "static" | "none";
 
 export type { PegClass };
-export { normalizePegTypeFromCurrency };
+export { pegTypeFromCurrency as normalizePegTypeFromCurrency };
 
 export interface PriceValidationContext {
   stablecoinId?: string;
@@ -94,7 +95,7 @@ export function buildPriceValidationContext(
   const trackedMeta = input.stablecoinId ? TRACKED_META_BY_ID.get(input.stablecoinId) : undefined;
   const pegCurrency = trackedMeta?.flags?.pegCurrency ?? input.pegCurrency;
   const pegType =
-    normalizePegTypeFromCurrency(pegCurrency) ??
+    pegTypeFromCurrency(pegCurrency) ??
     input.pegType;
   const navToken = trackedMeta?.flags?.navToken ?? !!input.navToken;
   const commodityOunces =
@@ -190,7 +191,7 @@ export async function loadPriceValidationReferences(
       typeByPeg,
     };
   } catch (error) {
-    console.warn("[price-validation] Failed to load FX validation references; falling back to static references", error);
+    logWorkerEventArgs("lib", "warn", "[price-validation] Failed to load FX validation references; falling back to static references", error);
     return {
       rates: staticRates,
       type: Object.keys(staticRates).length > 0 ? "static" : "none",

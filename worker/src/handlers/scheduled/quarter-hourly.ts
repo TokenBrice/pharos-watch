@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "../../lib/structured-log";
 /**
  * Quarter-hourly trigger (every 15 min):
  *   sync-fx-rates (3) -> sync-stablecoins (4) -> snapshots (0)
@@ -68,7 +69,7 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
   const stablecoinsCapabilities = parseStablecoinsCapabilities(stablecoinsResult);
   const stablecoinsCacheSafe = stablecoinsCapabilities.stablecoinsCache;
   if (stablecoinsResult && !stablecoinsCacheSafe) {
-    console.warn("[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
+    logWorkerEventArgs("handler", "warn", "[cron] sync-stablecoins completed without downstream-safe cache write — skipping cache-dependent jobs");
   }
 
   const runIfCacheSafe = async (

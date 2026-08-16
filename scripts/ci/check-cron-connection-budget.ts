@@ -3,8 +3,8 @@ import {
   CRON_CONNECTION_BUDGET_ENTRIES,
   CRON_GROWTH_HEADROOM_POLICY,
   CRON_SCHEDULES,
-} from "../../shared/lib/cron-jobs";
-import { SCHEDULED_SLOT_PLANS } from "../../shared/lib/scheduled-runner-registry";
+} from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 interface CronConnectionBudgetEntryForCheck {

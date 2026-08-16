@@ -1,3 +1,4 @@
+import { logWorkerEventArgs } from "./structured-log";
 import {
   API_KEY_DEPENDENCY_RETRY_AFTER_SEC,
   API_KEY_MIN_RATE_LIMIT_PER_MINUTE,
@@ -118,7 +119,7 @@ export async function checkApiKeyRateLimit(
         .run()
         .then(() => {})
         .catch((error) => {
-          console.warn("[api-keys] rate-limit prune failed:", error);
+          logWorkerEventArgs("lib", "warn", "[api-keys] rate-limit prune failed:", error);
         }),
     );
   }

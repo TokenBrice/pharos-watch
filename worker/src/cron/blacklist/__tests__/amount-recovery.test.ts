@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../balance-providers", () => ({
+vi.mock("../../../lib/blacklist/balance-providers", () => ({
   fetchEvmTokenBalance: vi.fn(),
 }));
 
@@ -9,14 +9,31 @@ import {
   backfillTronFromLedger,
   enrichRowBalances,
   extractDestroyAmountFromReceiptLogs,
-} from "../amount-recovery";
-import { fetchEvmTokenBalance } from "../balance-providers";
+} from "../../../lib/blacklist/amount-recovery";
+import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
-import { shouldSuppressAsMirrorZero } from "../shared";
-import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
-import type { BlacklistRow } from "../shared";
+import { shouldSuppressAsMirrorZero } from "../../../lib/blacklist/shared";
+import {
+  mockD1 as createMockD1,
+  type MockD1Options,
+  type MockTableConfig,
+} from "../../../test-helpers/__shared/mock-d1";
+import type { BlacklistRow } from "../../../lib/blacklist/shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
-import type { BlacklistRunBudget } from "../run-budget";
+import type { BlacklistRunBudget } from "../../../lib/blacklist/run-budget";
+
+const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
+  { match: "blacklist-amount-repair-queue-release-expired", rows: [] },
+  { match: "blacklist-amount-repair-queue-enqueue", rows: [] },
+  { match: "blacklist-amount-repair-queue-reconcile-resolved", rows: [] },
+  { match: "amount_attempt_count = COALESCE", rows: [] },
+  { match: "amount = ?, amount_native", rows: [] },
+  { match: "blacklist-amount-repair-queue-finish", rows: [] },
+];
+
+function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}) {
+  return createMockD1([...tables, ...DEFAULT_BLACKLIST_AMOUNT_D1_TABLES], options);
+}
 
 function makeConfig(): ContractEventConfig {
   return {

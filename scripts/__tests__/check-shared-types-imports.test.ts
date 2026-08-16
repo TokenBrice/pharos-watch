@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   findBroadSharedTypesValueImports,
   findSharedTypesRuntimeImports,
-} from "../ci/check-shared-types-imports.mjs";
+} from "../ci/check-shared-types-imports";
 
 let tempDirs: string[] = [];
 

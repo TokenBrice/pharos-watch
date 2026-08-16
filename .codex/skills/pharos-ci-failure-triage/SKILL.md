@@ -81,7 +81,7 @@ npm run validate:worker-smoke
 
 Use the exact `.nvmrc` runtime in the current shell. `check:pr` runs the committed-diff adaptive contract; use its failing leaf command for fast iteration. `check:release` is the optional Pages build plus Worker bundle rehearsal. `coverage:critical` is blocking in its weekly/manual workflow and runs on pull requests only when an enrolled critical source changes; `test:all`, full lint, and test typechecking belong to nightly/manual validation.
 
-Use `scripts/ci/classify-deploy-changes.mjs` and `scripts/ci/pharos-change-contract.mjs` when deploy-surface classification is unclear.
+Use `scripts/ci/classify-deploy-changes.ts` and `scripts/ci/pharos-change-contract.ts` when deploy-surface classification is unclear.
 
 ### 3. Fix The Root Cause
 

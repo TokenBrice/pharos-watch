@@ -29,7 +29,7 @@ vi.mock("../../../lib/chain-registry", async (importOriginal) => {
 });
 
 import { EXPLORER_LOG_SCAN_WINDOWS, fetchEvmEventsIncremental, getEvmSafeHead } from "../evm-source";
-import { createBlacklistRunBudget } from "../run-budget";
+import { createBlacklistRunBudget } from "../../../lib/blacklist/run-budget";
 import { fetchEvmLogsForTopicWithCompleteness } from "../../../lib/evm-logs";
 import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from "../../../lib/alchemy-logs";
 import { getChainRpc, type ChainRpcConfig } from "../../../lib/chain-registry";

@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import policyAsset from "../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
-import { compileV9FactSetV3 } from "../../shared/lib/safety-score-v9/compile";
-import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "../../shared/lib/safety-score-v9/evidence-gap-queue";
-import { loadV9MethodologyPolicy, resolveV9ReasonPolicy } from "../../shared/lib/safety-score-v9/policy";
-import { sha256Hex } from "../../shared/lib/sha256";
-import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
+import policyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
+import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
+import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
+import { loadV9MethodologyPolicy, resolveV9ReasonPolicy } from "@shared/lib/safety-score-v9/policy";
+import { sha256Hex } from "@shared/lib/sha256";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   V9EvidenceGapQueueV1Schema,
   V9EvidenceGapQueueV2Schema,
-} from "../../shared/types/safety-score-v9-evidence-queue";
-import type { V9EvidenceResponsibility } from "../../shared/types/safety-score-v9-fact-primitives";
-import type { V9FactSetCoreV3 } from "../../shared/types/safety-score-v9-facts";
+} from "@shared/types/safety-score-v9-evidence-queue";
+import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
+import type { V9FactSetCoreV3 } from "@shared/types/safety-score-v9-facts";
 import {
   runV9EvidenceGapQueueCli,
   type V9EvidenceGapQueueIo,

@@ -289,6 +289,9 @@ export const DdrPredictionErratumSchema = z.object({
   createdBy: z.string(),
 });
 export type DdrPredictionErratum = z.infer<typeof DdrPredictionErratumSchema>;
+/** Durable-store form; the public invalidation state is synthesized at publication time. */
+export const DdrStoredPredictionErratumSchema = DdrPredictionErratumSchema.omit({ state: true });
+export type DdrStoredPredictionErratum = z.infer<typeof DdrStoredPredictionErratumSchema>;
 
 export const DdrPredictionMetaSchema = z.object({
   state: z.enum(DDR_PUBLIC_PREDICTION_STATE_VALUES),
