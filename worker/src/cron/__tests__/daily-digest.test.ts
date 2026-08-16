@@ -98,6 +98,20 @@ vi.mock("../../lib/telegram-digest-outbox", () => ({
   deliverTelegramDigestEdition: vi.fn(),
 }));
 
+vi.mock("../telegram-digest-transport", () => ({
+  runTelegramDigestDeliveryWithPermit: vi.fn(async (params: {
+    creds: unknown;
+    deliver: (creds: unknown) => Promise<{ status: string }>;
+  }) => {
+    if (!params.creds) return "no-creds";
+    try {
+      return (await params.deliver(params.creds)).status;
+    } catch (error) {
+      return `failed: ${String(error).slice(0, 100)}`;
+    }
+  }),
+}));
+
 vi.mock("../../lib/circuit-breaker", () => mockCircuitBreaker());
 
 import { generateDailyDigest, classifyRegime } from "../daily-digest";
@@ -131,6 +145,7 @@ import { fetchWithRetry } from "../../lib/fetch-retry";
 import { postDigestTweet } from "../../lib/twitter";
 import { prepareTelegramDigestAppendices } from "../../lib/telegram-digest-appendices";
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../lib/telegram-digest-outbox";
+import { runTelegramDigestDeliveryWithPermit } from "../telegram-digest-transport";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
@@ -712,6 +727,11 @@ describe("generateDailyDigest", () => {
 
     expect(postDigestTweet).toHaveBeenCalledTimes(1);
     expect(enqueueTelegramDigestEdition).toHaveBeenCalledTimes(1);
+    expect(runTelegramDigestDeliveryWithPermit).toHaveBeenCalledWith(expect.objectContaining({
+      db,
+      owner: "daily-digest",
+      editionKey: "daily:2026-03-06",
+    }));
     expect(deliverTelegramDigestEdition).toHaveBeenCalledTimes(1);
     expect(commitTelegramAppendices).toHaveBeenCalledTimes(0);
     expect(fetchWithRetry).toHaveBeenCalledWith(

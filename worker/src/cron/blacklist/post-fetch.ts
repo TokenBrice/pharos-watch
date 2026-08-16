@@ -9,6 +9,8 @@ import { type BlacklistRow, shouldSuppressAsMirrorZero } from "./shared";
 import { enrichRowBalances } from "./amount-recovery";
 import { insertBlacklistRows } from "./persistence";
 import { type BlacklistRunBudget } from "./run-budget";
+import { throwIfAborted } from "../../lib/abort";
+import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import {
   buildCurrentBalanceSnapshotRows,
   buildLatestBlacklistRows,
@@ -48,17 +50,23 @@ interface ProcessFetchedBlacklistRowsOptions {
 async function filterNewBlacklistRows(
   db: D1Database,
   rows: BlacklistRow[],
+  signal?: AbortSignal,
 ): Promise<BlacklistRow[]> {
   if (rows.length === 0) return rows;
 
   const existingIds = new Set<string>();
   for (let i = 0; i < rows.length; i += EXISTING_BLACKLIST_ID_QUERY_CHUNK) {
+    throwIfAborted(signal);
     const ids = rows.slice(i, i + EXISTING_BLACKLIST_ID_QUERY_CHUNK).map((row) => row.id);
     const { sql, binds } = buildInClause(ids);
-    const result = await db
-      .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
-      .bind(...binds)
-      .all<{ id: string }>();
+    const result = await runWithOverloadRetry(() => db
+        .prepare(`/* blacklist-post-fetch-existing-id-filter */ SELECT id FROM blacklist_events WHERE id IN (${sql})`)
+        .bind(...binds)
+        .all<{ id: string }>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
     for (const row of result.results ?? []) {
       existingIds.add(row.id);
     }
@@ -79,6 +87,7 @@ function filterCacheRepairLedgerRows(rows: BlacklistRow[]): BlacklistRow[] {
 async function fetchLatestKnownRepairRows(
   db: D1Database,
   rows: BlacklistRow[],
+  signal?: AbortSignal,
 ): Promise<BlacklistRow[]> {
   if (rows.length === 0) return [];
 
@@ -110,7 +119,13 @@ async function fetchLatestKnownRepairRows(
 
   const results: D1Result[] = [];
   for (let i = 0; i < statements.length; i += D1_BATCH_SIZE) {
-    results.push(...await db.batch(statements.slice(i, i + D1_BATCH_SIZE)));
+    throwIfAborted(signal);
+    results.push(...await runWithOverloadRetry(
+      () => db.batch(statements.slice(i, i + D1_BATCH_SIZE)),
+      3,
+      signal,
+    ));
+    throwIfAborted(signal);
   }
   return results
     .map((result) => (result as { results?: BlacklistRow[] }).results?.[0])
@@ -124,7 +139,7 @@ export async function processFetchedBlacklistRows(
   enrichCounters: BlacklistPostFetchCounters;
   currentBalanceCacheCounters: CurrentBalanceCacheCounters;
 }> {
-  const newRows = await filterNewBlacklistRows(options.db, options.rows);
+  const newRows = await filterNewBlacklistRows(options.db, options.rows, options.signal);
   const newRowIds = new Set(newRows.map((row) => row.id));
   const duplicateRows = options.rows.filter((row) => !newRowIds.has(row.id));
   const duplicateCount = options.rows.length - newRows.length;
@@ -137,7 +152,7 @@ export async function processFetchedBlacklistRows(
   if (newRows.length === 0) {
     const duplicateLedgerRows = filterCacheRepairLedgerRows(duplicateRows);
     if (duplicateLedgerRows.length > 0) {
-      const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows);
+      const latestKnownRepairRows = await fetchLatestKnownRepairRows(options.db, duplicateLedgerRows, options.signal);
       const assetPriceUsd = getBlacklistPriceAssetId(options.config.stablecoin)
         ? await fetchBlacklistAssetPriceFromCache(options.db, options.config.stablecoin)
         : null;

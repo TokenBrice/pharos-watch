@@ -19,7 +19,7 @@ import {
   getCompletedSupplySnapshot,
   SNAPSHOT_SUPPLY_LAST_WRITE_KEY,
 } from "../lib/supply-snapshot-completion";
-import { startOfUtcDaySec } from "../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
@@ -129,7 +129,7 @@ export async function snapshotSupply(
   // previous 20h wall-clock cooldown drifted the write time through the whole
   // UTC day (consecutive rows spanned 20-28h), skewing day-over-day deltas;
   // date-keying pins the write to the first healthy run after UTC midnight.
-  const snapshotDate = startOfUtcDaySec();
+  const snapshotDate = startOfUtcDaySec(new Date());
 
   for (const asset of stablecoinsCache.payload.peggedAssets) {
     if (!snapshotEligibleIds.has(asset.id)) continue;

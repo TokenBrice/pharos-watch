@@ -35,6 +35,7 @@ import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/safety-score";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/yield-methodology";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { loadActiveSafetyScoreSource } from "../lib/safety-score-active-source";
@@ -187,10 +188,6 @@ function safetySourcesMatch(
   );
 }
 
-function utcDayStartSec(nowSec: number): number {
-  return nowSec - (nowSec % DAY_SECONDS);
-}
-
 async function loadExistingSnapshot(db: D1Database, snapshotDate: string): Promise<ExistingSnapshotRow | null> {
   return db
     .prepare("SELECT content_hash, byte_size, created_at FROM public_snapshots WHERE snapshot_date = ?")
@@ -245,7 +242,7 @@ export async function snapshotPublicDataset(
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   const snapshotDate = isoDateUtc(new Date(nowSec * 1000));
-  const expectedPsiComputedAt = utcDayStartSec(nowSec) - DAY_SECONDS;
+  const expectedPsiComputedAt = bucketUnixSecondsToUtcDay(nowSec) - DAY_SECONDS;
 
   const existingSnapshot = await loadExistingSnapshot(db, snapshotDate);
   throwIfAborted(signal);

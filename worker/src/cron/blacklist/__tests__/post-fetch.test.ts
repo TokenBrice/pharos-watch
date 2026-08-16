@@ -60,6 +60,61 @@ describe("processFetchedBlacklistRows", () => {
     vi.clearAllMocks();
   });
 
+  it("honors abort before a post-fetch D1 read", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("stop post-fetch"));
+    const prepare = vi.fn();
+    const row = makeBlacklistRow({ id: "ethereum-aborted" }) as BlacklistRow;
+
+    await expect(processFetchedBlacklistRows({
+      db: { prepare } as unknown as D1Database,
+      config,
+      rows: [row],
+      chainLabel: "evm",
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      trongridApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+      signal: controller.signal,
+    })).rejects.toThrow("stop post-fetch");
+    expect(prepare).not.toHaveBeenCalled();
+  });
+
+  it("retries a transient D1 overload while filtering existing ids", async () => {
+    const row = makeBlacklistRow({
+      id: "ethereum-overload-retry",
+      suppression_reason: "fixture-suppressed",
+    }) as BlacklistRow;
+    let attempts = 0;
+    const all = vi.fn(async () => {
+      attempts++;
+      if (attempts === 1) throw new Error("D1 DB is overloaded");
+      return { results: [{ id: row.id }] };
+    });
+    const db = {
+      prepare: vi.fn(() => ({ bind: vi.fn(() => ({ all })) })),
+    } as unknown as D1Database;
+    vi.spyOn(Math, "random").mockReturnValue(0);
+
+    const result = await processFetchedBlacklistRows({
+      db,
+      config,
+      rows: [row],
+      chainLabel: "evm",
+      etherscanApiKey: null,
+      drpcApiKey: null,
+      trongridApiKey: null,
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      tronLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(attempts).toBe(2);
+    expect(result.insertedRows).toBe(0);
+  });
+
   it("runs a current-balance cache repair lane for duplicate fetched rows", async () => {
     const duplicateRow = makeBlacklistRow({
       id: "ethereum-0xduplicate-0x0",

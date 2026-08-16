@@ -3,7 +3,7 @@ import { sumPegBuckets } from "@shared/lib/supply";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { getCache } from "../../lib/db-cache";
 import { throwIfAborted } from "../../lib/abort";
-import { startOfUtcDaySec } from "../../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import type { PeggedAsset } from "./enrich-prices";
 import { parseStablecoinsCachePayload } from "./shared";
 import { TRACKED_ASSET_ADDRESS_OVERRIDES } from "./tracked-asset-overrides";

@@ -5,7 +5,7 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { canonicalizeChainCirculating } from "@shared/lib/chain-circulating";
 import { formatIsoDate } from "@shared/lib/format";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
-import { startOfUtcDaySec } from "../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
   STABLECOIN_PUBLICATION_WAIVERS,
   evaluateStablecoinPublicationCoverage,
@@ -64,7 +64,7 @@ export async function snapshotChainSupply(
 
   // One snapshot per UTC day, keyed on the marker's stored snapshotDate.
   // See snapshot-supply.ts for the drift rationale.
-  const snapshotDate = startOfUtcDaySec();
+  const snapshotDate = startOfUtcDaySec(new Date());
   const expectedActiveIds = [...new Set(options.requiredActiveIds ?? CORE_AGGREGATE_ACTIVE_IDS)].sort();
   const expectedActiveIdSet = new Set(expectedActiveIds);
   const publicationWaivers = options.publicationWaivers ?? STABLECOIN_PUBLICATION_WAIVERS;

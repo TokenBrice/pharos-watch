@@ -1,6 +1,7 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/liquidity-score";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { ContractDeployment } from "@shared/types/core";
 import {
   ExitRouteObservationCoverageSchema,
@@ -1096,7 +1097,7 @@ export async function writeHistoricalSnapshots(
   signal?: AbortSignal,
   nowSec = Math.floor(Date.now() / 1000),
 ): Promise<HistoricalSnapshotWriteResult> {
-  const todayMidnight = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS; // epoch seconds at UTC midnight
+  const todayMidnight = bucketUnixSecondsToUtcDay(nowSec);
   const expectedActiveIds = new Set(ACTIVE_STABLECOINS.map((coin) => coin.id));
   const activeScoreMap = new Map([...scoreMap].filter(([id]) => expectedActiveIds.has(id)));
   const incomingScoredIds = new Set(activeScoreMap.keys());

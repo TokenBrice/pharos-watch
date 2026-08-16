@@ -9,7 +9,7 @@ import {
   makeWorkerV9Card,
 } from "../../../test-helpers/report-cards-v9";
 import type { DdrEventDbRow } from "../types";
-import { loadDdrContext, type DdrLoadedContext } from "../context";
+import { buildCurrentDeviationMap, loadDdrContext, type DdrLoadedContext } from "../context";
 import { deriveMintSurge, resolveDdrIncidents } from "../incident-resolution";
 import {
   allocateDdrRunId,
@@ -337,6 +337,44 @@ describe("allocateDdrRunId", () => {
 });
 
 describe("loadDdrContext", () => {
+  it("leaves resolver deviation null for a thin non-USD peg reference", async () => {
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [
+                {
+                  id: "brz-transfero",
+                  symbol: "BRZ",
+                  pegType: "peggedREAL",
+                  price: 0.18,
+                  circulating: { ethereum: 20_000_000 },
+                },
+                {
+                  id: "wbrl-ripio",
+                  symbol: "WBRL",
+                  pegType: "peggedREAL",
+                  price: 0.19,
+                  circulating: { ethereum: 20_000_000 },
+                },
+              ],
+            }),
+            updated_at: NOW_SEC,
+          },
+        ],
+      },
+    ]);
+
+    const result = await buildCurrentDeviationMap(db, NOW_SEC);
+
+    expect(result.healthy).toBe(true);
+    expect(result.byCoin.get("brz-transfero")).toBeNull();
+    expect(result.byCoin.get("wbrl-ripio")).toBeNull();
+  });
+
   it("degrades when the stablecoins cache is stale", async () => {
     const db = mockD1([
       {

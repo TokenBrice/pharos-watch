@@ -1277,6 +1277,48 @@ describe("price-derived and auto-discovery yield paths", () => {
     const autoRow = writeStatements.find((stmt) => stmt.boundValues?.[0] === "u-united-stables");
     expect(autoRow).toBeDefined();
   });
+
+  it("drops a deterministic auto-lending pool whose source is blocked", async () => {
+    const db = makeDb();
+    setupDefaultMocks();
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(getCache).mockImplementation(async (_db, key) => {
+      if (key === "dl-stablecoin-pools") {
+        return {
+          value: JSON.stringify([
+            {
+              pool: "pool-u-venus",
+              chain: "BSC",
+              symbol: "U",
+              poolMeta: "wstUSR lending market",
+              project: "venus-core-pool",
+              tvlUsd: 5_000_000,
+              apy: 3.5,
+              apyBase: 3.5,
+              apyReward: null,
+              apyMean30d: 3.4,
+              exposure: "single",
+              stablecoin: true,
+              underlyingTokens: null,
+            },
+          ]),
+          updatedAt: nowSec - 300,
+        };
+      }
+      if (key === "risk_free_rate") {
+        return { value: "4.0", updatedAt: nowSec };
+      }
+      return null;
+    });
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    mockFetch([]);
+
+    await syncYieldData(db);
+
+    const autoRow = getWriteStatements().find((stmt) => stmt.boundValues?.[0] === "u-united-stables");
+    expect(autoRow).toBeUndefined();
+  });
 });
 
 describe("on-chain rate bootstrapping seed", () => {

@@ -8,7 +8,6 @@ import {
   enqueueTelegramDigestEdition,
 } from "../lib/telegram-digest-outbox";
 import { SECONDS } from "../lib/time-constants";
-import { CIRCUIT_SOURCE } from "../lib/constants";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { parseJson } from "../lib/json-parse";
 import {
@@ -16,8 +15,8 @@ import {
   insertDigestRecord,
   markDigestMetaBlocked,
   requestDigestCopy,
-  runDigestChannelDelivery,
 } from "./digest/platform";
+import { runTelegramDigestDeliveryWithPermit } from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
@@ -162,22 +161,34 @@ async function deliverWeeklyDigestToTelegram(params: {
       throw new Error(`Immutable Telegram digest edition differs (${editionKey})`);
     }
   }
-  return runDigestChannelDelivery({
+  return runTelegramDigestDeliveryWithPermit({
     db: params.db,
-    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
     creds: params.telegramCreds,
-    logPrefix: "weekly-recap",
-    channelLabel: "Telegram",
+    owner: "weekly-recap",
+    editionKey,
+    signal: params.signal,
     deliver: async (creds) => {
       const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
-      if (delivery.outcome === "sent") return "ok";
-      if (delivery.outcome === "skipped" && delivery.state === "sent") {
-        return "ok+already-sent";
+      if (delivery.outcome === "sent") {
+        return {
+          status: "ok",
+          transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
+        };
       }
-      if (delivery.outcome === "skipped") return `queued: ${delivery.state}`;
-      throw new Error(
-        `Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
-      );
+      if (delivery.outcome === "skipped" && delivery.state === "sent") {
+        return { status: "ok+already-sent", transportOutcome: null };
+      }
+      if (delivery.outcome === "skipped") {
+        return { status: `queued: ${delivery.state}`, transportOutcome: null };
+      }
+      return {
+        status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+        transportOutcome: {
+          ok: false,
+          errorClass: delivery.errorClass,
+          retryAfterSec: delivery.retryAfterSec,
+        },
+      };
     },
   });
 }

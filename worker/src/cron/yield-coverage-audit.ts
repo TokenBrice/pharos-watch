@@ -17,21 +17,16 @@ import type { ChainRpcConfig } from "../lib/chain-registry";
 import { loadDlStablecoinPools } from "./yield-sync/sources";
 import {
   AUTO_LENDING_POOL_MAP,
-  AUTO_LENDING_SAFETY_BYPASS_IDS,
   EXPLICIT_YIELD_SOURCE_POOL_MAP,
-  isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   YIELD_ADAPTER_MANIFEST,
   YIELD_POOL_MAP,
   YIELD_WEIGHTED_POOL_GROUPS,
 } from "./yield-config";
 import {
-  getRequiredLendingOpportunityTvlUsd,
+  explainDeterministicAutoLendingEligibility,
+  type AutoLendingEligibilityReasonCode,
 } from "./yield-sync/resolve-helpers";
-import {
-  MIN_SAFETY_SCORE_FOR_YIELD,
-  MIN_LENDING_POOL_APY,
-} from "../lib/constants";
 import { computeSafetyScoresSnapshot, type PublishedSafetyScoresResultMap } from "../lib/safety-scores";
 import { buildStablecoinSupplyMapFromCacheValue } from "./yield-sync/supply-map";
 import type { YieldAdapterLifecycleEntry } from "./yield-config-registry";
@@ -269,6 +264,17 @@ interface IdentifyStaleAutoLendingOverrideOptions {
   stablecoinSupplyById?: Map<string, number>;
   safetyScores?: Map<string, { score: number }>;
 }
+
+const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string> = {
+  collision: "collision-blocked",
+  "safety-score": "below-safety-score",
+  "pool-exposure": "non-single-exposure",
+  "pool-stablecoin": "not-stablecoin",
+  "protocol-allowlist": "project-not-allowlisted",
+  "apy-floor": "below-apy-floor",
+  "tvl-floor": "below-tvl-floor",
+  "source-blocked": "blocked-source",
+};
 
 export interface CoverageGapPool {
   pool: string;
@@ -877,24 +883,15 @@ export function identifyStaleAutoLendingOverrides(
       continue;
     }
 
-    const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+    const verdict = explainDeterministicAutoLendingEligibility({
       stablecoinId,
-      poolChain: pool.chain,
+      pool,
+      safetyScore: safetyScores?.get(stablecoinId)?.score,
+      safetySnapshotAvailable: safetyScores != null,
       stablecoinSupplyById,
     });
-    const reasons: string[] = [];
-    if (safetyScores) {
-      const safetyScore = safetyScores.get(stablecoinId)?.score ?? 0;
-      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) reasons.push("below-safety-score");
-    }
-    if (pool.exposure !== "single") reasons.push("non-single-exposure");
-    if (!pool.stablecoin) reasons.push("not-stablecoin");
-    if (!LENDING_PROTOCOL_ALLOWLIST.has(pool.project)) reasons.push("project-not-allowlisted");
-    if (pool.apy < MIN_LENDING_POOL_APY) reasons.push("below-apy-floor");
-    if (pool.tvlUsd < requiredMinTvlUsd) reasons.push("below-tvl-floor");
-    if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) reasons.push("collision-blocked");
-    if (reasons.length === 0) continue;
+    if (verdict.eligible) continue;
+    const reasons = verdict.reasonCodes.map((reason) => AUTO_LENDING_AUDIT_REASON[reason]);
 
     staleOverrides.push({
       stablecoinId,
@@ -905,7 +902,7 @@ export function identifyStaleAutoLendingOverrides(
       chain: pool.chain,
       tvlUsd: pool.tvlUsd,
       apy: pool.apy,
-      requiredMinTvlUsd,
+      requiredMinTvlUsd: verdict.requiredMinTvlUsd,
     });
   }
 

@@ -1,5 +1,6 @@
 import { ACTIVE_IDS, ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { roundTo } from "@shared/lib/math";
+import { bucketUnixMillisecondsToUtcDay } from "@shared/lib/time-buckets";
 import { canonicalExitRouteScopedKey } from "@shared/lib/exit-route-identity";
 import { EXIT_ROUTE_SCORING_TABLES } from "@shared/lib/exit-route-scoring";
 import {
@@ -701,7 +702,7 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   tvlStabilityMap: Map<string, number>;
   volumeStabilityMap: Map<string, number>;
 }> {
-  const todayMidnight = Math.floor(Date.now() / 86_400_000) * 86_400;
+  const todayMidnight = bucketUnixMillisecondsToUtcDay(Date.now()) / 1000;
   const thirtyDaysAgo = todayMidnight - 30 * 86_400;
   const tvlStabilityMap = new Map<string, number>();
   const volumeStabilityMap = new Map<string, number>();

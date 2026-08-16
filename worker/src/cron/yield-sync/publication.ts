@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { deleteOrphanYieldRows, deleteStaleYieldRows, purgeYieldHistoryOwnershipHandoffs } from "./history";
@@ -27,7 +28,7 @@ export async function materializeYieldHistoryDaily(
   db: D1Database,
   startSec: number,
 ): Promise<number> {
-  const snapshotDate = Math.floor((startSec - (YIELD_HISTORY_RAW_DAYS + 1) * DAY_SECONDS) / DAY_SECONDS) * DAY_SECONDS;
+  const snapshotDate = bucketUnixSecondsToUtcDay(startSec - (YIELD_HISTORY_RAW_DAYS + 1) * DAY_SECONDS);
   try {
     const result = await db
       .prepare(

@@ -17,6 +17,7 @@ import { buildDailyDigestInput } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
+import { runTelegramDigestDeliveryWithPermit } from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
@@ -428,12 +429,12 @@ export async function generateDailyDigest(
       recordCronFailure("daily-digest", err, { metadata: { stage: "telegram-outbox-write" } });
     }
   }
-  const telegramStatus = qualityGateStatus ?? await runDigestChannelDelivery({
+  const telegramStatus = qualityGateStatus ?? await runTelegramDigestDeliveryWithPermit({
     db,
-    circuitSource: CIRCUIT_SOURCE.TELEGRAM_API,
     creds: telegramCreds,
-    logPrefix: "daily-digest",
-    channelLabel: "Telegram",
+    owner: "daily-digest",
+    editionKey: telegramEditionKey,
+    signal,
     deliver: async (creds) => {
       if (!telegramOutboxReady) throw new Error("Telegram digest outbox was not persisted");
       const delivery = await deliverTelegramDigestEdition(db, creds, telegramEditionKey, signal);
@@ -441,17 +442,25 @@ export async function generateDailyDigest(
         const appendixSuffix = telegramAppendices?.metadata.hasAppendix
           ? `+appendix(cemetery=${telegramAppendices.metadata.cemeteryDetected},tracked=${telegramAppendices.metadata.trackedDetected},prelaunch=${telegramAppendices.metadata.preLaunchDetected})`
           : "";
-        return `ok${appendixSuffix}`;
+        return {
+          status: `ok${appendixSuffix}`,
+          transportOutcome: { ok: true, errorClass: null, retryAfterSec: null },
+        };
       }
       if (delivery.outcome === "skipped" && delivery.state === "sent") {
-        return "skipped: already-sent";
+        return { status: "skipped: already-sent", transportOutcome: null };
       }
       if (delivery.outcome === "skipped") {
-        return `queued: ${delivery.state}`;
+        return { status: `queued: ${delivery.state}`, transportOutcome: null };
       }
-      throw new Error(
-        `Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
-      );
+      return {
+        status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
+        transportOutcome: {
+          ok: false,
+          errorClass: delivery.errorClass,
+          retryAfterSec: delivery.retryAfterSec,
+        },
+      };
     },
   });
   if (degradedReasons.includes("twitter-send-marker-write")) {

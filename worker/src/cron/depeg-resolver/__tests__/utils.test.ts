@@ -3,9 +3,16 @@ import type { StablecoinMeta } from "@shared/types/core";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
   clearV9DependencyImpairment,
+  fallbackStructural,
   hydrateV9DependencyImpairment,
   toStructural,
 } from "../utils";
+
+describe("peg taxonomy projection", () => {
+  it("projects the canonical BRL currency for DefiLlama's peggedREAL type", () => {
+    expect(fallbackStructural("brz-transfero", "BRZ", "peggedREAL").pegCurrency).toBe("BRL");
+  });
+});
 
 function fixtureMeta(id: string, dependencyWeight: number): StablecoinMeta {
   const [upstreamAssetId] = [...FROZEN_IDS];

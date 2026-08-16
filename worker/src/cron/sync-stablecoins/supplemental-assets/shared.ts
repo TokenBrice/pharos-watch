@@ -1,5 +1,6 @@
 import { CHAIN_META } from "@shared/lib/chains";
 import { selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import type { PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import { fetchTextWithRetry } from "../../../lib/fetch-retry";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
@@ -25,8 +26,8 @@ export interface SupplementalPriceResolution {
   observedAtMode: PriceObservedAtMode | null;
 }
 
-export function pegTypeKey(meta: StablecoinMeta): string {
-  return `pegged${meta.flags.pegCurrency}`;
+export function pegTypeKey(meta: { flags: { pegCurrency: string } }): string {
+  return pegTypeFromCurrency(meta.flags.pegCurrency) ?? `pegged${meta.flags.pegCurrency}`;
 }
 
 export function toPositiveFiniteNumber(value: unknown): number | null {

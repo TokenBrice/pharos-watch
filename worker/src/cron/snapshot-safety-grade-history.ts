@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { batchExecute } from "../lib/db";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
 import { throwIfAborted } from "../lib/abort";
@@ -53,7 +54,7 @@ export async function snapshotSafetyGradeHistory(db: D1Database, signal?: AbortS
   throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
-  const snapshotDay = Math.floor(nowSec / DAY_SECONDS) * DAY_SECONDS;
+  const snapshotDay = bucketUnixSecondsToUtcDay(nowSec);
   let identity: SafetyScorePublicationIdentity;
   let liveCards: HistoryCard[];
   let degradedReportCardInputs: boolean;

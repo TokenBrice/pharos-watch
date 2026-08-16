@@ -95,6 +95,63 @@ export function getRequiredLendingOpportunityTvlUsd(params: {
   return Math.max(absoluteFloor, supplyUsd * MIN_LENDING_POOL_TVL_SHARE_OF_STABLECOIN_SUPPLY);
 }
 
+export type AutoLendingEligibilityReasonCode =
+  | "collision"
+  | "safety-score"
+  | "pool-exposure"
+  | "pool-stablecoin"
+  | "protocol-allowlist"
+  | "apy-floor"
+  | "tvl-floor"
+  | "source-blocked";
+
+export interface AutoLendingEligibilityVerdict {
+  eligible: boolean;
+  reasonCodes: AutoLendingEligibilityReasonCode[];
+  requiredMinTvlUsd: number;
+}
+
+/** Canonical explained verdict for deterministic auto-lending publication. */
+export function explainDeterministicAutoLendingEligibility(params: {
+  stablecoinId: string;
+  pool: DlPool;
+  safetyScore?: number;
+  safetySnapshotAvailable: boolean;
+  stablecoinSupplyById: Map<string, number>;
+}): AutoLendingEligibilityVerdict {
+  const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+    stablecoinId: params.stablecoinId,
+    poolChain: params.pool.chain,
+    stablecoinSupplyById: params.stablecoinSupplyById,
+  });
+  const reasonCodes: AutoLendingEligibilityReasonCode[] = [];
+
+  if (isAutoLendingCollisionBlockedForStablecoin(params.stablecoinId, params.pool)) {
+    reasonCodes.push("collision");
+  }
+  if (
+    params.safetySnapshotAvailable &&
+    !AUTO_LENDING_SAFETY_BYPASS_IDS.has(params.stablecoinId) &&
+    (params.safetyScore ?? 0) < MIN_SAFETY_SCORE_FOR_YIELD
+  ) {
+    reasonCodes.push("safety-score");
+  }
+  if (params.pool.exposure !== "single") reasonCodes.push("pool-exposure");
+  if (!params.pool.stablecoin) reasonCodes.push("pool-stablecoin");
+  if (!LENDING_PROTOCOL_ALLOWLIST.has(params.pool.project)) reasonCodes.push("protocol-allowlist");
+  if (params.pool.apy < MIN_LENDING_POOL_APY) reasonCodes.push("apy-floor");
+  if (params.pool.tvlUsd < requiredMinTvlUsd) reasonCodes.push("tvl-floor");
+  if (isBlockedYieldOpportunitySource({ poolMeta: params.pool.poolMeta, symbol: params.pool.symbol })) {
+    reasonCodes.push("source-blocked");
+  }
+
+  return {
+    eligible: reasonCodes.length === 0,
+    reasonCodes,
+    requiredMinTvlUsd,
+  };
+}
+
 function passesLendingOpportunitySizeGate(params: {
   stablecoinId: string;
   poolChain?: string | null;
@@ -516,26 +573,14 @@ function appendDeterministicAutoLending(params: {
 
     const pool = params.dlPools.find((entry) => entry.pool === poolId);
     if (!pool) continue;
-    if (isAutoLendingCollisionBlockedForStablecoin(stablecoinId, pool)) continue;
-
-    if (params.safetySnapshotAvailable) {
-      const safetyScore = params.safetyScores.get(stablecoinId)?.score ?? 0;
-      const bypassSafety = AUTO_LENDING_SAFETY_BYPASS_IDS.has(stablecoinId);
-      if (!bypassSafety && safetyScore < MIN_SAFETY_SCORE_FOR_YIELD) continue;
-    }
-
-    const requiredMinTvlUsd = getRequiredLendingOpportunityTvlUsd({
+    const eligibility = explainDeterministicAutoLendingEligibility({
       stablecoinId,
-      poolChain: pool.chain,
+      pool,
+      safetyScore: params.safetyScores.get(stablecoinId)?.score,
+      safetySnapshotAvailable: params.safetySnapshotAvailable,
       stablecoinSupplyById: params.stablecoinSupplyById,
     });
-
-    if (!meetsLendingPoolCoreEligibility(pool, {
-      allowlist: LENDING_PROTOCOL_ALLOWLIST,
-      minApy: MIN_LENDING_POOL_APY,
-      minTvlUsd: requiredMinTvlUsd,
-    })) continue;
-    if (isBlockedYieldOpportunitySource({ poolMeta: pool.poolMeta, symbol: pool.symbol })) continue;
+    if (!eligibility.eligible) continue;
 
     if (isAlreadyResolved(params.resolved, stablecoinId, poolId)) {
       continue;
