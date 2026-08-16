@@ -41,6 +41,7 @@ const accountableParamsSchema = z
       .optional(),
     riskMap: riskRecordSchema.optional(),
     renameMap: stringRecordSchema.optional(),
+    sourceKeyMap: stringRecordSchema.optional(),
     coinIdMap: stringRecordSchema.optional(),
     depTypeMap: depTypeRecordSchema.optional(),
     totalReservesExcludeBuckets: z.array(z.string().min(1)).optional(),

@@ -51,6 +51,7 @@ export type ReserveLiquidityHorizon = (typeof RESERVE_LIQUIDITY_HORIZON_VALUES)[
 const ReserveLiquidityHorizonSchema = z.enum(RESERVE_LIQUIDITY_HORIZON_VALUES);
 
 export interface ReserveSlice {
+  sourceKey?: string;
   name: string;
   pct: number;
   risk: ReserveRisk;
@@ -66,6 +67,12 @@ export interface ReserveSlice {
 }
 
 export const ReserveSliceSchema: z.ZodType<ReserveSlice> = z.object({
+  sourceKey: z.string()
+    .trim()
+    .min(3)
+    .max(160)
+    .regex(/^[a-z0-9][a-z0-9._-]*:[a-z0-9][a-z0-9._:/-]*$/)
+    .optional(),
   name: z.string(),
   pct: z.number().finite().positive().max(100),
   risk: ReserveRiskSchema,

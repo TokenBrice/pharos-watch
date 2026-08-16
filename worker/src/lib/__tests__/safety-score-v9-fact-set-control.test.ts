@@ -1391,5 +1391,9 @@ describe("Safety Score v9 exact base fact-set adapter — control and wrapper di
     expect(computeSafetyScoreV9ReserveExposureKey({ ...slice, pct: 50 })).toBe(
       computeSafetyScoreV9ReserveExposureKey(slice),
     );
+    const keyed = { ...slice, sourceKey: "fixture:alpha:treasury" };
+    expect(computeSafetyScoreV9ReserveExposureKey({ ...keyed, name: "Renamed treasury", pct: 5 })).toBe(
+      computeSafetyScoreV9ReserveExposureKey(keyed),
+    );
   });
 });

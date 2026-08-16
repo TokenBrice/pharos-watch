@@ -148,6 +148,7 @@ export function parsePositiveNumericLike(value: unknown): number | null {
 export function slicesFromPercentages(
   values: Array<{
     pct: number;
+    sourceKey?: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
@@ -173,6 +174,7 @@ export function slicesFromPercentages(
 
   return normalizeSlices(
     filtered.map((value) => ({
+      ...(value.sourceKey ? { sourceKey: value.sourceKey } : {}),
       name: value.name,
       pct: value.pct,
       risk: value.risk,
@@ -192,6 +194,7 @@ export function slicesFromPercentages(
 export function slicesFromValues(
   values: Array<{
     value: number;
+    sourceKey?: string;
     name: string;
     risk: ReserveSlice["risk"];
     coinId?: string;
@@ -207,6 +210,7 @@ export function slicesFromValues(
   if (total <= 0) return [];
 
   return normalizeSlices(filtered.map((value) => ({
+    ...(value.sourceKey ? { sourceKey: value.sourceKey } : {}),
     name: value.name,
     pct: (value.value / total) * 100,
     risk: value.risk,

@@ -24,6 +24,10 @@ export function CollateralQualityMethodologyCopy() {
       Detail-only <code className="text-xs bg-muted px-1 py-0.5 rounded">static-validated</code> and{" "}
       <code className="text-xs bg-muted px-1 py-0.5 rounded">weak-live-probe</code> feeds remain visible
       on reserve surfaces, but they never override curated collateral scoring.
+      A score-grade adapter can identify a source-owned reserve category with a stable source key. Reviewed metadata
+      joins only to a unique matching key and fails closed on key mismatches or duplicates; historical unkeyed rows
+      use a unique normalized-name compatibility match. The live percentage remains the scoring weight and is never
+      used to decide whether the category is the same reserve slice.
       Each reserve slice is classified into one of five risk tiers and the score is their weighted average.
       Direct ETH and canonical WETH slices share the same Very Low tier, while ETH liquid staking tokens
       remain Low.{" "}

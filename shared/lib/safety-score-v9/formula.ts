@@ -1274,6 +1274,7 @@ export function scoreV9InputWithCaps(
   } else if (
     finalScore !== null &&
     attributedGrade !== null &&
+    attributedGrade !== "NR" &&
     scoreBearingGates.danger.dangerOnlyGrades.includes(attributedGrade) &&
     adverseAttribution.length === 0
   ) {

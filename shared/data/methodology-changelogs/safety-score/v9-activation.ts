@@ -1,7 +1,25 @@
 import type { MethodologyChangelogEntry } from "@shared/lib/methodology-versions/base";
 
-export const SAFETY_SCORE_V9_POLICY_GATE_PROVENANCE: MethodologyChangelogEntry = {
+export const SAFETY_SCORE_V9_RESERVE_SLICE_IDENTITY: MethodologyChangelogEntry = {
   version: "9.21",
+  title: "Reserve classifications follow source identity, not daily weights",
+  date: "2026-08-16",
+  effectiveAt: 1786838400,
+  summary:
+    "A live reserve slice's percentage is now only a scoring weight, never part of the join that attaches reviewed asset class, obligor, liquidity, maturity, or dependency metadata. Adapters can emit a namespace-qualified stable source key; a keyed live row joins one-to-one by that exact key and fails closed on a missing or duplicate reviewed key. Historical unkeyed rows retain a unique normalized-name compatibility join.",
+  impact: [
+    "Ordinary issuer rebalancing can no longer turn an unchanged reserve category into bounded unknown merely because its live percentage moved more than a fixed tolerance",
+    "Circle USDC and EURC, Re Protocol reUSD, and Noon's USN now carry adapter-owned source keys on both live and reviewed rows; the same matched identities drive Backing classifications and dependency compilation",
+    "On the current USDC publication inputs, the two drifted Treasury and systemically-important-bank rows leave the bounded 35 floor; the unchanged-pillar counterfactual restores Backing from 68.39 to about 90.02 and the public score from 79/B+ to 89/A+",
+    "Explicit-key mismatches and collisions remain unclassified, newly introduced source buckets cannot inherit metadata by label accident, and live percentages remain the only weights used by scoring",
+    "Pillar weights, reserve quality scores, bounded-unknown floors, score aggregation, structural caps, and grade thresholds are unchanged",
+  ],
+  commits: [],
+  reconstructed: false,
+};
+
+export const SAFETY_SCORE_V9_POLICY_GATE_PROVENANCE: MethodologyChangelogEntry = {
+  version: "9.22",
   title: "Every score-bearing gate rotates the methodology-policy digest",
   date: "2026-08-16",
   effectiveAt: 1786838400,

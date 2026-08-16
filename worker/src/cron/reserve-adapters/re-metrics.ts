@@ -293,6 +293,7 @@ export function adaptReMetrics(html: string): AdapterResult {
       }
       return {
         value,
+        sourceKey: `re-metrics:token:${symbol}`,
         name: config?.name ?? symbol,
         risk: config?.risk ?? "medium",
         ...(config?.coinId ? { coinId: config.coinId } : {}),
@@ -302,6 +303,7 @@ export function adaptReMetrics(html: string): AdapterResult {
     ...(offchainCapitalUsd != null && Number.isFinite(offchainCapitalUsd) && offchainCapitalUsd > 0
       ? [{
           value: offchainCapitalUsd,
+          sourceKey: "re-metrics:offchain-capital",
           name: "Off-chain insurance / reinsurance capital",
           risk: "medium" as const,
         }]

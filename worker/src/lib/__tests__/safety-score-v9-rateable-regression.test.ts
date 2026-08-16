@@ -24,5 +24,8 @@ describe("Safety Score v9 rateable regression fixture", () => {
       expect(card.grade, `${card.id} must stay rateable (got NR: ${JSON.stringify(card.nrReasons)})`).not.toBe("NR");
       expect(card.score).not.toBeNull();
     }
+    const usdc = cards.find((card) => card.id === "usdc-circle")!;
+    expect(usdc.pillars.backing.score).toBeCloseTo(90.018751, 6);
+    expect(usdc.reasonCodes).not.toContain("material-reserve-slice-unstructured");
   });
 });
