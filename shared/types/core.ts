@@ -96,14 +96,7 @@ export const PEG_CURRENCY_VALUES = [
 ] as const;
 export type PegCurrency = (typeof PEG_CURRENCY_VALUES)[number];
 
-export interface StablecoinFlags {
-  backing: BackingType;
-  pegCurrency: PegCurrency;
-  governance: GovernanceType;
-  yieldBearing: boolean;
-  rwa: boolean;
-  navToken: boolean;
-}
+export type StablecoinFlags = import("./stablecoin-meta-schemas").StablecoinFlags;
 
 export const PROOF_OF_RESERVES_TYPE_VALUES = ["independent-audit", "real-time", "self-reported"] as const;
 export type ProofOfReservesType = (typeof PROOF_OF_RESERVES_TYPE_VALUES)[number];
@@ -143,32 +136,9 @@ export type ProofAssuranceScope = (typeof PROOF_ASSURANCE_SCOPE_VALUES)[number];
 export const LIABILITY_RECONCILIATION_VALUES = ["full", "partial", "none", "unknown"] as const;
 export type LiabilityReconciliation = (typeof LIABILITY_RECONCILIATION_VALUES)[number];
 
-export interface ProofOfReservesLatestReport {
-  periodEnd: string;
-  publishedAt: string;
-  assuranceMethod: ProofAssuranceMethod;
-  scope: ProofAssuranceScope;
-  liabilityReconciliation: LiabilityReconciliation;
-  reviewer: string;
-  confidence: ResearchReviewConfidence;
-  sources: StablecoinLink[];
-}
-
-export interface ProofOfReserves {
-  type: ProofOfReservesType;
-  url: string;
-  provider?: string;
-  attestorTier?: AttestorTier;
-  cadence?: ProofOfReservesCadence;
-  attestorJurisdiction?: string;
-  attestorLicense?: string;
-  latestReport?: ProofOfReservesLatestReport;
-}
-
-export interface StablecoinLink {
-  label: string;
-  url: string;
-}
+export type ProofOfReservesLatestReport = import("./stablecoin-meta-schemas").ProofOfReservesLatestReport;
+export type ProofOfReserves = import("./stablecoin-meta-schemas").ProofOfReserves;
+export type StablecoinLink = import("./stablecoin-meta-schemas").StablecoinLink;
 
 export const RESEARCH_REVIEW_CONFIDENCE_VALUES = ["verified", "probable", "manual-review", "unknown"] as const;
 export type ResearchReviewConfidence = (typeof RESEARCH_REVIEW_CONFIDENCE_VALUES)[number];
@@ -177,13 +147,7 @@ export const MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES = ["resolved", "unres
 export type MechanismArchetypeReviewDisposition = (typeof MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES)[number];
 
 /** Review record for a direct mechanism classification or a reason-coded unresolved design. */
-export interface MechanismArchetypeReview {
-  disposition: MechanismArchetypeReviewDisposition;
-  reviewedAt: string;
-  reviewer: string;
-  rationale: string;
-  sources: StablecoinLink[];
-}
+export type MechanismArchetypeReview = import("./stablecoin-meta-schemas").MechanismArchetypeReview;
 
 export const RESERVE_REVIEW_SCOPE_VALUES = ["full-composition", "dependency-relationships", "selected-slices"] as const;
 export type ReserveReviewScope = (typeof RESERVE_REVIEW_SCOPE_VALUES)[number];
@@ -746,6 +710,8 @@ export const ORACLE_RISK_BRANCH_APPLICABILITY_VALUES = [
   "unresolved",
 ] as const;
 export type OracleRiskBranchApplicability = (typeof ORACLE_RISK_BRANCH_APPLICABILITY_VALUES)[number];
+export const ORACLE_RISK_LIQUIDATION_STATE_VALUES = ["callable", "uncallable", "unknown"] as const;
+export type OracleRiskLiquidationState = (typeof ORACLE_RISK_LIQUIDATION_STATE_VALUES)[number];
 
 /** Reviewed scope of the price-authority review. `not-applicable` is neutral,
  * `top-level-only` scores a price-sensitive control without liquidation rows,
@@ -779,31 +745,7 @@ export interface OracleRiskCollateralParameter {
   note?: string;
 }
 
-export interface OracleRiskBranch {
-  id: string;
-  label: string;
-  tier: OracleRiskTier;
-  summary: string;
-  collateralAssets?: string[];
-  chains?: string[];
-  feeds?: OracleRiskFeed[];
-  fallbackBehavior?: string;
-  observedAt?: string;
-  observedBlock?: number;
-  collateralParameters?: OracleRiskCollateralParameter[];
-  liquidationMechanism?: string;
-  liquidationDelaySec?: number;
-  backstop?: string;
-  shutdownOrBadDebtBehavior?: string;
-  /**
-   * Measured share of outstanding debt attributable to this branch's market, in
-   * percent (0-100). Undefined means the share is unmeasured: the V9 oracle
-   * branch-materiality lever then treats the branch as material (fail-closed).
-   */
-  debtSharePct?: number;
-  failureDomainKeys?: string[];
-  sources?: StablecoinLink[];
-}
+export type OracleRiskBranch = import("./stablecoin-meta-schemas").OracleRiskBranch;
 
 export interface OracleRiskProfile {
   tier: OracleRiskTier;

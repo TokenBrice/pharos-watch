@@ -15,7 +15,6 @@ import { ExitRouteObservationHistorySchema } from "./exit-route";
 import {
   V9EvidenceResponsibilitySchema,
   V9FactStatusV2Schema,
-  V9FailureDomainRefSchema,
   V9ObservationStateSchema,
   canonicalArrayBy,
   type V9EvidenceResponsibility,
@@ -27,6 +26,37 @@ import {
 } from "./safety-score-v9-fact-primitives";
 import { VARIANT_KIND_VALUES } from "./core";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
+import {
+  BaseInputGenerationIdSchema,
+  CanonicalChainIdSchema,
+  CanonicalFailureDomainsSchema,
+  CanonicalStringArraySchema,
+  CanonicalTextSchema,
+  FractionSchema,
+  NonNegativeUsdSchema,
+  PositiveFractionSchema,
+  Sha256Schema,
+  UnixSecondsSchema,
+  V9ClaimImpairmentSchema,
+  V9ControlCapKindSchema,
+  V9ControlCapUnitSchema,
+  V9ControlCapabilitySchema,
+  V9ControlKindSchema,
+  V9ControlScopeSchema,
+  V9EconomicLossScopeSchema,
+  V9MechanismExitDispositionSchema,
+  V9MechanismExitFactKeySchema,
+  V9MechanismQualitySchema,
+  V9RouteCoverageClassSchema,
+  V9RouteExecutionCertaintySchema,
+  V9RouteExecutionModelSchema,
+  V9RouteHolderAccessSchema,
+  V9RouteLaneSchema,
+  V9RouteOutputKindSchema,
+  V9RouteSettlementModelSchema,
+  V9RouteValuationBasisSchema,
+  V9RouteValuationConfidenceSchema,
+} from "./safety-score-v9-fact-input-primitives";
 
 export const V9ResolvedMechanismArchetypeSchema = z.union([
   z.enum(MECHANISM_ARCHETYPE_VALUES),
@@ -49,22 +79,6 @@ export type {
   V9ObservationState,
 };
 
-const Sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
-const UnixSecondsSchema = z.number().int().nonnegative();
-const FractionSchema = z.number().finite().min(0).max(1);
-const PositiveFractionSchema = z.number().finite().positive().max(1);
-const NonNegativeUsdSchema = z.number().finite().nonnegative();
-const BaseInputGenerationIdSchema = z.string().regex(/^report-cards-input:v1:[a-f0-9]{64}$/);
-const CanonicalTextSchema = z
-  .string()
-  .min(1)
-  .refine((value) => value.trim() === value, "Value must not have leading or trailing whitespace");
-const CanonicalChainIdSchema = CanonicalTextSchema.refine(
-  (value) => /^[a-z0-9][a-z0-9._:-]*$/.test(value),
-  "Chain ID must be a canonical lowercase identifier",
-);
-
-const CanonicalStringArraySchema = canonicalArrayBy(CanonicalTextSchema, (value) => value);
 
 const V9EvidenceFreshnessSchema = z
   .object({
@@ -191,10 +205,6 @@ export const V9FactGapV3Schema = z
   .superRefine(validateFactGapPath);
 export type V9FactGapV3 = z.infer<typeof V9FactGapV3Schema>;
 
-const CanonicalFailureDomainsSchema = canonicalArrayBy(
-  V9FailureDomainRefSchema,
-  (domain) => `${domain.kind}:${domain.key}`,
-);
 
 const V9EffectiveDependencyEdgeV2Schema = z
   .object({
@@ -466,7 +476,7 @@ const CanonicalCapacityCurveSchema = canonicalArrayBy(
 
 const V9RouteOutputValuationV2Schema = z
   .object({
-    basis: z.enum(["price", "nav", "fx", "reviewed-par"]),
+    basis: V9RouteValuationBasisSchema,
     referenceAssetKey: CanonicalTextSchema,
     unitValueUsd: z.number().finite().positive(),
     expectedUnitValueUsd: z.number().finite().positive(),
@@ -475,7 +485,7 @@ const V9RouteOutputValuationV2Schema = z
     sourceGenerationId: CanonicalTextSchema,
     observedAtSec: UnixSecondsSchema,
     asOfSec: UnixSecondsSchema,
-    confidence: z.enum(["high", "medium", "low", "unknown"]),
+    confidence: V9RouteValuationConfidenceSchema,
     freshness: V9EvidenceFreshnessSchema,
     evidenceRefIds: CanonicalStringArraySchema,
   })
@@ -490,7 +500,7 @@ const V9RouteOutputValuationV2Schema = z
 const V9RouteOutputV2Schema = z
   .object({
     status: V9FactStatusV2Schema,
-    kind: z.enum(["tracked-stablecoin", "fiat", "collateral", "basket", "unknown"]),
+    kind: z.union([V9RouteOutputKindSchema, z.literal("unknown")]),
     assetKeys: CanonicalStringArraySchema,
     basketWeights: canonicalArrayBy(
       z.object({ assetKey: CanonicalTextSchema, weight: PositiveFractionSchema }).strict(),
@@ -531,7 +541,7 @@ const V9ExitRouteFactV2Schema = z
   .object({
     routeKey: CanonicalTextSchema,
     routeId: CanonicalTextSchema,
-    lane: z.enum(["dex", "redemption"]),
+    lane: V9RouteLaneSchema,
     sourceGenerationId: CanonicalTextSchema,
     routeFamily: z.enum([
       "dex-amm",
@@ -540,24 +550,9 @@ const V9ExitRouteFactV2Schema = z
       "protocol-redemption",
       "eventual-redemption",
     ]),
-    holderAccess: z.enum([
-      "permissionless",
-      "retail-open",
-      "institutional-eligible",
-      "allowlisted",
-      "issuer-only",
-      "unknown",
-    ]),
-    executionModel: z.enum([
-      "atomic",
-      "deterministic",
-      "queued",
-      "discretionary",
-      "eventual",
-      "market-depth",
-      "unknown",
-    ]),
-    executionCertainty: z.enum(["guaranteed", "bounded", "conditional", "discretionary", "unknown"]),
+    holderAccess: V9RouteHolderAccessSchema,
+    executionModel: V9RouteExecutionModelSchema,
+    executionCertainty: V9RouteExecutionCertaintySchema,
     // Retained schema-v2 facts predate this field. Parse them conservatively;
     // current compilers still materialize the normalized value in their output.
     modelConfidence: z.enum(["high", "medium", "low"]).default("low"),
@@ -575,11 +570,11 @@ const V9ExitRouteFactV2Schema = z
       "onchain-contract-state",
       "manual-review",
     ]),
-    coverageClass: z.enum(["exact-complete", "exact-lower-bound", "diagnostic"]),
+    coverageClass: V9RouteCoverageClassSchema,
     /** Carried from the route observation: the reviewed fee is undisclosed, so the modeled capacity has no cost bound. */
     feeEvidence: z.literal("undisclosed-reviewed").optional(),
     capacityScoringHorizon: z.enum(["immediate", "daily", "queued", "eventual", "unknown"]).optional(),
-    settlementModel: z.enum(["atomic", "same-day", "bounded-delay", "queued", "eventual", "unknown"]),
+    settlementModel: V9RouteSettlementModelSchema,
     settlementSlaSec: z.number().int().nonnegative().nullable(),
     queueDepthUsd: z.number().finite().nonnegative().nullable().optional(),
     dailyLimitUsd: z.number().finite().nonnegative().nullable().optional(),
@@ -659,18 +654,6 @@ const V9ExitRouteFactV2Schema = z
   });
 export type V9ExitRouteFactV2 = z.infer<typeof V9ExitRouteFactV2Schema>;
 
-const V9ControlCapabilitySchema = z.enum([
-  "mint",
-  "burn",
-  "upgrade",
-  "freeze",
-  "seize",
-  "oracle-update",
-  "bridge-mint",
-  "custody-transfer",
-  "parameter-change",
-]);
-
 const V9DeploymentControlFactV2Schema = z
   .object({
     controlKey: CanonicalTextSchema,
@@ -679,24 +662,24 @@ const V9DeploymentControlFactV2Schema = z
     // Optional only for retained fact compatibility. Current compilers emit
     // the tracked native asset that owns a reused controller when reviewed.
     controllerAssetId: CanonicalTextSchema.nullable().optional(),
-    controlKind: z.enum(["mint", "upgrade", "custody", "oracle", "bridge", "freeze", "governance"]),
-    scope: z.enum(["global", "deployment", "exposure", "route"]),
+    controlKind: V9ControlKindSchema,
+    scope: V9ControlScopeSchema,
     status: V9FactStatusV2Schema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
     capSemantics: z
       .object({
-        kind: z.enum(["bounded", "raiseable", "unbounded", "not-applicable", "unknown"]),
+        kind: V9ControlCapKindSchema,
         bound: z
           .object({
             amount: z.number().finite().nonnegative(),
-            unit: z.enum(["token-units", "usd-notional", "supply-fraction"]),
+            unit: V9ControlCapUnitSchema,
           })
           .strict()
           .nullable(),
       })
       .strict(),
-    claimImpairment: z.enum(["none", "bounded", "unbounded", "unknown"]),
-    economicLossScope: z.enum(["access-only", "deployment", "reserve-claim", "global-claim", "unknown"]),
+    claimImpairment: V9ClaimImpairmentSchema,
+    economicLossScope: V9EconomicLossScopeSchema,
     authority: z
       .object({
         authorityKey: CanonicalTextSchema,
@@ -1271,9 +1254,9 @@ export type V9MechanismRiskReviewFactV2 = z.infer<typeof V9MechanismRiskReviewFa
 
 const V9MechanismExitFactV1Schema = z
   .object({
-    factKey: z.enum(["physical-redemption", "protocol-redemption"]),
-    disposition: z.enum(["supported", "issuer-undisclosed", "integration-missing", "method-unsupported"]),
-    quality: z.enum(["strong", "adequate", "limited", "weak", "failed"]).nullable(),
+    factKey: V9MechanismExitFactKeySchema,
+    disposition: V9MechanismExitDispositionSchema,
+    quality: V9MechanismQualitySchema.nullable(),
     evidenceRefIds: CanonicalStringArraySchema,
   })
   .strict()

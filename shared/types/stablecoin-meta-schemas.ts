@@ -18,20 +18,15 @@ import type {
   GeniusReference,
   Jurisdiction,
   LaunchMilestone,
-  MechanismArchetypeReview,
   MicaProfile,
   MintAuthorityControl,
   MintAuthorityDirectMintAbility,
   MintAuthorityProfile,
   MintAuthorityReview,
   MintAuthorityRouteChecks,
-  OracleRiskBranch,
   OracleRiskProfile,
   MintAuthoritySafeState,
-  ProofOfReserves,
   ReserveReview,
-  StablecoinFlags,
-  StablecoinLink,
   YieldConfig,
 } from "./core";
 import {
@@ -82,6 +77,7 @@ import {
   ORACLE_RISK_BRANCH_APPLICABILITY_VALUES,
   ORACLE_RISK_BRANCH_MODEL_VALUES,
   ORACLE_RISK_ROLE_VALUES,
+  ORACLE_RISK_LIQUIDATION_STATE_VALUES,
   ORACLE_RISK_TIER_VALUES,
   RESEARCH_REVIEW_CONFIDENCE_VALUES,
   RESERVE_NON_LINK_DISPOSITION_VALUES,
@@ -207,7 +203,7 @@ function hasText(value: string | null | undefined): boolean {
  * output is always the full flag set, so every generated aggregate and runtime
  * consumer still sees explicit values.
  */
-export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags, unknown> = z
+export const StablecoinFlagsSchema = z
   .object({
     backing: z.enum(BACKING_TYPE_VALUES),
     pegCurrency: z.enum(PEG_CURRENCY_VALUES).default("USD"),
@@ -218,14 +214,14 @@ export const StablecoinFlagsSchema: z.ZodType<StablecoinFlags, unknown> = z
   })
   .strict();
 
-export const StablecoinLinkSchema: z.ZodType<StablecoinLink> = z
+export const StablecoinLinkSchema = z
   .object({
     label: z.string(),
     url: HttpUrlSchema,
   })
   .strict();
 
-export const MechanismArchetypeReviewSchema: z.ZodType<MechanismArchetypeReview> = z
+export const MechanismArchetypeReviewSchema = z
   .object({
     disposition: z.enum(MECHANISM_ARCHETYPE_REVIEW_DISPOSITION_VALUES),
     reviewedAt: ReviewDateSchema,
@@ -235,7 +231,7 @@ export const MechanismArchetypeReviewSchema: z.ZodType<MechanismArchetypeReview>
   })
   .strict();
 
-export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
+export const ProofOfReservesSchema = z
   .object({
     type: z.enum(PROOF_OF_RESERVES_TYPE_VALUES),
     url: HttpUrlSchema,
@@ -279,7 +275,13 @@ export const ProofOfReservesSchema: z.ZodType<ProofOfReserves> = z
   })
   .strict();
 
-export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
+export type StablecoinFlags = z.infer<typeof StablecoinFlagsSchema>;
+export type StablecoinLink = z.infer<typeof StablecoinLinkSchema>;
+export type MechanismArchetypeReview = z.infer<typeof MechanismArchetypeReviewSchema>;
+export type ProofOfReserves = z.infer<typeof ProofOfReservesSchema>;
+export type ProofOfReservesLatestReport = NonNullable<ProofOfReserves["latestReport"]>;
+
+export const OracleRiskBranchSchema = z
   .object({
     id: z.string().min(1),
     label: z.string().min(1),
@@ -323,6 +325,8 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
       .min(1)
       .optional(),
     liquidationMechanism: z.string().min(12).optional(),
+    /** `uncallable` is distinct from a positive claim of zero-second liquidation. */
+    liquidationState: z.enum(ORACLE_RISK_LIQUIDATION_STATE_VALUES).optional(),
     liquidationDelaySec: z.number().finite().int().nonnegative().optional(),
     backstop: z.string().min(12).optional(),
     shutdownOrBadDebtBehavior: z.string().min(12).optional(),
@@ -349,6 +353,13 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
         path: ["observedAt"],
       });
     }
+    if (branch.liquidationState === "uncallable" && branch.liquidationDelaySec != null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "an uncallable liquidation path cannot claim a liquidation delay",
+        path: ["liquidationDelaySec"],
+      });
+    }
     if (branch.collateralAssets && branch.collateralParameters) {
       const parameterAssets = new Set(branch.collateralParameters.map((parameter) => parameter.asset));
       for (const asset of branch.collateralAssets) {
@@ -361,6 +372,8 @@ export const OracleRiskBranchSchema: z.ZodType<OracleRiskBranch> = z
       }
     }
   });
+
+export type OracleRiskBranch = z.infer<typeof OracleRiskBranchSchema>;
 
 export const OracleRiskProfileSchema: z.ZodType<OracleRiskProfile> = z
   .object({

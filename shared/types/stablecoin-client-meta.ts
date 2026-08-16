@@ -99,74 +99,6 @@ export type GeniusClientProfile = Pick<GeniusSourceProfile, (typeof GENIUS_CLIEN
 
 export type GeniusComplianceProfile = Pick<GeniusSourceProfile, (typeof GENIUS_COMPLIANCE_PROFILE_FIELDS)[number]>;
 
-/**
- * Slim projection of `StablecoinMeta` for client-side consumers.
- *
- * The full server-side `StablecoinMeta` carries ~50 fields including heavy
- * arrays (`contracts`, `dependencies`, `blacklistabilityReview`,
- * `featuredContent`, `obituary` text, etc.). This client type keeps only the fields
- * client surfaces actually read for routing, labels, filtering, basic
- * classification, reserve coverage summaries, mint-authority coverage
- * classification, compliance status labels, and portfolio exposure. Stablecoin
- * detail pages add page-specific full mint-authority summaries outside this
- * global registry so coverage growth does not inflate every route's client
- * chunk. GENIUS long-form compliance evidence is projected into a
- * compliance-route asset outside this global registry; source JSON remains the
- * canonical editorial record.
- *
- * Build pipeline: `scripts/build-data/build-client-registry.mjs` projects
- * `coins.generated.json` to a slim JSON consumed by
- * `shared/lib/stablecoins/client-registry.ts`. Any consumer that needs a
- * field NOT in this Pick must import from `@shared/lib/stablecoins/registry`
- * (the fat path) instead.
- */
-export type StablecoinClientMeta = Pick<
-  StablecoinMeta,
-  | "id"
-  | "name"
-  | "symbol"
-  | "oneLiner"
-  | "marketAvailability"
-  | "flags"
-  | "mechanismArchetype"
-  | "mechanismArchetypeReview"
-  | "implementationLaunchDate"
-  | "archetypeOverride"
-  | "geckoId"
-  | "protocolSlug"
-  | "variantOf"
-  | "variantKind"
-  | "status"
-  | "listingStatusReview"
-  | "tags"
-  | "frozenAt"
-  | "launchDate"
-  | "announcedDate"
-  | "expectedLaunchDate"
-  | "launchPhase"
-  | "milestones"
-  | "dateHistory"
-  | "commodityOunces"
-  | "infrastructures"
-  | "mica"
-  | "yieldConfig"
-  | "reserves"
-  | "collateralQuality"
-  | "custodyModel"
-> & {
-  /** Compact decision-ledger projection used by client aggregate filters. */
-  listingClass: ListingClass;
-  blacklistStatus?: BlacklistClientStatus;
-  genius?: GeniusClientProfile;
-  mintAuthoritySummary?: MintAuthorityCoverageSummary;
-  /**
-   * Adapter key derived from the server-only `liveReservesConfig`. Cross-coin
-   * client surfaces (`/coverage`) resolve the reserve display badge from this
-   * key without shipping the full live reserve config (~128 KB) to the client.
-   */
-  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
-};
-
 /** Canonical ordered list of source fields copied into the client projection. */
 export const STABLECOIN_CLIENT_META_FIELDS = [
   "id",
@@ -201,4 +133,21 @@ export const STABLECOIN_CLIENT_META_FIELDS = [
   "reserves",
   "collateralQuality",
   "custodyModel",
-] as const satisfies ReadonlyArray<keyof StablecoinClientMeta>;
+] as const satisfies ReadonlyArray<keyof StablecoinMeta>;
+
+type StablecoinClientSourceField = Exclude<(typeof STABLECOIN_CLIENT_META_FIELDS)[number], "genius">;
+
+/**
+ * Slim projection of `StablecoinMeta` for client-side consumers. The runtime
+ * projection tuple above is authoritative; this type is derived from it so a
+ * generator field cannot drift from the promised client contract.
+ */
+export type StablecoinClientMeta = Pick<StablecoinMeta, StablecoinClientSourceField> & {
+  /** Compact decision-ledger projection used by client aggregate filters. */
+  listingClass: ListingClass;
+  blacklistStatus?: BlacklistClientStatus;
+  genius?: GeniusClientProfile;
+  mintAuthoritySummary?: MintAuthorityCoverageSummary;
+  /** Adapter key derived from the server-only `liveReservesConfig`. */
+  liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+};

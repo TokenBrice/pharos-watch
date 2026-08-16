@@ -6,6 +6,7 @@ import {
   STABLECOIN_STATUS_VALUES,
   type StablecoinMeta,
 } from "../core";
+import { OracleRiskBranchSchema } from "../stablecoin-meta-schemas";
 
 function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
   return {
@@ -63,6 +64,31 @@ describe("StablecoinMeta", () => {
       },
     };
     expect(meta.status).toBe("frozen");
+  });
+});
+
+describe("OracleRiskBranch liquidation state", () => {
+  const branch = {
+    id: "dead-oracle",
+    label: "Dead oracle market",
+    tier: "opaque-or-unknown" as const,
+    summary: "The liquidation path was reviewed against deployed contracts.",
+  };
+
+  it("represents a reviewed uncallable path without pretending zero-second liquidation", () => {
+    expect(OracleRiskBranchSchema.parse({ ...branch, liquidationState: "uncallable" })).toMatchObject({
+      liquidationState: "uncallable",
+    });
+  });
+
+  it("rejects a liquidation delay on an uncallable path", () => {
+    expect(
+      OracleRiskBranchSchema.safeParse({
+        ...branch,
+        liquidationState: "uncallable",
+        liquidationDelaySec: 0,
+      }).success,
+    ).toBe(false);
   });
 });
 
