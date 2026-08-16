@@ -56,6 +56,7 @@
     "worker/src/cron/depeg-resolver/utils.ts": 100,
     "worker/src/lib/depeg-resolver-incident-store.ts": 93.5,
     "worker/src/lib/depeg-resolver-publication-store.ts": 87.1,
+    "worker/src/lib/depeg-resolver-review-response.ts": 100,
     "worker/src/cron/dews/persistence.ts": 81.2,
     "worker/src/cron/dews/scoring.ts": 87.1,
     "worker/src/cron/dews/source-state.ts": 100,

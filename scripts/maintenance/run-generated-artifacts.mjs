@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createExecutionUnit, runParallelExecutionUnits, runShellCommand } from "../lib/command-runner.mjs";
+import { createExecutionUnit, runParallelExecutionUnits, runShellCommand } from "../lib/command-runner.mts";
 import { buildGeneratedArtifactPhases } from "../lib/automation-registry.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 

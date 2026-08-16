@@ -5,7 +5,7 @@ import {
   runExecutionUnit,
   runParallelExecutionUnits,
   runShellCommand,
-} from "../lib/command-runner.mjs";
+} from "../lib/command-runner.mts";
 
 afterEach(() => {
   vi.restoreAllMocks();

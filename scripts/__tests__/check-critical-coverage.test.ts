@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   captureProcessExit,
@@ -273,6 +274,14 @@ describe("critical coverage changed-file detection", () => {
 
     expect(validateCriticalCoverageWaiverMetadata(CRITICAL_COVERAGE_WAIVERS, { candidateFiles: candidates })).toEqual([]);
     expect(findCriticalCoverageCandidatesMissingEnrollment(candidates)).toEqual([]);
+  });
+
+  it("keeps every critical file represented in the checked-in ratchet baseline", () => {
+    const baseline = JSON.parse(
+      readFileSync(new URL("../../.ci/critical-coverage-baseline.json", import.meta.url), "utf8"),
+    ) as { files: Record<string, unknown> };
+
+    expect(CRITICAL_FILES.filter((file) => !Number.isFinite(baseline.files[file]))).toEqual([]);
   });
 
   it("ratchets all critical files when CRITICAL_COVERAGE_RATCHET_ALL is enabled", () => {

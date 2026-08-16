@@ -8,15 +8,41 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx"]);
 const DEFAULT_ROOTS = ["worker/src/api", "worker/src/cron", "worker/src/lib"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
-/** @type {Set<string>} */
-const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set();
+const KNOWN_FETCH_BODY_TIMEOUT_DEBT = new Set<string>();
 
-function normalizeRelPath(path) {
+interface FetchBodyTimeoutViolation {
+  file: string;
+  fetchLine: number;
+  bodyLine: number;
+  variable: string;
+  method: string;
+  assignmentText: string;
+  bodyReadText: string;
+}
+
+interface TrackedFetchAssignment {
+  name: string;
+  line: number;
+  assignmentText: string;
+}
+
+interface ArrayItem {
+  text: string;
+  start: number;
+}
+
+interface FetchBodyTimeoutReport {
+  violations: FetchBodyTimeoutViolation[];
+  unexpected: FetchBodyTimeoutViolation[];
+  staleDebt: string[];
+}
+
+function normalizeRelPath(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
-function collectScanFiles(cwd, roots) {
-  const files = [];
+function collectScanFiles(cwd: string, roots: readonly string[]): string[] {
+  const files: string[] = [];
   for (const root of roots) {
     const absoluteRoot = resolve(cwd, root);
     if (!existsSync(absoluteRoot)) continue;
@@ -28,15 +54,15 @@ function collectScanFiles(cwd, roots) {
     .sort();
 }
 
-export function makeViolationKey(violation) {
+export function makeViolationKey(violation: FetchBodyTimeoutViolation): string {
   return `${violation.file}::${violation.assignmentText}::${violation.bodyReadText}`;
 }
 
-function escapeRegExp(value) {
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function collectFetchWithRetryCallees(lines) {
+function collectFetchWithRetryCallees(lines: readonly string[]): Set<string> {
   const callees = new Set(["fetchWithRetry"]);
   for (const line of lines) {
     const trimmed = line.trim();
@@ -56,13 +82,13 @@ function collectFetchWithRetryCallees(lines) {
   return callees;
 }
 
-function fetchWithRetryCalleePattern(callees) {
+function fetchWithRetryCalleePattern(callees: ReadonlySet<string>): RegExp {
   const names = [...callees].map(escapeRegExp).join("|");
   // eslint-disable-next-line security/detect-non-literal-regexp
   return new RegExp(`(?:^|[^\\w$])(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
 }
 
-function assignmentPattern(callees, declaration) {
+function assignmentPattern(callees: ReadonlySet<string>, declaration: boolean): RegExp {
   const names = [...callees].map(escapeRegExp).join("|");
   const prefix = declaration
     ? "\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*await\\s+"
@@ -71,7 +97,7 @@ function assignmentPattern(callees, declaration) {
   return new RegExp(`${prefix}(?:[A-Za-z_$][\\w$]*\\s*\\.\\s*)*(?:${names})\\s*\\(`);
 }
 
-function lineForOffset(lineStarts, offset) {
+function lineForOffset(lineStarts: readonly number[], offset: number): number {
   let low = 0;
   let high = lineStarts.length - 1;
   while (low <= high) {
@@ -85,7 +111,7 @@ function lineForOffset(lineStarts, offset) {
   return high + 1;
 }
 
-function computeLineStarts(source) {
+function computeLineStarts(source: string): number[] {
   const starts = [0];
   for (let index = 0; index < source.length; index++) {
     if (source[index] === "\n") starts.push(index + 1);
@@ -93,9 +119,9 @@ function computeLineStarts(source) {
   return starts;
 }
 
-function findMatchingBracket(source, openIndex) {
+function findMatchingBracket(source: string, openIndex: number): number {
   let depth = 0;
-  let quote = null;
+  let quote: string | null = null;
   let escaped = false;
   for (let index = openIndex; index < source.length; index++) {
     const char = source[index];
@@ -122,13 +148,13 @@ function findMatchingBracket(source, openIndex) {
   return -1;
 }
 
-function splitTopLevelArrayItems(source, openIndex, closeIndex) {
-  const items = [];
+function splitTopLevelArrayItems(source: string, openIndex: number, closeIndex: number): ArrayItem[] {
+  const items: ArrayItem[] = [];
   let itemStart = openIndex + 1;
   let parenDepth = 0;
   let bracketDepth = 0;
   let braceDepth = 0;
-  let quote = null;
+  let quote: string | null = null;
   let escaped = false;
 
   for (let index = openIndex + 1; index < closeIndex; index++) {
@@ -165,8 +191,12 @@ function splitTopLevelArrayItems(source, openIndex, closeIndex) {
   return items;
 }
 
-function trackDestructuredPromiseAllAssignments(source, lineStarts, callees) {
-  const tracked = [];
+function trackDestructuredPromiseAllAssignments(
+  source: string,
+  lineStarts: readonly number[],
+  callees: ReadonlySet<string>,
+): TrackedFetchAssignment[] {
+  const tracked: TrackedFetchAssignment[] = [];
   const fetchCallPattern = fetchWithRetryCalleePattern(callees);
   const promiseAllPattern = /\b(?:const|let|var)\s*\[([^\]]+)]\s*=\s*await\s+Promise\.all\s*\(\s*\[/g;
   let match;
@@ -203,14 +233,17 @@ function trackDestructuredPromiseAllAssignments(source, lineStarts, callees) {
   return tracked;
 }
 
-export function findFetchBodyTimeoutViolations(source, file = "<source>") {
+export function findFetchBodyTimeoutViolations(
+  source: string,
+  file = "<source>",
+): FetchBodyTimeoutViolation[] {
   const lines = source.split(/\r?\n/g);
   const lineStarts = computeLineStarts(source);
   const callees = collectFetchWithRetryCallees(lines);
   const declarationPattern = assignmentPattern(callees, true);
   const reassignmentPattern = assignmentPattern(callees, false);
   const tracked = trackDestructuredPromiseAllAssignments(source, lineStarts, callees);
-  const violations = [];
+  const violations: FetchBodyTimeoutViolation[] = [];
 
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index] ?? "";
@@ -258,8 +291,12 @@ export function scanFetchBodyTimeouts({
   cwd = process.cwd(),
   roots = DEFAULT_ROOTS,
   knownDebt = KNOWN_FETCH_BODY_TIMEOUT_DEBT,
-} = {}) {
-  const violations = [];
+}: {
+  cwd?: string;
+  roots?: readonly string[];
+  knownDebt?: ReadonlySet<string>;
+} = {}): FetchBodyTimeoutReport {
+  const violations: FetchBodyTimeoutViolation[] = [];
   for (const file of collectScanFiles(cwd, roots)) {
     const source = readFileSync(resolve(cwd, file), "utf8");
     violations.push(...findFetchBodyTimeoutViolations(source, file));
@@ -271,7 +308,7 @@ export function scanFetchBodyTimeouts({
   return { violations, unexpected, staleDebt };
 }
 
-export function main() {
+export function main(): number {
   const report = scanFetchBodyTimeouts();
   if (process.argv.includes("--print-baseline")) {
     for (const violation of report.violations) {

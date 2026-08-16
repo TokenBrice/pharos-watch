@@ -36,8 +36,8 @@ export function mockExecFileSync(impl: TestExecFileSync): typeof execFileSync {
   return impl as unknown as typeof execFileSync;
 }
 
-export function mockCommandRunner(impl: TestCommandRunner): typeof import("../lib/command-runner.mjs").runShellCommand {
-  return impl as unknown as typeof import("../lib/command-runner.mjs").runShellCommand;
+export function mockCommandRunner(impl: TestCommandRunner): typeof import("../lib/command-runner.mts").runShellCommand {
+  return impl as unknown as typeof import("../lib/command-runner.mts").runShellCommand;
 }
 
 export function mockConsole(impl: Partial<Pick<Console, "error" | "log" | "warn">>): Console {

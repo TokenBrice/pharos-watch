@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   collectTableInventory,
   scanTablePrimitives,
-} from "../ci/check-table-primitives.mjs";
+} from "../ci/check-table-primitives.ts";
 
 let tempDirs: string[] = [];
 

@@ -1,15 +1,58 @@
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
-/** @typedef {string | { cmd: string }} RunnerCommand */
-/** @typedef {{ status: number, aborted: boolean }} CommandResult */
-/** @typedef {(cmd: string, extraEnv?: Record<string, string>, options?: { signal?: AbortSignal }) => number | CommandResult | Promise<number | CommandResult>} CommandImplementation */
+export type RunnerCommand = string | { cmd: string };
 
-/** @template T @param {T[]} commands @param {Record<string, unknown>} [metadata] */
-export function createExecutionUnit(commands, metadata = {}) {
+export interface CommandResult {
+  status: number;
+  aborted: boolean;
+}
+
+export interface ExecutionResult extends CommandResult {
+  failedCmd: string | null;
+}
+
+export type CommandImplementation = (
+  cmd: string,
+  extraEnv?: Record<string, string>,
+  options?: { signal?: AbortSignal },
+) => number | CommandResult | Promise<number | CommandResult>;
+
+interface ExecutionOptions<TCommand extends RunnerCommand> {
+  getCommandEnv?: (command: TCommand) => Record<string, string>;
+  getCommandText?: (command: TCommand) => string;
+  label?: string;
+  runCommandImpl?: CommandImplementation;
+  signal?: AbortSignal;
+}
+
+interface ParallelExecutionOptions<TCommand extends RunnerCommand> extends Omit<ExecutionOptions<TCommand>, "signal"> {
+  continueOnError?: boolean;
+  maxParallel?: number;
+}
+
+type ExecutionUnit<TCommand extends RunnerCommand = RunnerCommand> = {
+  commands: TCommand[];
+};
+
+type ExecutionUnitResult<TUnit extends ExecutionUnit> = ExecutionResult & {
+  durationMs: number;
+  index: number;
+  unit: TUnit;
+};
+
+interface ParallelExecutionResult<TUnit extends ExecutionUnit> extends ExecutionResult {
+  failures: Array<ExecutionUnitResult<TUnit>>;
+  results: Array<ExecutionUnitResult<TUnit>>;
+}
+
+export function createExecutionUnit<
+  TCommand extends RunnerCommand,
+  TMetadata extends Record<string, unknown> = Record<string, never>,
+>(commands: TCommand[], metadata = {} as TMetadata): TMetadata & ExecutionUnit<TCommand> {
   return { ...metadata, commands };
 }
 
-function getCommandText(command) {
+function getCommandText(command: RunnerCommand): string {
   if (typeof command === "string") {
     return command;
   }
@@ -20,7 +63,7 @@ function getCommandText(command) {
   throw new Error("Expected command string or object with a cmd string.");
 }
 
-function normalizeCommandResult(result) {
+function normalizeCommandResult(result: number | CommandResult): CommandResult {
   if (typeof result === "number") {
     return { status: result, aborted: false };
   }
@@ -30,7 +73,7 @@ function normalizeCommandResult(result) {
   };
 }
 
-function killProcessGroup(child, signal) {
+function killProcessGroup(child: ChildProcess, signal: NodeJS.Signals): void {
   if (!child.pid) {
     return;
   }
@@ -46,8 +89,12 @@ function killProcessGroup(child, signal) {
   }
 }
 
-export function runShellCommand(cmd, extraEnv = {}, { signal } = {}) {
-  return new Promise((resolve) => {
+export function runShellCommand(
+  cmd: string,
+  extraEnv: Record<string, string> = {},
+  { signal }: { signal?: AbortSignal } = {},
+): Promise<CommandResult> {
+  return new Promise<CommandResult>((resolve) => {
     if (signal?.aborted) {
       resolve({ status: 130, aborted: true });
       return;
@@ -63,7 +110,7 @@ export function runShellCommand(cmd, extraEnv = {}, { signal } = {}) {
     });
 
     let aborted = false;
-    let killTimer;
+    let killTimer: NodeJS.Timeout | undefined;
     const abort = () => {
       aborted = true;
       killProcessGroup(child, "SIGTERM");
@@ -89,26 +136,16 @@ export function runShellCommand(cmd, extraEnv = {}, { signal } = {}) {
   });
 }
 
-/**
- * @param {{ commands: RunnerCommand[] }} unit
- * @param {{
- *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
- *   getCommandText?: (command: RunnerCommand) => string,
- *   label?: string,
- *   runCommandImpl?: CommandImplementation,
- *   signal?: AbortSignal,
- * }} [options]
- */
-export async function runExecutionUnit(
-  unit,
+export async function runExecutionUnit<TCommand extends RunnerCommand>(
+  unit: ExecutionUnit<TCommand>,
   {
     getCommandEnv = () => ({}),
     getCommandText: getUnitCommandText = getCommandText,
     label,
     runCommandImpl = runShellCommand,
     signal,
-  } = {},
-) {
+  }: ExecutionOptions<TCommand> = {},
+): Promise<ExecutionResult> {
   for (const command of unit.commands) {
     const cmd = getUnitCommandText(command);
     if (signal?.aborted) {
@@ -127,31 +164,22 @@ export async function runExecutionUnit(
   return { status: 0, failedCmd: null, aborted: false };
 }
 
-function reportFailedCommand(result, label) {
+function reportFailedCommand(result: ExecutionResult, label?: string): void {
   if (result.aborted) {
     return;
   }
   console.error(`[${label}] FAILED: ${result.failedCmd} exited with status ${result.status}`);
 }
 
-/**
- * @param {Array<Array<{ commands: RunnerCommand[] }>>} batches
- * @param {{
- *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
- *   getCommandText?: (command: RunnerCommand) => string,
- *   label?: string,
- *   runCommandImpl?: CommandImplementation,
- * }} [options]
- */
-export async function runCommandBatches(
-  batches,
+export async function runCommandBatches<TCommand extends RunnerCommand>(
+  batches: Array<Array<ExecutionUnit<TCommand>>>,
   {
     getCommandEnv = () => ({}),
     getCommandText: getBatchCommandText = getCommandText,
     label,
     runCommandImpl = runShellCommand,
-  } = {},
-) {
+  }: Omit<ExecutionOptions<TCommand>, "signal"> = {},
+): Promise<ExecutionResult> {
   for (const batch of batches) {
     if (batch.length === 1) {
       const result = await runExecutionUnit(batch[0], {
@@ -200,19 +228,11 @@ export async function runCommandBatches(
   return { status: 0, failedCmd: null, aborted: false };
 }
 
-/**
- * @param {Array<{ commands: RunnerCommand[], [key: string]: unknown }>} units
- * @param {{
- *   continueOnError?: boolean,
- *   getCommandEnv?: (command: RunnerCommand) => Record<string, string>,
- *   getCommandText?: (command: RunnerCommand) => string,
- *   label?: string,
- *   maxParallel?: number,
- *   runCommandImpl?: CommandImplementation,
- * }} [options]
- */
-export async function runParallelExecutionUnits(
-  units,
+export async function runParallelExecutionUnits<
+  TCommand extends RunnerCommand,
+  TUnit extends ExecutionUnit<TCommand>,
+>(
+  units: TUnit[],
   {
     continueOnError = false,
     getCommandEnv = () => ({}),
@@ -220,20 +240,20 @@ export async function runParallelExecutionUnits(
     label,
     maxParallel = units.length,
     runCommandImpl = runShellCommand,
-  } = {},
-) {
+  }: ParallelExecutionOptions<TCommand> = {},
+): Promise<ParallelExecutionResult<TUnit>> {
   if (units.length === 0) {
     return { status: 0, failedCmd: null, aborted: false, failures: [], results: [] };
   }
 
   const concurrency = Math.max(1, Math.min(maxParallel, units.length));
-  const controllers = new Set();
-  const failures = [];
-  const results = new Array(units.length);
+  const controllers = new Set<AbortController>();
+  const failures: Array<ExecutionUnitResult<TUnit>> = [];
+  const results: Array<ExecutionUnitResult<TUnit> | undefined> = new Array(units.length);
   let nextIndex = 0;
   let aborting = false;
 
-  async function runNext() {
+  async function runNext(): Promise<void> {
     while (nextIndex < units.length && (continueOnError || !aborting)) {
       const index = nextIndex;
       const unit = units[index];
@@ -283,7 +303,7 @@ export async function runParallelExecutionUnits(
       failedCmd: first.failedCmd,
       aborted: false,
       failures,
-      results: results.filter(Boolean),
+      results: results.filter((result): result is ExecutionUnitResult<TUnit> => result != null),
     };
   }
 
@@ -293,6 +313,6 @@ export async function runParallelExecutionUnits(
     failedCmd: firstAborted?.failedCmd ?? null,
     aborted: firstAborted?.aborted ?? false,
     failures,
-    results: results.filter(Boolean),
+    results: results.filter((result): result is ExecutionUnitResult<TUnit> => result != null),
   };
 }
