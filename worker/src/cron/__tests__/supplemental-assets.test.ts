@@ -13,6 +13,7 @@ import { fetchGoldTokens } from "../sync-stablecoins/supplemental-assets/gold";
 import { fetchSupplementalPriceData } from "../sync-stablecoins/supplemental-assets/shared";
 import { fillMissingSupplyHistory } from "../sync-stablecoins/phase-helpers";
 import { mockD1 as createMockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 
 function mockD1(tables: Parameters<typeof createMockD1>[0] = []) {
@@ -329,9 +330,7 @@ describe("resolveSupplementalPrice", () => {
 
 describe("fetchSupplementalPriceData", () => {
   it("fails closed to an empty coin map on malformed DefiLlama price payloads", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ coins: { "coingecko:test": { price: "1.00" } } }), { status: 200 })
-    ));
+    mockFetch([{ match: () => true, body: { coins: { "coingecko:test": { price: "1.00" } } } }]);
     const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
 
     await expect(fetchSupplementalPriceData([meta], "supplemental-test")).resolves.toEqual({ coins: {} });
@@ -345,8 +344,7 @@ describe("fetchSupplementalPriceData", () => {
         rows: [makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "open", nowSec)],
       },
     ]);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
     const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
 
     await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({ coins: {} });
@@ -361,9 +359,7 @@ describe("fetchSupplementalPriceData", () => {
         rows: [makeCircuitRow(CIRCUIT_SOURCE.DL_COINS, "open", nowSec - 31 * 60)],
       },
     ]);
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ coins: { "coingecko:test": { price: 1, timestamp: nowSec } } }), { status: 200 })
-    ));
+    mockFetch([{ match: () => true, body: { coins: { "coingecko:test": { price: 1, timestamp: nowSec } } } }]);
     const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
 
     await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({
@@ -382,8 +378,7 @@ describe("fetchSupplementalPriceData", () => {
 
   it("fetches supplemental DefiLlama prices by exact contract for no-gecko assets", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const fetchMock = vi.fn(async (_url: string) =>
-      new Response(JSON.stringify({
+    const fetchMock = mockFetch([{ match: () => true, body: {
         coins: {
           "ethereum:0xbeefff209270748ddd194831b3fa287a5386f5bc": {
             price: 1.114859,
@@ -392,9 +387,7 @@ describe("fetchSupplementalPriceData", () => {
             confidence: 0.99,
           },
         },
-      }), { status: 200 })
-    );
-    vi.stubGlobal("fetch", fetchMock);
+      } }]);
     const meta = makeMeta([
       {
         chain: "ethereum",
@@ -427,9 +420,7 @@ describe("fetchSupplementalPriceData", () => {
         rows: [],
       },
     ]);
-    vi.stubGlobal("fetch", vi.fn(async () =>
-      new Response(JSON.stringify({ coins: { "coingecko:test": { price: "1.00" } } }), { status: 200 })
-    ));
+    mockFetch([{ match: () => true, body: { coins: { "coingecko:test": { price: "1.00" } } } }]);
     const meta = { ...makeMeta([]), geckoId: "test" } as StablecoinMeta;
 
     await expect(fetchSupplementalPriceData([meta], "supplemental-test", undefined, db)).resolves.toEqual({ coins: {} });
@@ -460,33 +451,31 @@ describe("fetchGoldTokens", () => {
       date.setUTCHours(0, 0, 0, 0);
       return Math.floor(date.getTime() / 1000);
     };
-    const fetchMock = vi.fn(async (url: string) => {
-      if (url.includes("/prices/current/")) {
-        return new Response(JSON.stringify({
+    const fetchMock = mockFetch([
+      {
+        match: "/prices/current/",
+        body: {
           coins: {
             "coingecko:tether-gold": {
               price: 4_020,
               timestamp: nowSec,
             },
           },
-        }), { status: 200 });
-      }
-      if (url.endsWith("/protocol/tether-gold")) {
-        return new Response(JSON.stringify({
+        },
+      },
+      {
+        match: "/protocol/tether-gold",
+        body: {
           mcap,
           tvl: [
             { date: nowSec - 30 * 86_400, totalLiquidityUSD: protocolTvl },
             { date: nowSec - 7 * 86_400, totalLiquidityUSD: protocolTvl },
             { date: nowSec - 86_400, totalLiquidityUSD: protocolTvl },
           ],
-        }), { status: 200 });
-      }
-      if (url.includes("/protocol/")) {
-        return new Response("{}", { status: 200 });
-      }
-      throw new Error(`unexpected fetch: ${url}`);
-    });
-    vi.stubGlobal("fetch", fetchMock);
+        },
+      },
+      { match: "/protocol/", body: {} },
+    ], { requireMatch: true });
 
     const assets = await fetchGoldTokens({
       "tether-gold": {
@@ -535,13 +524,7 @@ describe("fetchGoldTokens", () => {
         ],
       },
     ]);
-    const fetchMock = vi.fn(async (url: string) => {
-      if (url.includes("/protocol/")) {
-        throw new Error(`unexpected protocol fetch: ${url}`);
-      }
-      return new Response(JSON.stringify({ coins: {} }), { status: 200 });
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: "/prices/current/", body: { coins: {} } }], { requireMatch: true });
 
     await expect(fetchGoldTokens({}, undefined, db)).resolves.toEqual([]);
 

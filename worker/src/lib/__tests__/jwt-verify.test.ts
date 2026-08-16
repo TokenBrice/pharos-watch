@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import {
   verifyAccessJwt,
   verifyAccessJwtUserIdentity,
@@ -215,7 +216,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("normalizes a full URL teamDomain before issuer comparison", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 })));
+      mockFetch([{ match: () => true, body: MOCK_JWKS }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
       // Passing the full URL should still reach JWKS fetch (claims pass)
       await verifyAccessJwt({ token, aud: AUD, teamDomain: `https://${TEAM_DOMAIN}.cloudflareaccess.com` });
@@ -228,8 +229,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("rejects a token whose Access type does not match the expected type", async () => {
-      const fetchMock = vi.fn();
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([], { requireMatch: true });
       const { token } = makeJwtParts(validHeader(), validClaims({ type: "org" }));
 
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).toBe(false);
@@ -237,8 +237,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("rejects a token with missing Access type when an expected type is configured", async () => {
-      const fetchMock = vi.fn();
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([], { requireMatch: true });
       const { token } = makeJwtParts(validHeader(), validClaims());
 
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).toBe(false);
@@ -246,8 +245,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("rejects a service-token subject when a user subject is required", async () => {
-      const fetchMock = vi.fn();
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([], { requireMatch: true });
       const { token } = makeJwtParts(
         validHeader(),
         validClaims({
@@ -274,7 +272,7 @@ describe("verifyAccessJwt", () => {
       // we're testing that the claim check for array audience works.
       // We mock fetch to return JWKS but the crypto.subtle.verify will
       // fail because the signature is fake.
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 })));
+      mockFetch([{ match: () => true, body: MOCK_JWKS }]);
       const { token } = makeJwtParts(validHeader(), validClaims({ aud: ["other-aud", AUD] }));
       // Should get past claim validation but fail at crypto — returning false
       // (but not due to claim rejection)
@@ -286,14 +284,14 @@ describe("verifyAccessJwt", () => {
 
     it("accepts a valid signed Access JWT", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims());
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
 
       await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).resolves.toBe(true);
     });
 
     it("accepts a valid signed Access JWT when the expected type matches", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
 
       await expect(verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN, expectedType: "app" })).resolves.toBe(
         true,
@@ -302,7 +300,7 @@ describe("verifyAccessJwt", () => {
 
     it("accepts a valid signed user Access JWT when a user subject is required", async () => {
       const { token, jwk } = await makeSignedJwt(validHeader(), validClaims({ type: "app" }));
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
 
       await expect(
         verifyAccessJwt({
@@ -320,7 +318,7 @@ describe("verifyAccessJwt", () => {
         validHeader(),
         validClaims({ type: "app", email: " Operator@Example.COM ", sub: " operator-subject " }),
       );
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
 
       await expect(
         verifyAccessJwtUserIdentity({
@@ -337,40 +335,33 @@ describe("verifyAccessJwt", () => {
 
   describe("JWKS fetch", () => {
     it("returns false when JWKS fetch fails", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
+      mockFetch([{ match: () => true, outcomes: [new Error("network error")] }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("returns false when JWKS returns non-200", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("not found", { status: 404 })));
+      mockFetch([{ match: () => true, body: "not found", status: 404 }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("returns false when JWKS has no matching kid", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi
-          .fn()
-          .mockResolvedValue(
-            new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "other-kid" }] }), { status: 200 }),
-          ),
-      );
+      mockFetch([{ match: () => true, body: { keys: [{ ...MOCK_JWKS.keys[0], kid: "other-kid" }] } }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
 
     it("retries with a fresh JWKS fetch when the cached key set misses the token kid", async () => {
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "old-kid" }] }), { status: 200 }),
-        )
-        .mockResolvedValueOnce(
-          new Response(JSON.stringify({ keys: [{ ...MOCK_JWKS.keys[0], kid: "rotated-kid" }] }), { status: 200 }),
-        );
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([
+        {
+          match: () => true,
+          outcomes: [
+            { body: { keys: [{ ...MOCK_JWKS.keys[0], kid: "old-kid" }] } },
+            { body: { keys: [{ ...MOCK_JWKS.keys[0], kid: "rotated-kid" }] } },
+          ],
+        },
+      ]);
 
       const { token } = makeJwtParts(validHeader({ kid: "old-kid" }), validClaims());
       await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN });
@@ -392,7 +383,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("returns false when JWKS response has no keys array", async () => {
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({}), { status: 200 })));
+      mockFetch([{ match: () => true, body: {} }]);
       const { token } = makeJwtParts(validHeader(), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
@@ -402,8 +393,7 @@ describe("verifyAccessJwt", () => {
 
   describe("JWKS caching", () => {
     it("caches JWKS and reuses on second call", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, body: MOCK_JWKS }]);
 
       const { token: token1 } = makeJwtParts(validHeader(), validClaims());
       await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
@@ -416,8 +406,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("re-fetches JWKS after cache expiry", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, body: MOCK_JWKS }]);
 
       const { token: token1 } = makeJwtParts(validHeader(), validClaims());
       await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
@@ -439,8 +428,7 @@ describe("verifyAccessJwt", () => {
     });
 
     it("keeps JWKS caches isolated per team domain", async () => {
-      const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(MOCK_JWKS), { status: 200 }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, body: MOCK_JWKS }]);
 
       const { token: token1 } = makeJwtParts(validHeader(), validClaims());
       await verifyAccessJwt({ token: token1, aud: AUD, teamDomain: TEAM_DOMAIN });
@@ -469,17 +457,9 @@ describe("verifyAccessJwt", () => {
 
   describe("algorithm handling", () => {
     it("rejects unsupported algorithm", async () => {
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
-            }),
-            { status: 200 },
-          ),
-        ),
-      );
+      mockFetch([{ match: () => true, body: {
+        keys: [{ ...MOCK_JWKS.keys[0], kid: "test-kid-1", alg: "ES256" }],
+      } }]);
       const { token } = makeJwtParts(validHeader({ alg: "ES256" }), validClaims());
       expect(await verifyAccessJwt({ token, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });
@@ -492,7 +472,7 @@ describe("verifyAccessJwt", () => {
       const confusedHeaderB64 = base64urlEncode(JSON.stringify(validHeader({ alg: "RS512" })));
       const [, payloadB64, sigB64] = token.split(".");
       const confusedToken = `${confusedHeaderB64}.${payloadB64}.${sigB64}`;
-      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 })));
+      mockFetch([{ match: () => true, body: { keys: [jwk] } }]);
 
       expect(await verifyAccessJwt({ token: confusedToken, aud: AUD, teamDomain: TEAM_DOMAIN })).toBe(false);
     });

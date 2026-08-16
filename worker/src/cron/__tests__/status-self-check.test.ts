@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 type HealthProbeStatus = "healthy" | "degraded" | "stale";
 
@@ -35,7 +36,7 @@ function buildProbeResponse(input: unknown, healthStatus: HealthProbeStatus = "h
   return new Response("{}", { status: 200 });
 }
 
-const fetchMock = vi.fn();
+let fetchMock: ReturnType<typeof mockFetch>;
 const routeMock = vi.fn();
 const writeStatusProbeRunMock = vi.fn(async () => true);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
@@ -103,7 +104,7 @@ describe("runStatusSelfCheck", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", fetchMock);
+    fetchMock = mockFetch([], { requireMatch: true });
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
       buildProbeResponse(input, "healthy", init),
     );
@@ -506,7 +507,7 @@ describe("health probe semantic classification", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.stubGlobal("fetch", fetchMock);
+    fetchMock = mockFetch([], { requireMatch: true });
     computeRawStatusMock.mockResolvedValue(buildRawStatus());
     reconcileStatusStateMock.mockResolvedValue({
       effectiveStatus: "healthy",

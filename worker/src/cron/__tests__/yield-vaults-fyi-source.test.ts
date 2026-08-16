@@ -37,6 +37,7 @@ import {
 } from "../yield-sync/vaults-fyi";
 import type { VaultsFyiRuntimeConfig } from "../../lib/env";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 function response(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -145,7 +146,7 @@ describe("fetchVaultsFyiSources", () => {
       bucket,
       creditsEstimated: 100,
     }));
-    vi.stubGlobal("fetch", vi.fn(async () => response({ data: [detailedVault()] })));
+    mockFetch([{ match: () => true, respond: () => response({ data: [detailedVault()] }) }]);
 
     const result = await fetchVaultsFyiSources({
       db,
@@ -182,9 +183,8 @@ describe("fetchVaultsFyiSources", () => {
 
   it("fails closed without fetching when the paid credit ledger is corrupt", async () => {
     const { db, writes } = creditLedgerDb("{not-json");
-    const fetchSpy = vi.fn();
+    const fetchSpy = mockFetch([], { requireMatch: true });
     const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.stubGlobal("fetch", fetchSpy);
 
     const result = await fetchVaultsFyiSources({
       db,
@@ -309,8 +309,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("skips without fetching when disabled", async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
     await expect(
       fetchVaultsFyiSources({
@@ -369,18 +368,17 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("runs a cheap audit-only inventory probe when enabled without rankable vaults", async () => {
-    const fetchSpy = vi.fn(async (input: string | Request | URL, init?: RequestInit) => {
-      const url = String(input);
+    const fetchSpy = mockFetch([{ match: () => true, respond: (request) => {
+      const url = request.url;
       expect(url).toContain("/v2/detailed-vaults?");
       expect(url).toContain("page=0");
       expect(url).toContain("perPage=4");
       expect(url).not.toContain("test-placeholder-key");
-      expect(new Headers(init?.headers).get("x-api-key")).toBe("test-placeholder-key");
+      expect(request.headers.get("x-api-key")).toBe("test-placeholder-key");
       return response({
         data: [detailedVault(), detailedVault({ address: "0x2222222222222222222222222222222222222222" })],
       });
-    });
-    vi.stubGlobal("fetch", fetchSpy);
+    } }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig(),
@@ -408,10 +406,7 @@ describe("fetchVaultsFyiSources", () => {
     const rows = Array.from({ length: 4 }, (_, index) =>
       detailedVault({ address: `0x${String(index + 1).padStart(40, "0")}` }),
     );
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => response({ data: rows })),
-    );
+    mockFetch([{ match: () => true, respond: () => response({ data: rows }) }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig(),
@@ -433,10 +428,10 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("emits exact address-matched allowlisted candidates from exact detailed-vault requests and drops symbol-only spoofed assets", async () => {
-    const fetchSpy = vi.fn(async (input: string | Request | URL, init?: RequestInit) => {
-      const url = String(input);
+    const fetchSpy = mockFetch([{ match: () => true, respond: (request) => {
+      const url = request.url;
       expect(url).not.toContain("test-placeholder-key");
-      expect(new Headers(init?.headers).get("x-api-key")).toBe("test-placeholder-key");
+      expect(request.headers.get("x-api-key")).toBe("test-placeholder-key");
 
       if (url.endsWith("/v2/detailed-vaults/mainnet/0x1111111111111111111111111111111111111111")) {
         return response({ data: detailedVault() });
@@ -453,8 +448,7 @@ describe("fetchVaultsFyiSources", () => {
           },
         }),
       });
-    });
-    vi.stubGlobal("fetch", fetchSpy);
+    } }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({
@@ -497,8 +491,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("stops before a detail fetch when the local per-run credit cap is too low", async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({
@@ -522,8 +515,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it("does not spend credits when all rankable allowlist entries are malformed", async () => {
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = mockFetch([], { requireMatch: true });
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["not-a-vault-entry"] }),
@@ -543,10 +535,7 @@ describe("fetchVaultsFyiSources", () => {
   });
 
   it.each([403, 429])("fails open as skipped on provider quota HTTP %s without emitting candidates", async (status) => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => response({ error: "quota" }, status)),
-    );
+    mockFetch([{ match: () => true, respond: () => response({ error: "quota" }, status) }]);
 
     const result = await fetchVaultsFyiSources({
       config: enabledConfig({ rankableVaults: ["mainnet:vault-a"] }),

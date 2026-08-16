@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../test-helpers/cron";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("@shared/lib/stablecoins/registry", () => {
   const stablecoins = [
@@ -62,11 +63,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("emits senior and junior tranche candidates for tracked deposit tokens", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
+    mockFetch([{ match: () => true, body: {
             count: 1,
             data: [
               {
@@ -99,11 +96,8 @@ describe("fetchRoycoDawnSources", () => {
                 }),
               },
             ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
+          },
+        }]);
 
     const candidates = await fetchRoycoDawnSources();
 
@@ -133,11 +127,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("maps Royco sNUSD deposit tokens to the tracked Neutrl USD parent", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
+    mockFetch([{ match: () => true, body: {
             count: 1,
             data: [
               {
@@ -170,11 +160,8 @@ describe("fetchRoycoDawnSources", () => {
                 }),
               },
             ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
+          },
+        }]);
 
     const candidates = await fetchRoycoDawnSources();
 
@@ -188,11 +175,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("resolves each tranche vault to its own tracked deposit token", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
+    mockFetch([{ match: () => true, body: {
             count: 1,
             data: [
               {
@@ -225,11 +208,8 @@ describe("fetchRoycoDawnSources", () => {
                 }),
               },
             ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
+          },
+        }]);
 
     const candidates = await fetchRoycoDawnSources();
 
@@ -241,11 +221,7 @@ describe("fetchRoycoDawnSources", () => {
   });
 
   it("drops tranche vaults below the tranche TVL floor", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(
-          JSON.stringify({
+    mockFetch([{ match: () => true, body: {
             count: 1,
             data: [
               {
@@ -278,11 +254,8 @@ describe("fetchRoycoDawnSources", () => {
                 }),
               },
             ],
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ),
-    );
+          },
+        }]);
 
     const candidates = await fetchRoycoDawnSources();
 

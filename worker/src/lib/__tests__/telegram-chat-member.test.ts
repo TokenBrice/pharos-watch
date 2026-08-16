@@ -1,9 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
-import { jsonResponse } from "../../test-helpers/__shared/mock-fetch";
+import { jsonResponse, mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+let fetchSpy = mockFetch([], { requireMatch: true });
 
 const { getCachedChatAdministrators, formatAdministratorMentions } = await import("../telegram-chat-member");
 
@@ -11,7 +10,7 @@ const NOW_SEC = Math.floor(Date.now() / 1000);
 
 describe("getCachedChatAdministrators", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("fetches and caches the administrator list", async () => {

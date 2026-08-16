@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "../../test-helpers/latest-schema-sqlite";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 vi.mock("../digest-safety-context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../digest-safety-context")>();
@@ -107,11 +108,14 @@ describe("Telegram digest outbox", () => {
     const successActions = [{ key: "telegram:appendix-pointer", value: "edition-42" }];
     await enqueueDaily(db, { successActions });
     const statesAtFetch: string[] = [];
-    vi.stubGlobal("fetch", vi.fn(async () => {
-      statesAtFetch.push(loadEdition(sqlite).state);
-      expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(successActions[0]!.key)).toBeUndefined();
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }));
+    mockFetch([{
+      match: () => true,
+      respond: () => {
+        statesAtFetch.push(loadEdition(sqlite).state);
+        expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(successActions[0]!.key)).toBeUndefined();
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      },
+    }]);
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
 
@@ -133,13 +137,13 @@ describe("Telegram digest outbox", () => {
     const { sqlite, db } = createHarness();
     await enqueueDaily(db);
     const storedPayload = (JSON.parse(loadEdition(sqlite).payload_chunks_json) as string[])[0]!;
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({ ok: false, description: "flood", parameters: { retry_after: 45 } }),
-        { status: 429, headers: { "Retry-After": "45" } },
-      ))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { ok: false, description: "flood", parameters: { retry_after: 45 } }, status: 429, headers: { "Retry-After": "45" } },
+        { body: { ok: true } },
+      ],
+    }]);
 
     const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
     expect(first).toMatchObject({ outcome: "pending", errorClass: "rate_limit", retryAfterSec: 45 });
@@ -169,8 +173,7 @@ describe("Telegram digest outbox", () => {
          (mode, generation, expires_at, reason, actor, created_at, updated_at)
        VALUES ('fresh', 1, ?, 'operator maintenance', 'test', ?, ?)`,
     ).run(nowSec + 300, nowSec, nowSec);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     const summary = await drainTelegramDigestOutbox(db, creds);
 
@@ -189,13 +192,13 @@ describe("Telegram digest outbox", () => {
     expect(enqueue.chunks.length).toBeGreaterThan(1);
     expect(enqueue.chunks.every((chunk) => chunk.length <= 4000)).toBe(true);
     const storedChunks = [...enqueue.chunks];
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(
-        JSON.stringify({ ok: false, parameters: { retry_after: 30 } }),
-        { status: 429 },
-      ));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { ok: true } },
+        { body: { ok: false, parameters: { retry_after: 30 } }, status: 429 },
+      ],
+    }]);
 
     const first = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
     expect(first).toMatchObject({ outcome: "pending", chunksSent: 1, nextChunkIndex: 1 });
@@ -220,10 +223,7 @@ describe("Telegram digest outbox", () => {
   it("fences network ambiguity and never replays it automatically", async () => {
     const { sqlite, db } = createHarness();
     await enqueueDaily(db);
-    const fetchMock = vi.fn(async () => {
-      throw new DOMException("timed out after request start", "TimeoutError");
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, outcomes: [new DOMException("timed out after request start", "TimeoutError")] }]);
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
     expect(result).toMatchObject({ outcome: "execution_unknown", errorClass: "timeout" });
@@ -244,8 +244,7 @@ describe("Telegram digest outbox", () => {
           SET state = 'sending', delivery_owner = 'abandoned', delivery_generation = 1,
               delivery_claim_expires_at = ?`,
     ).run(nowSec - 1);
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     const summary = await drainTelegramDigestOutbox(db, creds);
 
@@ -289,7 +288,7 @@ describe("Telegram digest outbox", () => {
       },
     } as D1Database;
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    mockFetch([{ match: () => true, body: { ok: true } }]);
 
     await expect(deliverTelegramDigestEdition(db, creds, "daily:2026-07-10"))
       .rejects.toThrow("fault after Telegram acceptance");
@@ -308,11 +307,11 @@ describe("Telegram digest outbox", () => {
   it("keeps confirmed permanent rejection distinct from ambiguous execution", async () => {
     const { sqlite, db } = createHarness();
     await enqueueDaily(db);
-    const fetchMock = vi.fn(async () => new Response(
-      JSON.stringify({ ok: false, description: "Bad Request: can't parse entities" }),
-      { status: 400 },
-    ));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      body: { ok: false, description: "Bad Request: can't parse entities" },
+      status: 400,
+    }]);
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
     expect(result).toMatchObject({ outcome: "failed_permanent", errorClass: "formatting_error" });
@@ -357,8 +356,7 @@ describe("Telegram digest outbox", () => {
         JSON.stringify(["USDT's Safety Score remains A."]),
         "daily:2026-07-10",
       );
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
 
@@ -399,8 +397,7 @@ describe("Telegram digest outbox", () => {
       kind: "stale",
       reason: "identity-mismatch",
     });
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
 
@@ -434,7 +431,7 @@ describe("Telegram digest outbox", () => {
       date: "2026-07-10-weekly",
       safetyContext,
     });
-    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ ok: true }), { status: 200 })));
+    mockFetch([{ match: () => true, body: { ok: true } }]);
 
     await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
 

@@ -809,35 +809,22 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(nowSec)) +
       toHexWord(1n);
 
-    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("frankfurter.dev")) {
-        return new Response(JSON.stringify({
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        }), { status: 200 });
-      }
-      if (url.includes("currency-api")) {
-        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAU")) {
-        return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAG")) {
-        return new Response(JSON.stringify({ price: 32 }), { status: 200 });
-      }
-      if (url === "https://rpc.base.test") {
-        const body = JSON.parse(String(init?.body ?? "{}")) as { params?: Array<{ to?: string; data?: string }> };
-        const call = body.params?.[0];
-        if (call?.to === "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F" && call.data === "0x313ce567") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: decimalsHex }), { status: 200 });
-        }
-        if (call?.to === "0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F" && call.data === "0xfeaf968c") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: latestRoundDataHex }), { status: 200 });
-        }
-      }
-      return new Response("not found", { status: 404 });
-    }));
+    mockFetch([
+      { match: "frankfurter.dev", body: frankfurterBody() },
+      { match: "currency-api", body: secondaryBody() },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+      {
+        match: "https://rpc.base.test",
+        matchBody: '"to":"0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F","data":"0x313ce567"',
+        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
+      },
+      {
+        match: "https://rpc.base.test",
+        matchBody: '"to":"0xc91D87E81faB8f93699ECf7Ee9B44D11e1D53F0F","data":"0xfeaf968c"',
+        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
+      },
+    ], { requireMatch: true });
 
     const db = mockD1([
       {
@@ -894,35 +881,22 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(olderUpdatedAt)) +
       toHexWord(1n);
 
-    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("frankfurter.dev")) {
-        return new Response(JSON.stringify({
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        }), { status: 200 });
-      }
-      if (url.includes("currency-api")) {
-        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAU")) {
-        return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAG")) {
-        return new Response(JSON.stringify({ price: 32 }), { status: 200 });
-      }
-      if (url === "https://rpc.ethereum.test") {
-        const body = JSON.parse(String(init?.body ?? "{}")) as { params?: Array<{ to?: string; data?: string }> };
-        const call = body.params?.[0];
-        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0x313ce567") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: decimalsHex }), { status: 200 });
-        }
-        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0xfeaf968c") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: latestRoundDataHex }), { status: 200 });
-        }
-      }
-      return new Response("not found", { status: 404 });
-    }));
+    mockFetch([
+      { match: "frankfurter.dev", body: frankfurterBody() },
+      { match: "currency-api", body: secondaryBody() },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+      {
+        match: "https://rpc.ethereum.test",
+        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0x313ce567"',
+        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
+      },
+      {
+        match: "https://rpc.ethereum.test",
+        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0xfeaf968c"',
+        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
+      },
+    ], { requireMatch: true });
 
     const db = mockD1([
       {
@@ -981,35 +955,22 @@ describe("syncFxRates", () => {
       toHexWord(BigInt(olderUpdatedAt)) +
       toHexWord(1n);
 
-    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.includes("frankfurter.dev")) {
-        return new Response(JSON.stringify({
-          base: "USD",
-          date: "2025-06-15",
-          rates: { EUR: 0.925, GBP: 0.79, CHF: 0.88, JPY: 149.5, BRL: 5.0, IDR: 15800, SGD: 1.35, TRY: 36, AUD: 1.55, ZAR: 18.3, CAD: 1.37, CNY: 7.25, PHP: 56, MXN: 17.2 },
-        }), { status: 200 });
-      }
-      if (url.includes("currency-api")) {
-        return new Response(JSON.stringify({ usd: { cnh: 7.28, rub: 90, uah: 41, ars: 1400, kgs: 87, ngn: 1370, xof: 560 } }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAU")) {
-        return new Response(JSON.stringify({ price: 2900 }), { status: 200 });
-      }
-      if (url.includes("gold-api.com/price/XAG")) {
-        return new Response(JSON.stringify({ price: 32 }), { status: 200 });
-      }
-      if (url === "https://rpc.ethereum.test") {
-        const body = JSON.parse(String(init?.body ?? "{}")) as { params?: Array<{ to?: string; data?: string }> };
-        const call = body.params?.[0];
-        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0x313ce567") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: decimalsHex }), { status: 200 });
-        }
-        if (call?.to === "0x379589227b15F1a12195D3f2d90bBc9F31f95235" && call.data === "0xfeaf968c") {
-          return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: latestRoundDataHex }), { status: 200 });
-        }
-      }
-      return new Response("not found", { status: 404 });
-    }));
+    mockFetch([
+      { match: "frankfurter.dev", body: frankfurterBody() },
+      { match: "currency-api", body: secondaryBody() },
+      { match: "gold-api.com/price/XAU", body: { price: 2900 } },
+      { match: "gold-api.com/price/XAG", body: { price: 32 } },
+      {
+        match: "https://rpc.ethereum.test",
+        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0x313ce567"',
+        body: { jsonrpc: "2.0", id: 1, result: decimalsHex },
+      },
+      {
+        match: "https://rpc.ethereum.test",
+        matchBody: '"to":"0x379589227b15F1a12195D3f2d90bBc9F31f95235","data":"0xfeaf968c"',
+        body: { jsonrpc: "2.0", id: 1, result: latestRoundDataHex },
+      },
+    ], { requireMatch: true });
 
     const db = mockD1([
       {
@@ -1597,7 +1558,8 @@ describe("syncFxRates", () => {
     const callStartedAt: Record<string, number> = {};
     let inFlight = 0;
     let maxInFlight = 0;
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
       if (
         url.includes("cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest")
         || (
@@ -1622,7 +1584,7 @@ describe("syncFxRates", () => {
         );
       }
       return new Response("not found", { status: 404 });
-    }));
+    } }]);
 
     await loadSecondaryCurrencyCandidate();
 
@@ -1636,7 +1598,8 @@ describe("syncFxRates", () => {
 
   it("uses the date-pinned jsdelivr package when @latest is behind", async () => {
     vi.setSystemTime(new Date("2026-05-20T07:30:00Z"));
-    const fetchSpy = vi.fn(async (url: string) => {
+    const fetchSpy = mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
       if (url.includes("@2026.5.20/")) {
         return new Response(
           JSON.stringify({ date: "2026-05-20", usd: { cnh: 7.18 } }),
@@ -1656,8 +1619,7 @@ describe("syncFxRates", () => {
         );
       }
       return new Response("not found", { status: 404 });
-    });
-    vi.stubGlobal("fetch", fetchSpy);
+    } }]);
 
     const candidate = await loadSecondaryCurrencyCandidate();
 
@@ -1669,7 +1631,8 @@ describe("syncFxRates", () => {
 
   it("ignores malformed optional date-pinned secondary FX payloads when other mirrors are healthy", async () => {
     vi.setSystemTime(new Date("2026-05-20T07:30:00Z"));
-    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    mockFetch([{ match: () => true, respond: async (request) => {
+      const url = request.url;
       if (url.includes("@2026.5.20/")) {
         return new Response("definitely not json", { status: 200 });
       }
@@ -1686,7 +1649,7 @@ describe("syncFxRates", () => {
         );
       }
       return new Response("not found", { status: 404 });
-    }));
+    } }]);
 
     const candidate = await loadSecondaryCurrencyCandidate();
 
@@ -1698,8 +1661,7 @@ describe("syncFxRates", () => {
   it("skips a duplicate delivery for an already completed cadence bucket", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const bucket = Math.floor(nowSec / (30 * 60));
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
     const db = mockD1([
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",

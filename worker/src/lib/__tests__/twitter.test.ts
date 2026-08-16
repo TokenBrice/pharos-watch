@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildTweetText, postDigestTweet } from "../twitter";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 const creds = {
   apiKey: "api-key",
@@ -52,8 +53,7 @@ describe("twitter helpers", () => {
     vi.spyOn(console, "log").mockImplementation(() => {});
 
     const response = new Response(JSON.stringify({ data: { id: "1" } }), { status: 201 });
-    const fetchSpy = vi.fn(async (_input: string | Request | URL, _init?: RequestInit) => response);
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = mockFetch([{ match: () => true, respond: () => response }]);
 
     await postDigestTweet("Daily Digest", "Daily Digest: USDT outpaced USDC.", creds);
 
@@ -75,10 +75,7 @@ describe("twitter helpers", () => {
 
   it("throws when the Twitter API responds with an error", async () => {
     const response = new Response("denied", { status: 403 });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => response),
-    );
+    mockFetch([{ match: () => true, respond: () => response }]);
 
     await expect(postDigestTweet("", "USDT stumbled against USDC.", creds)).rejects.toThrow("Twitter API 403: denied");
     expect(response.bodyUsed).toBe(true);

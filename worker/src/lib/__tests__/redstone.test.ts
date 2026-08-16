@@ -7,6 +7,7 @@ import {
 import { REDSTONE_SYMBOL_CONFIG } from "@shared/lib/pricing-provider-config";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import redstoneBatchFixture from "./fixtures/redstone-batch.json";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -15,15 +16,16 @@ afterEach(() => {
 
 describe("fetchRedstonePrices", () => {
   it("returns price and venue breakdown from the live object-per-symbol payload shape", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 0.9998,
           source: { binance: 0.9999, coinbase: 0.9997, curve: 0.9998 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
@@ -35,8 +37,9 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("computes venue agreement percentage correctly", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 0.97,
           source: {
@@ -45,8 +48,8 @@ describe("fetchRedstonePrices", () => {
           },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
     const r = outcome.value.get("usdt-tether")!;
@@ -54,15 +57,16 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("uses the conventional midpoint median for even venue counts", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 1.0,
           source: { a: 0.98, b: 1.0, c: 1.02, d: 1.04 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
@@ -70,8 +74,9 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("preserves exact-case symbols for mixed-case assets", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDe: {
           value: 1.0002,
           source: { curve: 1.0001 },
@@ -82,8 +87,8 @@ describe("fetchRedstonePrices", () => {
           source: { curve: 0.9996 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDe", "crvUSD"]);
     expect(outcome.value.get("usde-ethena")?.price).toBeCloseTo(1.0001, 4);
@@ -91,22 +96,25 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("retries missing batch symbols individually", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: {
         USDT: {
           value: 1.0,
           source: { kraken: 1.0 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({
+        } },
+        { body: {
         USD1: {
           value: 0.9993,
           source: { coingecko: 0.9993 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+        } },
+      ],
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT", "USD1"]);
 
@@ -116,10 +124,7 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("filters out symbols that are outside the tracked RedStone allowlist", async () => {
-    const fetchMock = vi.fn().mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: {} }]);
 
     const outcome = await fetchRedstonePrices(["NOTREAL", REDSTONE_TRACKED_SYMBOL_ALLOWLIST[0]]);
 
@@ -134,15 +139,16 @@ describe("fetchRedstonePrices", () => {
   it("rejects stale prices before they can enter consensus", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(new Date("2026-03-19T12:00:00Z"));
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 1.0,
           source: { binance: 1.0, coinbase: 1.0 },
           timestamp: Date.now() - 301_000,
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 
@@ -151,15 +157,16 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("rejects entries that do not include a usable per-venue breakdown", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 1.0,
           source: {},
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 
@@ -168,28 +175,29 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("returns upstream-error outcome when every batch HTTP request fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("server error", { status: 503 })));
+    mockFetch([{ match: () => true, body: "server error", status: 503 }]);
     const outcome = await fetchRedstonePrices(["USDT"]);
     expect(outcome.kind).toBe("upstream-error");
     expect(outcome.value.size).toBe(0);
   });
 
   it("returns no-data outcome when requested symbols are all outside the allowlist", async () => {
-    vi.stubGlobal("fetch", vi.fn());
+    mockFetch([], { requireMatch: true });
     const outcome = await fetchRedstonePrices(["NOTREAL"]);
     expect(outcome.kind).toBe("no-data");
   });
 
   it("returns ok outcome when at least one price is returned", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: {
           value: 0.9999,
           source: { binance: 0.9999 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
     const outcome = await fetchRedstonePrices(["USDT"]);
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.get("usdt-tether")?.price).toBeCloseTo(0.9999, 4);
@@ -200,14 +208,15 @@ describe("fetchRedstonePrices", () => {
     const olderTimestamp = now - 60_000;
     const newerTimestamp = now;
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDT: [
           { value: 0.5, source: { binance: 0.5 }, timestamp: olderTimestamp },
           { value: 1.0, source: { binance: 1.0 }, timestamp: newerTimestamp },
         ],
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 
@@ -216,15 +225,16 @@ describe("fetchRedstonePrices", () => {
   });
 
   it("keys USDH by the configured stablecoin id instead of every USDH symbol peer", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({
+    mockFetch([{
+      match: () => true,
+      body: {
         USDH: {
           value: 0.9999,
           source: { "hyperliquid-api-fetcher-usdc": 0.9999, "nest-hyperevm-usdc": 0.9998 },
           timestamp: Date.now(),
         },
-      }), { status: 200 }),
-    ));
+      },
+    }]);
 
     const outcome = await fetchRedstonePrices(["USDH"]);
 
@@ -237,10 +247,7 @@ describe("fetchRedstonePrices", () => {
     const tenSymbols = REDSTONE_TRACKED_SYMBOL_ALLOWLIST.slice(0, 10);
     expect(tenSymbols.length).toBe(10);
 
-    const fetchMock = vi.fn().mockImplementation(() =>
-      Promise.resolve(new Response(JSON.stringify({}), { status: 200 })),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: {} }]);
 
     await fetchRedstonePrices([...tenSymbols]);
 
@@ -259,9 +266,7 @@ describe("fetchRedstonePrices", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(fixtureTimestampMs + 10_000));
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(
-      new Response(JSON.stringify(redstoneBatchFixture), { status: 200 }),
-    ));
+    mockFetch([{ match: () => true, body: redstoneBatchFixture }]);
 
     const outcome = await fetchRedstonePrices(["USDT"]);
 

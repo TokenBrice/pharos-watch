@@ -21,6 +21,10 @@ import {
 import { selectRotatedCmcCandidates } from "../sync-stablecoins/enrich-prices-cmc-pass";
 import { DEXSCREENER_ROTATION_INTERVAL_MS } from "../sync-stablecoins/enrich-prices-dexscreener-pass";
 
+function installFetch(implementation: (url: string) => Response | Promise<Response>) {
+  return fixtureMockFetch([{ match: () => true, respond: (request) => implementation(request.url) }]);
+}
+
 function fixtureMockD1(
   tables: Parameters<typeof createFixtureMockD1>[0] = [],
   options?: Parameters<typeof createFixtureMockD1>[1],
@@ -1333,10 +1337,7 @@ describe("enrichMissingPrices", () => {
       { match: "circuit", rows: [] },
     ]);
     const response = new Response("blocked", { status: 500 });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => response),
-    );
+    installFetch(async () => response);
 
     const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
 
@@ -1370,16 +1371,10 @@ describe("enrichMissingPrices", () => {
         first: null,
       },
     ]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(JSON.stringify({ status: { error_message: "rate limited" } }), {
-            status: 429,
-            headers: { "Retry-After": "1" },
-          }),
-      ),
-    );
+    installFetch(async () => new Response(JSON.stringify({ status: { error_message: "rate limited" } }), {
+      status: 429,
+      headers: { "Retry-After": "1" },
+    }));
 
     const result = await fixtureRunCmcPass(assets, "test-cmc-key", undefined, db);
 
@@ -1456,8 +1451,7 @@ describe("enrichMissingPrices", () => {
       { requireMatch: true },
     );
 
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
 
     // GUSD is registered on ethereum and (since the P-wave) near, and the pass
     // rotates which chain leads each quarter-hour. Pinning the rotation clock
@@ -1493,8 +1487,7 @@ describe("enrichMissingPrices", () => {
       { requireMatch: true },
     );
 
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
 
     // One rotation interval later the bridged NEAR deployment takes its turn.
     // The rotation is the point — a persistent gap on one network must not
@@ -1525,8 +1518,7 @@ describe("enrichMissingPrices", () => {
       ],
       { requireMatch: true },
     );
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, db);
 
@@ -1547,11 +1539,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
+    installFetch(async () => new Response(
             JSON.stringify({
               pairs: [
                 {
@@ -1566,9 +1554,7 @@ describe("enrichMissingPrices", () => {
               ],
             }),
             { status: 200 },
-          ),
-      ),
-    );
+          ));
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
@@ -1589,11 +1575,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        async () =>
-          new Response(
+    installFetch(async () => new Response(
             JSON.stringify({
               pairs: [
                 {
@@ -1626,9 +1608,7 @@ describe("enrichMissingPrices", () => {
               ],
             }),
             { status: 200 },
-          ),
-      ),
-    );
+          ));
 
     const result = await fixtureRunDexScreenerPass(assets, undefined, undefined);
 
@@ -1750,8 +1730,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn();
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = fixtureMockFetch([], { requireMatch: true });
 
     const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
 
@@ -1781,8 +1760,7 @@ describe("enrichMissingPrices", () => {
       },
     ];
 
-    const fetchSpy = vi.fn(async () => new Response("upstream error", { status: 500 }));
-    vi.stubGlobal("fetch", fetchSpy);
+    const fetchSpy = fixtureMockFetch([{ match: () => true, body: "upstream error", status: 500 }]);
 
     const result = await fixtureRunDlContractPasses(assets, undefined, undefined, db);
 

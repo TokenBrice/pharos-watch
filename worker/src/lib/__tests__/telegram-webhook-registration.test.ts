@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import {
   buildTelegramMiniAppUrl,
   buildTelegramWebhookUrl,
@@ -17,8 +18,7 @@ import {
   TELEGRAM_MINI_APP_URL,
 } from "../telegram-webhook-registration";
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+let fetchSpy = mockFetch([], { requireMatch: true });
 
 const MINI_APP_MVP_ALLOWED_UPDATES = [
   "message",
@@ -131,7 +131,7 @@ describe("buildTelegramMiniAppUrl", () => {
 
 describe("reconcileTelegramWebhookRegistration", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("keeps Mini App MVP webhook updates limited to handled update types", () => {
@@ -410,7 +410,7 @@ describe("reconcileTelegramWebhookRegistration", () => {
 
 describe("reconcileTelegramMenuButton", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("sets the default Web App menu button and records the cache marker", async () => {
@@ -497,7 +497,7 @@ describe("reconcileTelegramMenuButton", () => {
 
 describe("reconcileTelegramCommandRegistration", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("skips the Telegram API call when the command reconciliation cache is still fresh", async () => {
@@ -760,7 +760,7 @@ describe("reconcileTelegramCommandRegistration", () => {
 
 describe("reconcileTelegramProfileRegistration", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("skips the Telegram API call when the profile reconciliation cache is still fresh", async () => {

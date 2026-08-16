@@ -83,10 +83,7 @@ describe("fetchWithRetry", () => {
   });
 
   it("passes through configured non-ok statuses", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: "unprocessable" }), { status: 422 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: { error: "unprocessable" }, status: 422 }]);
 
     const res = await fetchWithRetry(
       "https://example.com/token",
@@ -101,10 +98,7 @@ describe("fetchWithRetry", () => {
   });
 
   it("retains passthrough404 compatibility", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ error: "not found" }), { status: 404 }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, body: { error: "not found" }, status: 404 }]);
 
     const res = await fetchWithRetry(
       "https://example.com/token",
@@ -119,10 +113,10 @@ describe("fetchWithRetry", () => {
 
   it("returns and consumes the first HTTP response in network-only retry mode", async () => {
     const first = new Response("upstream down", { status: 503 });
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(first)
-      .mockResolvedValueOnce(new Response("should not be requested", { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [{ response: first }, { body: "should not be requested" }],
+    }]);
 
     const result = await fetchTextWithRetry(
       "https://example.com/provider",
@@ -138,9 +132,11 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries thrown transport failures and can preserve the final error", async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new TypeError("network unavailable"));
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [new TypeError("network unavailable"), new TypeError("network unavailable")],
+    }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     try {
       await expect(fetchTextWithRetry(
@@ -156,17 +152,13 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries 429 responses before succeeding", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "slow down" }), {
-          status: 429,
-          headers: { "Retry-After": "1" },
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ ok: true }), { status: 200 }),
-      );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: "slow down" }, status: 429, headers: { "Retry-After": "1" } },
+        { body: { ok: true } },
+      ],
+    }]);
 
     const res = await fetchWithRetry("https://example.com/token", undefined, 1);
 
@@ -176,11 +168,12 @@ describe("fetchWithRetry", () => {
   });
 
   it("handles a Response-like 429 without headers", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: false, status: 429, body: { cancel } })
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const rateLimitedResponse = new Response("rate limited", { status: 429 });
+    const cancel = vi.spyOn(rateLimitedResponse.body!, "cancel");
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [{ response: rateLimitedResponse }, { body: { ok: true } }],
+    }]);
 
     const res = await fetchWithRetry("https://example.com/token", undefined, 1);
 
@@ -191,15 +184,13 @@ describe("fetchWithRetry", () => {
   });
 
   it("caps provider-controlled retry delays when configured", async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ error: "slow down" }), {
-          status: 429,
-          headers: { "Retry-After": "120" },
-        }),
-      )
-      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: "slow down" }, status: 429, headers: { "Retry-After": "120" } },
+        { body: { ok: true } },
+      ],
+    }]);
 
     const res = await fetchWithRetry(
       "https://example.com/token",
@@ -221,8 +212,7 @@ describe("fetchWithRetry", () => {
     sleepWithSignalMock.mockImplementationOnce(async () => {
       expect(rateLimitedResponse.bodyUsed).toBe(true);
     });
-    const fetchMock = vi.fn().mockResolvedValue(rateLimitedResponse);
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([{ match: () => true, respond: () => rateLimitedResponse }]);
 
     const res = await fetchWithRetry(
       "https://example.com/token",
@@ -238,9 +228,8 @@ describe("fetchWithRetry", () => {
   });
 
   it("uses an explicit safe URL in retry logs without changing the fetched URL", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("bad gateway", { status: 520 }));
+    const fetchMock = mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     await fetchWithRetry(
       "https://example.com/secret-token/resource",
@@ -260,9 +249,8 @@ describe("fetchWithRetry", () => {
   });
 
   it("redacts known provider URLs in retry logs by default", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("bad gateway", { status: 520 }));
+    const fetchMock = mockFetch([{ match: () => true, body: "bad gateway", status: 520 }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     await fetchWithRetry(
       "https://eth-mainnet.g.alchemy.com/v2/real-secret-key",
@@ -281,11 +269,14 @@ describe("fetchWithRetry", () => {
   it("backs off on 529 overload responses before succeeding", async () => {
     const randomSpy = vi.spyOn(Math, "random").mockReturnValue(1);
     try {
-      const fetchMock = vi.fn()
-        .mockResolvedValueOnce(new Response(JSON.stringify({ error: "overloaded" }), { status: 529 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({ error: "still overloaded" }), { status: 529 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true }), { status: 200 }));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{
+        match: () => true,
+        outcomes: [
+          { body: { error: "overloaded" }, status: 529 },
+          { body: { error: "still overloaded" }, status: 529 },
+          { body: { ok: true } },
+        ],
+      }]);
 
       const res = await fetchWithRetry("https://example.com/token", undefined, 2);
 
@@ -330,8 +321,7 @@ describe("fetchWithRetry", () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      const fetchMock = vi.fn().mockResolvedValue(neverEndingResponse("{"));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, respond: () => neverEndingResponse("{") }]);
 
       const resultPromise = fetchJsonWithRetry(
         "https://example.com/slow.json",
@@ -358,8 +348,7 @@ describe("fetchWithRetry", () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     try {
-      const fetchMock = vi.fn().mockResolvedValue(neverEndingResponse("partial"));
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = mockFetch([{ match: () => true, respond: () => neverEndingResponse("partial") }]);
 
       const resultPromise = fetchTextWithRetry(
         "https://example.com/slow.txt",
@@ -384,7 +373,7 @@ describe("fetchWithRetry", () => {
 
   it("preserves raw response behavior when a body exceeds the configured wrapper limit", async () => {
     const response = new Response("raw response", { headers: { "Content-Length": "12" } });
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+    const fetchMock = mockFetch([{ match: () => true, respond: () => response }]);
 
     const result = await fetchWithRetry(
       "https://example.com/raw",
@@ -402,13 +391,15 @@ describe("fetchWithRetry", () => {
     ["text", fetchTextWithRetry],
   ])("retries and rejects declared %s bodies above the configured limit", async (_label, fetchBody) => {
     const attempts: Array<ReturnType<typeof streamedResponse>> = [];
-    const fetchMock = vi.fn().mockImplementation(() => {
-      const attempt = streamedResponse([encode("{}")], { "Content-Length": "6" });
-      attempts.push(attempt);
-      return Promise.resolve(attempt.response);
-    });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => {
+        const attempt = streamedResponse([encode("{}")], { "Content-Length": "6" });
+        attempts.push(attempt);
+        return attempt.response;
+      },
+    }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     try {
       const result = await fetchBody(
@@ -433,13 +424,15 @@ describe("fetchWithRetry", () => {
 
   it("retries and rejects a chunked JSON body instead of parsing a partial payload", async () => {
     const attempts: Array<ReturnType<typeof streamedResponse>> = [];
-    const fetchMock = vi.fn().mockImplementation(() => {
-      const attempt = streamedResponse([encode('{"ok":"'), encode("overflow"), encode('"}')]);
-      attempts.push(attempt);
-      return Promise.resolve(attempt.response);
-    });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => {
+        const attempt = streamedResponse([encode('{"ok":"'), encode("overflow"), encode('"}')]);
+        attempts.push(attempt);
+        return attempt.response;
+      },
+    }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     try {
       const result = await fetchJsonWithRetry(
@@ -462,13 +455,15 @@ describe("fetchWithRetry", () => {
 
   it("retries and rejects a chunked text body above the configured limit", async () => {
     const attempts: Array<ReturnType<typeof streamedResponse>> = [];
-    const fetchMock = vi.fn().mockImplementation(() => {
-      const attempt = streamedResponse([encode("abcd"), encode("ef")]);
-      attempts.push(attempt);
-      return Promise.resolve(attempt.response);
-    });
+    const fetchMock = mockFetch([{
+      match: () => true,
+      respond: () => {
+        const attempt = streamedResponse([encode("abcd"), encode("ef")]);
+        attempts.push(attempt);
+        return attempt.response;
+      },
+    }]);
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    vi.stubGlobal("fetch", fetchMock);
 
     try {
       const result = await fetchTextWithRetry(
@@ -489,7 +484,7 @@ describe("fetchWithRetry", () => {
   it("counts UTF-8 bytes while preserving an under-limit multibyte body", async () => {
     const bytes = encode("€🙂");
     const attempt = streamedResponse([bytes.slice(0, 2), bytes.slice(2)]);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(attempt.response));
+    mockFetch([{ match: () => true, respond: () => attempt.response }]);
 
     const result = await fetchTextWithRetry(
       "https://example.com/multibyte.txt",

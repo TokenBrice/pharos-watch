@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+let fetchSpy = mockFetch([], { requireMatch: true });
 
 const {
   answerCallbackQuery,
@@ -20,7 +20,7 @@ const digestCreds = {
 };
 
 beforeEach(() => {
-  fetchSpy.mockReset();
+  fetchSpy = mockFetch([], { requireMatch: true });
 });
 
 describe("sendToChat", () => {
@@ -409,7 +409,7 @@ describe("answerInlineQuery", () => {
 
 describe("sendBatch", () => {
   beforeEach(() => {
-    fetchSpy.mockReset();
+    fetchSpy = mockFetch([], { requireMatch: true });
   });
 
   it("sends messages in parallel batches of the given size", async () => {

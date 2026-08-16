@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetchRetry } from "../../test-helpers/cron";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry());
@@ -24,18 +25,10 @@ function uint256Hex(value: bigint): string {
 }
 
 function stubScrvusdRpc(values: Record<string, bigint>) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: string | Request, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.url;
-      if (!url.includes("rpc.example/eth")) {
-        return new Response(JSON.stringify({ error: "Not found" }), {
-          status: 404,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      const body = JSON.parse(String(init?.body)) as {
+  mockFetch([{
+    match: "rpc.example/eth",
+    respond: async (request) => {
+      const body = await request.clone().json() as {
         params?: Array<{ data?: string } | string>;
       };
       const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -51,8 +44,8 @@ function stubScrvusdRpc(values: Record<string, bigint>) {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    }),
-  );
+    },
+  }], { requireMatch: true });
 }
 
 describe("fetchCurveScrvusdCurrentRateSource", () => {

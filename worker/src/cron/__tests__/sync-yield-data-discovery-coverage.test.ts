@@ -943,10 +943,8 @@ describe("syncYieldData", () => {
 
     let activeRpcCalls = 0;
     let maxActiveRpcCalls = 0;
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
 
         if (url.includes("yields.llama.fi")) {
           return new Response(
@@ -984,7 +982,7 @@ describe("syncYieldData", () => {
           maxActiveRpcCalls = Math.max(maxActiveRpcCalls, activeRpcCalls);
           await Promise.resolve();
           try {
-            const body = JSON.parse(String(init?.body)) as {
+            const body = JSON.parse(await request.clone().text()) as {
               params?: Array<{ data?: string } | string>;
             };
             const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -1015,8 +1013,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [

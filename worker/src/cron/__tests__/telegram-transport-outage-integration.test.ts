@@ -3,11 +3,12 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { drainPendingQueue } from "../telegram-pending";
 
 const NOW = 1_800_000_000;
 const databases: DatabaseSync[] = [];
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
+let fetchSpy: ReturnType<typeof mockFetch>;
 
 function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
   const sqlite = new DatabaseSync(":memory:");
@@ -57,8 +58,7 @@ function insertRows(
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(NOW * 1_000);
-  fetchSpy.mockReset();
-  vi.stubGlobal("fetch", fetchSpy);
+  fetchSpy = mockFetch([], { requireMatch: true });
 });
 
 afterEach(() => {

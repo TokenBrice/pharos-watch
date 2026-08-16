@@ -448,12 +448,10 @@ describe("syncYieldData", () => {
     });
 
     // Mock fetch to handle the convertToAssets RPC call
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
         if (url.includes("rpc.example/eth")) {
-          const body = JSON.parse(String(init?.body)) as {
+          const body = JSON.parse(await request.clone().text()) as {
             params?: Array<{ data?: string } | string>;
           };
           const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -471,8 +469,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [
@@ -660,12 +658,10 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
         if (url.includes("rpc.example/fallback")) {
-          const body = JSON.parse(String(init?.body)) as {
+          const body = JSON.parse(await request.clone().text()) as {
             params?: Array<{ data?: string } | string>;
           };
           const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -692,8 +688,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [
@@ -978,12 +974,10 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
         if (url.includes("rpc.example/eth")) {
-          const body = JSON.parse(String(init?.body)) as {
+          const body = JSON.parse(await request.clone().text()) as {
             params?: Array<{ data?: string } | string>;
           };
           const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -1000,8 +994,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [
@@ -1069,10 +1063,8 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
 
         if (url.includes("/simple/price?ids=liquity&vs_currencies=usd")) {
           return new Response(JSON.stringify({ liquity: { usd: 0.280527 } }), {
@@ -1082,7 +1074,7 @@ describe("syncYieldData", () => {
         }
 
         if (url.includes("rpc.example/eth")) {
-          const body = JSON.parse(String(init?.body)) as {
+          const body = JSON.parse(await request.clone().text()) as {
             params?: Array<{ data?: string } | string>;
           };
           const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -1110,8 +1102,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [
@@ -1223,12 +1215,10 @@ describe("syncYieldData", () => {
       explorerUrl: "https://etherscan.io",
     });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: string | Request, init?: RequestInit) => {
-        const url = typeof input === "string" ? input : input.url;
+    fixtureMockFetch([{ match: () => true, respond: async (request) => {
+        const url = request.url;
         if (url.includes("rpc.example/eth")) {
-          const body = JSON.parse(String(init?.body)) as {
+          const body = JSON.parse(await request.clone().text()) as {
             params?: Array<{ data?: string } | string>;
           };
           const callData = typeof body.params?.[0] === "object" ? body.params[0]?.data : null;
@@ -1245,8 +1235,8 @@ describe("syncYieldData", () => {
           status: 404,
           headers: { "Content-Type": "application/json" },
         });
-      }),
-    );
+      },
+    }]);
 
     const testChainRpcs = new Map<string, ChainRpcConfig>([
       [

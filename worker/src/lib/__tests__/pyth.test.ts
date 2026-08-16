@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { fetchPythPrices } from "../pyth";
 import pythHermesFixture from "./fixtures/pyth-hermes.json";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -10,17 +11,17 @@ afterEach(() => {
 describe("fetchPythPrices", () => {
   it("returns prices with confidence intervals for unprefixed Hermes feed ids", async () => {
     const freshPublishTime = Math.floor(Date.now() / 1000) - 60;
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    mockFetch([{
+      match: () => true,
+      body: {
         parsed: [
           {
             id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
             price: { price: "100013000", expo: -8, conf: "61000", publish_time: freshPublishTime },
           },
         ],
-      }),
-    }));
+      },
+    }]);
 
     const feedIds = new Map([["usdt-tether", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b"]]);
     const outcome = await fetchPythPrices(feedIds);
@@ -35,17 +36,17 @@ describe("fetchPythPrices", () => {
 
   it("warns when feeds were requested but none map back to tracked assets", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    mockFetch([{
+      match: () => true,
+      body: {
         parsed: [
           {
             id: "deadbeef",
             price: { price: "100000000", expo: -8, conf: "1000", publish_time: 1710000000 },
           },
         ],
-      }),
-    }));
+      },
+    }]);
 
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const outcome = await fetchPythPrices(feedIds);
@@ -55,8 +56,12 @@ describe("fetchPythPrices", () => {
   });
 
   it("returns upstream-error outcome on API failure", async () => {
-    const cancel = vi.fn().mockResolvedValue(undefined);
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 503, body: { cancel } }));
+    const cancel = vi.fn(async () => undefined);
+    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 503 });
+    mockFetch([{
+      match: () => true,
+      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
+    }]);
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const outcome = await fetchPythPrices(feedIds);
     expect(outcome.kind).toBe("upstream-error");
@@ -65,14 +70,14 @@ describe("fetchPythPrices", () => {
   });
 
   it("skips feeds with non-positive price", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    mockFetch([{
+      match: () => true,
+      body: {
         parsed: [
           { id: "0xabc", price: { price: "0", expo: -8, conf: "0", publish_time: 0 } },
         ],
-      }),
-    }));
+      },
+    }]);
     const feedIds = new Map([["broken-coin", "0xabc"]]);
     const outcome = await fetchPythPrices(feedIds);
     expect(outcome.value.size).toBe(0);
@@ -80,17 +85,17 @@ describe("fetchPythPrices", () => {
 
   it("rejects feeds older than PYTH_MAX_STALENESS_SEC (RISK-3)", async () => {
     const stalePublishTime = Math.floor(Date.now() / 1000) - 600; // 10 min ago (> 5 min threshold)
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
+    mockFetch([{
+      match: () => true,
+      body: {
         parsed: [
           {
             id: "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
             price: { price: "100010000", expo: -8, conf: "5000", publish_time: stalePublishTime },
           },
         ],
-      }),
-    }));
+      },
+    }]);
 
     const feedIds = new Map([["usdt-tether", "0x2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b"]]);
     const outcome = await fetchPythPrices(feedIds);
@@ -99,13 +104,13 @@ describe("fetchPythPrices", () => {
   });
 
   it("returns no-data outcome when feedIds is empty", async () => {
-    vi.stubGlobal("fetch", vi.fn());
+    mockFetch([], { requireMatch: true });
     const outcome = await fetchPythPrices(new Map());
     expect(outcome.kind).toBe("no-data");
   });
 
   it("returns upstream-error outcome when fetch throws", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
     const feedIds = new Map([["usdt-tether", "0xabc"]]);
     const outcome = await fetchPythPrices(feedIds);
     expect(outcome.kind).toBe("upstream-error");
@@ -122,10 +127,7 @@ describe("fetchPythPrices", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date((fixtureFeed.price.publish_time + 10) * 1000));
 
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(pythHermesFixture),
-    }));
+    mockFetch([{ match: () => true, body: pythHermesFixture }]);
 
     const feedIds = new Map([["usdt-tether", `0x${fixtureFeed.id}`]]);
     const outcome = await fetchPythPrices(feedIds);

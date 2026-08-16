@@ -7,9 +7,9 @@ import {
   resolveBlockTimestamps,
 } from "../alchemy-logs";
 import { createBudget } from "../evm-logs";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 
-const fetchMock = vi.fn();
-vi.stubGlobal("fetch", fetchMock);
+let fetchMock: ReturnType<typeof mockFetch>;
 
 function makeLog(txHash: string, blockNumber = 0x176f050) {
   return {
@@ -80,7 +80,7 @@ describe("buildAlchemyUrl", () => {
 
 describe("getAlchemyBlockNumber", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    fetchMock = mockFetch([], { requireMatch: true });
   });
 
   it("returns block number from JSON-RPC response", async () => {
@@ -144,7 +144,7 @@ describe("getAlchemyBlockNumber", () => {
 
 describe("fetchAlchemyLogs runtime deadline", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    fetchMock = mockFetch([], { requireMatch: true });
   });
 
   it("does not start eth_getLogs when the run deadline is already exhausted", async () => {
@@ -175,7 +175,7 @@ describe("fetchAlchemyLogs runtime deadline", () => {
 
 describe("getAlchemyTransactionContextBatchMany", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    fetchMock = mockFetch([], { requireMatch: true });
   });
 
   it("batches transaction and receipt lookups into one HTTP request", async () => {
@@ -221,7 +221,7 @@ describe("getAlchemyTransactionContextBatchMany", () => {
 
 describe("fetchAlchemyLogs", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    fetchMock = mockFetch([], { requireMatch: true });
   });
 
   it("returns parsed log entries on success", async () => {
@@ -457,9 +457,9 @@ describe("fetchAlchemyLogs", () => {
   });
 
   it("builds correct sparse topic array for multi-topic filters", async () => {
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: [] }), { status: 200 }),
-    );
+    fetchMock = mockFetch([
+      { match: () => true, body: { jsonrpc: "2.0", id: 1, result: [] } },
+    ]);
 
     const budget = createBudget(100);
     await fetchAlchemyLogs(
@@ -474,7 +474,7 @@ describe("fetchAlchemyLogs", () => {
       budget,
     );
 
-    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const body = JSON.parse(fetchMock.getHistory()[0]?.body ?? "");
     expect(body.params[0].topics).toEqual([
       "0xddf252ad...",
       null,
@@ -487,7 +487,7 @@ describe("fetchAlchemyLogs", () => {
 
 describe("resolveBlockTimestamps", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    fetchMock = mockFetch([], { requireMatch: true });
   });
 
   it("batch-fetches timestamps for multiple blocks", async () => {
