@@ -9,7 +9,6 @@ import {
 import { canonicalExitRouteAssetKey } from "@shared/lib/exit-route-identity";
 import {
   DEX_CURVE_STABLESWAP_MEASURED_FRESHNESS_MAX_SEC,
-  DEX_MEASURED_MAX_COST_BPS,
   DEX_MEASURED_TARGET_SCHEMA_VERSION,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionCurveCompositeProof,
@@ -34,10 +33,8 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import {
-  rawAmountToUsdOrNull as rawAmountToUsd,
-  usdToRawAmount,
-} from "./fixed-point";
+import { usdToRawAmount } from "./fixed-point";
+import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
 import {
   CURVE_ALUSD_3CRV_METAPOOL_ADDRESS,
   CURVE_DOLA_FRAXBP_METAPOOL_ADDRESS,
@@ -1714,39 +1711,22 @@ function decodeQuotePoint(
   if (!result.success) return { failureReason: "pool-revert" };
   const amountOutRaw = decodeCurveCompositeQuote(request.policy, result.returnData);
   if (amountOutRaw == null) return { failureReason: "malformed-pool-return" };
-  const inputUsd = rawAmountToUsd(
-    request.amountInRaw,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  const outputUsd = rawAmountToUsd(
+  const point = materializeEvmQuotePoint({
+    amountInRaw: request.amountInRaw,
     amountOutRaw,
-    request.target.tokenOut.decimals,
-    request.target.tokenOut.referencePriceUsd,
-  );
-  if (inputUsd == null || inputUsd <= 0 || outputUsd == null) {
-    return { failureReason: "malformed-pool-return" };
-  }
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    point: {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData,
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
-      adapterMetadata: {
+    callData: request.callData,
+    returnData: result.returnData,
+    tokenIn: request.target.tokenIn,
+    tokenOut: request.target.tokenOut,
+    adapterMetadata: {
         executionPool: request.endpointAddress,
         blockNumber: request.blockNumber,
         inputIndex: request.inputIndex,
         outputIndex: request.outputIndex,
         quoteFunction: request.policy.quoteFunction,
-      },
     },
-  };
+  });
+  return point ? { point } : { failureReason: "malformed-pool-return" };
 }
 
 interface QuoteDependencies {
@@ -1775,48 +1755,41 @@ export function createCurveCompositeQuoteExecutor(dependencies: QuoteDependencie
       eligibility: prepared[index]!.eligibility,
       ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
     }));
-    const valid = prepared.flatMap((entry) => entry.encoded ? [entry.encoded] : []);
-    const requestGroups = new Map<string, EncodedRequest[]>();
-    for (const request of valid) {
-      const key = `${request.policy.chain}:${request.blockNumber}`;
-      const group = requestGroups.get(key) ?? [];
-      group.push(request);
-      requestGroups.set(key, group);
-    }
-    for (const group of requestGroups.values()) {
-      for (let offset = 0; offset < group.length; offset += BATCH_SIZE) {
-        throwIfAborted(input.signal);
-        const chunk = group.slice(offset, offset + BATCH_SIZE);
-        const results = await dependencies.executeMulticall({
-          chain: chunk[0]!.policy.chain,
-          calls: chunk.map((request) => ({
-            label: request.label,
-            target: request.endpointAddress,
-            callData: request.callData,
+    const plans = prepared.flatMap((entry) => entry.encoded ? [{
+      ...entry.encoded,
+      chain: entry.encoded.policy.chain,
+      call: {
+            label: entry.encoded.label,
+            target: entry.encoded.endpointAddress,
+            callData: entry.encoded.callData,
             allowFailure: true,
-          })),
-          blockNumber: chunk[0]!.blockNumber,
-          chainRpcs: input.chainRpcs,
-          signal: input.signal,
-          rpcBudget: input.rpcBudget,
-        });
-        input.rpcBudget?.recordChainResult(chunk[0]!.policy.chain, results != null);
-        const byLabel = new Map((results ?? []).map((result) => [result.label, result]));
-        for (const request of chunk) {
-          const result = byLabel.get(request.label);
-          outcomes[request.index] = {
+      },
+    }] : []);
+    return executeEvmQuotePlan({
+      plans,
+      outcomes,
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      rpcBudget: input.rpcBudget,
+      spec: {
+        batchSize: BATCH_SIZE,
+        executeMulticall: dependencies.executeMulticall,
+        resolveResult: (request, result) => ({
             targetId: request.target.targetId,
             inputUsd: request.inputUsd,
             blockNumber: request.blockNumber,
             eligibility: request.eligibility,
-            ...(result
-              ? decodeQuotePoint(request, result)
-              : { failureReason: input.rpcBudget?.stopReason ?? "rpc-failure" }),
-          };
-        }
-      }
-    }
-    return outcomes;
+            ...decodeQuotePoint(request, result),
+        }),
+        materializeTransportFailure: (request, reason) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          eligibility: request.eligibility,
+          failureReason: reason ?? "rpc-failure",
+        }),
+      },
+    });
   };
 }
 

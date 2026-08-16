@@ -6,7 +6,6 @@ import {
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
@@ -21,10 +20,9 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { executeAdaptiveMulticall } from "./adaptive-multicall";
-import { mapWithConcurrency } from "../../lib/concurrency";
 import { usdToRawAmount } from "./fixed-point";
 import { decodeCurveMeasuredRawQuotePoint } from "./curve-quote-point";
+import { executeEvmQuotePlan } from "./evm-quote-plan";
 
 const CURVE_CRYPTOSWAP_ABI = parseAbi(["function get_dy(uint256 i,uint256 j,uint256 dx) view returns (uint256)"]);
 const CURVE_CRYPTOSWAP_DEPENDENCY_ABI = parseAbi([
@@ -775,37 +773,6 @@ export function decodeCurveCryptoSwapQuotePoint(
 }
 
 export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwapQuoteDependencies) {
-  async function executeAdaptiveChunk(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }) {
-    return executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
-      chain: input.chain,
-      calls: input.calls,
-      blockNumber: input.blockNumber,
-      signal: input.signal,
-      execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
-        dependencies.executeMulticall({
-          chain,
-          calls,
-          blockNumber,
-          chainRpcs: input.chainRpcs,
-          signal,
-          rpcBudget: input.rpcBudget,
-          onBudgetStop,
-        }),
-      failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
-      getLabel: (call) => call.label,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
-      failedAttemptAccounting: "all",
-      unattemptedResult: "omit",
-    });
-  }
-
   return async function quoteCurveCryptoSwapRequests(input: {
     requests: readonly CurveCryptoSwapRequest[];
     chainRpcs: Map<string, ChainRpcConfig>;
@@ -820,62 +787,45 @@ export function createCurveCryptoSwapQuoteExecutor(dependencies: CurveCryptoSwap
       eligibility: prepared[index]!.eligibility,
       ...(prepared[index]!.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
     }));
-    const valid = prepared.flatMap((entry) => (entry.encoded ? [entry.encoded] : []));
-    const groupsByChain = new Map<string, EncodedCurveCryptoSwapRequest[]>();
-    for (const request of valid) {
-      const group = groupsByChain.get(request.policy.chain) ?? [];
-      group.push(request);
-      groupsByChain.set(request.policy.chain, group);
-    }
-
-    await mapWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
-      const requestsByBlock = new Map<number, EncodedCurveCryptoSwapRequest[]>();
-      for (const request of chainRequests) {
-        const blockRequests = requestsByBlock.get(request.blockNumber) ?? [];
-        blockRequests.push(request);
-        requestsByBlock.set(request.blockNumber, blockRequests);
-      }
-      // Each chain lane has at most one in-flight RPC request.
-      for (const blockRequests of requestsByBlock.values()) {
-        throwIfAborted(input.signal);
-        for (let offset = 0; offset < blockRequests.length; offset += CURVE_MULTICALL_BATCH_SIZE) {
-          throwIfAborted(input.signal);
-          const chunk = blockRequests.slice(offset, offset + CURVE_MULTICALL_BATCH_SIZE);
-          const calls = chunk.map((request) => ({
-            label: request.label,
-            target: request.endpointAddress,
-            callData: request.callData,
+    const plans = prepared.flatMap((entry) => entry.encoded ? [{
+      ...entry.encoded,
+      chain: entry.encoded.policy.chain,
+      call: {
+            label: entry.encoded.label,
+            target: entry.encoded.endpointAddress,
+            callData: entry.encoded.callData,
             allowFailure: true,
-          }));
-          const chunkResult = await executeAdaptiveChunk({
-            chain: chunk[0]!.policy.chain,
-            calls,
-            blockNumber: chunk[0]!.blockNumber,
-            chainRpcs: input.chainRpcs,
-            signal: input.signal,
-            rpcBudget: input.rpcBudget,
-          });
-          const byLabel = new Map(chunkResult.results.map((result) => [result.label, result]));
-          for (const request of chunk) {
-            const result = byLabel.get(request.label);
-            const budgetFailure = chunkResult.budgetStopReasonsByLabel.get(request.label);
-            const decoded = budgetFailure
-              ? { failureReason: budgetFailure }
-              : result == null
-                ? { failureReason: "pool-revert" as const }
-                : decodeCurveCryptoSwapQuotePoint(request, result);
-            outcomes[request.index] = {
-              targetId: request.target.targetId,
-              inputUsd: request.inputUsd,
-              blockNumber: request.blockNumber,
-              eligibility: request.eligibility,
-              ...decoded,
-            };
-          }
-        }
-      }
+      },
+    }] : []);
+    return executeEvmQuotePlan({
+      plans,
+      outcomes,
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      rpcBudget: input.rpcBudget,
+      spec: {
+        batchSize: CURVE_MULTICALL_BATCH_SIZE,
+        executeMulticall: dependencies.executeMulticall,
+        adaptive: {
+          failedAttemptAccounting: "all",
+          unattemptedResult: "omit",
+        },
+        resolveResult: (request, result) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          eligibility: request.eligibility,
+          ...decodeCurveCryptoSwapQuotePoint(request, result),
+        }),
+        materializeTransportFailure: (request, reason) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          eligibility: request.eligibility,
+          failureReason: reason ?? "pool-revert",
+        }),
+      },
     });
-    return outcomes;
   };
 }
 

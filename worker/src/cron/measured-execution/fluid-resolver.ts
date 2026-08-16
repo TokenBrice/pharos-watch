@@ -1,13 +1,11 @@
 import { decodeFunctionData, encodeFunctionData, keccak256, parseAbi } from "viem/utils";
 
 import {
-  DEX_MEASURED_MAX_COST_BPS,
   buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionProfile,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { throwIfAborted } from "../../lib/abort";
 import {
   fetchEvmCodeAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
@@ -20,13 +18,11 @@ import {
   type DexMeasuredExecutionRpcBudget,
   type DexMeasuredRawQuotePoint,
 } from "./profiles";
-import { executeAdaptiveMulticall } from "./adaptive-multicall";
-import { mapWithConcurrency } from "../../lib/concurrency";
 import {
   MAX_UINT256,
-  rawAmountToUsdOrNull as rawAmountToUsd,
   usdToRawAmount,
 } from "./fixed-point";
+import { executeEvmQuotePlan, materializeEvmQuotePoint } from "./evm-quote-plan";
 
 const FLUID_RESOLVER_ABI = parseAbi([
   "function estimateSwapIn(address dex_,bool swap0To1_,uint256 amountIn_,uint256 minAmountOut_) view returns (uint256 amountOut_)",
@@ -333,30 +329,13 @@ export function decodeFluidResolverQuotePoint(
   if (!result.success) return { failureReason: "resolver-revert" };
   const amountOutRaw = decodeFluidEstimateSwapIn(result.returnData);
   if (amountOutRaw == null) return { failureReason: "malformed-resolver-return" };
-  const inputUsd = rawAmountToUsd(
-    request.amountInRaw,
-    request.target.tokenIn.decimals,
-    request.target.tokenIn.referencePriceUsd,
-  );
-  const outputUsd = rawAmountToUsd(
+  const point = materializeEvmQuotePoint({
+    amountInRaw: request.amountInRaw,
     amountOutRaw,
-    request.target.tokenOut.decimals,
-    request.target.tokenOut.referencePriceUsd,
-  );
-  if (inputUsd == null || inputUsd <= 0 || outputUsd == null) {
-    return { failureReason: "malformed-resolver-return" };
-  }
-  const costBps = Math.max(0, (1 - outputUsd / inputUsd) * 10_000);
-  return {
-    point: {
-      amountInRaw: request.amountInRaw.toString(),
-      amountOutRaw: amountOutRaw.toString(),
-      callData: request.callData,
-      returnData: result.returnData.toLowerCase() as `0x${string}`,
-      inputUsd,
-      outputUsd,
-      costBps,
-      passesCostBound: costBps <= DEX_MEASURED_MAX_COST_BPS,
+    callData: request.callData,
+    returnData: result.returnData,
+    tokenIn: request.target.tokenIn,
+    tokenOut: request.target.tokenOut,
       adapterMetadata: {
         resolver: request.deployment.endpointAddress,
         resolverCodeHash: request.deployment.expectedCodeHash,
@@ -364,42 +343,11 @@ export function decodeFluidResolverQuotePoint(
         swap0To1: request.swap0To1,
         zeroLimitReturn: amountOutRaw === 0n,
       },
-    },
-  };
+  });
+  return point ? { point } : { failureReason: "malformed-resolver-return" };
 }
 
 function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDependencies) {
-  async function executeAdaptiveChunk(input: {
-    chain: string;
-    calls: readonly EvmMulticall3Call[];
-    blockNumber: number;
-    chainRpcs: Map<string, ChainRpcConfig>;
-    signal?: AbortSignal;
-    rpcBudget?: DexMeasuredExecutionRpcBudget;
-  }) {
-    return executeAdaptiveMulticall<EvmMulticall3Call, EvmMulticall3Result>({
-      chain: input.chain,
-      calls: input.calls,
-      blockNumber: input.blockNumber,
-      signal: input.signal,
-      execute: ({ chain, calls, blockNumber, signal, onBudgetStop }) =>
-        dependencies.executeMulticall({
-          chain,
-          calls,
-          blockNumber,
-          chainRpcs: input.chainRpcs,
-          signal,
-          rpcBudget: input.rpcBudget,
-          onBudgetStop,
-        }),
-      failureResult: (call) => ({ label: call.label, success: false, returnData: "0x" }),
-      getLabel: (call) => call.label,
-      ...(input.rpcBudget ? { deadlineMs: input.rpcBudget.deadlineMs, budget: input.rpcBudget } : {}),
-      failedAttemptAccounting: "single-call",
-      unattemptedResult: "failure-result",
-    });
-  }
-
   return async function quoteFluidResolverRequests(input: {
     requests: readonly FluidResolverRequest[];
     chainRpcs: Map<string, ChainRpcConfig>;
@@ -414,78 +362,64 @@ function createFluidResolverQuoteExecutor(dependencies: FluidResolverQuoteDepend
       blockNumber: request.blockNumber,
       ...(prepared[index]?.failureReason ? { failureReason: prepared[index]!.failureReason } : {}),
     }));
-    const valid = prepared.flatMap((entry) => (entry.encoded ? [entry.encoded] : []));
-    const groupsByChain = new Map<string, EncodedFluidResolverRequest[]>();
-    for (const request of valid) {
-      const group = groupsByChain.get(request.deployment.chain) ?? [];
-      group.push(request);
-      groupsByChain.set(request.deployment.chain, group);
-    }
-
-    await mapWithConcurrency([...groupsByChain.values()], 3, async (chainRequests) => {
-      const requestsByBlock = new Map<number, EncodedFluidResolverRequest[]>();
-      for (const request of chainRequests) {
-        const blockRequests = requestsByBlock.get(request.blockNumber) ?? [];
-        blockRequests.push(request);
-        requestsByBlock.set(request.blockNumber, blockRequests);
-      }
-
-      // A chain lane owns one RPC request at a time, including when a caller
-      // accidentally supplies more than one pinned block for the same chain.
-      for (const requests of requestsByBlock.values()) {
-        throwIfAborted(input.signal);
-        const first = requests[0]!;
-        const verification = input.deploymentVerified
-          ? { ok: true as const, codeHash: first.deployment.expectedCodeHash }
-          : await dependencies.verifyDeployment({
-              deployment: first.deployment,
-              blockNumber: first.blockNumber,
-              chainRpcs: input.chainRpcs,
-              signal: input.signal,
-              rpcBudget: input.rpcBudget,
-            });
-        if (!verification.ok) {
-          for (const request of requests) outcomes[request.index]!.failureReason = verification.reason;
-          continue;
-        }
-
-        for (let offset = 0; offset < requests.length; offset += FLUID_MULTICALL_BATCH_SIZE) {
-          throwIfAborted(input.signal);
-          const chunk = requests.slice(offset, offset + FLUID_MULTICALL_BATCH_SIZE);
-          const calls = chunk.map((request) => ({
-            label: request.label,
-            target: request.deployment.endpointAddress,
-            callData: request.callData,
+    const plans = prepared.flatMap((entry) => entry.encoded ? [{
+      ...entry.encoded,
+      chain: entry.encoded.deployment.chain,
+      call: {
+            label: entry.encoded.label,
+            target: entry.encoded.deployment.endpointAddress,
+            callData: entry.encoded.callData,
             allowFailure: true,
-          }));
-          const chunkResult = await executeAdaptiveChunk({
-            chain: first.deployment.chain,
-            calls,
-            blockNumber: first.blockNumber,
-            chainRpcs: input.chainRpcs,
-            signal: input.signal,
-            rpcBudget: input.rpcBudget,
+      },
+    }] : []);
+    return executeEvmQuotePlan({
+      plans,
+      outcomes,
+      chainRpcs: input.chainRpcs,
+      signal: input.signal,
+      rpcBudget: input.rpcBudget,
+      spec: {
+        batchSize: FLUID_MULTICALL_BATCH_SIZE,
+        beforeBlock: async ({ plans: blockPlans, blockNumber, chainRpcs, signal, rpcBudget }) => {
+          if (input.deploymentVerified) return { ok: true };
+          const verification = await dependencies.verifyDeployment({
+            deployment: blockPlans[0]!.deployment,
+            blockNumber,
+            chainRpcs,
+            signal,
+            rpcBudget,
           });
-          const byLabel = new Map(chunkResult.results.map((result) => [result.label, result]));
-          for (const request of chunk) {
-            const result = byLabel.get(request.label);
-            const budgetFailure = chunkResult.budgetStopReasonsByLabel.get(request.label);
-            const decoded = budgetFailure
-              ? { failureReason: budgetFailure }
-              : result == null
-                ? { failureReason: "resolver-revert" as const }
-                : decodeFluidResolverQuotePoint(request, result);
-            outcomes[request.index] = {
-              targetId: request.target.targetId,
-              inputUsd: request.inputUsd,
-              blockNumber: request.blockNumber,
-              ...decoded,
-            };
-          }
-        }
-      }
+          return verification.ok
+            ? { ok: true }
+            : {
+                ok: false,
+                materialize: (request): FluidResolverBatchOutcome => ({
+                  targetId: request.target.targetId,
+                  inputUsd: request.inputUsd,
+                  blockNumber: request.blockNumber,
+                  failureReason: verification.reason,
+                }),
+              };
+        },
+        executeMulticall: dependencies.executeMulticall,
+        adaptive: {
+          failedAttemptAccounting: "single-call",
+          unattemptedResult: "failure-result",
+        },
+        resolveResult: (request, result) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          ...decodeFluidResolverQuotePoint(request, result),
+        }),
+        materializeTransportFailure: (request, reason) => ({
+          targetId: request.target.targetId,
+          inputUsd: request.inputUsd,
+          blockNumber: request.blockNumber,
+          failureReason: reason ?? "resolver-revert",
+        }),
+      },
     });
-    return outcomes;
   };
 }
 
