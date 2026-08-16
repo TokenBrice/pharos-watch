@@ -147,7 +147,7 @@ export const V9_FACT_PRODUCER_SOURCE_PATHS = [
   "shared/types/safety-score-history.ts",
   "shared/types/stablecoin-taxonomy.ts",
   "shared/lib/chains/index.ts",
-  "worker/src/lib/exit-route-capacity-point.ts",
+  "shared/lib/exit-route-capacity-point.ts",
   "worker/src/lib/redemption-exit-route-observations.ts",
   "worker/src/lib/report-cards-fixed-input.ts",
   "worker/src/lib/safety-score-v9-extension.ts",
