@@ -9,6 +9,7 @@ import {
   assertAllD1MatchesUsed,
   mockD1,
   mockD1Strict,
+  type MockD1Database,
   type MockTableConfig,
 } from "../../test-helpers/__shared/mock-d1";
 import { createSqliteD1 } from "../../test-helpers/sqlite-d1";
@@ -34,7 +35,7 @@ const REDEMPTION_WRITE_TABLES: MockTableConfig[] = [
   { match: "DELETE FROM redemption_backstop_history", rows: [], runMeta: { changes: 0 } },
 ];
 
-function mockRedemptionD1(tables: MockTableConfig[] = []): D1Database {
+function mockRedemptionD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1([...tables, ...REDEMPTION_WRITE_TABLES]);
 }
 

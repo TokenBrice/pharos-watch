@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import worker from "../index";
-import { mockD1, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../test-helpers/__shared/mock-d1";
 import { createWorkerEnv } from "../test-helpers/__shared/worker-env";
 import { hmacSha256Hex, makeExecutionContext } from "../test-helpers/__shared/auth";
 import { API_KEY_AUTH_CACHE_TTL_MS, resetApiKeyStateForTests } from "../lib/api-keys";
@@ -54,12 +54,23 @@ async function validKeyDbTables(
   ];
 }
 
-function makeEnv(overrides: Parameters<typeof createWorkerEnv>[0] = {}) {
-  return createWorkerEnv({
+type TestEnvOverrides = Omit<NonNullable<Parameters<typeof createWorkerEnv>[0]>, "DB"> & {
+  DB?: MockD1Database;
+};
+
+type TestEnv = Omit<ReturnType<typeof createWorkerEnv>, "DB"> & {
+  DB: MockD1Database;
+};
+
+function makeEnv(overrides: TestEnvOverrides = {}): TestEnv {
+  const db = overrides.DB ?? mockD1();
+  const env = createWorkerEnv({
     SITE_API_SHARED_SECRET: "site-secret",
     API_KEY_HASH_PEPPER: VALID_KEY_PEPPER,
     ...overrides,
+    DB: db,
   });
+  return { ...env, DB: db };
 }
 
 describe("worker.fetch", () => {
@@ -81,7 +92,7 @@ describe("worker.fetch", () => {
     });
   });
 
-  async function fetchStablecoinsWithApiKey(method = "GET", database?: D1Database): Promise<Response> {
+  async function fetchStablecoinsWithApiKey(method = "GET", database?: MockD1Database): Promise<Response> {
     const { ctx, waits } = makeExecutionContext();
     const response = await worker.fetch(
       new Request("https://api.pharos.watch/api/stablecoins", {

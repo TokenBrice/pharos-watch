@@ -17,7 +17,10 @@ import { buildDailyDigestInput } from "./daily-digest/input";
 import { formatStandingConditionsLine } from "./daily-digest/cause-context";
 import { buildUserPrompt, SYSTEM_PROMPT } from "./daily-digest/prompt";
 import { insertDigestRecord, markDigestMetaBlocked, requestDigestCopy, runDigestChannelDelivery } from "./digest/platform";
-import { runTelegramDigestDeliveryWithPermit } from "./telegram-digest-transport";
+import {
+  runTelegramDigestDeliveryWithPermit,
+  type TelegramDigestPermittedDelivery,
+} from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { logDailyDigestLlmCall } from "./daily-digest/runtime-helpers";
@@ -26,6 +29,7 @@ import { buildCriticalDailyLeadRequirements } from "./daily-digest/critical-lead
 import { attachDigestEditorialAudit } from "./daily-digest/digest-intelligence";
 import type { DigestValidationIssue } from "./daily-digest/response";
 import { logWorkerEvent } from "../lib/structured-log";
+import type { TelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 import {
   checkDigestSafetyContextForDelivery,
   findUnboundDigestSafetyClaimMarkers,
@@ -34,6 +38,26 @@ import {
 export { classifyRegime } from "./daily-digest/prompt";
 
 const TWITTER_SENT_MARKER_PREFIX = "daily-digest:twitter-sent:";
+
+function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
+}
 
 function getTwitterSentMarkerKey(date: string): string {
   return `${TWITTER_SENT_MARKER_PREFIX}${date}`;
@@ -435,7 +459,7 @@ export async function generateDailyDigest(
     owner: "daily-digest",
     editionKey: telegramEditionKey,
     signal,
-    deliver: async (creds) => {
+    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
       if (!telegramOutboxReady) throw new Error("Telegram digest outbox was not persisted");
       const delivery = await deliverTelegramDigestEdition(db, creds, telegramEditionKey, signal);
       if (delivery.outcome === "sent") {
@@ -453,12 +477,15 @@ export async function generateDailyDigest(
       if (delivery.outcome === "skipped") {
         return { status: `queued: ${delivery.state}`, transportOutcome: null };
       }
+      const errorClass = telegramTransportErrorClass(delivery.errorClass);
       return {
         status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
         transportOutcome: {
           ok: false,
-          errorClass: delivery.errorClass,
-          retryAfterSec: delivery.retryAfterSec,
+          errorClass,
+          retryAfterSec: errorClass == null
+            ? null
+            : delivery.retryAfterSec,
         },
       };
     },

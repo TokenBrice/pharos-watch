@@ -101,7 +101,7 @@ describe("evaluateAccessGate", () => {
   });
 
   it("serves maintenance mode for non-preflight requests only", async () => {
-    const env = { MAINTENANCE_MODE: "true" };
+    const env = createWorkerEnv({ MAINTENANCE_MODE: "true" });
 
     const blocked = handleMaintenanceMode(
       new Request("https://api.pharos.watch/api/stablecoins"),

@@ -13,7 +13,11 @@ import {
 import { fetchEvmTokenBalance } from "../balance-providers";
 import { buildBlacklistContractBalanceKey } from "@shared/lib/blacklist";
 import { shouldSuppressAsMirrorZero } from "../shared";
-import { mockD1 as createMockD1, type MockTableConfig } from "../../../test-helpers/__shared/mock-d1";
+import {
+  mockD1 as createMockD1,
+  type MockD1Options,
+  type MockTableConfig,
+} from "../../../test-helpers/__shared/mock-d1";
 import type { BlacklistRow } from "../shared";
 import { chainConfig, type ContractEventConfig } from "../../../lib/blacklist-contracts";
 import type { BlacklistRunBudget } from "../run-budget";
@@ -27,8 +31,8 @@ const DEFAULT_BLACKLIST_AMOUNT_D1_TABLES: MockTableConfig[] = [
   { match: "blacklist-amount-repair-queue-finish", rows: [] },
 ];
 
-function mockD1(tables: MockTableConfig[] = []) {
-  return createMockD1([...tables, ...DEFAULT_BLACKLIST_AMOUNT_D1_TABLES]);
+function mockD1(tables: MockTableConfig[] = [], options: MockD1Options = {}) {
+  return createMockD1([...tables, ...DEFAULT_BLACKLIST_AMOUNT_D1_TABLES], options);
 }
 
 function makeConfig(): ContractEventConfig {

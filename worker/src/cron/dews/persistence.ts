@@ -13,7 +13,7 @@ import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { writeDewsPublishedGeneration } from "../../lib/dews-publication-pointer";
 import type { DewsComputedRow } from "./contracts";
 import { toErrorMessage } from "../../lib/error-utils";
-import { startOfUtcDaySec } from "../../lib/time-constants";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 
 const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const DEWS_TABLES = new Set([
@@ -417,7 +417,7 @@ export async function persistDewsResults(params: {
   const rowsRetiredCurrent = await deleteCurrentStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
   await deleteLatestStressSignalRowsForIds(params.db, noCurrentSupplyIds, params.signal);
 
-  const todayMidnight = startOfUtcDaySec();
+  const todayMidnight = startOfUtcDaySec(new Date());
   if (params.results.length > 0) {
     const dailySnapshot = await reconcileDailyDewsHistorySnapshot(
       params.db,

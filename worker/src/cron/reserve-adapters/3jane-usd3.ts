@@ -10,6 +10,7 @@ import {
   customObservation,
   executeEvmObservationPlan,
   uint256Observation,
+  type AnyEvmObservationField,
 } from "./evm-observation-plan";
 import {
   buildRedemptionSnapshotMetadata,
@@ -81,7 +82,7 @@ function decodeMarketLiquidity(raw: `0x${string}`): readonly [bigint, bigint, bi
   }
 }
 
-async function executeObservationPlan<Fields extends Parameters<typeof executeEvmObservationPlan>[0]["fields"]>(
+async function executeObservationPlan<const Fields extends readonly AnyEvmObservationField[]>(
   fields: Fields,
   chain: string,
   signal: AbortSignal,

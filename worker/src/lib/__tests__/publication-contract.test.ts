@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   makeWorkerReportCardsV9Response,
   makeWorkerV9Card,
@@ -61,7 +61,7 @@ const EMPTY_PUBLICATION_TABLES: MockTableConfig[] = [
   { match: "FROM stability_index_samples", rows: [], first: null },
 ];
 
-function mockPublicationD1(tables: MockTableConfig[] = []): D1Database {
+function mockPublicationD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1([...tables, ...EMPTY_PUBLICATION_TABLES]);
 }
 

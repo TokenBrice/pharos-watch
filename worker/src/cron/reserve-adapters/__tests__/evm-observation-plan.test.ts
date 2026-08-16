@@ -5,6 +5,7 @@ import {
   boolObservation,
   executeEvmObservationPlan,
   uint256Observation,
+  type EvmObservationTransportCall,
 } from "../evm-observation-plan";
 
 function word(value: bigint): `0x${string}` {
@@ -14,7 +15,7 @@ function word(value: bigint): `0x${string}` {
 describe("executeEvmObservationPlan", () => {
   it("constructs labeled calls, decodes values, verifies identity, accumulates warnings, and projects metadata", async () => {
     const expectedAddress = "0x1111111111111111111111111111111111111111";
-    const read = vi.fn(async (calls) => calls.map((call) => ({
+    const read = vi.fn(async (calls: readonly EvmObservationTransportCall[]) => calls.map((call) => ({
       label: call.label,
       success: true,
       returnData: call.label === "asset"

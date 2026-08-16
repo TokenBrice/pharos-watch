@@ -16,13 +16,17 @@ import {
   markDigestMetaBlocked,
   requestDigestCopy,
 } from "./digest/platform";
-import { runTelegramDigestDeliveryWithPermit } from "./telegram-digest-transport";
+import {
+  runTelegramDigestDeliveryWithPermit,
+  type TelegramDigestPermittedDelivery,
+} from "./telegram-digest-transport";
 import { reportCronProgress } from "../lib/cron-progress";
 import { formatQualityMetadata } from "./digest/quality-metadata";
 import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "./daily-digest/shared";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { getMetaString } from "./daily-digest/digest-intelligence-utils";
 import type { DigestValidationIssue } from "./daily-digest/response";
+import type { TelegramTransportErrorClass } from "../lib/telegram-transport-errors";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
 import type { DailyDigestSourceRow } from "./weekly-recap/types";
@@ -48,6 +52,26 @@ interface WeeklyDigestMeta {
   telegramDeliveryUpdatedAt?: number;
   telegramDeliveredAt?: number;
   [key: string]: unknown;
+}
+
+function telegramTransportErrorClass(value: string | null): TelegramTransportErrorClass | null {
+  switch (value) {
+    case "blocked":
+    case "chat_not_found":
+    case "chat_migrated":
+    case "formatting_error":
+    case "payload_too_large":
+    case "rate_limit":
+    case "server_error":
+    case "bad_request":
+    case "auth_error":
+    case "timeout":
+    case "network":
+    case "unknown":
+      return value;
+    default:
+      return null;
+  }
 }
 
 function parseWeeklyDigestMeta(rawMeta: string | null, updatedAt: number | null): WeeklyDigestMeta {
@@ -167,7 +191,7 @@ async function deliverWeeklyDigestToTelegram(params: {
     owner: "weekly-recap",
     editionKey,
     signal: params.signal,
-    deliver: async (creds) => {
+    deliver: async (creds): Promise<TelegramDigestPermittedDelivery> => {
       const delivery = await deliverTelegramDigestEdition(params.db, creds, editionKey, params.signal);
       if (delivery.outcome === "sent") {
         return {
@@ -181,12 +205,15 @@ async function deliverWeeklyDigestToTelegram(params: {
       if (delivery.outcome === "skipped") {
         return { status: `queued: ${delivery.state}`, transportOutcome: null };
       }
+      const errorClass = telegramTransportErrorClass(delivery.errorClass);
       return {
         status: `failed: Telegram digest ${delivery.outcome}: ${delivery.errorClass ?? "unknown"}`,
         transportOutcome: {
           ok: false,
-          errorClass: delivery.errorClass,
-          retryAfterSec: delivery.retryAfterSec,
+          errorClass,
+          retryAfterSec: errorClass == null
+            ? null
+            : delivery.retryAfterSec,
         },
       };
     },

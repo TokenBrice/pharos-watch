@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { describe, expect, it } from "vitest";
-import { mockD1, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
+import { mockD1, type MockD1Database, type MockTableConfig } from "../../test-helpers/__shared/mock-d1";
 import {
   buildDdrRepairTaskId,
   DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
@@ -25,7 +25,7 @@ const REPAIR_TASK_RUNNER_TABLES: MockTableConfig[] = [
   { match: "UPDATE depeg_resolver_incidents", rows: [] },
 ];
 
-function mockRepairD1(tables: MockTableConfig[] = []): D1Database {
+function mockRepairD1(tables: MockTableConfig[] = []): MockD1Database {
   return mockD1([...tables, ...REPAIR_TASK_RUNNER_TABLES]);
 }
 

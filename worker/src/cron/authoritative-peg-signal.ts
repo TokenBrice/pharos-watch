@@ -66,6 +66,10 @@ export function deriveAuthoritativePegSignal(input: {
     return { kind: "rejected", reason: "invalid-reference", evidence };
   }
 
+  if (input.price == null) {
+    return { kind: "rejected", reason: "invalid-price", evidence };
+  }
+
   const signal = deriveDepegSignal(input.price, pegReference);
   if (signal == null) {
     return { kind: "rejected", reason: "invalid-price", evidence };
