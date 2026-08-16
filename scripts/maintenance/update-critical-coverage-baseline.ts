@@ -16,7 +16,7 @@ if (!fs.existsSync(LCOV_PATH)) {
 
 const lcov = fs.readFileSync(LCOV_PATH, "utf8");
 const parsed = parseLcov(lcov);
-const files = {};
+const files: Record<string, number> = {};
 
 for (const file of CRITICAL_FILES) {
   const cov = findCoverageFor(file, parsed);

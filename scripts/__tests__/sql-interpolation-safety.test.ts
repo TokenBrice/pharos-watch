@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   DEFAULT_SQL_SAFETY_ROOTS,
   scanSqlInterpolationSafety,
-} from "../ci/check-sql-interpolation-safety.mjs";
+} from "../ci/check-sql-interpolation-safety.ts";
 
 const FIXTURE_ROOT = new URL("./fixtures/sql-safety/", import.meta.url);
 

@@ -5,7 +5,7 @@ import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mjs";
 import { localBin } from "../lib/local-bin.mjs";
 import { withCiVitestArgs } from "../lib/vitest-ci-args.mjs";
 
-function run(cmd, args) {
+function run(cmd: string, args: readonly string[]): void {
   const result = spawnSync(cmd, args, {
     stdio: "inherit",
   });

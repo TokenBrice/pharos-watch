@@ -26,9 +26,15 @@ const COMMENT_LINE_RE = /^\s*\/\/\s*expiresAt:\s*(\d{4}-\d{2}-\d{2})(.*)$/;
 // Match an `identifier:` flag-key on the following code line.
 const FLAG_KEY_LINE_RE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:/;
 
-function parseFlags(source) {
+interface StaleFlag {
+  flag: string;
+  expiresAt: string;
+  reason: string;
+}
+
+function parseFlags(source: string): StaleFlag[] {
   const lines = source.split(/\r?\n/);
-  const flags = [];
+  const flags: StaleFlag[] = [];
   for (let i = 0; i < lines.length - 1; i += 1) {
     const commentMatch = COMMENT_LINE_RE.exec(lines[i]);
     if (!commentMatch) continue;
@@ -42,7 +48,7 @@ function parseFlags(source) {
   return flags;
 }
 
-function daysBetween(fromDate, toDate) {
+function daysBetween(fromDate: Date, toDate: Date): number {
   const ms = toDate.getTime() - fromDate.getTime();
   return Math.floor(ms / 86_400_000);
 }
@@ -51,9 +57,10 @@ const sourcePath = resolve(process.cwd(), FLAGS_PATH);
 let source;
 try {
   source = readFileSync(sourcePath, "utf8");
-} catch (err) {
+} catch (err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(
-    `check-stale-flags: could not read ${FLAGS_PATH}: ${err.message}\n`,
+    `check-stale-flags: could not read ${FLAGS_PATH}: ${message}\n`,
   );
   process.exit(1);
 }
@@ -70,8 +77,8 @@ if (flags.length === 0) {
 const today = new Date();
 today.setUTCHours(0, 0, 0, 0);
 
-const expired = [];
-const approaching = [];
+const expired: Array<StaleFlag & { daysUntil: number }> = [];
+const approaching: Array<StaleFlag & { daysUntil: number }> = [];
 
 for (const entry of flags) {
   const expiresAt = new Date(`${entry.expiresAt}T00:00:00Z`);

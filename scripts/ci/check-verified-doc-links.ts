@@ -8,11 +8,16 @@ import { reportViolations } from "../lib/report-violations.mts";
 const repoRoot = process.cwd();
 const verifiedDocFiles = getVerifiedDocFiles(repoRoot);
 
-function stripMarkdownLinks(text) {
+interface ResolvedDocTarget {
+  filePath: string;
+  fragment: string | null;
+}
+
+function stripMarkdownLinks(text: string): string {
   return text.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
 }
 
-function collapseRepeatedChar(text, char) {
+function collapseRepeatedChar(text: string, char: string): string {
   let result = "";
   let previousWasChar = false;
 
@@ -31,7 +36,7 @@ function collapseRepeatedChar(text, char) {
   return result;
 }
 
-function slugifyHeading(text) {
+function slugifyHeading(text: string): string {
   let normalized = stripMarkdownLinks(text.trim().toLowerCase()).replace(/[`*~]/g, "");
   let result = "";
 
@@ -46,9 +51,9 @@ function slugifyHeading(text) {
   return collapseRepeatedChar(result, "-");
 }
 
-function collectAnchors(filePath) {
-  const anchors = new Set();
-  const duplicateCounts = new Map();
+function collectAnchors(filePath: string): Set<string> {
+  const anchors = new Set<string>();
+  const duplicateCounts = new Map<string, number>();
   let inFence = false;
 
   for (const line of splitLines(readFileSync(filePath, "utf8"))) {
@@ -72,7 +77,7 @@ function collectAnchors(filePath) {
   return anchors;
 }
 
-function hasExplicitScheme(target) {
+function hasExplicitScheme(target: string): boolean {
   const colonIndex = target.indexOf(":");
   if (colonIndex <= 0) return false;
 
@@ -97,11 +102,11 @@ function hasExplicitScheme(target) {
   return true;
 }
 
-function isExternalTarget(target) {
+function isExternalTarget(target: string): boolean {
   return target.startsWith("mailto:") || target.includes("://") || hasExplicitScheme(target);
 }
 
-function resolveDocTarget(sourceFile, target) {
+function resolveDocTarget(sourceFile: string, target: string): ResolvedDocTarget {
   const [rawPath, rawFragment] = target.split("#", 2);
   const fragment = rawFragment?.trim() || null;
 
@@ -122,14 +127,14 @@ function resolveDocTarget(sourceFile, target) {
   };
 }
 
-function stripEnclosingAngleBrackets(value) {
+function stripEnclosingAngleBrackets(value: string): string {
   if (value.startsWith("<") && value.endsWith(">") && value.length > 1) {
     return value.slice(1, -1);
   }
   return value;
 }
 
-function findClosingBracket(line, startIndex) {
+function findClosingBracket(line: string, startIndex: number): number {
   let depth = 0;
 
   for (let index = startIndex; index < line.length; index += 1) {
@@ -149,7 +154,7 @@ function findClosingBracket(line, startIndex) {
   return -1;
 }
 
-function findLinkTargetEnd(line, startIndex) {
+function findLinkTargetEnd(line: string, startIndex: number): number {
   if (line[startIndex] === "<") {
     const end = line.indexOf(">", startIndex + 1);
     return end >= 0 ? end : -1;
@@ -175,7 +180,7 @@ function findLinkTargetEnd(line, startIndex) {
   return -1;
 }
 
-function* iterMarkdownLinks(content) {
+function* iterMarkdownLinks(content: string): Generator<string> {
   let inFence = false;
 
   for (const line of splitLines(content)) {
@@ -207,8 +212,8 @@ function* iterMarkdownLinks(content) {
   }
 }
 
-const errors = [];
-const anchorCache = new Map();
+const errors: string[] = [];
+const anchorCache = new Map<string, Set<string>>();
 
 for (const filePath of verifiedDocFiles) {
   const content = readFileSync(filePath, "utf8");
@@ -233,7 +238,7 @@ for (const filePath of verifiedDocFiles) {
     }
 
     const anchors = anchorCache.get(resolvedTarget.filePath);
-    if (!anchors.has(resolvedTarget.fragment)) {
+    if (!anchors || !anchors.has(resolvedTarget.fragment)) {
       errors.push(
         `${relative(repoRoot, filePath)} -> ${target}: missing heading anchor "#${resolvedTarget.fragment}" in ${relative(repoRoot, resolvedTarget.filePath)}`,
       );

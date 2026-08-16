@@ -68,7 +68,7 @@ jobs:
       # Fail loudly on a partial or non-scoring refresh rather than committing
       # a measurement the engine would reject.
       - name: Assert both targets produced a fresh scoring measurement
-        run: node scripts/ci/check-shock-coverage-freshness.mjs
+        run: node --import tsx scripts/ci/check-shock-coverage-freshness.ts
 
       # A refresh must pass the shock-coupled Vitest suites the PR gate runs.
       # Fail here rather than opening a refresh PR that cannot clear its checks.

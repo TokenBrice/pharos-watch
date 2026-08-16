@@ -33,8 +33,19 @@ const THREAT_TYPES = [
 
 const PLATFORM_TYPES = ["ANY_PLATFORM"];
 
-async function findThreats() {
-  const endpoint = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(API_KEY)}`;
+interface SafeBrowsingThreatMatch {
+  threat?: { url?: string };
+  threatType?: string;
+  platformType?: string;
+  cacheDuration?: string;
+}
+
+interface SafeBrowsingResponse {
+  matches?: SafeBrowsingThreatMatch[];
+}
+
+async function findThreats(apiKey: string): Promise<SafeBrowsingThreatMatch[]> {
+  const endpoint = `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${encodeURIComponent(apiKey)}`;
   const body = {
     client: { clientId: "pharos-watch-ci", clientVersion: "1.0" },
     threatInfo: {
@@ -56,7 +67,7 @@ async function findThreats() {
     throw new Error(`Safe Browsing API error ${response.status}: ${text.slice(0, 400)}`);
   }
 
-  const payload = await response.json();
+  const payload = (await response.json()) as SafeBrowsingResponse;
   return Array.isArray(payload.matches) ? payload.matches : [];
 }
 
@@ -67,7 +78,7 @@ async function main() {
     process.exit(2);
   }
 
-  const matches = await findThreats();
+  const matches = await findThreats(API_KEY);
   if (matches.length === 0) {
     console.log(`OK: ${URLS_TO_CHECK.length} URLs clean against Google Safe Browsing (${THREAT_TYPES.join(", ")}).`);
     return;
@@ -88,7 +99,8 @@ async function main() {
   process.exit(1);
 }
 
-main().catch((err) => {
-  console.error(`[check:safe-browsing] ${err.message}`);
+main().catch((err: unknown) => {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(`[check:safe-browsing] ${message}`);
   process.exit(2);
 });

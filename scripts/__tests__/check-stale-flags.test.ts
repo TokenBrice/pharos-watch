@@ -18,7 +18,7 @@ describe("check-stale-flags", () => {
       const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
 
       try {
-        await import("../ci/check-stale-flags.mjs");
+        await import("../ci/check-stale-flags.ts");
         expect(exit).toHaveBeenCalledWith(1);
       } finally {
         cwd.mockRestore();

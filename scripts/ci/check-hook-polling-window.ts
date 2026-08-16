@@ -33,7 +33,30 @@ const HOOK_EXTENSIONS = new Set([".ts", ".tsx"]);
 const STALE_TIME_RE = /(^|[\s,{])staleTime\s*:\s*([^,\n}]+)/g;
 const REFETCH_RE = /(^|[\s,{])refetchInterval\s*:\s*([^,\n}]+)/g;
 
-function isDestructurePattern(content, matchIndex) {
+interface HookPollingWaiver {
+  file: string;
+  reason: string;
+}
+
+interface ScanHookPollingOptions {
+  roots?: readonly string[];
+  waivers?: readonly HookPollingWaiver[];
+  cwd?: string;
+}
+
+interface HookPollingViolation {
+  file: string;
+  reason: string;
+}
+
+interface HookPollingReport {
+  scannedFiles: string[];
+  violations: HookPollingViolation[];
+}
+
+type HookPollingScanResult = { ok: true } | { ok: false; reason: string };
+
+function isDestructurePattern(content: string, matchIndex: number): boolean {
   // The `staleTime:` / `refetchInterval:` inside `const { ... } = expr` is a
   // rename pattern, not an option-object property. Walk back to the start of
   // the line and look for an opening brace preceded by `const`/`let`/`var`.
@@ -42,7 +65,7 @@ function isDestructurePattern(content, matchIndex) {
   return /\b(const|let|var)\s*\{/.test(before);
 }
 
-function classifyExpression(expr) {
+function classifyExpression(expr: string): HookPollingScanResult {
   const trimmed = expr.trim().replace(/[,;]+$/, "").trim();
   if (trimmed.length === 0) return { ok: true };
 
@@ -77,10 +100,10 @@ export function scanHookPollingWindow({
   roots = DEFAULT_HOOK_POLLING_ROOTS,
   waivers = HOOK_POLLING_WAIVERS,
   cwd = process.cwd(),
-} = {}) {
+}: ScanHookPollingOptions = {}): HookPollingReport {
   const waiverFiles = new Set(waivers.map((w) => w.file));
   const scannedFiles = [];
-  const violations = [];
+  const violations: HookPollingViolation[] = [];
 
   for (const root of roots) {
     const resolvedRoot = resolveSourceRoot(root, cwd);
@@ -112,7 +135,7 @@ export function scanHookPollingWindow({
   return { scannedFiles, violations };
 }
 
-export function printHookPollingWindowReport(report) {
+export function printHookPollingWindowReport(report: HookPollingReport): number {
   return reportViolations({
     label: "Hook polling window",
     heading: "Hook polling-window violations",
@@ -122,7 +145,7 @@ export function printHookPollingWindowReport(report) {
   });
 }
 
-export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
+export function main(argv: readonly string[] = process.argv.slice(2), cwd = process.cwd()): number {
   const roots = argv.filter((arg) => !arg.startsWith("-"));
   const report = scanHookPollingWindow({
     roots: roots.length > 0 ? roots : DEFAULT_HOOK_POLLING_ROOTS,

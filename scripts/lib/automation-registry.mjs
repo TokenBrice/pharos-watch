@@ -275,14 +275,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "legacy-stablecoin-redirects",
-    checkCommand: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs --check",
-    command: "node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
+    checkCommand: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
     bootstrap: true,
     dependsOn: ["stablecoin-catalog"],
     outputPaths: ["shared/data/stablecoins/legacy-llama-redirects.generated.json"],
     phase: 1,
     reproducibility: "deterministic",
-    script: "scripts/maintenance/generate-legacy-stablecoin-redirects.mjs",
+    script: "scripts/maintenance/generate-legacy-stablecoin-redirects.ts",
     sourcePaths: ["shared/data/stablecoins/coins.generated.json"],
   }),
   generatedArtifact({

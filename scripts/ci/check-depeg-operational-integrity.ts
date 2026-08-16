@@ -71,15 +71,19 @@ WHERE status = 'complete'
   },
 ];
 
-function printUsage() {
+interface D1ResultEnvelope {
+  results?: unknown[];
+}
+
+function printUsage(): void {
   console.log(`Usage:
-  node scripts/ci/check-depeg-operational-integrity.mjs --print-sql
-  node scripts/ci/check-depeg-operational-integrity.mjs --database stablecoin-db [--remote]
+  node --import tsx scripts/ci/check-depeg-operational-integrity.ts --print-sql
+  node --import tsx scripts/ci/check-depeg-operational-integrity.ts --database stablecoin-db [--remote]
 
 The wrangler mode is operator-run first and exits non-zero when any check returns rows.`);
 }
 
-function runWrangler(database, remote) {
+function runWrangler(database: string, remote: boolean): number {
   const dir = mkdtempSync(join(tmpdir(), "pharos-depeg-check-"));
   try {
     let failures = 0;
@@ -94,9 +98,9 @@ function runWrangler(database, remote) {
         return result.status ?? 1;
       }
       const output = result.stdout.trim();
-      let rows = [];
+      let rows: unknown[] = [];
       try {
-        const parsed = JSON.parse(output);
+        const parsed = JSON.parse(output) as D1ResultEnvelope | D1ResultEnvelope[];
         rows = Array.isArray(parsed) ? (parsed[0]?.results ?? []) : (parsed.results ?? []);
       } catch {
         process.stdout.write(output + "\n");

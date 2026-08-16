@@ -9,7 +9,7 @@
  * Also writes src/lib/logo-variants.generated.json mapping canonical src
  * paths to their compact counterparts. The map is consumed by logo-variants.ts.
  *
- * Manual invocation:  node scripts/maintenance/generate-compact-logos.mjs
+ * Manual invocation:  node --import tsx scripts/maintenance/generate-compact-logos.ts
  * Re-run whenever logos are added or replaced.
  */
 import sharp from "sharp";
@@ -37,7 +37,7 @@ const entries = readdirSync(LOGOS_DIR, { withFileTypes: true })
 let generated = 0;
 let bytesOriginal = 0;
 let bytesCompact = 0;
-const map = {};
+const map: Record<string, string> = {};
 
 for (const name of entries) {
   const srcPath = resolve(LOGOS_DIR, name);

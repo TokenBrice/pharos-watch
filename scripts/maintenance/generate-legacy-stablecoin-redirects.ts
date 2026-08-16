@@ -12,7 +12,12 @@ const SOURCE_JSON_ABS = resolve(REPO_ROOT, SOURCE_JSON_REL);
 const OUTPUT_JSON_ABS = resolve(REPO_ROOT, OUTPUT_JSON_REL);
 const CHECK_MODE = process.argv.includes("--check");
 
-const source = JSON.parse(readFileSync(SOURCE_JSON_ABS, "utf8"));
+interface StablecoinRedirectSource {
+  llamaId?: unknown;
+  id?: unknown;
+}
+
+const source = JSON.parse(readFileSync(SOURCE_JSON_ABS, "utf8")) as StablecoinRedirectSource[];
 if (!Array.isArray(source)) {
   console.error(`[legacy-stablecoin-redirects] ${SOURCE_JSON_REL} is not a JSON array`);
   process.exit(1);
@@ -20,7 +25,10 @@ if (!Array.isArray(source)) {
 
 const redirects = Object.fromEntries(
   source
-    .filter((coin) => typeof coin.llamaId === "string" && coin.llamaId.length > 0)
+  .filter(
+    (coin): coin is { llamaId: string; id: string } =>
+      typeof coin.llamaId === "string" && coin.llamaId.length > 0 && typeof coin.id === "string",
+  )
     .map((coin) => [coin.llamaId, coin.id])
     .sort(([left], [right]) => Number(left) - Number(right)),
 );
@@ -29,7 +37,7 @@ const contents = `${JSON.stringify(redirects, null, 2)}\n`;
 if (CHECK_MODE) {
   const current = existsSync(OUTPUT_JSON_ABS) ? readFileSync(OUTPUT_JSON_ABS, "utf8") : "";
   if (current !== contents) {
-    console.error(`${OUTPUT_JSON_REL} is stale. Run \`node scripts/maintenance/generate-legacy-stablecoin-redirects.mjs\`.`);
+    console.error(`${OUTPUT_JSON_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-legacy-stablecoin-redirects.ts\`.`);
     process.exit(1);
   }
   console.log(`${OUTPUT_JSON_REL}: legacy redirect map is current (${Object.keys(redirects).length} entries)`);

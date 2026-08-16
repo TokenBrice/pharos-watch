@@ -3,30 +3,37 @@
 import { spawnSync } from "node:child_process";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
-/**
- * @typedef {Record<string, string | undefined>} PrepareWorkspaceEnv
- * @typedef {[string, string[]]} PrepareWorkspaceCommand
- * @typedef {{ env: PrepareWorkspaceEnv, stdio: "inherit" }} PrepareWorkspaceSpawnOptions
- * @typedef {{ status?: number | null, error?: Error }} PrepareWorkspaceCommandResult
- * @typedef {(command: string, args: string[], options: PrepareWorkspaceSpawnOptions) => PrepareWorkspaceCommandResult} PrepareWorkspaceRunCommand
- */
+type PrepareWorkspaceEnv = Record<string, string | undefined>;
+type PrepareWorkspaceCommand = [string, string[]];
+interface PrepareWorkspaceSpawnOptions {
+  env: PrepareWorkspaceEnv;
+  stdio: "inherit";
+}
+interface PrepareWorkspaceCommandResult {
+  status?: number | null;
+  error?: Error;
+}
+type PrepareWorkspaceRunCommand = (
+  command: string,
+  args: string[],
+  options: PrepareWorkspaceSpawnOptions,
+) => PrepareWorkspaceCommandResult;
 
-function isTruthy(value) {
+interface RunPrepareWorkspaceOptions {
+  env?: PrepareWorkspaceEnv;
+  runCommand?: PrepareWorkspaceRunCommand;
+}
+
+function isTruthy(value: string | undefined): boolean {
   return value === "1" || String(value ?? "").toLowerCase() === "true";
 }
 
-/** @param {PrepareWorkspaceEnv} [env] */
-export function isCiEnvironment(env = process.env) {
+export function isCiEnvironment(env: PrepareWorkspaceEnv = process.env): boolean {
   return isTruthy(env.CI) || isTruthy(env.GITHUB_ACTIONS);
 }
 
-/**
- * @param {PrepareWorkspaceEnv} [env]
- * @returns {PrepareWorkspaceCommand[]}
- */
-export function buildPrepareWorkspaceCommands(env = process.env) {
-  /** @type {PrepareWorkspaceCommand[]} */
-  const commands = [];
+export function buildPrepareWorkspaceCommands(env: PrepareWorkspaceEnv = process.env): PrepareWorkspaceCommand[] {
+  const commands: PrepareWorkspaceCommand[] = [];
   const ci = isCiEnvironment(env);
   const forceBootstrap = isTruthy(env.PHAROS_PREPARE_BOOTSTRAP);
   const skipHooks = isTruthy(env.PHAROS_PREPARE_SKIP_GIT_HOOKS);
@@ -42,10 +49,9 @@ export function buildPrepareWorkspaceCommands(env = process.env) {
   return commands;
 }
 
-/**
- * @param {{ env?: PrepareWorkspaceEnv, runCommand?: PrepareWorkspaceRunCommand }} [options]
- */
-export function runPrepareWorkspace({ env = process.env, runCommand = spawnSync } = {}) {
+export function runPrepareWorkspace({ env = process.env, runCommand = spawnSync }: RunPrepareWorkspaceOptions = {}): {
+  status: number;
+} {
   const commands = buildPrepareWorkspaceCommands(env);
 
   if (commands.length === 0) {

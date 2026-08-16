@@ -144,7 +144,7 @@ Be specific and technical. Vague "we've fixed it" submissions are queued behind 
 
 ### Step 8 — Post-incident
 
-Add lessons learned to `docs/security-governance.md` under the appropriate Rule. Update `scripts/ci/check-phishing-signatures.mjs` if a new signature was identified. If the trigger was something the CI guardrails didn't catch, add a check.
+Add lessons learned to `docs/security-governance.md` under the appropriate Rule. Update `scripts/ci/check-phishing-signatures.ts` if a new signature was identified. If the trigger was something the CI guardrails didn't catch, add a check.
 
 ## What not to do
 

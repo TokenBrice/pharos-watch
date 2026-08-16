@@ -3,13 +3,13 @@
 import { spawnSync } from "node:child_process";
 import { parseChangedFileArgs } from "../lib/changed-files.mts";
 
-function runNpmScript(name, args, env = process.env) {
+function runNpmScript(name: string, args: readonly string[], env: NodeJS.ProcessEnv = process.env): void {
   const result = spawnSync("npm", ["run", name, "--", ...args], { env, stdio: "inherit" });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-export function runPrChecks(argv = process.argv.slice(2), env = process.env) {
+export function runPrChecks(argv: readonly string[] = process.argv.slice(2), env: NodeJS.ProcessEnv = process.env): number {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   runNpmScript("check:pr:static", [`--base=${base}`, `--head=${head}`], env);
   runNpmScript("test:pr", [`--base=${base}`, ...rest], env);

@@ -10,7 +10,23 @@ const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_EXACT_PATHS = new Set(["package.json", "package-lock.json"]);
 const STRUCTURAL_CHECK_PREFIXES = [".github/", "functions/", "scripts/", "shared/", "src/", "worker/"];
 
-function hasStructuralCheckImpact(changedFiles) {
+interface RunNpmScriptOptions {
+  env?: NodeJS.ProcessEnv;
+  spawn?: typeof spawnSync;
+}
+
+interface PrStaticCheckOptions {
+  argv?: readonly string[];
+  env?: NodeJS.ProcessEnv;
+  spawn?: typeof spawnSync;
+}
+
+interface PrStaticCheckCommand {
+  name: string;
+  args?: string[];
+}
+
+function hasStructuralCheckImpact(changedFiles: readonly string[]): boolean {
   return changedFiles.some(
     (file) =>
       STRUCTURAL_CHECK_EXACT_PATHS.has(file) ||
@@ -18,7 +34,11 @@ function hasStructuralCheckImpact(changedFiles) {
   );
 }
 
-function runNpmScript(name, args = [], { env = process.env, spawn = spawnSync } = {}) {
+function runNpmScript(
+  name: string,
+  args: readonly string[] = [],
+  { env = process.env, spawn = spawnSync }: RunNpmScriptOptions = {},
+): void {
   console.log(`[check:pr:static] npm run ${name}${args.length > 0 ? ` -- ${args.join(" ")}` : ""}`);
   const result = spawn("npm", ["run", name, ...(args.length > 0 ? ["--", ...args] : [])], {
     env,
@@ -28,9 +48,9 @@ function runNpmScript(name, args = [], { env = process.env, spawn = spawnSync } 
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-export function buildPrStaticCheckPlan(changedFiles) {
+export function buildPrStaticCheckPlan(changedFiles: readonly string[]) {
   const classification = classifyChangedFiles(changedFiles);
-  const commands = [
+  const commands: PrStaticCheckCommand[] = [
     { name: "lint:changed" },
     { name: "check:table-primitives" },
     { name: "typecheck" },
@@ -91,7 +111,7 @@ export function runPrStaticChecks({
   argv = process.argv.slice(2),
   env = process.env,
   spawn = spawnSync,
-} = {}) {
+}: PrStaticCheckOptions = {}): number {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   if (rest.length > 0) throw new Error(`Unknown option(s): ${rest.join(", ")}`);
   const changedFiles = collectChangedFiles({ base, head });

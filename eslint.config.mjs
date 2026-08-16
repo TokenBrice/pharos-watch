@@ -44,7 +44,7 @@ const NON_WORKER_SOURCE_GLOBS = [
 
 // ADR-2, frontend→worker half: nothing under src/, shared/, scripts/ or
 // functions/ may reach into worker/src/. The reviewed exceptions are the
-// `BOUNDARY_WAIVERS` registry in `scripts/ci/check-worker-import-boundary.mjs`
+// `BOUNDARY_WAIVERS` registry in `scripts/ci/check-worker-import-boundary.ts`
 // (capped at MAX_BOUNDARY_WAIVERS, documented in
 // docs/process/boundary-waivers.md); that script cross-checks that every waived
 // file is ignored here, so the two lists cannot drift apart.
@@ -57,7 +57,7 @@ const frontendToWorkerRestrictedImportPatterns = [
 ];
 
 // Waived by docs/process/boundary-waivers.md → keep in sync with
-// BOUNDARY_WAIVERS in scripts/ci/check-worker-import-boundary.mjs.
+// BOUNDARY_WAIVERS in scripts/ci/check-worker-import-boundary.ts.
 const FRONTEND_TO_WORKER_WAIVED_FILES = ["scripts/ci/check-frozen-invariants.ts"];
 
 // Cached StablecoinData current-supply reads in route/component/API code go

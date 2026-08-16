@@ -40,9 +40,10 @@ let errored = false;
 let source;
 try {
   source = readFileSync(FLAGS_SOURCE, "utf8");
-} catch (err) {
+} catch (err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
   process.stderr.write(
-    `check-feature-flag-inlining: could not read ${FLAGS_SOURCE}: ${err.message}\n`,
+    `check-feature-flag-inlining: could not read ${FLAGS_SOURCE}: ${message}\n`,
   );
   process.exit(1);
 }
@@ -53,12 +54,17 @@ try {
 // template literal are parsed as code (and may themselves contain nested
 // strings/templates), preserving any real `process.env[...]` access there while
 // still discarding the surrounding literal text.
-function stripCommentsAndStrings(input) {
+interface ParserContext {
+  kind: "code" | "template";
+  brace: number;
+}
+
+function stripCommentsAndStrings(input: string): string {
   let out = "";
   let i = 0;
   // Each frame is { kind: "code" | "template", brace: <depth> }. "code" frames
   // entered via `${` pop back to the template when their brace depth returns to 0.
-  const stack = [{ kind: "code", brace: 0 }];
+  const stack: ParserContext[] = [{ kind: "code", brace: 0 }];
   while (i < input.length) {
     const top = stack[stack.length - 1];
     const ch = input[i];
@@ -142,7 +148,7 @@ if (DYNAMIC_ENV_RE.test(stripCommentsAndStrings(source))) {
 }
 
 // ---------- Tier 2: bundle-level scan (only flags set at script-run) -----
-function listChunkFiles(dir) {
+function listChunkFiles(dir: string): string[] | null {
   try {
     statSync(dir);
   } catch {
@@ -163,15 +169,16 @@ if (setFlags.length > 0) {
     );
     process.exit(1);
   }
-  const offenders = new Map();
+  const offenders = new Map<string, string[]>();
   for (const file of files) {
     const content = readFileSync(file, "utf8");
     const matches = content.match(FLAG_NAME_RE);
     if (!matches) continue;
     for (const name of new Set(matches)) {
       if (!setFlags.includes(name)) continue;
-      if (!offenders.has(name)) offenders.set(name, []);
-      offenders.get(name).push(file);
+      const hits = offenders.get(name) ?? [];
+      hits.push(file);
+      offenders.set(name, hits);
     }
   }
   if (offenders.size > 0) {

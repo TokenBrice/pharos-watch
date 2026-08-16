@@ -9,13 +9,28 @@ export const SQL_INTERPOLATION_PATTERN = /`\s*(?:(?:SELECT|DELETE|UPDATE|INSERT)
 export const SQL_SAFETY_PATTERN = /(?:\/\/\s*SAFETY:|\.has\(|throw\s+new\s+Error)/;
 export const SQL_SAFETY_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"]);
 
-function hasSqlSafetySignal(context) {
+interface SqlSafetyViolation {
+  file: string;
+  line: number;
+  text: string;
+  root: string;
+}
+
+interface SqlSafetyReport {
+  scannedFiles: string[];
+  violations: SqlSafetyViolation[];
+}
+
+function hasSqlSafetySignal(context: string): boolean {
   return SQL_SAFETY_PATTERN.test(context);
 }
 
-export function scanSqlInterpolationSafety(roots = DEFAULT_SQL_SAFETY_ROOTS, cwd = process.cwd()) {
-  const scannedFiles = [];
-  const violations = [];
+export function scanSqlInterpolationSafety(
+  roots: readonly string[] = DEFAULT_SQL_SAFETY_ROOTS,
+  cwd = process.cwd(),
+): SqlSafetyReport {
+  const scannedFiles: string[] = [];
+  const violations: SqlSafetyViolation[] = [];
 
   for (const root of roots) {
     const resolvedRoot = resolveSourceRoot(root, cwd);
@@ -45,7 +60,7 @@ export function scanSqlInterpolationSafety(roots = DEFAULT_SQL_SAFETY_ROOTS, cwd
   return { scannedFiles, violations };
 }
 
-export function printSqlInterpolationSafetyReport(report) {
+export function printSqlInterpolationSafetyReport(report: SqlSafetyReport): number {
   return reportViolations({
     label: "SQL interpolation safety",
     heading: "SQL interpolation sites missing allowlist validation or SAFETY comment",
@@ -55,12 +70,12 @@ export function printSqlInterpolationSafetyReport(report) {
   });
 }
 
-export function parseSqlSafetyRoots(argv = process.argv.slice(2)) {
+export function parseSqlSafetyRoots(argv: readonly string[] = process.argv.slice(2)): string[] {
   const positionalRoots = argv.filter((arg) => !arg.startsWith("-"));
   return positionalRoots.length > 0 ? positionalRoots : DEFAULT_SQL_SAFETY_ROOTS;
 }
 
-export function main(argv = process.argv.slice(2), cwd = process.cwd()) {
+export function main(argv: readonly string[] = process.argv.slice(2), cwd = process.cwd()): number {
   const report = scanSqlInterpolationSafety(parseSqlSafetyRoots(argv), cwd);
   return printSqlInterpolationSafetyReport(report);
 }

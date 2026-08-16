@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const checker = resolve(process.cwd(), "scripts/ci/check-phishing-signatures.mjs");
+const checker = resolve(process.cwd(), "scripts/ci/check-phishing-signatures.ts");
 
 function runChecker(html: string) {
   const cwd = mkdtempSync(resolve(tmpdir(), "pharos-phishing-signatures-"));

@@ -20,12 +20,45 @@ const REQUIRED_ASSET_IDS = ["lusd-liquity", "bold-liquity"];
 // inside the policy bound so a single failed run still leaves usable slack.
 const MAX_AGE_FRACTION = 0.5;
 
-function readJson(relativePath) {
-  return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8"));
+interface ShockMeasurement {
+  assetId: string;
+  block: {
+    number: number;
+    timestampIso: string;
+    timestampUnix: number;
+  };
+  applicability: string;
+  failureReason?: string | null;
+  complete: boolean;
+  blockers: string[];
+  exactReplayPassed: boolean;
+  replayVerification: unknown;
+}
+
+interface ShockCoverageRegistry {
+  measurements?: ShockMeasurement[];
+}
+
+interface ShockCoveragePolicy {
+  semantic?: {
+    backing?: {
+      structural?: {
+        cdp?: {
+          stressMeasurementFreshness?: {
+            maxAgeSec?: number;
+          };
+        };
+      };
+    };
+  };
+}
+
+function readJson<T>(relativePath: string): T {
+  return JSON.parse(readFileSync(resolve(ROOT, relativePath), "utf8")) as T;
 }
 
 function readPolicyMaxAgeSec() {
-  const policy = readJson(POLICY_PATH);
+  const policy = readJson<ShockCoveragePolicy>(POLICY_PATH);
   const maxAgeSec = policy?.semantic?.backing?.structural?.cdp?.stressMeasurementFreshness?.maxAgeSec;
   if (typeof maxAgeSec !== "number" || !Number.isFinite(maxAgeSec) || maxAgeSec <= 0) {
     throw new Error(`Could not read cdp.stressMeasurementFreshness.maxAgeSec from ${POLICY_PATH}`);
@@ -34,7 +67,7 @@ function readPolicyMaxAgeSec() {
 }
 
 function main() {
-  const registry = readJson(REGISTRY_PATH);
+  const registry = readJson<ShockCoverageRegistry>(REGISTRY_PATH);
   const maxAgeSec = readPolicyMaxAgeSec();
   const nowSec = Math.floor(Date.now() / 1000);
   const failures = [];

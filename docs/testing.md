@@ -348,7 +348,7 @@ Critical gate coverage is intentionally smaller than the full suite:
 - `npm run coverage:critical` runs the critical suite owned by `scripts/lib/critical-test-files.mjs` with line/branch coverage ratchets owned by `scripts/lib/critical-coverage.mjs`. The weekly/manual all-critical workflow blocks on it, while the PR workflow runs it only when an enrolled critical source file changes. Telegram enrollment includes authoritative target planning and legacy recovery, pending lifecycle and outage control, webhook effect fencing and watchlist import, Mini App authentication plus authenticated state/theme contracts, and aggregate-only adoption analytics. Real-SQL migration, crash-resume, rollback, and external-effect failure suites are preferred wherever the runtime owns durable state; authenticated axe coverage remains owned by the Playwright accessibility gate.
 - `npm run test:critical-contracts` is the explicit API contract set and is always included by `test:pr`.
 
-Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep the full runner in `scripts/maintenance/run-all-tests.mjs`; and keep contract membership in `scripts/lib/critical-test-files.mjs`.
+Put critical source coverage membership in `scripts/lib/critical-coverage.mjs`; keep the full runner in `scripts/maintenance/run-all-tests.ts`; and keep contract membership in `scripts/lib/critical-test-files.mjs`.
 
 When adding tests, prefer colocating them near the module under test unless an existing `__tests__/` directory is already the local pattern. If the new test protects a production gate, add it to the relevant npm script rather than only documenting it here.
 
@@ -540,7 +540,7 @@ describe("syncFxRates", () => {
 | Scope | Restriction |
 | ----- | ----------- |
 | `worker/src/**` | No bare `viem` or non-`viem/utils` subpaths; no `src/lib/*` / `@/lib/*` (ADR-2, worker→frontend half) |
-| `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). Waived files come from `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.mjs`, which cross-checks that each waived path is ignored in `eslint.config.mjs` |
+| `src/**`, `shared/**`, `scripts/**`, `functions/**` | No `worker/src/**` imports (ADR-2, frontend→worker half). Waived files come from `BOUNDARY_WAIVERS` in `scripts/ci/check-worker-import-boundary.ts`, which cross-checks that each waived path is ignored in `eslint.config.mjs` |
 | `shared/lib/**` (excluding its tests) | No `@shared/*` aliases — use relative imports |
 | `src/app/**`, `src/components/**`, `worker/src/api/**` | No `sumPegBuckets` from `@shared/lib/supply`; cached `StablecoinData` supply reads use `getCirculatingRaw()`. The three raw-bucket parsers under `worker/src/api/` that pre-date a `StablecoinData` object are listed as glob exceptions in the config |
 

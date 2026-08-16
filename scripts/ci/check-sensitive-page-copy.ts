@@ -17,7 +17,31 @@ import { readFileSync } from "node:fs";
 import { relative } from "node:path";
 import { collectSourceFilesUnderRoot, formatScannedOk, runAsCli } from "../lib/source-files.mts";
 
-export const SENSITIVE_COPY_ROOTS = [
+interface SensitiveCopyRule {
+  id: string;
+  terms: readonly string[];
+}
+
+interface SensitiveCopyFinding {
+  file: string;
+  line: number;
+  id: string;
+  term: string;
+  text: string;
+}
+
+interface SensitiveCopyOutput {
+  write(data: string): unknown;
+}
+
+interface SensitiveCopyOptions {
+  roots?: readonly string[];
+  cwd?: string;
+  stdout?: SensitiveCopyOutput;
+  stderr?: SensitiveCopyOutput;
+}
+
+export const SENSITIVE_COPY_ROOTS: readonly string[] = [
   "src/app/api",
   "src/app/funding",
   "src/app/pharoswatchbot",
@@ -29,7 +53,7 @@ export const SENSITIVE_COPY_ROOTS = [
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".css"]);
 
 /** Multi-word by design: code identifiers are camelCase, so these only match prose. */
-export const FORBIDDEN_COPY = [
+export const FORBIDDEN_COPY: readonly SensitiveCopyRule[] = [
   { id: "seed-phrase", terms: ["seed phrase", "recovery phrase", "private key"] },
   { id: "connect-wallet", terms: ["connect wallet", "connect your wallet", "wallet connect"] },
   { id: "verify-wallet", terms: ["verify wallet", "verify your wallet", "validate wallet", "sync wallet"] },
@@ -39,8 +63,11 @@ export const FORBIDDEN_COPY = [
   { id: "urgency-pressure", terms: ["urgent action required", "act now to secure"] },
 ];
 
-export function collectSensitiveCopyFindings(roots = SENSITIVE_COPY_ROOTS, cwd = process.cwd()) {
-  const findings = [];
+export function collectSensitiveCopyFindings(
+  roots: readonly string[] = SENSITIVE_COPY_ROOTS,
+  cwd = process.cwd(),
+): SensitiveCopyFinding[] {
+  const findings: SensitiveCopyFinding[] = [];
 
   for (const root of roots) {
     for (const file of collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS })) {
@@ -66,7 +93,7 @@ export function checkSensitivePageCopy({
   cwd = process.cwd(),
   stdout = process.stdout,
   stderr = process.stderr,
-} = {}) {
+}: SensitiveCopyOptions = {}): number {
   const scanned = roots.reduce(
     (total, root) => total + collectSourceFilesUnderRoot(root, cwd, { extensions: SOURCE_EXTENSIONS }).length,
     0,

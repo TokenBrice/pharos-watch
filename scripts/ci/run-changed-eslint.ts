@@ -7,7 +7,20 @@ import { localBin } from "../lib/local-bin.mjs";
 
 const LINTABLE_EXTENSION = /\.(?:[cm]?[jt]sx?)$/;
 
-export function selectLintableFiles(changedFiles, { exists = existsSync } = {}) {
+interface SelectLintableFilesOptions {
+  exists?: (file: string) => boolean;
+}
+
+interface RunChangedEslintOptions {
+  argv?: readonly string[];
+  env?: NodeJS.ProcessEnv;
+  spawn?: typeof spawnSync;
+}
+
+export function selectLintableFiles(
+  changedFiles: readonly string[],
+  { exists = existsSync }: SelectLintableFilesOptions = {},
+): string[] {
   return changedFiles.filter((file) => LINTABLE_EXTENSION.test(file) && exists(file));
 }
 
@@ -15,7 +28,7 @@ export function runChangedEslint({
   argv = process.argv.slice(2),
   env = process.env,
   spawn = spawnSync,
-} = {}) {
+}: RunChangedEslintOptions = {}): number {
   const { base, head, rest } = parseChangedFileArgs(argv, env);
   const files = selectLintableFiles(collectChangedFiles({ base, head }));
 

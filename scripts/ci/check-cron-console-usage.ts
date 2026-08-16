@@ -25,17 +25,39 @@ const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__"]);
 const CONSOLE_CALL_PATTERN = /\bconsole\.(?:log|warn|error|info|debug)\s*\(/g;
 const STRUCTURED_LOGGER_FILES = new Set(["worker/src/lib/structured-log.ts", "worker/src/lib/telegram-log.ts"]);
 
-function lineNumberAt(source, offset) {
+interface ConsoleCall {
+  line: number;
+  text: string;
+  args: string | null;
+}
+
+interface ConsoleFinding {
+  file: string;
+  line: number;
+  text: string;
+  structured: boolean;
+}
+
+interface CheckCronConsoleUsageOptions {
+  roots?: readonly string[];
+  baselinePath?: string;
+  cwd?: string;
+  updateBaseline?: boolean;
+  stdout?: { write(chunk: string): unknown };
+  stderr?: { write(chunk: string): unknown };
+}
+
+function lineNumberAt(source: string, offset: number): number {
   return source.slice(0, offset).split(/\r?\n/g).length;
 }
 
-function lineTextAt(source, offset) {
+function lineTextAt(source: string, offset: number): string {
   const lineStart = source.lastIndexOf("\n", offset) + 1;
   const lineEnd = source.indexOf("\n", offset);
   return source.slice(lineStart, lineEnd === -1 ? source.length : lineEnd).trim();
 }
 
-function extractCallArguments(source, openParenOffset) {
+function extractCallArguments(source: string, openParenOffset: number): string | null {
   let depth = 1;
   let quote = null;
   let escaped = false;
@@ -72,8 +94,8 @@ function extractCallArguments(source, openParenOffset) {
   return null;
 }
 
-function collectConsoleCalls(source) {
-  const calls = [];
+function collectConsoleCalls(source: string): ConsoleCall[] {
+  const calls: ConsoleCall[] = [];
   for (const match of source.matchAll(CONSOLE_CALL_PATTERN)) {
     const offset = match.index ?? 0;
     const text = lineTextAt(source, offset);
@@ -90,7 +112,7 @@ function collectConsoleCalls(source) {
   return calls;
 }
 
-function isStructuredConsoleCall(rel, args) {
+function isStructuredConsoleCall(rel: string, args: string | null): boolean {
   if (!args) return false;
   const normalized = args.trim().replace(/\s+/g, " ");
   if (STRUCTURED_LOGGER_FILES.has(rel) && /^(line|payload)$/.test(normalized)) {
@@ -101,8 +123,11 @@ function isStructuredConsoleCall(rel, args) {
   );
 }
 
-export function collectWorkerConsoleUsage(roots = DEFAULT_ROOTS, cwd = process.cwd()) {
-  const counts = {};
+export function collectWorkerConsoleUsage(
+  roots: readonly string[] = DEFAULT_ROOTS,
+  cwd = process.cwd(),
+): Record<string, number> {
+  const counts: Record<string, number> = {};
 
   for (const root of roots) {
     for (const file of collectSourceFilesUnderRoot(root, cwd, {
@@ -119,8 +144,11 @@ export function collectWorkerConsoleUsage(roots = DEFAULT_ROOTS, cwd = process.c
   return Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
 }
 
-export function collectWorkerConsoleFindings(roots = DEFAULT_ROOTS, cwd = process.cwd()) {
-  const findings = [];
+export function collectWorkerConsoleFindings(
+  roots: readonly string[] = DEFAULT_ROOTS,
+  cwd = process.cwd(),
+): ConsoleFinding[] {
+  const findings: ConsoleFinding[] = [];
 
   for (const root of roots) {
     for (const file of collectSourceFilesUnderRoot(root, cwd, {
@@ -143,12 +171,6 @@ export function collectWorkerConsoleFindings(roots = DEFAULT_ROOTS, cwd = proces
   return findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }
 
-/**
- * @param {{
- *   roots?: string[], baselinePath?: string, cwd?: string, updateBaseline?: boolean,
- *   stdout?: { write(chunk: string): unknown }, stderr?: { write(chunk: string): unknown },
- * }} [options]
- */
 export function checkCronConsoleUsage({
   roots = DEFAULT_ROOTS,
   baselinePath = BASELINE_PATH,
@@ -156,7 +178,7 @@ export function checkCronConsoleUsage({
   updateBaseline = false,
   stdout = process.stdout,
   stderr = process.stderr,
-} = {}) {
+}: CheckCronConsoleUsageOptions = {}): number {
   return runCountRatchet({
     collectCounts: () => collectWorkerConsoleUsage(roots, cwd),
     baselinePath,

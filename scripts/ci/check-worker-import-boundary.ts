@@ -11,10 +11,22 @@ import { collectSourceFiles } from "../lib/source-files.mts";
 const WORKER_SRC_DIR = "worker/src";
 const ESLINT_CONFIG_PATH = "eslint.config.mjs";
 const SOURCE_FILE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs", ".cts"]);
-const SOURCE_FILE_EXCLUDED_DIRS = new Set();
+const SOURCE_FILE_EXCLUDED_DIRS = new Set<string>();
 const WORKER_TO_FRONTEND_IMPORT_PATTERN = /(?:from\s+["'][^"']*(?:@\/|src\/)|import\s*\(\s*["'][^"']*(?:@\/|src\/))/;
 
-function formatMatches(matches) {
+interface BoundaryMatch {
+  file: string;
+  line: number;
+  text: string;
+}
+
+interface BoundaryCheckOptions {
+  excludeTests: boolean;
+  rootDir: string;
+  forbiddenPattern: RegExp;
+}
+
+function formatMatches(matches: readonly BoundaryMatch[]): void {
   for (const match of matches) {
     process.stderr.write(`${match.file}:${match.line}:${match.text}\n`);
   }
@@ -50,13 +62,13 @@ if (BOUNDARY_WAIVERS.length > MAX_BOUNDARY_WAIVERS) {
 }
 const BOUNDARY_EXEMPT_FILES = new Set(BOUNDARY_WAIVERS.map((waiver) => waiver.file));
 
-function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
+function runBoundaryCheck(label: string, { excludeTests, rootDir, forbiddenPattern }: BoundaryCheckOptions): boolean {
   try {
     const files = collectSourceFiles(rootDir, {
       extensions: SOURCE_FILE_EXTENSIONS,
       excludedDirs: SOURCE_FILE_EXCLUDED_DIRS,
     });
-    const matches = [];
+    const matches: BoundaryMatch[] = [];
     for (const file of files) {
       if (excludeTests && file.includes("/__tests__/")) continue;
       if (BOUNDARY_EXEMPT_FILES.has(file)) continue;
@@ -91,7 +103,7 @@ function runBoundaryCheck(label, { excludeTests, rootDir, forbiddenPattern }) {
 // recorded here would silently stop being waived (and one that is only ignored
 // in the ESLint config would escape the cap and the documentation requirement).
 function checkEslintWaiverSync() {
-  let config;
+  let config: string;
   try {
     config = readFileSync(ESLINT_CONFIG_PATH, "utf8");
   } catch (error) {

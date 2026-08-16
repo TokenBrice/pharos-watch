@@ -23,15 +23,18 @@ import { walkOutFiles } from "../lib/seo-sitemap.mjs";
 const OUT_DIR = path.resolve("out");
 
 /** Routes that are permitted to carry specific patterns inline. */
-const ALLOWLIST = new Map([
+const ALLOWLIST = new Map<string, Set<string>>([
   // example shape:
   // ["api/index.html", new Set(["url-hash-token-extraction"])],
 ]);
 
-/** @typedef {{ id: string; severity: "red"; test: (script: string) => boolean }} Signature */
+interface Signature {
+  id: string;
+  severity: "red";
+  test: (script: string) => boolean;
+}
 
-/** @type {Signature[]} */
-const SIGNATURES = [
+const SIGNATURES: Signature[] = [
   {
     id: "history-replacestate-near-credential",
     severity: "red",
@@ -57,7 +60,7 @@ const SIGNATURES = [
 ];
 
 /** Extract the textual content of every inline <script>...</script> block. */
-function hasSrcAttribute(openTag) {
+function hasSrcAttribute(openTag: string): boolean {
   let index = "<script".length;
   while (index < openTag.length) {
     while (index < openTag.length && /[\s/]/.test(openTag[index] ?? "")) index += 1;
@@ -90,12 +93,12 @@ function hasSrcAttribute(openTag) {
   return false;
 }
 
-function isScriptTagOpen(lowerHtml, openStart) {
+function isScriptTagOpen(lowerHtml: string, openStart: number): boolean {
   const next = lowerHtml[openStart + "<script".length] ?? "";
   return next === "" || /[\s/>]/.test(next);
 }
 
-function findNextScriptOpen(html, lowerHtml, searchFrom) {
+function findNextScriptOpen(html: string, lowerHtml: string, searchFrom: number): number {
   while (true) {
     const openStart = lowerHtml.indexOf("<script", searchFrom);
     if (openStart < 0) return -1;
@@ -113,8 +116,8 @@ function findNextScriptOpen(html, lowerHtml, searchFrom) {
   }
 }
 
-function extractInlineScripts(html) {
-  const scripts = [];
+function extractInlineScripts(html: string): string[] {
+  const scripts: string[] = [];
   const lowerHtml = html.toLowerCase();
   let searchFrom = 0;
   while (true) {
@@ -137,14 +140,21 @@ function extractInlineScripts(html) {
   return scripts;
 }
 
-function relPath(file) {
+function relPath(file: string): string {
   return path.relative(OUT_DIR, file).replace(/\\/g, "/");
 }
 
-function scanFile(file) {
+interface PhishingFinding {
+  signature: string;
+  severity: "red";
+  scriptIndex: number;
+  preview: string;
+}
+
+function scanFile(file: string): PhishingFinding[] {
   const html = fs.readFileSync(file, "utf8");
   const scripts = extractInlineScripts(html);
-  const findings = [];
+  const findings: PhishingFinding[] = [];
   const allowed = ALLOWLIST.get(relPath(file)) ?? new Set();
   for (const [scriptIndex, script] of scripts.entries()) {
     for (const sig of SIGNATURES) {
@@ -161,14 +171,14 @@ function scanFile(file) {
   return findings;
 }
 
-function main() {
+function main(): void {
   if (!fs.existsSync(OUT_DIR)) {
     console.error(`[check:phishing-signatures] out/ directory missing — run \`npm run build\` first.`);
     process.exit(2);
   }
 
   const files = [...walkOutFiles(OUT_DIR, (name) => name.endsWith(".html"))];
-  const violations = [];
+  const violations: Array<{ file: string; findings: PhishingFinding[] }> = [];
   for (const file of files) {
     const findings = scanFile(file);
     if (findings.length === 0) continue;
@@ -195,7 +205,7 @@ function main() {
   console.error("phishing kits and will trip Google Safe Browsing's social-engineering");
   console.error("classifier. Move the logic into a route-scoped client component, or");
   console.error("if the pattern is genuinely required, add an explicit allowlist entry");
-  console.error("in scripts/ci/check-phishing-signatures.mjs documenting why.");
+  console.error("in scripts/ci/check-phishing-signatures.ts documenting why.");
   console.error("");
   console.error(`Total: ${violations.length} file(s) with violations.`);
   process.exit(1);

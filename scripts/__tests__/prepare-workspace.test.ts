@@ -4,7 +4,7 @@ import {
   buildPrepareWorkspaceCommands,
   isCiEnvironment,
   runPrepareWorkspace,
-} from "../maintenance/prepare-workspace.mjs";
+} from "../maintenance/prepare-workspace.ts";
 import { testEnv } from "../test-utils/ci-script-test-helpers";
 
 function commandTexts(commands: ReturnType<typeof buildPrepareWorkspaceCommands>) {
