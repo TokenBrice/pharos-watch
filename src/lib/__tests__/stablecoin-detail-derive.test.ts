@@ -13,16 +13,19 @@ describe("stablecoin detail derivations", () => {
       expect(deriveDeviationBps(0.9975, 1)).toBe(-25);
     });
 
-    it("returns 0 when price is missing or peg reference is invalid", () => {
-      expect(deriveDeviationBps(null, 1)).toBe(0);
-      expect(deriveDeviationBps(undefined, 1)).toBe(0);
-      expect(deriveDeviationBps(1.01, 0)).toBe(0);
-      expect(deriveDeviationBps(1.01, -1)).toBe(0);
+    it("returns null when price is missing or either input is invalid", () => {
+      expect(deriveDeviationBps(null, 1)).toBeNull();
+      expect(deriveDeviationBps(undefined, 1)).toBeNull();
+      expect(deriveDeviationBps(Number.NaN, 1)).toBeNull();
+      expect(deriveDeviationBps(1.01, 0)).toBeNull();
+      expect(deriveDeviationBps(1.01, -1)).toBeNull();
+      expect(deriveDeviationBps(1.01, Number.NaN)).toBeNull();
     });
 
     it("forces gauge deviation to zero for NAV tokens", () => {
       expect(deriveGaugeDeviationBps(240, true)).toBe(0);
       expect(deriveGaugeDeviationBps(240, false)).toBe(240);
+      expect(deriveGaugeDeviationBps(null, false)).toBe(0);
     });
   });
 
@@ -107,13 +110,15 @@ describe("deriveDeviationBps", () => {
     expect(deriveDeviationBps(0.99, 1.0)).toBeCloseTo(-100, 0);
   });
 
-  it("returns 0 for invalid peg reference", () => {
-    expect(deriveDeviationBps(1.0, 0)).toBe(0);
-    expect(deriveDeviationBps(1.0, NaN)).toBe(0);
+  it("returns null for invalid peg reference", () => {
+    expect(deriveDeviationBps(1.0, 0)).toBeNull();
+    expect(deriveDeviationBps(1.0, NaN)).toBeNull();
   });
 
-  it("returns 0 for null price", () => {
-    expect(deriveDeviationBps(null, 1.0)).toBe(0);
+  it("distinguishes an exact-peg zero from absent and invalid prices", () => {
+    expect(deriveDeviationBps(null, 1.0)).toBeNull();
+    expect(deriveDeviationBps(Number.NaN, 1.0)).toBeNull();
+    expect(deriveDeviationBps(1.0, 1.0)).toBe(0);
   });
 });
 
@@ -125,5 +130,6 @@ describe("deriveGaugeDeviationBps", () => {
   it("passes through deviation for non-NAV tokens", () => {
     expect(deriveGaugeDeviationBps(50, false)).toBe(50);
     expect(deriveGaugeDeviationBps(-30, false)).toBe(-30);
+    expect(deriveGaugeDeviationBps(null, false)).toBe(0);
   });
 });

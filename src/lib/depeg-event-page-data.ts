@@ -1,11 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent } from "@shared/types/market";
-import { MIN_DEPEG_PAGE_DEVIATION_BPS, selectStaticDepegEventPages } from "./config";
+import { MIN_DEPEG_PAGE_DEVIATION_BPS, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
-} from "./event-display";
+} from "@/lib/depeg-event-display";
 
 /**
  * Event payload as written by scripts/maintenance/sync-depeg-events.ts.

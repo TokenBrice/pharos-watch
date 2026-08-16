@@ -4,14 +4,10 @@
  * Flat URL keys per plan §2.1: `p` `peg` `h` `d` `v` `u` `step` + share-link `sid` `ev`.
  * The codec encodes only non-default fields; null is expressed as a missing key.
  *
- * The transition() function is pure. `useSelectorState()` wraps it with
- * `useUrlFilters` so each step push lands as a new history entry.
+ * The transition function is pure. The URL-backed React adapter lives in
+ * `src/hooks/use-selector-state.ts`.
  */
 
-"use client";
-
-import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useUrlFilters } from "@/hooks/use-url-filters";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   isSelectorEligiblePegCurrency,
@@ -464,82 +460,4 @@ export function softConfirmationForHorizon(
     };
   }
   return null;
-}
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-export interface UseSelectorStateResult {
-  state: SelectorWizardState;
-  dispatch: (action: SelectorAction) => void;
-  setStep: (step: SelectorStep) => void;
-  /** Build the canonical URL for the current state (no leading slash). */
-  toSearchString: () => string;
-}
-
-export function useSelectorState(): UseSelectorStateResult {
-  const { searchParams, pushSearchParams, replaceParams } = useUrlFilters();
-
-  const state = useMemo(() => decodeSelectorState(searchParams), [searchParams]);
-
-  // Rehydrate-down: if the URL claims a step beyond what's answerable, replace
-  // step with the highest valid step on initial mount.
-  const rehydratedRef = useRef(false);
-  useEffect(() => {
-    if (rehydratedRef.current) return;
-    rehydratedRef.current = true;
-    const valid = highestValidStep(state);
-    const urlStep = state.step;
-    // Rehydrate down only; a URL step below an otherwise result-ready state is allowed.
-    const urlClaimsBeyondValid =
-      (urlStep === "result" && valid !== "result") ||
-      (typeof urlStep === "number" && typeof valid === "number" && urlStep > valid);
-    if (urlClaimsBeyondValid) {
-      const next = { ...state, step: valid };
-      replaceParams((params) => {
-        for (const key of SELECTOR_URL_KEYS) params.delete(key);
-        const fresh = encodeSelectorState(next);
-        for (const [k, v] of fresh) params.set(k, v);
-      });
-    }
-  }, [state, replaceParams]);
-
-  const dispatch = useCallback(
-    (action: SelectorAction) => {
-      const next = transition(state, action);
-      const isRelax = action.type === "relax";
-      const isBack = action.type === "go-back";
-      const updater = (params: URLSearchParams) => {
-        for (const key of SELECTOR_URL_KEYS) params.delete(key);
-        const fresh = encodeSelectorState(next);
-        for (const [k, v] of fresh) params.set(k, v);
-      };
-      if (isRelax || isBack) {
-        replaceParams(updater);
-      } else {
-        pushSearchParams(updater);
-      }
-    },
-    [state, pushSearchParams, replaceParams],
-  );
-
-  const setStep = useCallback(
-    (step: SelectorStep) => {
-      const next = { ...state, step };
-      pushSearchParams((params) => {
-        for (const key of SELECTOR_URL_KEYS) params.delete(key);
-        const fresh = encodeSelectorState(next);
-        for (const [k, v] of fresh) params.set(k, v);
-      });
-    },
-    [state, pushSearchParams],
-  );
-
-  const toSearchString = useCallback(
-    () => encodeSelectorState(state).toString(),
-    [state],
-  );
-
-  return { state, dispatch, setStep, toSearchString };
 }

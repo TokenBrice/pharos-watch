@@ -7,10 +7,10 @@ import {
   isValidSelectorSnapshotId,
   softConfirmationForHorizon,
   toSelectorInput,
-  useSelectorState,
   type SelectorProfile,
   type SelectorStep,
-} from "./selector-state";
+} from "@/lib/selector-state";
+import { useSelectorState } from "@/hooks/use-selector-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { useIsMobile } from "@/hooks/use-is-mobile";
@@ -25,7 +25,7 @@ import {
   SELECTOR_QUESTIONS,
   computeTotalSteps,
   stepLegend,
-} from "./picker-options";
+} from "@/lib/selector-options";
 import {
   clearStoredSelectorRun,
   isInitialSelectorState,

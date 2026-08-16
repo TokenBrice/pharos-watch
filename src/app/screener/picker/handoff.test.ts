@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SCREENER_URL_SCHEMA } from "@/app/screener/screener-filters";
+import { SCREENER_URL_SCHEMA } from "@/lib/screener-filters";
 import { decodeState } from "@/lib/url-state";
 import { buildScreenerUrl } from "@shared/lib/selector";
 import type { SelectorOutput } from "@shared/lib/selector";

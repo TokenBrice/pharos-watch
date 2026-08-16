@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { MiniAppScreenshotCarousel } from "./mini-app-screenshot-carousel";
 import { MINI_APP_FEATURES, MINI_APP_SCREENSHOTS } from "./telegram-content";
-import { MINI_APP_HOME_DEEP_LINK, MINI_APP_WATCHLIST_DEEP_LINK } from "./telegram-route-constants";
+import { MINI_APP_HOME_DEEP_LINK, MINI_APP_WATCHLIST_DEEP_LINK } from "@/lib/telegram-route-constants";
 
 /**
  * Act IV — 05:40, the Mini App. The same alert state without slash commands,

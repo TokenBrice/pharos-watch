@@ -15,7 +15,7 @@ import { YieldRiskBudgetSlider } from "@/components/yield-risk-budget-slider";
 import { YieldScatterPlot } from "@/components/yield-scatter-plot";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { YieldSourceBoard } from "@/app/yield/source-board";
-import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
+import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { ReferenceRatesStrip } from "@/app/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/app/yield/coin-index";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";

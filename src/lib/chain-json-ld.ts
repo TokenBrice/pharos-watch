@@ -1,5 +1,5 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
-import { buildCollectionItemListJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries } from "@/lib/json-ld";
 
 export interface ChainJsonLdDirectoryEntry {
   id: string;
@@ -90,19 +90,13 @@ export function buildChainProfileJsonLd({
         : {}),
       ...(meta.explorerUrl ? { sameAs: [meta.explorerUrl] } : {}),
     },
-    entries: deployments.map((deployment) => {
-      const url = absoluteUrl(deployment.href);
-
-      return {
-        item: {
-          "@type": "Thing",
-          "@id": `${pageUrl}#deployment-${deployment.id}`,
-          name: `${deployment.name} (${deployment.symbol})`,
-          url,
-          description: `${deployment.name} is a ${deployment.pegLabel}, ${deployment.backingLabel}, ${deployment.governanceLabel} stablecoin with ${deployment.contractCount} tracked deployment${deployment.contractCount === 1 ? "" : "s"} on ${meta.name}.`,
-          mainEntityOfPage: url,
-        },
-      };
+    entries: buildStablecoinItemListEntries(deployments, {
+      schemaType: "Thing",
+      resolveUrl: (deployment) => absoluteUrl(deployment.href),
+      resolveId: (deployment) => `${pageUrl}#deployment-${deployment.id}`,
+      resolveDescription: (deployment) =>
+        `${deployment.name} is a ${deployment.pegLabel}, ${deployment.backingLabel}, ${deployment.governanceLabel} stablecoin with ${deployment.contractCount} tracked deployment${deployment.contractCount === 1 ? "" : "s"} on ${meta.name}.`,
+      includeMainEntityOfPage: true,
     }),
   });
 }

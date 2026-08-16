@@ -4,7 +4,7 @@ import { ContagionGraph } from "@/components/contagion-graph-root";
 import { formatCurrency } from "@shared/lib/format";
 import type { ContagionGraphCard } from "@/lib/contagion-layout";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
-import type { DependencyHubsModel } from "./dependency-hubs-model";
+import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 interface DependencyHeroProps {
   model: DependencyHubsModel;

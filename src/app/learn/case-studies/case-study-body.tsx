@@ -19,7 +19,7 @@ import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
-} from "./case-study-outcomes";
+} from "@/lib/case-study-outcomes";
 import { CaseStudyShare } from "./case-study-share";
 import { CaseStudyTimeline } from "./case-study-timeline";
 import { estimateCaseStudyReadingMinutes } from "./case-study-reading-time";

@@ -1,4 +1,4 @@
-import type { CaseStudyOutcome } from "./content/types";
+export type CaseStudyOutcome = "survived" | "wounded" | "died";
 
 export const CASE_STUDY_OUTCOME_LABELS: Record<CaseStudyOutcome, string> = {
   survived: "Survived",

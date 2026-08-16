@@ -2,7 +2,7 @@ import type { CaseStudy } from "./types";
 import {
   resolveCaseStudySlugForEvent,
   type CaseStudyEventWindowResolverItem,
-} from "./event-window-resolver";
+} from "@/lib/case-study-event-window";
 import { content as usdcSvb2023 } from "./usdc-svb-2023";
 import { content as terraUst2022 } from "./terra-ust-2022";
 import { content as daiBlackThursday } from "./dai-black-thursday";
@@ -64,6 +64,12 @@ export const CASE_STUDY_LIST: readonly CaseStudy[] = [
   pmusdPreciousMetals,
   apxusdDatCollateral,
 ];
+
+export const CASE_STUDY_OUTCOME_COUNTS: Readonly<Record<CaseStudy["outcome"], number>> =
+  CASE_STUDY_LIST.reduce(
+    (counts, study) => ({ ...counts, [study.outcome]: counts[study.outcome] + 1 }),
+    { survived: 0, wounded: 0, died: 0 },
+  );
 
 export const CASE_STUDIES: Record<string, CaseStudy> = Object.fromEntries(
   CASE_STUDY_LIST.map((study) => [study.slug, study]),

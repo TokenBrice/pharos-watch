@@ -11,7 +11,7 @@ import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
-} from "./case-study-outcomes";
+} from "@/lib/case-study-outcomes";
 
 /**
  * Serializable subset of `CaseStudy` passed from the server `page.tsx`. The full

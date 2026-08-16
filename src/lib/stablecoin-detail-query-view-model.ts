@@ -52,7 +52,7 @@ export interface DetailMarketSnapshot {
 
 export interface DetailPegPriceSnapshot {
   pegRef: number;
-  deviationBps: number;
+  deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;

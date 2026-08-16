@@ -12,7 +12,7 @@ import {
   type SelectorProfile,
   type SelectorVenue,
   type SelectorWizardState,
-} from "./selector-state";
+} from "@/lib/selector-state";
 
 export const PROFILE_OPTIONS: readonly SelectorOption<SelectorProfile>[] = [
   {

@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useCoverageMatrixModel } from "@/hooks/use-coverage-matrix-model";
 import { useLogos } from "@/hooks/use-logos";
-import { buildDataCoverageModel } from "@/app/safety-scores/data-coverage-view-model";
+import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { useCoverageFilters } from "./use-coverage-filters";
 
 export function useCoveragePageModel() {

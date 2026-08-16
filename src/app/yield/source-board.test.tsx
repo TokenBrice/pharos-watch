@@ -3,7 +3,7 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { YieldSourceBoard } from "@/app/yield/source-board";
-import { buildYieldSourceBoardModel } from "@/app/yield/source-board-model";
+import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
 
 function makeBoardRanking(overrides = {}) {

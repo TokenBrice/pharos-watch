@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { describeDataCoverageHoldCauses } from "@/app/safety-scores/data-coverage-view-model";
+import { describeDataCoverageHoldCauses } from "@/lib/safety-score-data-coverage";
 
 /**
  * Compact held-publication notice for every surface other than `/safety-scores`,

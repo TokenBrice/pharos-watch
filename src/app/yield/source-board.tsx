@@ -29,7 +29,7 @@ import type {
   YieldSourceBoardRiskDriverCount,
   YieldSourceBoardRowDetail,
   YieldSourceBoardSourceSwitchDetail,
-} from "@/app/yield/source-board-model";
+} from "@/lib/yield-source-board-model";
 
 interface YieldSourceBoardProps {
   model: YieldSourceBoardModel;

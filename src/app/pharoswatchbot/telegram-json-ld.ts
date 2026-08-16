@@ -3,7 +3,7 @@ import {
   TELEGRAM_ALERT_FAMILY_PHRASE_LIST,
 } from "@shared/lib/telegram-alert-families";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import { RECOMMENDED_SETUP_COMMAND } from "./telegram-route-constants";
+import { RECOMMENDED_SETUP_COMMAND } from "@/lib/telegram-route-constants";
 
 const TELEGRAM_HOW_TO_STEPS = [
   {

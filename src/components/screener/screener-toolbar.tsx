@@ -15,7 +15,7 @@ import {
   type BlacklistableValue,
   type SafetyEvidenceValue,
   type ScreenerFilters,
-} from "@/app/screener/screener-filters";
+} from "@/lib/screener-filters";
 import {
   MINT_AUTHORITY_FILTER_VALUES,
   MINT_AUTHORITY_SCORE_FILTER_CONFIG,

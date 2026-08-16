@@ -158,7 +158,7 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   prevMonth: number | null;
   performanceVsUsd1y: number | null;
   pegRef: number;
-  deviationBps: number;
+  deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   isNavToken: boolean;

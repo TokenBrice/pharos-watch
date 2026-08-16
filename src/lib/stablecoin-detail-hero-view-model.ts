@@ -1,5 +1,5 @@
-import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/app/learn/case-studies/case-study-outcomes";
-import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/app/learn/case-studies/content/client-index";
+import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
+import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@/lib/blacklist-status";
 import { buildLiveCompareUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
@@ -78,7 +78,7 @@ export interface HeroCardViewModel {
   header: { coinId: string; compareHref: string; benchmarkSymbol: string | null };
   price: {
     pegRef: number;
-    deviationBps: number;
+    deviationBps: number | null;
     gaugeDeviationBps: number;
     pegReferenceUnavailable: boolean;
     isNavToken: boolean;
@@ -115,7 +115,7 @@ export interface BuildHeroCardViewModelParams {
   prevMonth: number | null;
   performanceVsUsd1y: number | null;
   pegRef: number;
-  deviationBps: number;
+  deviationBps: number | null;
   gaugeDeviationBps: number;
   pegReferenceUnavailable: boolean;
   pegScoreResult: PegSummaryCoin | null;

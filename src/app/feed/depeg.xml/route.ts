@@ -4,7 +4,7 @@ import { rssResponse, toRfc822, type RssItem } from "@/lib/rss";
 import {
   getPeakDeviationMagnitudeBps,
   selectStaticDepegEventPages,
-} from "@/app/depeg/[event]/config";
+} from "@/lib/depeg-event-config";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { DepegEventSchema } from "@shared/types/market";
 import { z } from "zod";

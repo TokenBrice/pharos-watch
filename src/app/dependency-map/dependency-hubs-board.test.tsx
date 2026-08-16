@@ -3,7 +3,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
-import type { DependencyHubsModel } from "./dependency-hubs-model";
+import type { DependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 const MODEL: DependencyHubsModel = {
   upstreamHubCount: 1,

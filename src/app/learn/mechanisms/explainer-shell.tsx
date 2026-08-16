@@ -14,7 +14,7 @@ import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
 import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
-} from "@/app/learn/case-studies/case-study-outcomes";
+} from "@/lib/case-study-outcomes";
 import { RelatedCoinsList } from "../_shared/related-coins-list";
 import {
   CrossLinksFooter,

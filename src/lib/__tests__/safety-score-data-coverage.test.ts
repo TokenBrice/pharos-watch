@@ -4,7 +4,7 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 import {
   buildDataCoverageModel,
   describeDataCoverageHoldCauses,
-} from "./data-coverage-view-model";
+} from "@/lib/safety-score-data-coverage";
 
 function withGaps(
   card: SafetyScoreV9CurrentCard,

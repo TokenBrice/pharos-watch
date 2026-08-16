@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { CoverageMatrixCard, CoverageMobileResults, CoverageSafetyScoreDataCard } from "./coverage-page-sections";
 import { buildCoverageRow } from "@/lib/coverage";
 import { logosById } from "@/lib/logos";
-import { buildDataCoverageModel } from "@/app/safety-scores/data-coverage-view-model";
+import { buildDataCoverageModel } from "@/lib/safety-score-data-coverage";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import type { StablecoinMeta } from "@shared/types";
 

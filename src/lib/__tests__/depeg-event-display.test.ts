@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "./page-data";
+import { COLLIDING_DEPEG_EVENT_SLUGS, DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 import {
   buildDepegEventDescription,
   buildDepegEventSynopsis,
   buildDepegEventTitle,
   formatEventNavigationLabel,
-} from "./event-display";
+} from "@/lib/depeg-event-display";
 
 const GYD_MARCH_19 = DEPEG_EVENT_ENTRIES.filter((event) => event.slug.startsWith("gyd-2026-03-19-down-"));
 

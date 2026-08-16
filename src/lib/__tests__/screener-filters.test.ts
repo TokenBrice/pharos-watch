@@ -12,7 +12,7 @@ import {
   sortScreenerRows,
   type ScreenerFilters,
   type ScreenerRow,
-} from "./screener-filters";
+} from "@/lib/screener-filters";
 import { decodeState, encodeState } from "@/lib/url-state";
 
 function makeRow(overrides: Partial<ScreenerRow> = {}): ScreenerRow {

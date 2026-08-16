@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { LearnPageShell } from "./_shared/learn-page-shell";
 import { CrossLinksFooter } from "./_shared/section-primitives";
 import { ARCHETYPE_VISUALS } from "./mechanisms/content/types";
-import { CASE_STUDY_LIST } from "./case-studies/content";
+import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "./case-studies/content";
 import { content as usdcSvb2023 } from "./case-studies/content/usdc-svb-2023";
 import { content as terraUst2022 } from "./case-studies/content/terra-ust-2022";
 import { content as usd0ppUsual2025 } from "./case-studies/content/usd0pp-usual-2025";
@@ -23,7 +23,7 @@ import {
   CASE_STUDY_OUTCOME_CHIP_BASE,
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
-} from "./case-studies/case-study-outcomes";
+} from "@/lib/case-study-outcomes";
 import { GLOSSARY_ENTRIES } from "./glossary/content";
 
 export const metadata: Metadata = buildPageMetadata({
@@ -199,13 +199,6 @@ export default function LearnIndexPage() {
     0,
   );
 
-  const outcomeCounts = CASE_STUDY_LIST.reduce(
-    (acc, study) => {
-      acc[study.outcome] += 1;
-      return acc;
-    },
-    { survived: 0, wounded: 0, died: 0 } as Record<CaseStudyOutcome, number>,
-  );
   const totalStudies = CASE_STUDY_LIST.length;
 
   const glossaryById = new Map(GLOSSARY_ENTRIES.map((entry) => [entry.id, entry]));
@@ -223,7 +216,7 @@ export default function LearnIndexPage() {
       title="How Stables Work & Break"
       subtitle="How stablecoins hold a dollar, why they break it, and the vocabulary Pharos uses to name the risk."
     >
-      <OutcomeLedger total={totalStudies} counts={outcomeCounts} />
+      <OutcomeLedger total={totalStudies} counts={CASE_STUDY_OUTCOME_COUNTS} />
 
       {/* 01 — Case Studies: the evidence */}
       <section

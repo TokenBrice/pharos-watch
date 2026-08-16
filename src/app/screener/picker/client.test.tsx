@@ -236,7 +236,7 @@ vi.mock("next/link", async () => {
 
 // Import AFTER mocks
 import { SelectorClient } from "./client";
-import { SELECTOR_STATE_DEFAULTS, toSelectorInput } from "./selector-state";
+import { SELECTOR_STATE_DEFAULTS, toSelectorInput } from "@/lib/selector-state";
 
 // ----------------------------------------------------------------------------
 // Helpers

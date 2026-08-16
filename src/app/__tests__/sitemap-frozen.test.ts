@@ -8,6 +8,7 @@ import docsMetadata from "@/generated/docs-metadata.json";
 import { changelogs } from "@/data/changelogs";
 import { STATIC_COMPARISON_PAGES } from "@/lib/compare-pages";
 import { buildStablecoinUrl } from "@/lib/urls";
+import { PUBLIC_ROUTE_PATHS } from "@/lib/public-route-inventory";
 import { CASE_STUDY_LIST } from "@/app/learn/case-studies/content";
 import sitemap, { METHODOLOGY_CHANGELOG_SITEMAP_PATHS } from "../sitemap";
 import digests from "../../../data/digests.json";
@@ -15,13 +16,18 @@ import {
   COLLIDING_DEPEG_EVENT_SLUGS,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
   DEPEG_EVENT_ENTRIES,
-} from "@/app/depeg/[event]/page-data";
+} from "@/lib/depeg-event-page-data";
 
 describe("sitemap", () => {
   it("emits each canonical URL exactly once", () => {
     const urls = sitemap().map((entry) => entry.url);
 
     expect(new Set(urls).size).toBe(urls.length);
+  });
+
+  it("is the machine-readable projection of the canonical public route inventory", () => {
+    const sitemapPaths = sitemap().map((entry) => new URL(entry.url).pathname).sort();
+    expect(sitemapPaths).toEqual([...PUBLIC_ROUTE_PATHS].sort());
   });
 
   it("includes every frozen detail page (TRACKED source preserves indexability)", () => {

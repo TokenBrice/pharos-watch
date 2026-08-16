@@ -150,11 +150,12 @@ export function buildLimitedDepegCoverageNote(
   coinData: StablecoinData,
   isNavToken: boolean,
   pegScoreResult: PegSummaryCoin | null,
-  deviationBps: number,
+  deviationBps: number | null,
 ): string | null {
   const depegThresholdBps = coinData.pegType === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;
   return !isNavToken &&
     pegScoreResult?.depegEventCoverageLimited === true &&
+    deviationBps != null &&
     Math.abs(deviationBps) >= depegThresholdBps
     ? `Below ${formatCurrency(DEPEG_EVENT_MIN_SUPPLY_USD)} live-event floor. Deviation is shown, but event history may stay empty.`
     : null;

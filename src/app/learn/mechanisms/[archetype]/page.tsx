@@ -8,21 +8,12 @@ import {
 } from "@shared/lib/classification";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { ArchetypeArticleJsonLd } from "@/lib/mechanism-json-ld";
+import { MECHANISM_EXPLAINER_TITLES } from "@/lib/mechanism-explainer-registry";
 import { LearnPageShell } from "../../_shared/learn-page-shell";
 import { ARCHETYPE_CONTENT } from "../content";
 import { ArchetypeExplainerBody } from "../explainer-shell";
 
 const ARCHETYPE_SLUGS = new Set<string>(MECHANISM_ARCHETYPE_VALUES);
-
-const TITLE_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
-  "fiat-cash": "Fiat-Backed Stablecoins, Explained",
-  tbill: "Tokenized Treasury Stablecoins, Explained",
-  cdp: "CDP Stablecoins, Explained",
-  "synthetic-delta-neutral": "Delta-Neutral Stablecoins, Explained",
-  algorithmic: "Algorithmic Stablecoins, Explained",
-  "rwa-credit-fund": "Tokenized Credit Fund Stablecoins, Explained",
-  "commodity-claim": "Gold and Commodity Tokens, Explained",
-};
 
 const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   "fiat-cash":
@@ -56,7 +47,7 @@ export async function generateMetadata({
   }
   const slug = archetype as MechanismArchetype;
   return buildPageMetadata({
-    title: TITLE_BY_ARCHETYPE[slug],
+    title: MECHANISM_EXPLAINER_TITLES[slug],
     description: DESCRIPTION_BY_ARCHETYPE[slug],
     canonical: getMechanismExplainerPath(slug),
     ogImage: `/og-learn-${slug}.png`,

@@ -13,7 +13,7 @@ import { getCirculatingRaw } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
 import { DependencyHubsBoard } from "./dependency-hubs-board";
-import { buildDependencyHubsModel } from "./dependency-hubs-model";
+import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 export function DependencyMapClient() {
   const reportCardsQuery = useReportCardsV9();

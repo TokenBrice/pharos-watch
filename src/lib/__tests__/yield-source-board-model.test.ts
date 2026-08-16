@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/app/yield/source-board-model";
+import { buildYieldSourceBoardModel, inferLaneConfidenceTier } from "@/lib/yield-source-board-model";
 import { makeAltYieldSource, makeYieldProvenance, makeYieldRanking } from "@/test/fixtures/yield";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 

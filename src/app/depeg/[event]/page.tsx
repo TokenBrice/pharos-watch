@@ -28,7 +28,7 @@ import {
   eventBySlug,
   formatIncidentNumber,
   type DepegEventEntry,
-} from "./page-data";
+} from "@/lib/depeg-event-page-data";
 import {
   buildDepegEventDescription,
   buildDepegEventSynopsis,
@@ -38,7 +38,7 @@ import {
   formatEventPrice,
   formatEventTimestamp,
   formatEventUtcTime,
-} from "./event-display";
+} from "@/lib/depeg-event-display";
 import { getDepegEditorial, qualifiesForEditorialBriefing } from "./editorials";
 import { CASE_STUDY_BY_DEPEG_SLUG } from "@/app/learn/case-studies/content";
 

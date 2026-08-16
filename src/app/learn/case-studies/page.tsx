@@ -8,8 +8,7 @@ import { cn } from "@/lib/utils";
 import { ARCHETYPE_VISUALS } from "../mechanisms/content/types";
 import { SectionHeading, SectionKicker } from "../_shared/section-primitives";
 import { LearnHero } from "../_shared/learn-hero";
-import { CASE_STUDY_LIST } from "./content";
-import type { CaseStudyOutcome } from "./content/types";
+import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "./content";
 import { content as terraUst2022 } from "./content/terra-ust-2022";
 import { content as ironTitan2021 } from "./content/iron-titan-2021";
 import { content as feiProtocol } from "./content/fei-protocol";
@@ -62,14 +61,6 @@ export default function CaseStudiesHub() {
   // Outcome spread for the header hero, derived from the archive so the copy can
   // never drift. The archive count itself is neutral → frost One-Beam; the
   // breakdown figures stay semantic (emerald/amber/rose).
-  const outcomeCounts = CASE_STUDY_LIST.reduce(
-    (acc, study) => {
-      acc[study.outcome] += 1;
-      return acc;
-    },
-    { survived: 0, wounded: 0, died: 0 } as Record<CaseStudyOutcome, number>,
-  );
-
   return (
     <LearnPageShell
       breadcrumbItems={[
@@ -88,21 +79,21 @@ export default function CaseStudiesHub() {
         sub={
           <p className="pharos-numeric text-sm text-muted-foreground">
             <span className="text-emerald-700 dark:text-emerald-400">
-              {outcomeCounts.survived}
+              {CASE_STUDY_OUTCOME_COUNTS.survived}
             </span>{" "}
             survived
             <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
               ·
             </span>
             <span className="text-amber-700 dark:text-amber-400">
-              {outcomeCounts.wounded}
+              {CASE_STUDY_OUTCOME_COUNTS.wounded}
             </span>{" "}
             wounded
             <span aria-hidden="true" className="px-1.5 text-muted-foreground/50">
               ·
             </span>
             <span className="text-rose-600 dark:text-rose-400">
-              {outcomeCounts.died}
+              {CASE_STUDY_OUTCOME_COUNTS.died}
             </span>{" "}
             died
           </p>

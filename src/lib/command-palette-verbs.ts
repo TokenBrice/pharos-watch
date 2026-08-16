@@ -22,7 +22,7 @@ import {
   SCREENER_URL_SCHEMA,
   SCREENER_FILTER_DEFAULTS,
   type ScreenerFilters,
-} from "@/app/screener/screener-filters";
+} from "@/lib/screener-filters";
 
 // ── Result types ────────────────────────────────────────────────────────────
 

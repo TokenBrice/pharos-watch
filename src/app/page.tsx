@@ -3,7 +3,7 @@ import { HomeAltClient } from "@/components/home-alt-client";
 import { HomeBlogBanner } from "@/components/home-blog-banner";
 import { HomepageBootstrapScript } from "@/components/homepage-bootstrap-script";
 import { HomeAltHero } from "@/components/home-alt-hero";
-import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
+import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@/lib/urls";
@@ -31,19 +31,9 @@ export default function HomePage() {
   const heroSnapshot = getHomepageHeroSnapshot();
 
   // Top 20 stablecoins for ItemList schema
-  const itemListEntries = HOMEPAGE_TOP_CORE_STABLECOINS.map((coin) => {
-    const logo = logosById[coin.id];
-    const url = `${SITE_URL}${buildStablecoinUrl(coin.id)}`;
-
-    return {
-      item: {
-        "@type": "WebPage",
-        "@id": url,
-        name: `${coin.name} (${coin.symbol})`,
-        url,
-        ...(logo ? { image: `${SITE_URL}${logo}` } : {}),
-      },
-    };
+  const itemListEntries = buildStablecoinItemListEntries(HOMEPAGE_TOP_CORE_STABLECOINS, {
+    resolveUrl: (coin) => `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
+    resolveImage: (coin) => logosById[coin.id] ? `${SITE_URL}${logosById[coin.id]}` : undefined,
   });
 
   return (

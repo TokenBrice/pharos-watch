@@ -8,14 +8,14 @@ import {
 } from "@shared/lib/selector";
 import type { SelectorOption } from "@/components/selector/selector-question-card";
 import type { SelectorResultSummaryProps } from "@/components/selector/selector-result-summary";
-import { shouldSkipExitStep, type SelectorStep, type SelectorVenue, type SelectorWizardState } from "./selector-state";
+import { shouldSkipExitStep, type SelectorStep, type SelectorVenue, type SelectorWizardState } from "@/lib/selector-state";
 import {
   DEPEG_OPTIONS,
   EXIT_OPTIONS,
   HORIZON_OPTIONS,
   PROFILE_LABEL,
   VENUE_OPTIONS_BY_PROFILE,
-} from "./picker-options";
+} from "@/lib/selector-options";
 
 export interface ScreenerHandoffView {
   url: string;

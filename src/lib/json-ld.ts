@@ -83,6 +83,52 @@ export function buildPharosOrganizationNode() {
 
 type JsonLdNode = Record<string, unknown>;
 
+export interface StablecoinItemListEntryInput {
+  id: string;
+  name: string;
+  symbol: string;
+  href?: string;
+}
+
+export interface StablecoinItemListEntryOptions<T extends StablecoinItemListEntryInput> {
+  schemaType?: "Thing" | "WebPage";
+  resolveUrl?: (coin: T) => string;
+  resolveId?: (coin: T, url: string) => string;
+  resolveImage?: (coin: T) => string | undefined;
+  resolveDescription?: (coin: T) => string | undefined;
+  includeMainEntityOfPage?: boolean;
+}
+
+/** Build the common ListItem payload used by stablecoin directories and profiles. */
+export function buildStablecoinItemListEntries<T extends StablecoinItemListEntryInput>(
+  coins: readonly T[],
+  {
+    schemaType = "WebPage",
+    resolveUrl = (coin) => `${SITE_URL}/stablecoin/${encodeURIComponent(coin.id)}/`,
+    resolveId = (_coin, url) => url,
+    resolveImage,
+    resolveDescription,
+    includeMainEntityOfPage = false,
+  }: StablecoinItemListEntryOptions<T> = {},
+): JsonLdNode[] {
+  return coins.map((coin) => {
+    const url = resolveUrl(coin);
+    const image = resolveImage?.(coin);
+    const description = resolveDescription?.(coin);
+    return {
+      item: {
+        "@type": schemaType,
+        "@id": resolveId(coin, url),
+        name: `${coin.name} (${coin.symbol})`,
+        url,
+        ...(image ? { image } : {}),
+        ...(description ? { description } : {}),
+        ...(includeMainEntityOfPage ? { mainEntityOfPage: url } : {}),
+      },
+    };
+  });
+}
+
 const SCHEMA_CONTEXT = "https://schema.org";
 
 const PHAROS_ORG_REF = { "@id": `${SITE_URL}#organization` } as const;

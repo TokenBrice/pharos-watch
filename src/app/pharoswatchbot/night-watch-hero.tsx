@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { TelegramAdoptionLink } from "./telegram-adoption-link";
 import { NightShiftMetric } from "./night-shift-metric";
-import { SETUP_DEEP_LINK } from "./telegram-route-constants";
+import { SETUP_DEEP_LINK } from "@/lib/telegram-route-constants";
 
 /**
  * Act I — the lighthouse scene. A single frost beam sweeps dark water at

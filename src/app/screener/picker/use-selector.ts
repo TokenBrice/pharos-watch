@@ -14,7 +14,7 @@ import {
   useYieldRankings,
 } from "@/hooks/api-hooks";
 import { useStablecoins } from "@/hooks/use-stablecoins";
-import { isValidSelectorSnapshotId } from "./selector-state";
+import { isValidSelectorSnapshotId } from "@/lib/selector-state";
 import { buildSelectorRows } from "@shared/lib/selector/data-adapter";
 import { RequestFailure, RequestSequence, isRequestCancellation, requestJson } from "@/lib/request";
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { DependencyGraphEdge } from "@shared/lib/dependency-graph";
-import type { DependencyHubCard } from "./dependency-hubs-model";
-import { buildDependencyHubsModel } from "./dependency-hubs-model";
+import type { DependencyHubCard } from "@/lib/dependency-hubs-model";
+import { buildDependencyHubsModel } from "@/lib/dependency-hubs-model";
 
 const CARDS: readonly DependencyHubCard[] = [
   { id: "usdc-circle", name: "USD Coin", symbol: "USDC", isDefunct: false },

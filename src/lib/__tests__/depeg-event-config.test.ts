@@ -4,7 +4,7 @@ import {
   hasDedicatedDepegEventPage,
   selectIndexableDepegEvents,
   selectStaticDepegEventPages,
-} from "./config";
+} from "@/lib/depeg-event-config";
 
 const EPOCH = DEPEG_ARCHIVE_EPOCH_SECONDS;
 

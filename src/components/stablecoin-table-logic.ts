@@ -3,6 +3,7 @@ import { createTableComparator } from "@/lib/table-comparator";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import type { ColumnId } from "@/hooks/use-preferences";
 import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { getPegReference } from "@shared/lib/peg-rates";
 import { getCirculatingRaw, getPrevDayRaw, getPrevWeekRaw } from "@shared/lib/supply";
 import {
@@ -200,8 +201,8 @@ export function sortStablecoins({
       const meta = metaById.get(r.id);
       if (meta?.flags.navToken) return null;
       const ref = getPegReference(r.pegType, pegRates, meta?.commodityOunces);
-      const price = r.price;
-      return price != null && ref > 0 ? Math.abs(price / ref - 1) * 10_000 : null;
+      const signal = r.price == null ? null : deriveDepegSignal(r.price, ref);
+      return signal?.absRawBps ?? null;
     },
   };
   const extractSortValue = extractors[effectiveSortKey];

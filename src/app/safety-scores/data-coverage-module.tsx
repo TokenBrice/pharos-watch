@@ -3,7 +3,7 @@
 import { ChevronDown, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDecimal } from "@shared/lib/format";
-import type { DataCoverageModel } from "./data-coverage-view-model";
+import type { DataCoverageModel } from "@/lib/safety-score-data-coverage";
 
 /** Static swatch per gap owner, in the canonical owner order of the view model. */
 const OWNER_SWATCHES: Record<string, string> = {

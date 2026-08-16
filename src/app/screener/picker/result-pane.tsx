@@ -25,8 +25,8 @@ import {
 } from "@/components/selector/selector-empty-state";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
-import type { SelectorProfile, SelectorStep, SelectorWizardState } from "./selector-state";
-import { PROFILE_LABEL } from "./picker-options";
+import type { SelectorProfile, SelectorStep, SelectorWizardState } from "@/lib/selector-state";
+import { PROFILE_LABEL } from "@/lib/selector-options";
 import {
   buildCompareShortlistHref,
   buildCompareWithWatchoutsHref,
@@ -36,7 +36,7 @@ import {
   stepForAnswerKey,
 } from "./handoff";
 import type { UseSelectorResult } from "./use-selector";
-import { PHAROSWATCHBOT_BOT_URL } from "@/app/pharoswatchbot/telegram-route-constants";
+import { PHAROSWATCHBOT_BOT_URL } from "@/lib/telegram-route-constants";
 import { isTelegramReservedTargetToken } from "@shared/lib/telegram-command-vocabulary";
 
 export interface ResultPaneProps {

@@ -2,13 +2,13 @@
 
 import { selectorProfileLabel } from "@shared/lib/selector/selector-labels";
 import { SelectorQuestionCard } from "@/components/selector/selector-question-card";
-import { SELECTOR_QUESTIONS, computeTotalSteps } from "@/app/screener/picker/picker-options";
+import { SELECTOR_QUESTIONS, computeTotalSteps } from "@/lib/selector-options";
 import type {
   SelectorAction,
   SelectorProfile,
   SelectorWizardState,
-} from "@/app/screener/picker/selector-state";
-import { shouldSkipExitStep } from "@/app/screener/picker/selector-state";
+} from "@/lib/selector-state";
+import { shouldSkipExitStep } from "@/lib/selector-state";
 
 interface SelectorMobileFormProps {
   state: SelectorWizardState;
