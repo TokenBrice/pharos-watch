@@ -24,6 +24,19 @@ This skill does **not** touch `shared/data/funding/costs.json`. Cost line items 
 
 All three are in `worker/.dev.vars`.
 
+**That file is not shell-sourceable.** It uses Wrangler's `KEY = "value"` form with spaces around the `=`, so `source worker/.dev.vars` throws `command not found: ALCHEMY_API_KEY` for every line, leaves the variables unset, and every subsequent request fails with `{"code":-32600,"message":"Must be authenticated!"}` — an auth error that looks like a bad key rather than an unset one. Parse it instead:
+
+```bash
+eval "$(python3 -c "
+import re
+for line in open('worker/.dev.vars'):
+    m = re.match(r'\s*([A-Z_]+)\s*=\s*\"?([^\"\n]*)\"?', line)
+    if m: print(f\"export {m.group(1)}='{m.group(2).strip()}'\")
+")"
+```
+
+Confirm presence by variable name only (`grep -oE '^(ALCHEMY|ETHERSCAN|COINGECKO)_API_KEY' worker/.dev.vars`); never print or log the values.
+
 Extended reference (edge cases, history, examples): read ./reference.md when needed.
 
 ### Process
