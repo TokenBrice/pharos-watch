@@ -5,6 +5,7 @@ import { splitNullDelimited } from "./changed-files.mts";
 export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS = [
   "shared/data/stablecoins/coins/**",
   "src/app/**",
+  "src/lib/case-studies/**",
   "src/data/blog/**",
   "src/components/stablecoin-detail/static-seo-content.tsx",
   "src/lib/page-metadata.ts",

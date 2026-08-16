@@ -6,7 +6,7 @@ import {
   getMethodologyChangelogEntryByMarkdownKey,
   type MethodologyChangelogMarkdownKey,
 } from "@shared/lib/methodology-versions/registry";
-import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/app/methodology/sections/methodology-content";
+import { METHODOLOGY_INDEX_SECTION_CONTENT } from "../../src/lib/methodology-content";
 import { frontMatterBlock } from "./markdown-renderers";
 
 export type MethodologyChangelogKey = MethodologyChangelogMarkdownKey;

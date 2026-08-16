@@ -1,4 +1,7 @@
 import { parseAttributes } from "./seo-html-parse.mjs";
+import { tsImport } from "tsx/esm/api";
+
+const { buildStablecoinUrl } = await tsImport("../../shared/lib/urls.ts", import.meta.url);
 
 export const DEFAULT_YIELD_RANKING_COUNT = 25;
 export const REPRESENTATIVE_YIELD_CANARY_IDS = Object.freeze([
@@ -57,7 +60,7 @@ export function buildYieldDeepRoutes(rankingIds, representativeIds = REPRESENTAT
     seen.add(id);
     ids.push(id);
   }
-  return ids.map((id) => ({ id, route: `/stablecoin/${id}/yield/` }));
+  return ids.map((id) => ({ id, route: buildStablecoinUrl(id, "yield/") }));
 }
 
 export function extractScriptUrls(html, documentUrl) {

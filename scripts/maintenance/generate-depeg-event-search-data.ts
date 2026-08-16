@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DepegEvent, DepegEventSearchEntry } from "@shared/types/market";
-import { selectStaticDepegEventPages } from "../../src/app/depeg/[event]/config";
+import { selectStaticDepegEventPages } from "../../src/lib/depeg-event-config";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -6,6 +6,7 @@ import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import { CAUSE_META } from "@shared/lib/dead-stablecoins";
 import { CEMETERY_ENTRIES, type CemeteryEntry } from "@shared/lib/cemetery-merged";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DeadStablecoin } from "@shared/types";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -113,7 +114,7 @@ function coinToRow(coin: CemeteryEntry): CemeteryDatasetRow {
     archivedDataAvailable,
     contracts: coin.contracts ?? [],
     pharosUrl: archivedDataAvailable
-      ? `${SITE_ORIGIN}/stablecoin/${coin.id}/`
+      ? `${SITE_ORIGIN}${buildStablecoinUrl(coin.id)}`
       : `${SITE_ORIGIN}/cemetery/#${coin.id}`,
   };
 }

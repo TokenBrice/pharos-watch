@@ -144,11 +144,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-case-study-client-index.ts --check",
     command: "tsx scripts/maintenance/generate-case-study-client-index.ts",
     bootstrap: true,
-    outputPaths: ["src/app/learn/case-studies/content/client-index.ts"],
+    outputPaths: ["src/lib/case-study-client-index.ts"],
     phase: 0,
     reproducibility: "deterministic",
     script: "scripts/maintenance/generate-case-study-client-index.ts",
-    sourcePaths: ["src/app/learn/case-studies/content/**"],
+    sourcePaths: ["src/lib/case-studies/**"],
   }),
   generatedArtifact({
     id: "docs-metadata",
@@ -175,7 +175,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 0,
     reproducibility: "pinned-input",
     script: "scripts/maintenance/generate-depeg-event-search-data.ts",
-    sourcePaths: ["data/depeg-events.json", "src/app/depeg/[event]/config.ts"],
+    sourcePaths: ["data/depeg-events.json", "src/lib/depeg-event-config.ts"],
   }),
   generatedArtifact({
     id: "homepage-bootstrap",
@@ -332,7 +332,14 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 2,
     reproducibility: "network-derived",
     script: "scripts/maintenance/generate-llms-txt.ts",
-    sourcePaths: ["data/digests.json", "docs/*.md", "shared/lib/public-docs.ts", "src/app/learn/**"],
+    sourcePaths: [
+      "data/digests.json",
+      "docs/*.md",
+      "shared/lib/public-docs.ts",
+      "src/lib/case-studies/**",
+      "src/lib/glossary-content.ts",
+      "src/lib/mechanism-explainers/**",
+    ],
   }),
   generatedArtifact({
     id: "api-reference",
@@ -363,7 +370,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-learn-images.ts",
-    sourcePaths: ["src/app/learn/mechanisms/**"],
+    sourcePaths: [
+      "src/components/stablecoin-detail/mechanism-diagrams/**",
+      "src/lib/mechanism-explainer-registry.ts",
+    ],
   }),
   generatedArtifact({
     id: "og-case-studies",
@@ -374,7 +384,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     phase: 3,
     reproducibility: "deterministic",
     script: "scripts/maintenance/build-og-case-studies.ts",
-    sourcePaths: ["data/logos.json", "public/datasets/stablecoin-cemetery.json", "src/app/learn/case-studies/**"],
+    sourcePaths: ["data/logos.json", "public/datasets/stablecoin-cemetery.json", "src/lib/case-studies/**"],
   }),
 ];
 

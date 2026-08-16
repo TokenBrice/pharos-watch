@@ -17,6 +17,7 @@ import {
   type PublicDoc,
 } from "@shared/lib/public-docs";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
@@ -60,7 +61,7 @@ export function renderStablecoinDetail(
   const parts: string[] = [
     frontMatterBlock({
       title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
-      canonical: `https://pharos.watch/stablecoin/${id}/`,
+      canonical: `https://pharos.watch${buildStablecoinUrl(id)}`,
       description: `Build-time stablecoin profile for ${coin.name} (${coin.symbol}). Live price, supply, peg, liquidity, and flow data are served by the Pharos API.`,
       ...(summary?.updatedAt ? { dateModified: summary.updatedAt } : {}),
     }),
@@ -126,7 +127,7 @@ export function renderStablecoinDetail(
 
 export function* iterateStablecoinRoutes(): Generator<MarkdownRoute> {
   for (const [id] of TRACKED_META_BY_ID.entries()) {
-    yield { path: `/stablecoin/${id}/`, body: renderStablecoinDetail(id) };
+    yield { path: buildStablecoinUrl(id), body: renderStablecoinDetail(id) };
   }
 }
 
