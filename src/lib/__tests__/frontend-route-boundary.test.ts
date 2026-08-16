@@ -41,17 +41,5 @@ describe("frontend route boundary", () => {
       expect(routeOwnedModules).toEqual([]);
     }
 
-    const compatibilityEntrypoints = new Map([
-      ["src/app/learn/case-studies/content/index.ts", 'export * from "@/lib/case-studies";'],
-      ["src/app/learn/glossary/content.ts", 'export * from "@/lib/glossary-content";'],
-      ["src/app/learn/mechanisms/content/index.ts", 'export * from "@/lib/mechanism-explainers";'],
-      ["src/app/methodology/sections/methodology-content.ts", 'export * from "@/lib/methodology-content";'],
-    ]);
-    for (const [path, reexport] of compatibilityEntrypoints) {
-      const absolutePath = join(ROOT, path);
-      if (existsSync(absolutePath)) {
-        expect(readFileSync(absolutePath, "utf8")).toContain(reexport);
-      }
-    }
   });
 });

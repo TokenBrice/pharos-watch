@@ -24,7 +24,7 @@ import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
 } from "@/lib/case-study-outcomes";
-import { GLOSSARY_ENTRIES } from "./glossary/content";
+import { GLOSSARY_ENTRIES } from "@/lib/glossary-content";
 
 export const metadata: Metadata = buildPageMetadata({
   title: "Learn Stablecoin Mechanisms and Case Studies",
