@@ -1,19 +1,17 @@
-import { isRecord } from "@shared/lib/type-guards";
 import type { ReserveSlice, StablecoinMeta } from "@shared/types/core";
-import { DEPENDENCY_TYPE_VALUES } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import { ReserveSliceSchema } from "@shared/types/reserves";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeHtmlEntities,
   fetchPrimaryHtmlInput,
   fetchTextWithRetry,
   htmlLayoutChangedError,
+  normalizeSlices,
   readHtmlAttribute,
   requireHtmlInput,
-  slicesFromPercentages,
   stripTags,
   verifiedFreshnessMetadata,
-  isReserveRisk,
 } from "./helpers";
 import { buildBrowserHeaders, HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "./request";
 import { buildDocumentedRedemptionTelemetry } from "./redemption";
@@ -171,56 +169,39 @@ function readConfiguredSlices(rawSlices: unknown): ReserveSlice[] {
     throw new Error(`${ADAPTER_NAME} adapter params invalid.slices: expected a non-empty array`);
   }
 
-  return slicesFromPercentages(
-    rawSlices.map((rawSlice, index) => {
-      if (!isRecord(rawSlice)) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}]: expected an object`);
-      }
+  const slices = rawSlices.map((rawSlice, index) => {
+    const parsed = ReserveSliceSchema.safeParse(rawSlice);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      const path = issue && issue.path.length > 0 ? `.${issue.path.join(".")}` : "";
+      throw new Error(
+        `${ADAPTER_NAME} adapter params invalid.slices[${index}]${path}: ${issue?.message ?? "invalid reserve slice"}`,
+      );
+    }
 
-      const name = rawSlice.name;
-      if (typeof name !== "string" || !name.trim()) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].name: expected a non-empty string`);
-      }
+    const slice = parsed.data;
+    if (!slice.name.trim()) {
+      throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].name: expected a non-empty string`);
+    }
+    if (slice.coinId != null && !slice.coinId.trim()) {
+      throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].coinId: expected a string`);
+    }
 
-      const pct = rawSlice.pct;
-      if (typeof pct !== "number" || !Number.isFinite(pct) || pct <= 0) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].pct: expected a positive number`);
-      }
+    return {
+      ...slice,
+      name: slice.name.trim(),
+      ...(slice.coinId != null ? { coinId: slice.coinId.trim() } : {}),
+    };
+  });
 
-      const risk = rawSlice.risk;
-      if (!isReserveRisk(risk)) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].risk: expected a reserve risk`);
-      }
+  const total = slices.reduce((sum, slice) => sum + slice.pct, 0);
+  if (Math.abs(total - 100) > 1.5) {
+    throw new Error(
+      `attestation PDF configured reserve composition sum to ${total.toFixed(1)}% (expected 100% ± 1.5%)`,
+    );
+  }
 
-      const coinId = rawSlice.coinId;
-      if (coinId != null && (typeof coinId !== "string" || !coinId.trim())) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].coinId: expected a string`);
-      }
-
-      const depType = rawSlice.depType;
-      if (
-        depType != null &&
-        (typeof depType !== "string" || !(DEPENDENCY_TYPE_VALUES as readonly string[]).includes(depType))
-      ) {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].depType: expected a dependency type`);
-      }
-
-      const blacklistable = rawSlice.blacklistable;
-      if (blacklistable != null && typeof blacklistable !== "boolean") {
-        throw new Error(`${ADAPTER_NAME} adapter params invalid.slices[${index}].blacklistable: expected a boolean`);
-      }
-
-      return {
-        name: name.trim(),
-        pct,
-        risk,
-        ...(typeof coinId === "string" ? { coinId: coinId.trim() } : {}),
-        ...(typeof depType === "string" ? { depType: depType as ReserveSlice["depType"] } : {}),
-        ...(typeof blacklistable === "boolean" ? { blacklistable } : {}),
-      };
-    }),
-    { context: "attestation PDF configured reserve composition" },
-  );
+  return normalizeSlices(slices);
 }
 
 function readParams(config: LiveReservesConfig): AttestationPdfIndexParams {

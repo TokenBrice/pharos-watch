@@ -81,6 +81,38 @@ describe("adaptAttestationPdfIndex", () => {
     expect(String(result.metadata?.compositionNote)).toContain("full PDF parsing");
   });
 
+  it("preserves the complete curated reserve-slice shape", () => {
+    const slices: AttestationPdfIndexParams["slices"] = [
+      {
+        sourceKey: "custody:solomon",
+        name: "Ceffu-custodied treasury bills",
+        pct: 60,
+        risk: "low",
+        coinId: "usdc-circle",
+        depType: "collateral",
+        blacklistable: true,
+        blacklistabilityExposure: "yes",
+        assetClass: "treasury-bill",
+        issuerOrObligor: "Ceffu",
+        riskFactors: ["credit", "custody"],
+        liquidityHorizon: "one-day",
+        maturityDaysMax: 90,
+      },
+      {
+        name: "Cash",
+        pct: 40,
+        risk: "very-low",
+      },
+    ];
+
+    const result = adaptAttestationPdfIndex(
+      '<a href="/reports/2026-02-28-attestation.pdf">February report</a>',
+      { slices },
+    );
+
+    expect(result.slices).toEqual(slices);
+  });
+
   it("uses end-of-month freshness for month-only report dates", () => {
     const html = `
       <a href="/attestations/2026_january.pdf">View January report</a>
