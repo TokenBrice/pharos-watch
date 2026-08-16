@@ -175,7 +175,7 @@ export function estimateTelegramDrainTimeSec(
   return Math.ceil(messageCount / budget) * dispatchIntervalSec;
 }
 
-export function mapTelegramPendingCapacity(
+function mapTelegramPendingCapacity(
   row: TelegramPendingCapacityRow | null,
   nowSec: number,
   drainBudgetPerRun: number = TELEGRAM_PENDING_DRAIN_BUDGET,

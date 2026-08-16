@@ -18,7 +18,7 @@ const DEFAULT_LIVE_RESERVE_D1_TABLES: MockTableConfig[] = [
   { match: "INSERT OR IGNORE INTO reserve_composition_history", rows: [] },
   { match: "INSERT INTO reserve_sync_attempts", rows: [] },
   { match: "INSERT OR IGNORE INTO reserve_sync_attempt_history", rows: [] },
-  { match: "SELECT key, value FROM cache WHERE key IN", rows: [] },
+  { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
   { match: "SELECT key, value FROM cache WHERE key LIKE 'circuit:%'", rows: [] },
   { match: "SELECT key FROM cache WHERE key LIKE", rows: [] },
   { match: "INSERT OR REPLACE INTO cache", rows: [] },
@@ -613,8 +613,8 @@ describe("syncLiveReserves", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
-        match: "SELECT key, value FROM cache WHERE key IN",
-        rows: closedBreakerRows,
+        match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+        rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
       },
     ]);
     const result = await syncLiveReserves(db, new AbortController().signal, {});
@@ -667,8 +667,8 @@ describe("syncLiveReserves", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
-        match: "SELECT key, value FROM cache WHERE key IN",
-        rows: closedBreakerRows,
+        match: "SELECT key, value, updated_at FROM cache WHERE key IN",
+        rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
       },
     ]);
     const result = await syncLiveReserves(db, new AbortController().signal, {});
@@ -699,7 +699,7 @@ describe("syncLiveReserves", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1([
       {
-        match: "SELECT key, value FROM cache WHERE key IN",
+        match: "SELECT key, value, updated_at FROM cache WHERE key IN",
         rows: [],
         throwError: new Error("bulk breaker read unavailable"),
       },

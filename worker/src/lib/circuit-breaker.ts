@@ -32,7 +32,7 @@ const DEFAULT_RECORD: CircuitRecord = {
   lastSuccessAt: null,
   openedAt: null,
 };
-export const CIRCUIT_RECORD_MEMO_POLICY = {
+const CIRCUIT_RECORD_MEMO_POLICY = {
   storage: "isolate-memory",
   schemaId: "circuit-record:memo:v1",
   ttlSec: 5,

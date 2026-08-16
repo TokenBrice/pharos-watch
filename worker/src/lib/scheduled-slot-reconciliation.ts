@@ -8,7 +8,6 @@ import { runWithOverloadRetry } from "./d1-overload-retry";
 import { recordProducerOutcome } from "./producer-history";
 import { cronEventCacheKey, logCronEvent } from "./cron-logger";
 
-export { cacheKeySegment } from "./cron-logger";
 
 export interface StaleSlotExecutionArtifact {
   slot_key: string;

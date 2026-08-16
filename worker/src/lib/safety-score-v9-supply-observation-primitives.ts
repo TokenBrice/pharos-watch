@@ -10,7 +10,7 @@ import {
   type ReviewedDeploymentUnitPartitionV1,
 } from "./safety-score-v9-supply-attribution-contract";
 
-export const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
+const REVIEWED_DEPLOYMENT_MAX_SCORING_CLOCK_REWIND_BLOCKS = 128;
 
 export type ReviewedDeploymentObservationRejectionCode =
   | "route-inventory-unavailable"

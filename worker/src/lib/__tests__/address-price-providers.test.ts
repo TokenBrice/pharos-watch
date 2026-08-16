@@ -683,10 +683,15 @@ describe("address price providers", () => {
       `https://api.g.alchemy.com/prices/v1/${encodedSecret}/tokens/by-address`,
       expect.any(Object),
     );
-    const warnOutput = warnSpy.mock.calls.map((call) => call.join(" ")).join("\n");
-    expect(warnOutput).toContain("https://api.g.alchemy.com/prices/v1/<api-key>/tokens/by-address");
-    expect(warnOutput).not.toContain(secret);
-    expect(warnOutput).not.toContain(encodedSecret);
+    const warnLine = warnSpy.mock.calls
+      .map((call) => call[0])
+      .find((value): value is string => typeof value === "string");
+    expect(warnLine).toBeDefined();
+    if (typeof warnLine !== "string") throw new Error("expected a structured retry log line");
+    const warnRecord = JSON.parse(warnLine) as { metadata?: Record<string, unknown> };
+    expect(warnRecord.metadata?.url).toBe("[url]");
+    expect(warnLine).not.toContain(secret);
+    expect(warnLine).not.toContain(encodedSecret);
     warnSpy.mockRestore();
   });
 

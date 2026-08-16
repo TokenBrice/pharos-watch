@@ -11,7 +11,6 @@ import {
 } from "./scheduled-slot-reconciliation";
 
 export {
-  cacheKeySegment,
   STALE_SLOT_ABANDONED_EVENT_TYPE,
   staleSlotEventCacheKey,
 } from "./scheduled-slot-reconciliation";

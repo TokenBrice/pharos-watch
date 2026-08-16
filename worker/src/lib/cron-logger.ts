@@ -141,7 +141,7 @@ const MAX_CRON_EVENT_METADATA_KEYS = 30;
 const MAX_CRON_EVENT_METADATA_ARRAY_ITEMS = 20;
 const MAX_CRON_EVENT_METADATA_DEPTH = 4;
 
-export function cacheKeySegment(value: string): string {
+function cacheKeySegment(value: string): string {
   const normalized = value
     .toLowerCase()
     .replace(/[^a-z0-9:-]+/g, "-")

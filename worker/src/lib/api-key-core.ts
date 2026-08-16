@@ -28,7 +28,7 @@ const API_KEY_OWNER_EMAIL_MAX_LENGTH = 200;
 export const API_KEY_TRAFFIC_CLASS_DEFAULT: ApiKeyTrafficClass = "external";
 export const API_KEY_AUTH_CACHE_TTL_MS = 5_000;
 export const API_KEY_AUTH_CACHE_MAX_ENTRIES = 2_048;
-export const API_KEY_AUTH_CACHE_POLICY = {
+const API_KEY_AUTH_CACHE_POLICY = {
   storage: "isolate-memory",
   schemaId: "api-key-auth-row:v1",
   ttlSec: API_KEY_AUTH_CACHE_TTL_MS / 1_000,

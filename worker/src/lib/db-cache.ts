@@ -111,7 +111,7 @@ export async function setCache(db: D1Database, key: string, value: string, signa
   await setCacheAt(db, key, value, Math.floor(Date.now() / 1000), signal);
 }
 
-export async function setCacheAt(
+async function setCacheAt(
   db: D1Database,
   key: string,
   value: string,
