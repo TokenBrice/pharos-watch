@@ -6,6 +6,19 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+## 2026-08-10 to 2026-08-16
+
+MiCA and GENIUS backfilled across 322 coins, redemption reaches 327 routes, and the V9 stack is rebuilt.
+
+- **Compliance coverage**: MiCA and GENIUS research drained the gap queue across 322 active coins, leaving 356 compliance sidecars. Registers were checked before issuer claims, and the DeFi and wrapper long tail stays deliberately undefined.
+- **Regulation workbenches**: The compliance page splits into an overview plus MiCA and GENIUS workbenches on the same URL contract, so actionable rows surface instead of drowning in out-of-scope ones. Both regimes join the coverage matrix.
+- **Independent assurance**: A new framework compiles reviewed examiner reports into hash-pinned manifests the Worker verifies at runtime and fails closed on drift. AUDX, EUROP, XSGD, XUSD, USDGO, anzen-usdz and USDRIF bind it.
+- **Wider exit routes**: Redemption v4.36 and v4.37 lift configured coverage from 315 to 327 coins, adding JPYSC trust redemption, EURO3 vault exits, Indigo iUSD and nine more reviewed routes, plus live route-openness and fee telemetry.
+- **Mint posture reconciliation**: Economic cap semantics, reconciliation and supervision were reviewed on 295 mint-authority profiles and all 64 adverse-posture assets. 54 coins moved in both directions; eight gained scored reconciliation evidence.
+- **Safety Score hardening**: Releases 9.17 through 9.22 added screener peg filters, stopped publishing reviewed-but-unproven residuals as missing data, activated the Uniswap V4 measured lane, and bound score-bearing gates to the policy digest.
+- **One owner per concept**: A repository-wide cleanup gave peg taxonomy, chain ids, supply, exit capacity, URLs and logging single owners, unwound the api/cron and src/app boundaries, and fixed the divergences that duplication had been hiding.
+- **Leaner D1 footprint**: DDR snapshots became validated gzip blobs, producer telemetry slimmed, and DEX pipelines moved to hourly source work with two-hourly Liquidity Score publication, cutting recurring writes and sustained storage growth.
+
 ## 2026-08-03 to 2026-08-09
 
 Mint Authority and Exit fold into Safety Score V9, the V8 engine is retired, and 25 reserve proofs are corrected.

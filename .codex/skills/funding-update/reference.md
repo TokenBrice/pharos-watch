@@ -37,6 +37,16 @@ The skill is memoryless on discarded spam, so recurring non-donations re-surface
 
   Both would have double-counted donations already in the ledger. Note the near-identical timestamps — the Safe tends to batch this housekeeping, so expect these in clusters rather than singly.
 
+  **These two resurface every run** (re-confirmed 2026-08-16). They sit *above* the optimism and arbitrum cursors, and a cursor only advances when a row is written — since these are never written, no run can move past them. Expect them until a genuine donation lands on each of those chains. Re-decode is cheap; just don't re-litigate the verdict.
+
+- **Address-poisoning clone of a real ledger row** (confirmed 2026-08-16): base `0xb88485ce…`, ticker `USḌC` (dotted-D homoglyph), contract `0x48ffb148…` — not canonical Base USDC `0x833589fc…`. Sender `0xd68cc0c1…4802` mimics genuine donor `0xd68c9d2c…4802` on first/last four digits, and the amount `365.84` is copied verbatim from that donor's 2026-07-21 row. The clone targets the ledger's most recent large Base donation, so **expect the attack to re-aim at whatever the newest sizeable row is** rather than reusing these exact values. Compare full sender addresses against recent rows, never the truncated form.
+
+- **Ticker-as-advertisement spam**: tokens whose symbol is a URL or promo string (`www.base1.cfd` ×2 on optimism, `SWAP ✅ t .me/s/shib_pool` on polygon, seen 2026-07/2026-08). Discard on sight; the ticker is self-identifying.
+
+- **Plausible-sounding scam tokens**: `USGF` on base (`0x5fc8980e…`), contract name "UNITED STATED GOLD FUND" — the typo is the tell. Unknown tickers get manual pricing per Step 4, which is exactly where these get caught; never auto-resolve contract → CoinGecko id.
+
+- **Dust in a legitimate token**: 0.0001 GIV on optimism (2026-05-13) from a batch-disperse contract. The GIV contract `0x528cdc92…` is genuine, so the Step 4 contract check passes — but the value rounds to zero USD and the delivery pattern is a mass airdrop, not a gift. A real contract is not by itself evidence of a donation.
+
 - **Giveth payouts** arrive from the Giveth payout contract and are real donations — `kind: "pool"`, `display: "via Giveth"` (see Step 5).
 
 When a new recurring non-donation pattern is confirmed with the user, add it here instead of relying on session memory.
