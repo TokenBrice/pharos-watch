@@ -232,11 +232,12 @@ export async function runGitleaks({
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
-  try {
-    const result = await runGitleaks();
-    process.exitCode = result.status;
-  } catch (error) {
-    console.error(`[gitleaks] FAILED: ${error instanceof Error ? error.message : String(error)}`);
-    process.exitCode = 1;
-  }
+  void runGitleaks()
+    .then((result) => {
+      process.exitCode = result.status;
+    })
+    .catch((error) => {
+      console.error(`[gitleaks] FAILED: ${error instanceof Error ? error.message : String(error)}`);
+      process.exitCode = 1;
+    });
 }
