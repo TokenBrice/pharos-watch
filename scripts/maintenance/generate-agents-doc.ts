@@ -28,7 +28,7 @@ const contents = readFileSync(SOURCE_ABS, "utf8");
 if (CHECK_MODE) {
   const current = existsSync(OUTPUT_ABS) ? readFileSync(OUTPUT_ABS, "utf8") : "";
   if (current !== contents) {
-    console.error(`${OUTPUT_REL} is stale. Run \`node scripts/maintenance/generate-agents-doc.mjs\`.`);
+    console.error(`${OUTPUT_REL} is stale. Run \`node --import tsx scripts/maintenance/generate-agents-doc.ts\`.`);
     process.exit(1);
   }
   console.log(`${OUTPUT_REL}: matches ${SOURCE_REL}`);

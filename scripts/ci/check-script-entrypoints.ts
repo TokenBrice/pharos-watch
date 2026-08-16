@@ -28,7 +28,7 @@ const REVERSE_ENTRYPOINT_EXTENSIONS = new Set([".mjs", ".js", ".ts"]);
 const REVERSE_REFERENCE_ROOTS = ["scripts", "package.json", ".github"];
 const REVERSE_REFERENCE_EXTENSIONS = new Set([".md", ".mjs", ".js", ".ts", ".tsx", ".json", ".yml", ".yaml"]);
 
-function collectFiles(root, path, acc, extensions = SOURCE_EXTENSIONS) {
+function collectFiles(root: string, path: string, acc: string[], extensions: ReadonlySet<string> = SOURCE_EXTENSIONS): void {
   const abs = resolve(root, path);
   if (!existsSync(abs)) return;
   const stats = statSync(abs);
@@ -41,20 +41,20 @@ function collectFiles(root, path, acc, extensions = SOURCE_EXTENSIONS) {
   acc.push(...collectSourceFiles(abs, { extensions, excludedDirs: SKIP_DIRS }));
 }
 
-function isTestPath(path) {
+function isTestPath(path: string): boolean {
   return path.includes("__tests__") || /\.test\.[a-z]+$/.test(path);
 }
 
-function normalizeScriptPath(rawPath) {
+function normalizeScriptPath(rawPath: string): string {
   return rawPath.replace(/[\\.,;:]+$/, "");
 }
 
-function isCommandBoundary(char) {
+function isCommandBoundary(char: string): boolean {
   return char === "" || /\s/.test(char) || char === "`" || char === "'" || char === '"';
 }
 
-export function collectScriptEntrypoints(content, { allowLineBreaks = false } = {}) {
-  const entrypoints = [];
+export function collectScriptEntrypoints(content: string, { allowLineBreaks = false }: { allowLineBreaks?: boolean } = {}): string[] {
+  const entrypoints: string[] = [];
 
   for (const command of SCRIPT_COMMANDS) {
     let searchStart = 0;
@@ -109,13 +109,13 @@ export function collectScriptEntrypoints(content, { allowLineBreaks = false } = 
   return entrypoints;
 }
 
-export function collectScriptEntrypointErrors({ root = process.cwd() } = {}) {
-  const files = [];
+export function collectScriptEntrypointErrors({ root = process.cwd() }: { root?: string } = {}): { errors: string[]; scannedFileCount: number } {
+  const files: string[] = [];
   for (const scanRoot of SCAN_ROOTS) {
     collectFiles(root, scanRoot, files);
   }
 
-  const errors = [];
+  const errors: string[] = [];
 
   for (const file of files) {
     const relFile = relative(root, file).replaceAll("\\", "/");
@@ -135,11 +135,11 @@ export function collectScriptEntrypointErrors({ root = process.cwd() } = {}) {
   }
 
   // Reverse check: flag runnable scripts that nothing references (dead scripts).
-  const reverseCandidates = [];
+  const reverseCandidates: string[] = [];
   for (const dir of REVERSE_ENTRYPOINT_DIRS) {
     collectFiles(root, dir, reverseCandidates, REVERSE_ENTRYPOINT_EXTENSIONS);
   }
-  const referenceFiles = [];
+  const referenceFiles: string[] = [];
   for (const referenceRoot of REVERSE_REFERENCE_ROOTS) {
     collectFiles(root, referenceRoot, referenceFiles, REVERSE_REFERENCE_EXTENSIONS);
   }
@@ -162,7 +162,10 @@ export function collectScriptEntrypointErrors({ root = process.cwd() } = {}) {
   return { errors, scannedFileCount: files.length };
 }
 
-export function runScriptEntrypointCheck({ root = process.cwd(), exit = process.exit } = {}) {
+export function runScriptEntrypointCheck({
+  root = process.cwd(),
+  exit = process.exit,
+}: { root?: string; exit?: (code?: number) => never } = {}): boolean {
   const { errors, scannedFileCount } = collectScriptEntrypointErrors({ root });
   const status = reportViolations({
     label: "Script entrypoint references",

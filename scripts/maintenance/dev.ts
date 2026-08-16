@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 
-const children = new Set();
+const children = new Set<ChildProcess>();
 let shuttingDown = false;
 
-function spawnChild(label, command, args) {
+function spawnChild(label: string, command: string, args: string[]): void {
   const child = spawn(command, args, {
     env: process.env,
     stdio: "inherit",
@@ -34,7 +34,7 @@ function spawnChild(label, command, args) {
   });
 }
 
-function shutdown(signal) {
+function shutdown(signal: NodeJS.Signals): void {
   if (shuttingDown) return;
   shuttingDown = true;
   for (const child of children) {

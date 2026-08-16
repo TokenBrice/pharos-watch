@@ -18,15 +18,29 @@ const RELATIVE_IMPORT_PATTERNS = [
   /\bimport\s*\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g,
 ];
 
-function normalizeRepoPath(path) {
+interface CliPolicyPathEntry {
+  path?: unknown;
+  parserPath?: unknown;
+  category?: unknown;
+  reason?: unknown;
+}
+
+interface CliArgsPolicy {
+  strict?: readonly CliPolicyPathEntry[];
+  exemptions?: readonly CliPolicyPathEntry[];
+}
+
+type SourceReader = (path: string) => string;
+
+function normalizeRepoPath(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
-export function sourceUsesProcessArgv(source, path = "source.ts") {
+export function sourceUsesProcessArgv(source: string, path = "source.ts"): boolean {
   const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, getScriptKind(path));
   let found = false;
 
-  function visit(node) {
+  function visit(node: ts.Node): void {
     if (
       ts.isPropertyAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
@@ -53,7 +67,7 @@ export function sourceUsesProcessArgv(source, path = "source.ts") {
   return found;
 }
 
-function isCanonicalRepoPath(path) {
+function isCanonicalRepoPath(path: unknown): path is string {
   return (
     typeof path === "string" &&
     path.length > 0 &&
@@ -64,8 +78,8 @@ function isCanonicalRepoPath(path) {
   );
 }
 
-function collectRelativeImportSpecifiers(source) {
-  const imports = new Set();
+function collectRelativeImportSpecifiers(source: string): string[] {
+  const imports = new Set<string>();
   for (const pattern of RELATIVE_IMPORT_PATTERNS) {
     pattern.lastIndex = 0;
     for (const match of source.matchAll(pattern)) {
@@ -76,7 +90,7 @@ function collectRelativeImportSpecifiers(source) {
   return [...imports];
 }
 
-function importCandidates(fromPath, specifier) {
+function importCandidates(fromPath: string, specifier: string): string[] {
   const base = posix.normalize(posix.join(dirname(fromPath), specifier));
   const extension = extname(base);
   const candidates = [base];
@@ -97,10 +111,10 @@ function importCandidates(fromPath, specifier) {
   return candidates;
 }
 
-function createSourceReader(readSource) {
-  const cache = new Map();
-  return (path) => {
-    if (cache.has(path)) return cache.get(path);
+function createSourceReader(readSource: SourceReader): (path: string) => string | null {
+  const cache = new Map<string, string | null>();
+  return (path: string): string | null => {
+    if (cache.has(path)) return cache.get(path) ?? null;
     try {
       const source = readSource(path);
       const normalized = typeof source === "string" ? source : null;
@@ -113,7 +127,7 @@ function createSourceReader(readSource) {
   };
 }
 
-function entrypointReachesParser(entrypointPath, parserPath, readSource) {
+function entrypointReachesParser(entrypointPath: string, parserPath: string, readSource: (path: string) => string | null): boolean {
   if (entrypointPath === parserPath) return true;
 
   const pending = [entrypointPath];
@@ -136,22 +150,33 @@ function entrypointReachesParser(entrypointPath, parserPath, readSource) {
   return false;
 }
 
-function findDuplicatePaths(records) {
-  const seen = new Set();
-  const duplicates = new Set();
+function findDuplicatePaths(records: readonly CliPolicyPathEntry[]): string[] {
+  const seen = new Set<unknown>();
+  const duplicates = new Set<string>();
   for (const record of records) {
-    if (seen.has(record.path)) duplicates.add(record.path);
+    if (typeof record.path === "string" && seen.has(record.path)) duplicates.add(record.path);
     seen.add(record.path);
   }
   return [...duplicates].sort();
 }
 
-function isSorted(paths) {
+function isSorted(paths: readonly unknown[]): boolean {
   return paths.every((path, index) => index === 0 || String(paths[index - 1]).localeCompare(String(path)) <= 0);
 }
 
-export function evaluateCliArgsPolicy({ discoveredPaths, policy = CLI_ARGV_POLICY, readSource }) {
-  const errors = [];
+export function evaluateCliArgsPolicy({
+  discoveredPaths,
+  policy = CLI_ARGV_POLICY,
+  readSource,
+}: {
+  discoveredPaths: readonly string[];
+  policy?: CliArgsPolicy;
+  readSource: SourceReader;
+}): {
+  errors: string[];
+  counts: { discovered: number; strict: number; exempt: number };
+} {
+  const errors: string[] = [];
   const strictEntries = Array.isArray(policy?.strict) ? policy.strict : [];
   const exemptions = Array.isArray(policy?.exemptions) ? policy.exemptions : [];
   const discovered = [...new Set(discoveredPaths)].sort();
@@ -210,7 +235,7 @@ export function evaluateCliArgsPolicy({ discoveredPaths, policy = CLI_ARGV_POLIC
       errors.push(`Invalid CLI exemption path: ${String(entry?.path)}`);
       continue;
     }
-    if (!Object.hasOwn(CLI_ARGV_EXEMPTION_CATEGORIES, entry?.category)) {
+    if (typeof entry?.category !== "string" || !Object.hasOwn(CLI_ARGV_EXEMPTION_CATEGORIES, entry.category)) {
       errors.push(`Invalid CLI exemption category for ${entry.path}: ${String(entry?.category)}`);
     }
     if (typeof entry?.reason !== "string" || entry.reason.trim().length < 20) {
@@ -240,7 +265,7 @@ export function evaluateCliArgsPolicy({ discoveredPaths, policy = CLI_ARGV_POLIC
   };
 }
 
-export function collectRepositoryProcessArgvFiles(cwd = process.cwd()) {
+export function collectRepositoryProcessArgvFiles(cwd = process.cwd()): string[] {
   const output = execFileSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], {
     cwd,
     encoding: "utf8",
@@ -263,20 +288,19 @@ export function collectRepositoryProcessArgvFiles(cwd = process.cwd()) {
 }
 
 /**
- * @param {{
- *   cwd?: string,
- *   policy?: typeof CLI_ARGV_POLICY,
- *   stdout?: { write: (chunk: string) => unknown },
- *   stderr?: { write: (chunk: string) => unknown },
- * }} [options]
  */
 export function checkCliArgsPolicy({
   cwd = process.cwd(),
   policy = CLI_ARGV_POLICY,
   stdout = process.stdout,
   stderr = process.stderr,
-} = {}) {
-  let discoveredPaths;
+}: {
+  cwd?: string;
+  policy?: CliArgsPolicy;
+  stdout?: { write: (chunk: string) => unknown };
+  stderr?: { write: (chunk: string) => unknown };
+} = {}): number {
+  let discoveredPaths: string[];
   try {
     discoveredPaths = collectRepositoryProcessArgvFiles(cwd);
   } catch (error) {

@@ -14,7 +14,7 @@ import { isDirectRun, parsePositiveInt, sleep } from "../lib/smoke-runtime.mjs";
 const DEFAULT_ATTEMPTS = 24;
 const DEFAULT_DELAY_MS = 5_000;
 const DEFAULT_TIMEOUT_MS = 8_000;
-const USAGE = `Usage: node scripts/maintenance/wait-pages-release-marker.mjs [options]
+const USAGE = `Usage: node --import tsx scripts/maintenance/wait-pages-release-marker.ts [options]
 
 Options:
   --url <url>         Release marker URL (required)
@@ -24,8 +24,16 @@ Options:
   --timeout-ms <ms>   Per-request timeout (default: 8000)
   -h, --help          Show this help`;
 
-/** @param {readonly string[]} argv @param {Record<string, string | undefined>} [env] */
-export function parseReleaseMarkerArgs(argv, env = process.env) {
+interface ReleaseMarkerArgs {
+  attempts: number;
+  delayMs: number;
+  help: boolean;
+  markerPath: string;
+  timeoutMs: number;
+  url: string;
+}
+
+export function parseReleaseMarkerArgs(argv: readonly string[], env: NodeJS.ProcessEnv = process.env): ReleaseMarkerArgs {
   const { values } = parseStrictCliArgs(argv, {
     options: {
       attempts: { type: "string" },
@@ -58,16 +66,25 @@ export function parseReleaseMarkerArgs(argv, env = process.env) {
   return args;
 }
 
-async function loadExpectedCommit(markerPath) {
-  const marker = JSON.parse(await readFile(markerPath, "utf8"));
-  const commit = typeof marker.commit === "string" ? marker.commit.trim() : "";
+async function loadExpectedCommit(markerPath: string): Promise<string> {
+  const marker: unknown = JSON.parse(await readFile(markerPath, "utf8"));
+  const record: Record<string, unknown> =
+    marker !== null && typeof marker === "object" && !Array.isArray(marker)
+      ? (marker as Record<string, unknown>)
+      : {};
+  const commit = typeof record.commit === "string" ? record.commit.trim() : "";
   if (!commit) {
     throw new Error(`Release marker ${markerPath} is missing a commit field`);
   }
   return commit;
 }
 
-async function fetchMarker(rawUrl, commit, attempt, timeoutMs) {
+async function fetchMarker(
+  rawUrl: string,
+  commit: string,
+  attempt: number,
+  timeoutMs: number,
+): Promise<{ body: Record<string, unknown> | null; response: Response; text: string }> {
   const url = new URL(rawUrl);
   url.searchParams.set("expected", commit);
   url.searchParams.set("attempt", String(attempt));
@@ -78,9 +95,12 @@ async function fetchMarker(rawUrl, commit, attempt, timeoutMs) {
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await response.text();
-  let body = null;
+  let body: Record<string, unknown> | null = null;
   try {
-    body = JSON.parse(text);
+    const parsed: unknown = JSON.parse(text);
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      body = parsed as Record<string, unknown>;
+    }
   } catch {
     // The status and body prefix below are enough to diagnose a non-JSON edge response.
   }

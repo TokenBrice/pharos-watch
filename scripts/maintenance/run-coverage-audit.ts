@@ -18,17 +18,28 @@
 import { spawnSync } from "node:child_process";
 import { localBin } from "../lib/local-bin.mjs";
 
-const DOMAIN_SCRIPTS = Object.freeze({
+const DOMAIN_SCRIPTS = {
   "redemption-backstops": "scripts/ci/check-redemption-backstops.ts",
   "redemption-coverage": "scripts/maintenance/generate-redemption-coverage-audit.ts",
   "oracle-risk": "scripts/ci/check-oracle-risk-coverage.ts",
   "mechanism-archetype": "scripts/ci/check-mechanism-archetype-coverage.ts",
   "l2beat-snapshot": "scripts/maintenance/generate-l2beat-snapshot-coverage-audit.ts",
-});
+} as const;
 
-const DOMAINS = Object.keys(DOMAIN_SCRIPTS);
+type Domain = keyof typeof DOMAIN_SCRIPTS;
+interface ParsedArgs {
+  help: boolean;
+  domains: Domain[];
+  forwarded: string[];
+}
 
-function usage() {
+const DOMAINS = Object.keys(DOMAIN_SCRIPTS) as Domain[];
+
+function isDomain(value: string): value is Domain {
+  return value in DOMAIN_SCRIPTS;
+}
+
+function usage(): string {
   return [
     "Usage: npm run audit:coverage -- --domain=<domain> [audit args...]",
     "       npm run audit:coverage -- --all",
@@ -40,8 +51,8 @@ function usage() {
   ].join("\n");
 }
 
-function parseArgs(argv) {
-  const domains = [];
+function parseArgs(argv: readonly string[]): ParsedArgs {
+  const domains: string[] = [];
   let all = false;
   const forwarded = [];
 
@@ -79,15 +90,15 @@ function parseArgs(argv) {
   }
 
   const selected = all ? [...DOMAINS] : domains;
-  const unknown = selected.filter((domain) => !(domain in DOMAIN_SCRIPTS));
+  const unknown = selected.filter((domain) => !isDomain(domain));
   if (unknown.length > 0) {
     throw new Error(`Unknown coverage audit domain(s): ${unknown.join(", ")}. Known: ${DOMAINS.join(", ")}`);
   }
 
-  return { help: false, domains: selected, forwarded };
+  return { help: false, domains: selected.filter(isDomain), forwarded };
 }
 
-function runDomain(domain, forwarded) {
+function runDomain(domain: Domain, forwarded: readonly string[]): number {
   const script = DOMAIN_SCRIPTS[domain];
   console.log(`\n[audit:coverage] ${domain} -> tsx ${script}${forwarded.length > 0 ? ` ${forwarded.join(" ")}` : ""}`);
   const result = spawnSync(localBin("tsx"), [script, ...forwarded], { stdio: "inherit" });

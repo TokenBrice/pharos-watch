@@ -120,13 +120,13 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       # The gitleaks version + tarball SHA-256 pin lives only in
-      # scripts/ci/run-gitleaks.mjs, which downloads and checksum-verifies the
+      # scripts/ci/run-gitleaks.ts, which downloads and checksum-verifies the
       # pinned binary before scanning. Blocking gate (see the pr-gate job).
       - name: Scan PR commit range for secrets
         env:
           GITLEAKS_BASE_REF: ${{ github.event.pull_request.base.sha }}
           GITLEAKS_HEAD_REF: ${{ github.event.pull_request.head.sha }}
-        run: node scripts/ci/run-gitleaks.mjs --range
+        run: node --import tsx scripts/ci/run-gitleaks.ts --range
 
   pr-gate:
     name: PR gate

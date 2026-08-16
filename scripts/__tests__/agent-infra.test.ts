@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { buildCodexHookConfig, renderCodexHookConfig, runAgentHookSetup } from "../maintenance/setup-agent-hooks.mjs";
+import { buildCodexHookConfig, renderCodexHookConfig, runAgentHookSetup } from "../maintenance/setup-agent-hooks.ts";
 
 const temporaryDirectories: string[] = [];
 

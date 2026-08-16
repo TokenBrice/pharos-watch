@@ -4,17 +4,15 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSitemap, checkSitemapUrls, isMainEntrypoint } from "../ci/check-seo-live-smoke.mjs";
+import { mockFetchStrict } from "../../worker/src/test-helpers/__shared/mock-fetch";
 
 function responseWithBody(status: number, contentType = "text/plain") {
-  const cancel = vi.fn(async () => {});
-  return {
+  const response = new Response("<html><head></head><body>ok</body></html>", {
     status,
-    ok: status >= 200 && status < 300,
-    headers: new Headers({ "content-type": contentType }),
-    body: { cancel },
-    text: vi.fn(async () => "<html><head></head><body>ok</body></html>"),
-    cancel,
-  };
+    headers: { "content-type": contentType },
+  });
+  const cancel = vi.spyOn(response.body!, "cancel");
+  return { response, cancel };
 }
 
 afterEach(() => {
@@ -24,10 +22,13 @@ afterEach(() => {
 describe("check-seo-live-smoke sitemap URL checks", () => {
   it("rejects duplicate locations in the live sitemap", async () => {
     const sitemap = responseWithBody(200, "application/xml");
-    sitemap.text.mockResolvedValue(
+    vi.spyOn(sitemap.response, "text").mockResolvedValue(
       "<urlset><url><loc>https://pharos.watch/</loc></url><url><loc>https://pharos.watch/</loc></url></urlset>",
     );
-    vi.stubGlobal("fetch", vi.fn(async () => sitemap));
+    mockFetchStrict([{
+      match: "https://pharos.watch/sitemap.xml",
+      outcomes: [{ response: sitemap.response }],
+    }]);
     const errors: string[] = [];
 
     await checkSitemap(new URL("https://pharos.watch/"), errors);
@@ -42,8 +43,12 @@ describe("check-seo-live-smoke sitemap URL checks", () => {
     const notFound = responseWithBody(404);
     const serverError = responseWithBody(503);
     const nonHtml = responseWithBody(200, "application/json");
-    const responses = [redirect, notFound, serverError, nonHtml];
-    vi.stubGlobal("fetch", vi.fn(async () => responses.shift()));
+    mockFetchStrict([
+      { match: "https://pharos.watch/redirect/", outcomes: [{ response: redirect.response }] },
+      { match: "https://pharos.watch/not-found/", outcomes: [{ response: notFound.response }] },
+      { match: "https://pharos.watch/error/", outcomes: [{ response: serverError.response }] },
+      { match: "https://pharos.watch/data.json", outcomes: [{ response: nonHtml.response }] },
+    ]);
     const errors: string[] = [];
 
     await checkSitemapUrls(

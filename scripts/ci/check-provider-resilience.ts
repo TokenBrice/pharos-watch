@@ -13,16 +13,50 @@ const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs"]);
 const DEFAULT_DIRECT_FETCH_ROOTS = ["worker/src"];
 const EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
 
-function normalizeRelPath(path) {
+interface ProviderResilienceEntry {
+  id?: string;
+  family?: string;
+  files?: readonly string[];
+  tests?: readonly string[];
+  requiredMarkers?: readonly string[];
+  allowBareFetch?: boolean;
+  directFetchJustification?: string;
+  resilience?: {
+    transport?: string;
+    timeout?: string;
+    body?: string;
+    circuitSources?: readonly string[];
+  };
+}
+
+interface ProviderViolation {
+  kind: string;
+  message: string;
+  file?: string;
+  line?: number;
+  text?: string;
+  id?: string;
+  marker?: string;
+  circuitSource?: string;
+  family?: string;
+}
+
+interface FetchCall {
+  file: string;
+  line: number;
+  text: string;
+}
+
+function normalizeRelPath(path: string): string {
   return path.replaceAll("\\", "/");
 }
 
-function lineNumberForIndex(source, index) {
+function lineNumberForIndex(source: string, index: number): number {
   return source.slice(0, index).split("\n").length;
 }
 
-export function findBareFetchCalls(source, file = "<source>") {
-  const calls = [];
+export function findBareFetchCalls(source: string, file = "<source>"): FetchCall[] {
+  const calls: FetchCall[] = [];
   const pattern = /\bfetch\s*\(/g;
   for (const match of source.matchAll(pattern)) {
     const index = match.index ?? 0;
@@ -47,12 +81,12 @@ export function findBareFetchCalls(source, file = "<source>") {
   return calls;
 }
 
-function readRelFile(cwd, relPath) {
+function readRelFile(cwd: string, relPath: string): string {
   return readFileSync(resolve(cwd, relPath), "utf8");
 }
 
-function collectDirectFetchFiles(cwd, roots) {
-  const files = [];
+function collectDirectFetchFiles(cwd: string, roots: readonly string[]): string[] {
+  const files: string[] = [];
   for (const root of roots) {
     const rootPath = resolve(cwd, root);
     if (!existsSync(rootPath)) continue;
@@ -64,11 +98,16 @@ function collectDirectFetchFiles(cwd, roots) {
     .sort();
 }
 
-function addViolation(violations, kind, message, details = {}) {
+function addViolation(
+  violations: ProviderViolation[],
+  kind: string,
+  message: string,
+  details: Omit<ProviderViolation, "kind" | "message"> = {},
+): void {
   violations.push({ kind, message, ...details });
 }
 
-function validateRegistryEntryShape(entry, violations) {
+function validateRegistryEntryShape(entry: ProviderResilienceEntry | undefined, violations: ProviderViolation[]): void {
   if (!entry || typeof entry !== "object") {
     addViolation(violations, "invalid-entry", "Registry entry must be an object.");
     return;
@@ -95,7 +134,7 @@ function validateRegistryEntryShape(entry, violations) {
     addViolation(violations, "missing-resilience", `${entry.id ?? "<unknown>"} must describe resilience posture.`);
     return;
   }
-  for (const key of ["transport", "timeout", "body"]) {
+  for (const key of ["transport", "timeout", "body"] as const) {
     if (typeof entry.resilience[key] !== "string" || entry.resilience[key].length === 0) {
       addViolation(violations, "missing-resilience-field", `${entry.id ?? "<unknown>"} is missing resilience.${key}.`);
     }
@@ -110,10 +149,15 @@ export function scanProviderResilience({
   registry = PROVIDER_RESILIENCE_REGISTRY,
   requiredFamilies = REQUIRED_PROVIDER_SURFACE_FAMILIES,
   directFetchRoots = DEFAULT_DIRECT_FETCH_ROOTS,
-} = {}) {
-  const violations = [];
-  const seenIds = new Set();
-  const entriesByFile = new Map();
+}: {
+  cwd?: string;
+  registry?: readonly ProviderResilienceEntry[];
+  requiredFamilies?: readonly string[];
+  directFetchRoots?: readonly string[];
+} = {}): { entries: number; registeredFiles: number; violations: ProviderViolation[] } {
+  const violations: ProviderViolation[] = [];
+  const seenIds = new Set<string>();
+  const entriesByFile = new Map<string, ProviderResilienceEntry[]>();
 
   for (const entry of registry) {
     validateRegistryEntryShape(entry, violations);
@@ -212,7 +256,7 @@ export function scanProviderResilience({
   };
 }
 
-export function main(cwd = process.cwd()) {
+export function main(cwd = process.cwd()): number {
   const report = scanProviderResilience({ cwd });
   const status = reportViolations({
     label: "Provider resilience registry",

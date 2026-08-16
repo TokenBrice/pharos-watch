@@ -109,7 +109,7 @@ describe("adaptive PR checks", () => {
     for (const path of [
       "src/lib/feature-flags.ts",
       "worker/src/cron/sync-stablecoins.ts",
-      "scripts/ci/check-provider-resilience.mjs",
+      "scripts/ci/check-provider-resilience.ts",
       ".github/workflows/nightly-validation.yml",
     ]) {
       expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:structural");

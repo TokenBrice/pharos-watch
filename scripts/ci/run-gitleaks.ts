@@ -22,18 +22,34 @@ const ZERO_SHA = /^0+$/;
 const FALCON_SELF_TEST_PATH =
   "shared/data/safety-score-v9/mechanism-measurements/usdf-falcon/2099-01-01T00-00-00.000Z-a1b2c3d4e5f6-protocol-api.json";
 
-function sha256File(path) {
+interface GitleaksRunResult {
+  status?: number | null;
+  error?: unknown;
+}
+
+type GitleaksRunner = (binary: string, args: string[], options: Record<string, unknown>) => GitleaksRunResult;
+
+function sha256File(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-function parseOptions(argv, env) {
+interface GitleaksOptions {
+  baseRef: string;
+  fullHistory: boolean;
+  headRef: string;
+  mode: "worktree" | "range";
+}
+
+function parseOptions(argv: readonly string[], env: NodeJS.ProcessEnv): GitleaksOptions {
   const mode = argv.includes("--worktree") ? "worktree" : "range";
   const baseRef = env.GITLEAKS_BASE_REF ?? "origin/main";
   const headRef = env.GITLEAKS_HEAD_REF ?? "HEAD";
   return { baseRef, fullHistory: env.GITLEAKS_FULL_HISTORY === "1" || ZERO_SHA.test(baseRef), headRef, mode };
 }
 
-export function buildGitleaksWorktreeInput({ execFile = execFileSync } = {}) {
+export function buildGitleaksWorktreeInput({
+  execFile = execFileSync,
+}: { execFile?: (file: string, args: string[], options: { encoding: "utf8" }) => string } = {}): Buffer {
   const diff = execFile("git", ["diff", "--no-ext-diff", "--unified=0", "HEAD", "--"], { encoding: "utf8" });
   const addedLines = diff
     .split(/\r?\n/g)
@@ -48,7 +64,7 @@ export function buildGitleaksWorktreeInput({ execFile = execFileSync } = {}) {
     try {
       chunks.push(Buffer.from(`\nFILE:${path}\n`), readFileSync(resolve(process.cwd(), path)), Buffer.from("\n"));
     } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
     }
   }
   return Buffer.concat(chunks);
@@ -58,7 +74,11 @@ export async function ensurePinnedGitleaks({
   cacheRoot = resolve(process.cwd(), ".cache/gitleaks"),
   fetchImpl = fetch,
   execFile = execFileSync,
-} = {}) {
+}: {
+  cacheRoot?: string;
+  fetchImpl?: typeof fetch;
+  execFile?: (file: string, args: string[], options: { stdio: "ignore" }) => unknown;
+} = {}): Promise<string> {
   if (platform() !== "linux" || arch() !== "x64") {
     throw new Error(`Pinned Gitleaks bootstrap supports linux/x64, received ${platform()}/${arch()}`);
   }
@@ -116,7 +136,10 @@ export async function ensurePinnedGitleaks({
   }
 }
 
-export function runGitleaksConfigSelfTest(binaryPath, { runBinary = spawnSync } = {}) {
+export function runGitleaksConfigSelfTest(
+  binaryPath: string,
+  { runBinary = spawnSync }: { runBinary?: GitleaksRunner } = {},
+): void {
   const root = mkdtempSync(join(tmpdir(), "pharos-gitleaks-self-test-"));
   const fixturePath = resolve(root, FALCON_SELF_TEST_PATH);
   const configPath = resolve(process.cwd(), ".gitleaks.toml");
@@ -161,13 +184,6 @@ export function runGitleaksConfigSelfTest(binaryPath, { runBinary = spawnSync } 
 }
 
 /**
- * @param {{
- *   argv?: string[],
- *   env?: NodeJS.ProcessEnv,
- *   ensureBinary?: () => Promise<string>,
- *   buildWorktreeInput?: () => Buffer,
- *   runBinary?: (binary: string, args: string[], options: Record<string, unknown>) => { status?: number | null, error?: unknown },
- * }} [options]
  */
 export async function runGitleaks({
   argv = process.argv.slice(2),
@@ -175,7 +191,13 @@ export async function runGitleaks({
   env = process.env,
   ensureBinary = ensurePinnedGitleaks,
   runBinary = spawnSync,
-} = {}) {
+}: {
+  argv?: string[];
+  env?: NodeJS.ProcessEnv;
+  ensureBinary?: () => Promise<string>;
+  buildWorktreeInput?: () => Buffer;
+  runBinary?: GitleaksRunner;
+} = {}): Promise<{ status: number }> {
   const options = parseOptions(argv, env);
   const binaryPath = await ensureBinary();
   runGitleaksConfigSelfTest(binaryPath, { runBinary });

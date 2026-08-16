@@ -767,7 +767,7 @@ function buildWarnings(changedFiles: readonly string[]): string[] {
     warnings.push("D1 migrations are applied before the new Worker is live; keep them backward-compatible.");
   }
   if (changedFiles.some((file) => file === "AGENTS.md" || file === "CLAUDE.md")) {
-    warnings.push("AGENTS.md is generated from CLAUDE.md; edit CLAUDE.md and run node scripts/maintenance/generate-agents-doc.mjs.");
+    warnings.push("AGENTS.md is generated from CLAUDE.md; edit CLAUDE.md and run node --import tsx scripts/maintenance/generate-agents-doc.ts.");
   }
   if (changedFiles.some((file) => file.startsWith("shared/data/stablecoins/"))) {
     warnings.push("Stablecoin data changes must not introduce manual supply overrides.");

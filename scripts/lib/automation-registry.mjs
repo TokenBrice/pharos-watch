@@ -17,7 +17,7 @@ const PAGES_EXTRA_EXACT_PATHS = [
   "scripts/maintenance/serve-static-export.ts",
   "scripts/maintenance/sync-depeg-events.ts",
   "scripts/maintenance/sync-digests.ts",
-  "scripts/maintenance/wait-pages-release-marker.mjs",
+  "scripts/maintenance/wait-pages-release-marker.ts",
   "tsconfig.json",
 ];
 
@@ -119,13 +119,13 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "agents-doc",
-    checkCommand: "node scripts/maintenance/generate-agents-doc.mjs --check",
-    command: "node scripts/maintenance/generate-agents-doc.mjs",
+    checkCommand: "node --import tsx scripts/maintenance/generate-agents-doc.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-agents-doc.ts",
     bootstrap: true,
     outputPaths: ["AGENTS.md"],
     phase: 0,
     reproducibility: "deterministic",
-    script: "scripts/maintenance/generate-agents-doc.mjs",
+    script: "scripts/maintenance/generate-agents-doc.ts",
     sourcePaths: ["CLAUDE.md"],
   }),
   generatedArtifact({
@@ -343,13 +343,13 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "api-reference",
-    checkCommand: "node scripts/maintenance/generate-api-reference.mjs --check",
-    command: "node scripts/maintenance/generate-api-reference.mjs",
+    checkCommand: "node --import tsx scripts/maintenance/generate-api-reference.ts --check",
+    command: "node --import tsx scripts/maintenance/generate-api-reference.ts",
     dependsOn: ["openapi"],
     outputPaths: ["docs/api-reference.md"],
     phase: 2,
     reproducibility: "mixed",
-    script: "scripts/maintenance/generate-api-reference.mjs",
+    script: "scripts/maintenance/generate-api-reference.ts",
     sourcePaths: ["public/openapi.json"],
   }),
   generatedArtifact({

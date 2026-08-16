@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { evaluateCliArgsPolicy, sourceUsesProcessArgv } from "../ci/check-cli-args-policy.mjs";
+import { evaluateCliArgsPolicy, sourceUsesProcessArgv } from "../ci/check-cli-args-policy.ts";
 
 const EXEMPTION_REASON = "Reads repository state and reports findings without persistent mutation.";
 

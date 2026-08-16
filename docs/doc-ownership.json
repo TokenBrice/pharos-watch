@@ -157,7 +157,7 @@
       "checks": ["npm run check:generated-artifacts -- --only=agents-doc when AGENTS.md or CLAUDE.md changes", "focused hook/script tests"],
       "hardRules": ["Top-level AGENTS.md and CLAUDE.md are deliberately kept in sync.", "Temporary agent output belongs in ignored scratch locations, not committed docs."],
       "prefixes": [".agents/", ".claude/", ".codex/"],
-      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/pharos-change-contract.ts", "scripts/maintenance/generate-agents-doc.mjs", "scripts/maintenance/setup-agent-hooks.mjs"]
+      "exactPaths": ["AGENTS.md", "CLAUDE.md", "docs/agent-task-router.md", "docs/process/agent-artifacts.md", "scripts/ci/pharos-change-contract.ts", "scripts/maintenance/generate-agents-doc.ts", "scripts/maintenance/setup-agent-hooks.ts"]
     },
     {
       "id": "documentation",
