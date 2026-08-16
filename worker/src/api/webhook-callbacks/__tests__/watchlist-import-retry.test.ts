@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "../../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 import { packWatchlistDirectState } from "../../../lib/telegram-watchlist-token";
 import type { ConfirmBulkPayload } from "../../telegram-webhook-shared";
 import type { TelegramWebhookOperationIntent } from "../../telegram-webhook-store";
@@ -76,10 +77,13 @@ describe("watchlist import confirmation retry", () => {
       },
     ], { requireMatch: true });
     const requests: Array<Record<string, unknown>> = [];
-    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
-      requests.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
-      return new Response("ok", { status: 200 });
-    }));
+    mockFetch([{
+      match: "https://api.telegram.org/bottoken/sendMessage",
+      respond: async (request) => {
+        requests.push(await request.clone().json() as Record<string, unknown>);
+        return { body: "ok" };
+      },
+    }], { requireMatch: true });
     const answerCallback = vi.fn(async () => undefined);
     const confirmAtomicMutationApplied = vi.fn();
     await handleBulkActionCallback({

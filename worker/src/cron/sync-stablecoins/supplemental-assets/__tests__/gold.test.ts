@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { mockRegistry } from "../../../../test-helpers/cron";
+import { mockFetch } from "../../../../test-helpers/__shared/mock-fetch";
 
 // Live supplies observed 2026-07-29. Arbitrum is the conserved global total:
 // its CCIP LockRelease pool holds exactly Ethereum + Pharos supply and the
@@ -66,18 +67,16 @@ function stubGoldUpstreams(
   protocolMcap: number | null,
   priceObservedAt: number = Math.floor(Date.now() / 1000),
 ): void {
-  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    if (String(url).includes("/prices/current/")) {
-      return new Response(
-        JSON.stringify({ coins: { "coingecko:pleasing-gold": { price: PGOLD_PRICE, timestamp: priceObservedAt } } }),
-        { status: 200 },
-      );
-    }
-    if (String(url).includes("/protocol/")) {
-      return new Response(JSON.stringify(protocolMcap == null ? {} : { mcap: protocolMcap }), { status: 200 });
-    }
-    throw new Error(`unexpected fetch: ${url}`);
-  }));
+  mockFetch([
+    {
+      match: "/prices/current/",
+      body: { coins: { "coingecko:pleasing-gold": { price: PGOLD_PRICE, timestamp: priceObservedAt } } },
+    },
+    {
+      match: "/protocol/",
+      body: protocolMcap == null ? {} : { mcap: protocolMcap },
+    },
+  ], { requireMatch: true });
 }
 
 afterEach(() => {

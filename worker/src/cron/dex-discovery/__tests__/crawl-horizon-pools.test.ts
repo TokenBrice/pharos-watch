@@ -6,6 +6,7 @@ import {
 } from "../crawl-horizon-pools";
 import { createCrawlStageContext } from "../staged-pool";
 import type { StagedPool } from "../types";
+import { mockFetch } from "../../../test-helpers/__shared/mock-fetch";
 
 const EURC_ADDRESS = "EURC-GDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2";
 const USDC_ADDRESS = "USDC-GA5ZSEJYB37JRC5AVCIA5MOP4RHTM335X2KGX3IHOJAPP5RE34K4KZVN";
@@ -68,13 +69,11 @@ describe("Horizon pool discovery", () => {
   });
 
   it("queries the canonical CODE:ISSUER filter and preserves Stellar identities", async () => {
-    const fetchMock = vi.fn(async (_input: unknown, _init?: RequestInit) =>
-      new Response(JSON.stringify(payload([poolRow()])), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const expectedUrl = "https://horizon.stellar.org/liquidity_pools?reserves=EURC%3AGDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2&limit=200";
+    const fetchMock = mockFetch([{
+      match: expectedUrl,
+      body: payload([poolRow()]),
+    }], { requireMatch: true, strictUrl: true });
     const stageContext = context();
 
     const result = await crawlHorizonPoolsStage({
@@ -83,9 +82,7 @@ describe("Horizon pool discovery", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]![0])).toBe(
-      "https://horizon.stellar.org/liquidity_pools?reserves=EURC%3AGDHU6WRG4IEQXM5NZ4BMPKOXHW76MZM4Y2IEMFDVXBSDP6SJY4ITNPP2&limit=200",
-    );
+    expect(fetchMock.getHistory()[0]?.url).toBe(expectedUrl);
     expect(result).toEqual({
       providerChecks: [
         {
@@ -117,15 +114,10 @@ describe("Horizon pool discovery", () => {
   });
 
   it("fails every queried target closed when Horizon returns a malformed payload", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () =>
-        new Response(JSON.stringify({ _embedded: { records: null } }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    );
+    mockFetch([{
+      match: "horizon.stellar.org/liquidity_pools",
+      body: { _embedded: { records: null } },
+    }], { requireMatch: true });
     const stageContext = context();
 
     const result = await crawlHorizonPoolsStage({
@@ -146,16 +138,10 @@ describe("Horizon pool discovery", () => {
 
   it("contains the stage timeout as a provider failure", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((_url: string | URL | Request, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
-          const signal = init?.signal;
-          if (!signal) return reject(new Error("missing signal"));
-          signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-        }),
-      ),
-    );
+    mockFetch([{
+      match: "horizon.stellar.org/liquidity_pools",
+      outcomes: [{ stall: true }],
+    }], { requireMatch: true });
     const stageContext = context({ deadlineMs: Date.now() + 10 });
 
     const result = await crawlHorizonPoolsStage({
@@ -174,8 +160,7 @@ describe("Horizon pool discovery", () => {
   });
 
   it("keeps contract-token ids explicit and outside invalid Horizon queries", async () => {
-    const fetchMock = vi.fn();
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetch([], { requireMatch: true });
     const stageContext = context();
     const contractToken = "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A";
 
@@ -196,22 +181,19 @@ describe("Horizon pool discovery", () => {
   });
 
   it("combines a bare issuer deployment with the tracked Stellar asset symbol", async () => {
-    const fetchMock = vi.fn(async (_input: unknown) =>
-      new Response(JSON.stringify(payload([])), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
     const stageContext = context({ stablecoinId: "eurcv-societe-generale-forge" });
     const issuer = "GCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G";
+    const fetchMock = mockFetch([{
+      match: `reserves=EURCV%3A${issuer}`,
+      body: payload([]),
+    }], { requireMatch: true });
 
     const result = await crawlHorizonPoolsStage({
       coinTargets: [target("stellar", issuer)],
       context: stageContext.value,
     });
 
-    expect(String(fetchMock.mock.calls[0]![0])).toContain(
+    expect(fetchMock.getHistory()[0]?.url).toContain(
       "reserves=EURCV%3AGCEYGIVOLAVBF2TG2RUSGTUJCIN75KEX3NGLMY4VPL4GFE5L355AXW3G",
     );
     expect(result.providerChecks).toEqual([

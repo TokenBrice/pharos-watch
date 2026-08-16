@@ -1,10 +1,37 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "../../test-helpers/__shared/mock-d1";
+import { mockFetch } from "../../test-helpers/__shared/mock-fetch";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 // Stub external fetches before importing the handler
-const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>();
-vi.stubGlobal("fetch", fetchSpy);
+type FetchOutcome = Response | Error | Promise<Response>;
+let fetchSpy: ReturnType<typeof mockFetch>;
+let fetchOutcomes: FetchOutcome[] = [];
+let fetchResponder: ((request: Request) => FetchOutcome) | null = null;
+
+function queueFetch(...outcomes: FetchOutcome[]): void {
+  fetchResponder = null;
+  fetchOutcomes = outcomes;
+}
+
+function respondToFetch(responder: (request: Request) => FetchOutcome): void {
+  fetchResponder = responder;
+  fetchOutcomes = [];
+}
+
+function installFetchMock(): ReturnType<typeof mockFetch> {
+  fetchOutcomes = [];
+  fetchResponder = null;
+  const respond = (request: Request): FetchOutcome =>
+    fetchResponder?.(request) ?? fetchOutcomes.shift() ?? new Error("unexpected stablecoin detail request");
+  return mockFetch([
+    { match: "https://stablecoins.llama.fi/", respond },
+    { match: "https://coins.llama.fi/", respond },
+    { match: "https://api.llama.fi/", respond },
+    { match: "https://api.coingecko.com/api/v3/", respond },
+    { match: "https://pro-api.coingecko.com/api/v3/", respond },
+  ], { requireMatch: true });
+}
 
 const fetchWithRetryMock = vi.fn(
   async (url: string, init?: RequestInit, _maxRetries?: number, options?: { passthrough404?: boolean }) => {
@@ -89,7 +116,7 @@ function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number 
 describe("handleStablecoinDetail", () => {
   beforeEach(() => {
     resetStablecoinDetailStateForTests();
-    fetchSpy.mockReset();
+    fetchSpy = installFetchMock();
     fetchWithRetryMock.mockReset().mockImplementation(async (url, init, _maxRetries, options) => {
       try {
         const res = await fetch(url, init);
@@ -113,6 +140,10 @@ describe("handleStablecoinDetail", () => {
       if (!response) return null;
       return { response, body: await response.clone().text() };
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it.each([
@@ -156,7 +187,7 @@ describe("handleStablecoinDetail", () => {
     // No cache hit
     const db = mockD1([{ match: "cache", rows: [] }]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+    queueFetch(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -184,7 +215,7 @@ describe("handleStablecoinDetail", () => {
     });
 
     const db = mockD1([{ match: "cache", rows: [] }]);
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+    queueFetch(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
@@ -254,7 +285,7 @@ describe("handleStablecoinDetail", () => {
       { match: "FROM supply_history", rows: [] },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+    queueFetch(new Response("Not Found", { status: 404 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -273,7 +304,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+    queueFetch(new Response("Server Error", { status: 500 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -302,7 +333,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(freshUpstreamBody, { status: 200 }));
+    queueFetch(new Response(freshUpstreamBody, { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -330,7 +361,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+    queueFetch(new Response("Server Error", { status: 500 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -356,7 +387,7 @@ describe("handleStablecoinDetail", () => {
       { match: "supply_history", rows: [] },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response("Server Error", { status: 500 }));
+    queueFetch(new Response("Server Error", { status: 500 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -377,7 +408,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    fetchSpy.mockRejectedValue(new Error("network timeout"));
+    queueFetch(new Error("network timeout"));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -399,7 +430,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
     let resolveFetch!: (response: Response) => void;
-    fetchSpy.mockReturnValue(new Promise<Response>((resolve) => {
+    respondToFetch(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     }));
 
@@ -410,6 +441,7 @@ describe("handleStablecoinDetail", () => {
 
     expect(resA.status).toBe(200);
     expect(resB.status).toBe(200);
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
     await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -424,7 +456,7 @@ describe("handleStablecoinDetail", () => {
       first: { value: cachedValue, updated_at: now - 900 },
     }]);
     const resolvers: Array<(response: Response) => void> = [];
-    fetchSpy.mockImplementation(() => new Promise<Response>((resolve) => {
+    respondToFetch(() => new Promise<Response>((resolve) => {
       resolvers.push(resolve);
     }));
 
@@ -458,7 +490,7 @@ describe("handleStablecoinDetail", () => {
     ]);
     const coldDb = mockD1([{ match: "cache", rows: [] }]);
     let resolveFetch!: (response: Response) => void;
-    fetchSpy.mockReturnValueOnce(new Promise<Response>((resolve) => {
+    respondToFetch(() => new Promise<Response>((resolve) => {
       resolveFetch = resolve;
     }));
 
@@ -470,6 +502,7 @@ describe("handleStablecoinDetail", () => {
 
     const syncCtx = makeCtx();
     const syncResponse = handleStablecoinDetail(coldDb, "usdt-tether", syncCtx);
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1));
     resolveFetch(new Response(freshUpstreamBody, { status: 200 }));
 
     const res = await syncResponse;
@@ -491,7 +524,7 @@ describe("handleStablecoinDetail", () => {
       { match: "cache", rows: [] },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+    queueFetch(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
     await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -512,7 +545,7 @@ describe("handleStablecoinDetail", () => {
       { match: "FROM supply_history", rows: [] },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response("upstream unavailable", { status: 503 }));
+    queueFetch(new Response("upstream unavailable", { status: 503 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -528,8 +561,8 @@ describe("handleStablecoinDetail", () => {
       { match: "FROM supply_history", rows: [] },
     ]);
 
-    fetchSpy.mockImplementation(async (url: RequestInfo | URL) => {
-      const value = String(url);
+    respondToFetch(async (request) => {
+      const value = request.url;
       if (value.includes("coins.llama.fi/chart/coingecko:tether-gold")) {
         return new Response(JSON.stringify({ coins: {} }), { status: 200 });
       }
@@ -568,7 +601,7 @@ describe("handleStablecoinDetail", () => {
       ],
     });
 
-    fetchSpy.mockResolvedValueOnce(new Response(dlBody, { status: 200 }));
+    queueFetch(new Response(dlBody, { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "eurc-circle", ctx);
@@ -594,9 +627,10 @@ describe("handleStablecoinDetail", () => {
       { match: "cache", rows: [] },
       { match: "FROM supply_history", rows: [] },
     ]);
-    fetchSpy
-      .mockResolvedValueOnce(new Response("{", { status: 200 })) // DL coins chart invalid JSON
-      .mockResolvedValueOnce(new Response(JSON.stringify({ tvl: [] }), { status: 200 }));
+    queueFetch(
+      new Response("{", { status: 200 }), // DL coins chart invalid JSON
+      new Response(JSON.stringify({ tvl: [] }), { status: 200 }),
+    );
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
@@ -617,7 +651,7 @@ describe("handleStablecoinDetail", () => {
     ]);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    fetchSpy.mockResolvedValueOnce(new Response("{invalid-json", { status: 200 }));
+    queueFetch(new Response("{invalid-json", { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
@@ -646,7 +680,7 @@ describe("handleStablecoinDetail", () => {
     ]);
 
     // CoinGecko returns empty market_caps
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({ market_caps: [], prices: [] }), { status: 200 }));
+    queueFetch(new Response(JSON.stringify({ market_caps: [], prices: [] }), { status: 200 }));
 
     const ctx = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
@@ -676,7 +710,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    fetchSpy.mockResolvedValueOnce(new Response(JSON.stringify({
+    queueFetch(new Response(JSON.stringify({
       market_caps: [[staleTsMs, 55_000_000]],
       prices: [[staleTsMs, 1.05]],
     }), { status: 200 }));

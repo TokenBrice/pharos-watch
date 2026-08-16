@@ -7,6 +7,7 @@ import {
   type AttestationPdfIndexParams,
 } from "../attestation-pdf-index";
 import { HTML_ACCEPT_HEADER, NEUTRAL_ADAPTER_HEADERS } from "../request";
+import { mockFetchStrict } from "../../../test-helpers/__shared/mock-fetch";
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -304,14 +305,12 @@ describe("fetchAttestationPdfIndexReserves", () => {
 
   it("fetches the primary HTML input and resolves relative report URLs against that page", async () => {
     const html = '<a href="reports/2026-04-30-attestation.pdf">April 2026 report</a>';
-    const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(html, {
-          headers: { "content-type": "text/html" },
-          status: 200,
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://issuer.example/transparency/index.html",
+      body: html,
+      status: 200,
+      headers: { "content-type": "text/html" },
+    }]);
 
     const result = await fetchAttestationPdfIndexReserves(
       {} as StablecoinMeta,
@@ -320,16 +319,15 @@ describe("fetchAttestationPdfIndexReserves", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://issuer.example/transparency/index.html",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Origin: "https://issuer.example",
-          Referer: "https://issuer.example/transparency/index.html",
-          "Accept-Language": "en-US,en;q=0.9",
-        }),
-      }),
-    );
+    expect(fetchMock.getHistory()).toMatchObject([{
+      url: "https://issuer.example/transparency/index.html",
+      headers: {
+        accept: HTML_ACCEPT_HEADER,
+        "accept-language": "en-US,en;q=0.9",
+        origin: "https://issuer.example",
+        referer: "https://issuer.example/transparency/index.html",
+      },
+    }]);
     expect(result.slices).toEqual(CONFIGURED_PARAMS.slices);
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Date.UTC(2026, 3, 30) / 1000,
@@ -341,14 +339,12 @@ describe("fetchAttestationPdfIndexReserves", () => {
 
   it("uses neutral HTML headers first for Schuman reserve-audit pages", async () => {
     const html = '<a href="/reports/EUROP_Reserve_Report_31_05_2026.pdf">May 2026 report</a>';
-    const fetchMock = vi.fn(
-      async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(html, {
-          headers: { "content-type": "text/html" },
-          status: 200,
-        }),
-    );
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = mockFetchStrict([{
+      match: "https://schuman.io/reserve-audits/",
+      body: html,
+      status: 200,
+      headers: { "content-type": "text/html" },
+    }]);
 
     const result = await fetchAttestationPdfIndexReserves(
       {} as StablecoinMeta,
@@ -357,16 +353,14 @@ describe("fetchAttestationPdfIndexReserves", () => {
     );
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://schuman.io/reserve-audits/",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Accept: HTML_ACCEPT_HEADER,
-          ...NEUTRAL_ADAPTER_HEADERS,
-        }),
-      }),
-    );
-    expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty("Origin");
+    expect(fetchMock.getHistory()).toMatchObject([{
+      url: "https://schuman.io/reserve-audits/",
+      headers: {
+        accept: HTML_ACCEPT_HEADER,
+        ...Object.fromEntries(Object.entries(NEUTRAL_ADAPTER_HEADERS).map(([name, value]) => [name.toLowerCase(), value])),
+      },
+    }]);
+    expect(fetchMock.getHistory()[0]?.headers).not.toHaveProperty("origin");
     expect(result.metadata).toMatchObject({
       reportDate: "2026-05-31",
       reportPdfPath: "/reports/EUROP_Reserve_Report_31_05_2026.pdf",
