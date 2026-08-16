@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  makeDb as createMakeDb,
   findPublishedYieldRow,
   getYieldRankingsCachePayload,
   mockHealthyRiskFreeRateCache,

@@ -1,20 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
-import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
-import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Search, X } from "lucide-react";
+import type { ApiKeySummary, ApiKeyTrafficClass } from "@shared/types";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RotateCcw, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/copy-button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import type {
   ApiKeyInventoryExpiryPreset,
@@ -23,22 +11,13 @@ import type {
   ApiKeyInventorySortField,
   ApiKeyInventoryStatusFilter,
   ApiKeySummaryItem,
-  CreateKeyState,
-  EditableKeyState,
 } from "@/lib/api-key-admin-view-model";
 import { formatExpirySummary, isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
 import { FilterSelect, STATUS_FILTER_FIELD_CLASS, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
-import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { apiKeyAccessibleIdentity } from "./api-key-presentation";
-
-type CreateKeyPatch = Partial<CreateKeyState>;
-type EditableKeyPatch = Partial<EditableKeyState>;
-
-const FIELD_CLASS_NAME =
-  "min-h-11 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring";
 // The Sort control keeps the bare class: its `<select>` shares a flex row with
 // the direction toggle rather than filling the label, so it is not a
 // `FilterSelect`.
@@ -441,4 +420,3 @@ export function ApiKeyTable({
     </TableFrame>
   );
 }
-

@@ -31,6 +31,8 @@ export function collectSourceFiles(
   const files: string[] = [];
 
   function visit(dir: string): void {
+    // The scanner intentionally walks the caller-selected source root.
+    // eslint-disable-next-line security/detect-non-literal-fs-filename -- scan root is an explicit CLI input
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (skipDotEntries && entry.name.startsWith(".")) continue;
       const entryPath = join(dir, entry.name);
@@ -61,7 +63,9 @@ export function collectSourceFilesUnderRoot(
   { extensions, excludedDirs, skipDotEntries }: CollectSourceFileOptions = {},
 ): string[] {
   const absolute = resolveSourceRoot(root, cwd);
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- inspect the explicit caller-selected root
   if (!existsSync(absolute)) return [];
+  // eslint-disable-next-line security/detect-non-literal-fs-filename -- inspect the explicit caller-selected root
   if (statSync(absolute).isFile()) return [absolute];
   return collectSourceFiles(absolute, { extensions, excludedDirs, skipDotEntries });
 }

@@ -13,7 +13,7 @@ function pillar(score: number) {
   };
 }
 
-function replay(score = 80): any {
+function replay(score = 80) {
   return {
     pipeline: {
       evaluatedSet: {

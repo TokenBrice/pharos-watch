@@ -1,36 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { API_KEY_MAX_RATE_LIMIT_PER_MINUTE, API_KEY_MIN_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { API_KEY_TIER_VALUES } from "@shared/types/api-keys";
-import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier, ApiKeyTrafficClass } from "@shared/types";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, RefreshCw, RotateCcw, Search, X } from "lucide-react";
+import type { ApiKeyAuditEntry, ApiKeySummary, ApiKeyTier } from "@shared/types";
+import { RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/copy-button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import type {
-  ApiKeyInventoryExpiryPreset,
-  ApiKeyInventoryQuery,
-  ApiKeyInventorySortDirection,
-  ApiKeyInventorySortField,
-  ApiKeyInventoryStatusFilter,
-  ApiKeySummaryItem,
-  CreateKeyState,
-  EditableKeyState,
-} from "@/lib/api-key-admin-view-model";
+import type { CreateKeyState, EditableKeyState } from "@/lib/api-key-admin-view-model";
 import { formatExpirySummary, isApiKeyExpiringSoon } from "@/lib/api-key-admin-view-model";
 import { apiKeyStatusBadgeClassName, getApiKeyStatus } from "./api-key-status";
-import { FilterSelect, STATUS_FILTER_FIELD_CLASS, STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
+import { STATUS_PANEL_SHELL_CLASS } from "@/components/status/page-primitives";
 import { StatusPill } from "./severity-pill";
-import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
 import { apiKeyAccessibleIdentity } from "./api-key-presentation";
 

@@ -1,7 +1,6 @@
 import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { getYieldDataSourceLabel } from "@/lib/yield-data-source";
 import {
-  YIELD_SOURCE_CONFIDENCE_ORDER,
   classifyYieldSourceDepth,
   classifyYieldSourcePosture,
   getYieldSourceRiskDrivers,

@@ -15,12 +15,18 @@ import { buildOpenApiDocument } from "../maintenance/generate-openapi-spec";
 describe("OpenAPI runtime response contracts", () => {
   it("derives documented response components from their canonical Zod schemas", () => {
     const document = buildOpenApiDocument();
-    const schemas = document.components.schemas as Record<string, any>;
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const historySchema = schemas.YieldHistoryResponse as {
+      properties: { history: { items: { properties: Record<string, unknown> } } };
+    };
+    const manifestSchema = schemas.YieldAdapterManifestResponse as {
+      properties: { entries: { items: { properties: { lifecycle: { enum: readonly string[] } } } } };
+    };
     const runtimeHistoryFields = Object.keys(
       YieldHistoryResponseSchema.shape.history.element.shape,
     );
     const openApiHistoryFields = Object.keys(
-      schemas.YieldHistoryResponse.properties.history.items.properties,
+      historySchema.properties.history.items.properties,
     );
 
     expect(openApiHistoryFields).toEqual(runtimeHistoryFields);
@@ -32,7 +38,7 @@ describe("OpenAPI runtime response contracts", () => {
       "pysReproducibility",
     ]));
     expect(
-      schemas.YieldAdapterManifestResponse.properties.entries.items.properties.lifecycle.enum,
+      manifestSchema.properties.entries.items.properties.lifecycle.enum,
     ).toEqual(YIELD_ADAPTER_LIFECYCLE_VALUES);
   });
 

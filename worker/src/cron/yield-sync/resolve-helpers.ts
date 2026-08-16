@@ -11,7 +11,7 @@ import {
   MIN_LENDING_POOL_TVL_USD_SMALL_ECOSYSTEM,
   MIN_SAFETY_SCORE_FOR_YIELD,
 } from "../../lib/constants";
-import { findBestLendingPool, isBlockedYieldOpportunitySource, meetsLendingPoolCoreEligibility } from "../yield-helpers";
+import { findBestLendingPool, isBlockedYieldOpportunitySource } from "../yield-helpers";
 import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,

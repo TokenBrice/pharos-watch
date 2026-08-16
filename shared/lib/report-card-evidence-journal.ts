@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { Sha256Schema } from "../types/safety-schema-primitives";
 import { RESERVE_EVIDENCE_SOURCE_ORIGIN_CLASSES } from "../types/report-card-evidence-journal";
 import { sha256Hex } from "./sha256";
 import { stableJsonStringifyV1 } from "./stable-json";

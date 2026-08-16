@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  ApiKeysPanel,
   GENERATED_AT,
   makeKey,
   renderPanel,
-  requestIdempotencyKey,
   getApiKeyAuditLogMock,
 } from "./api-keys-panel-harness";
 
