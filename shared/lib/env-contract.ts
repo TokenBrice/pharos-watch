@@ -1,5 +1,4 @@
 export {
-  ENV_BINDINGS,
   getAllEnvBindingKeys,
   getRuntimeActiveEnvKeys,
   getRuntimeEnvKeys,

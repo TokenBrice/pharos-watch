@@ -7,7 +7,7 @@ const PRESET_COMMAND_TOKENS = TELEGRAM_PRESET_IDS.flatMap((presetId) => {
 });
 
 /** Tokens parsed as Telegram command vocabulary rather than stablecoin targets. */
-export const TELEGRAM_RESERVED_TARGET_TOKENS: ReadonlySet<string> = new Set([
+const TELEGRAM_RESERVED_TARGET_TOKENS: ReadonlySet<string> = new Set([
   "all",
   "depeg-step",
   ...TELEGRAM_ALERT_TYPES,

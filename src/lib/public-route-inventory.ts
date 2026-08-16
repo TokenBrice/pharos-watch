@@ -33,14 +33,14 @@ export interface PublicRouteInventoryEntry {
   kind: PublicRouteKind;
 }
 
-export const PRIMARY_PUBLIC_ROUTE_PATHS = [
+const PRIMARY_PUBLIC_ROUTE_PATHS = [
   "/", "/coverage/", "/alt-pegs/", "/start/", "/freezewatch/", "/depeg/", "/cemetery/",
   "/compare/", "/liquidity/", "/upcoming/", "/digest/", "/safety-scores/", "/stability-index/",
   "/dependency-map/", "/yield/", "/screener/", "/funding/", "/status/", "/flows/", "/timeline/",
   "/compliance/", "/pharoswatchbot/", "/methodology/",
 ] as const;
 
-export const REFERENCE_PUBLIC_ROUTE_PATHS = [
+const REFERENCE_PUBLIC_ROUTE_PATHS = [
   "/changelog/", "/blog/", "/about/", "/about/api/", "/about/bluechip/", "/learn/",
   "/learn/glossary/", "/sitemap-tree/", "/api/", "/stablecoins/", "/stablecoins/backing/",
   "/stablecoins/governance/", "/stablecoins/infrastructure/", "/privacy/", "/docs/",

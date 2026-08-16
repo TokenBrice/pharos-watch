@@ -823,7 +823,7 @@ export function applyV9AssetPremium(
   };
 }
 
-export function scoreV9InputWithCaps(
+function scoreV9InputWithCaps(
   rawInput: V9ScoringInput,
   policy: V9ValidatedPolicyEnvelope,
   scenarioCaps: readonly V9AttributedScenarioCap[],

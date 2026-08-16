@@ -12,7 +12,7 @@ import { apiFetch, apiFetchWithMeta, type ApiContractMode, type ApiMeta } from "
 import { resolveSchemaLike, type SchemaLikeSource } from "@/lib/schema-like";
 import { getPollingWindow } from "@/lib/api-query-polling";
 
-export { getPollingWindow, type PollingWindow } from "@/lib/api-query-polling";
+export { getPollingWindow } from "@/lib/api-query-polling";
 
 const DEFAULT_RETRY_DELAY = (attempt: number) => Math.min(1000 * 2 ** attempt, 10000);
 const NO_CLEANUP = (): void => {};

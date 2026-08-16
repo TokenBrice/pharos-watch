@@ -46,7 +46,7 @@ function assertScore(value: number, field: string): void {
   }
 }
 
-export function applyV9AllocatedScopedRiskAdjustments(
+function applyV9AllocatedScopedRiskAdjustments(
   baseScore: number,
   adjustments: readonly { exposureShare: number; exposedScore: number }[],
 ): number {

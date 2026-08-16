@@ -44,14 +44,14 @@ function buildTelegramMiniAppDeepLink(payload: string): string {
   return url.toString();
 }
 
-export function buildTelegramAdoptionDeepLink(placement: TelegramAdoptionCatalogPlacement): string {
+function buildTelegramAdoptionDeepLink(placement: TelegramAdoptionCatalogPlacement): string {
   const entry = telegramAdoptionEntryForPlacement(placement);
   return entry.destination === "setup"
     ? buildTelegramBotStartDeepLink(entry.token)
     : buildTelegramMiniAppDeepLink(entry.token);
 }
 
-export function buildSubscribeStartPayload(setup: SubscribeStartPayloadInput): string {
+function buildSubscribeStartPayload(setup: SubscribeStartPayloadInput): string {
   return assertTelegramStartPayload(`sub_${setup.alertTypes.join("-")}_${setup.presetId}`);
 }
 

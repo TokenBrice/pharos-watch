@@ -22,7 +22,7 @@ function readLegacy(storage: Storage | null, key: string): string[] {
   return readJsonStorageValue(storage, key, normalize, []);
 }
 
-export function loadWatchlistFromStorage(): string[] {
+function loadWatchlistFromStorage(): string[] {
   const storage = getWindowStorage("local");
   if (!storage) return [];
 
@@ -41,7 +41,7 @@ export function loadWatchlistFromStorage(): string[] {
   return merged;
 }
 
-export function persistWatchlistToStorage(ids: readonly string[]): void {
+function persistWatchlistToStorage(ids: readonly string[]): void {
   writeJsonStorageValue(getWindowStorage("local"), WATCHLIST_STORAGE_KEY, ids);
 }
 

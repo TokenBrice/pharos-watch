@@ -19,24 +19,24 @@ import {
 // Vocabularies
 // ---------------------------------------------------------------------------
 
-export const SELECTOR_PROFILE_VALUES = ["treasury", "yield", "trading"] as const;
+const SELECTOR_PROFILE_VALUES = ["treasury", "yield", "trading"] as const;
 export type SelectorProfile = (typeof SELECTOR_PROFILE_VALUES)[number];
 
 export type SelectorPeg = SelectorEligiblePegCurrency;
 
-export const SELECTOR_HORIZON_VALUES = [
+const SELECTOR_HORIZON_VALUES = [
   "lt24h", "1to7d", "1to4w", "1to6m", "6mplus",
 ] as const;
 export type SelectorHorizon = (typeof SELECTOR_HORIZON_VALUES)[number];
 
-export const SELECTOR_DEPEG_VALUES = ["zero", "tight", "moderate"] as const;
+const SELECTOR_DEPEG_VALUES = ["zero", "tight", "moderate"] as const;
 export type SelectorDepeg = (typeof SELECTOR_DEPEG_VALUES)[number];
 
-export const SELECTOR_EXIT_VALUES = ["1h", "24h", "any"] as const;
+const SELECTOR_EXIT_VALUES = ["1h", "24h", "any"] as const;
 export type SelectorExit = (typeof SELECTOR_EXIT_VALUES)[number];
 
 // Venue values vary by profile but share a single set so the URL codec is flat.
-export const SELECTOR_VENUE_VALUES = [
+const SELECTOR_VENUE_VALUES = [
   // Yield
   "lend", "dex", "wrap",
   // Trading
@@ -48,13 +48,13 @@ export const SELECTOR_VENUE_VALUES = [
 ] as const;
 export type SelectorVenue = (typeof SELECTOR_VENUE_VALUES)[number];
 
-export const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue[]> = {
+const SELECTOR_VENUES_BY_PROFILE: Record<SelectorProfile, readonly SelectorVenue[]> = {
   treasury: ["custody", "some", "active"],
   yield: ["lend", "dex", "wrap", "all"],
   trading: ["cex", "perps", "spot", "all"],
 };
 
-export const SELECTOR_STEP_VALUES = ["1", "2", "3", "4", "5", "6", "result"] as const;
+const SELECTOR_STEP_VALUES = ["1", "2", "3", "4", "5", "6", "result"] as const;
 export type SelectorStepRaw = (typeof SELECTOR_STEP_VALUES)[number];
 export type SelectorStep = 1 | 2 | 3 | 4 | 5 | 6 | "result";
 
@@ -393,7 +393,7 @@ export function toSelectorInput(state: SelectorWizardState): SelectorInput | nul
   };
 }
 
-export function composabilityFromVenue(
+function composabilityFromVenue(
   profile: SelectorProfile,
   venue: readonly SelectorVenue[],
 ): "none" | "moderate" | "high" {

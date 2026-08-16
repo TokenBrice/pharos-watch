@@ -22,7 +22,7 @@ export function buildSameDayDirectionCollisionSlugs(events: readonly DepegEventD
   return new Set(events.filter((event) => (counts.get(collisionKey(event)) ?? 0) > 1).map((event) => event.slug));
 }
 
-export function formatEventLongDate(seconds: number): string {
+function formatEventLongDate(seconds: number): string {
   return formatLongDate(new Date(seconds * 1000), { utc: true });
 }
 

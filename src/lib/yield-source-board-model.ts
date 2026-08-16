@@ -26,8 +26,6 @@ import type {
   YieldType,
 } from "@shared/types";
 
-export { YIELD_SOURCE_CONFIDENCE_ORDER, type YieldSourceConfidenceTier };
-
 export type YieldSourceConfidenceCounts = Record<YieldSourceConfidenceTier, number>;
 export type YieldSourceDepthCounts = Record<YieldSourceDepthLens, number>;
 export type YieldSourcePostureCounts = Record<YieldSourcePosture, number>;

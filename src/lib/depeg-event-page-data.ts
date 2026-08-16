@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DepegEvent } from "@shared/types/market";
-import { MIN_DEPEG_PAGE_DEVIATION_BPS, selectStaticDepegEventPages } from "@/lib/depeg-event-config";
+import { selectStaticDepegEventPages } from "@/lib/depeg-event-config";
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
@@ -14,8 +14,6 @@ import {
 export interface DepegEventEntry extends DepegEvent {
   slug: string;
 }
-
-export { MIN_DEPEG_PAGE_DEVIATION_BPS };
 
 function readDepegEventEntries(): readonly DepegEventEntry[] {
   const filePath = join(process.cwd(), "data/depeg-events.json");
@@ -58,7 +56,7 @@ export const eventBySlug: ReadonlyMap<string, DepegEventEntry> = new Map(
  * The chronological direction (ascending, not the sync-script's descending
  * order) is the canonical convention for serial publication numbering.
  */
-export const INCIDENT_NUMBER_BY_SLUG: ReadonlyMap<string, number> = (() => {
+const INCIDENT_NUMBER_BY_SLUG: ReadonlyMap<string, number> = (() => {
   const ascending = [...DEPEG_EVENT_ENTRIES].sort((a, b) => {
     if (a.startedAt !== b.startedAt) return a.startedAt - b.startedAt;
     return a.slug.localeCompare(b.slug);

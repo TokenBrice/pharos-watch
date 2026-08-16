@@ -29,7 +29,7 @@ const DEFAULT_COMPACT_USD_OPTIONS: CompactUsdFormatOptions = {
 };
 
 /** Canonical compact-USD renderer. Product-specific output differences are explicit options. */
-export function formatCompactUsdWithOptions(
+function formatCompactUsdWithOptions(
   value: number,
   options: CompactUsdFormatOptions = DEFAULT_COMPACT_USD_OPTIONS,
 ): string {
