@@ -73,12 +73,11 @@ export const PUBLIC_API_ARTIFACT_TAGS = [
  * canonical Zod response schema or are deliberately added to this debt list.
  */
 export const OPENAPI_JSON_VALUE_ENDPOINT_KEYS = new Set<EndpointKey>([
-  "stablecoin-detail",
-  "stablecoin-summary",
-  "non-usd-share",
-  "snapshots-index",
+  // `snapshot-day` alone stays generic, deliberately. Its producer envelope spans the
+  // historical V8 shape and a very large inline V9 union, so a faithful schema would be
+  // enormous and brittle while documenting little. The other five endpoints that used to
+  // sit here are now typed in public-api-response-schemas.ts.
   "snapshot-day",
-  "snapshot-coin",
 ]);
 
 export const POSTMAN_FOLDERS: readonly { name: PostmanFolderName; description: string }[] = [
@@ -244,6 +243,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-detail",
+    responseSchema: "StablecoinDetailResponse",
     summary: "Stablecoin detail",
     description: "Full per-coin analytics dossier for a canonical Pharos stablecoin ID.",
     tags: ["Stablecoins"],
@@ -254,6 +254,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "stablecoin-summary",
+    responseSchema: "StablecoinSummaryResponse",
     summary: "Stablecoin summary",
     description: "Lightweight per-coin price and aggregate supply snapshot.",
     tags: ["Stablecoins"],
@@ -803,6 +804,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "non-usd-share",
+    responseSchema: "NonUsdShareResponse",
     summary: "Non-USD share",
     description: "Historical non-USD peg share series for market-structure views.",
     tags: ["Market Structure", "History"],
@@ -898,6 +900,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "snapshots-index",
+    responseSchema: "SnapshotsIndexResponse",
     summary: "Public snapshot index",
     description: "Listing of available daily public snapshots with content hashes and methodology versions.",
     tags: ["Digest"],
@@ -929,6 +932,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "snapshot-coin",
+    responseSchema: "SnapshotCoinResponse",
     summary: "Public snapshot projection for a single coin",
     description:
       "Per-coin slice of a daily snapshot (camelCase). Immutable artifact keyed by YYYY-MM-DD + stablecoin id; served with public, immutable, max-age=1y cache headers.",
