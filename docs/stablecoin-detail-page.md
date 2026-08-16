@@ -8,7 +8,7 @@ Route contract for `/stablecoin/[id]/`, the central per-asset analytics surface.
 
 - **Route shell:** `src/app/stablecoin/[id]/page.tsx`
 - **Client composition:** `src/app/stablecoin/[id]/client.tsx` plus adjacent section-group modules under the same route
-- **Yield subroute:** `src/app/stablecoin/[id]/yield/page.tsx` and `src/app/stablecoin/[id]/yield/client.tsx` for yield-bearing coins and curated auto-lending workbenches; known tracked coins without a static workbench redirect to `/yield/?compare=<id>&from=detail-fallback`
+- **Yield subroute:** `src/app/stablecoin/[id]/yield/page.tsx` and `src/components/stablecoin-detail/yield-analysis-client.tsx` for yield-bearing coins and curated auto-lending workbenches; known tracked coins without a static workbench redirect to `/yield/?compare=<id>&from=detail-fallback`
 - **Primary hook:** `src/hooks/use-stablecoin-detail-view-model.ts`
 - **Pure view-model facade:** `src/lib/stablecoin-detail-view-model.ts`
 - **View-model owners:** `src/lib/stablecoin-detail-query-view-model.ts`, `src/lib/stablecoin-detail-hero-view-model.ts`, and `src/lib/stablecoin-detail-view-model-types.ts`
