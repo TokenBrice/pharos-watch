@@ -6,8 +6,11 @@ import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
 import {
+  DETAIL_MODULE_BODY_CLASS,
+  DETAIL_MODULE_HEADER_CLASS,
+  DETAIL_MODULE_SHELL_CLASS,
   DETAIL_MODULE_TITLE_CLASS,
-  SECTION_DIVIDER_CLASS, SECTION_SCROLL_MT,
+  SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
 import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
@@ -34,7 +37,7 @@ export function ContractDeployments({
   contracts: ContractDeployment[];
   /**
    * Rail rendering (Figma coin template): single-column rows, shorter
-   * preview, and no `#contracts` anchor — the in-flow Key Info instance
+   * preview, and no `#contracts` anchor — the in-flow (`xl:hidden`) instance
    * owns the deep-link id so dual-rendering never duplicates it.
    */
   compact?: boolean;
@@ -84,7 +87,7 @@ export function ContractDeployments({
     const ToggleIcon = showAllContracts ? Minimize2 : Maximize2;
     return (
       <section
-        // The in-flow Key Info instance owns `#contracts` but is xl:hidden;
+        // The in-flow instance owns `#contracts` but is xl:hidden;
         // the passport strip's hash jump falls back to this visible twin.
         data-anchor-twin="contracts"
         className={cn("pharos-card-shell overflow-hidden", SECTION_SCROLL_MT)}
@@ -129,8 +132,21 @@ export function ContractDeployments({
   }
 
   return (
-    <div id="contracts" className={cn(SECTION_SCROLL_MT, SECTION_DIVIDER_CLASS)}>
-      <p className="pharos-kicker mb-1.5">Contract Deployments</p>
+    <section
+      id="contracts"
+      className={cn(DETAIL_MODULE_SHELL_CLASS, SECTION_SCROLL_MT)}
+      aria-label={`Contracts, ${contracts.length} deployments`}
+    >
+      <div className={DETAIL_MODULE_HEADER_CLASS}>
+        <div className="flex items-center gap-2">
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
+          <span className="text-muted-foreground/50" aria-hidden="true">
+            ·
+          </span>
+          <span className="font-mono text-xs text-muted-foreground">{contracts.length}</span>
+        </div>
+      </div>
+      <div className={DETAIL_MODULE_BODY_CLASS}>
       {contractSummary && <p className="mb-3 text-sm leading-relaxed text-muted-foreground">{contractSummary}</p>}
       {quickCopyContract ? (
         <ContractDetailRow
@@ -197,7 +213,8 @@ export function ContractDeployments({
           className="mt-3 sm:hidden"
         />
       ) : null}
-    </div>
+      </div>
+    </section>
   );
 }
 

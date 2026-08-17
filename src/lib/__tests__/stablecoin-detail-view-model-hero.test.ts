@@ -347,11 +347,12 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(byKey.get("mechanism")).toMatchObject({ value: "RWA-Backed", href: "#info" });
     // No proof of reserves -> attestor chip omitted entirely.
     expect(byKey.has("attestor")).toBe(false);
-    // Undisclosed jurisdiction stays as an honest answer, muted.
-    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Not disclosed", href: "#jurisdiction" });
+    // Undisclosed jurisdiction stays as an honest answer, muted; with no
+    // reviewed regime there is no Regulatory standing module to jump to.
+    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Not disclosed", href: "#info" });
     // No freeze section anywhere -> FreezeWatch coverage page link.
     expect(byKey.get("freeze")).toMatchObject({ value: "No", href: "/freezewatch/?stablecoin=MSP" });
-    // No curated contracts -> chains chip falls back to the info card.
+    // No curated contracts -> chains chip falls back to the overview section.
     expect(byKey.get("chains")).toMatchObject({ value: "0", href: "#info" });
     // Unreviewed mint authority / missing backstop -> both entries omitted.
     expect(byKey.has("minting")).toBe(false);
@@ -421,11 +422,13 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(byKey.get("minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
     // Passport-short attestor tier (Figma coin template); the aria-label keeps the full label.
     expect(byKey.get("attestor")).toMatchObject({ value: "Big-4", href: "#attestation" });
-    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#jurisdiction" });
+    // No curated MiCA/GENIUS profile on this fixture, so jurisdiction has no
+    // Regulatory standing module to target.
+    expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#info" });
     expect(byKey.get("chains")).toMatchObject({ value: "3", href: "#contracts", chip: true });
 
-    // A decentralized coin omits the attestor chip and routes jurisdiction
-    // to the info card, mirroring the Key Information card's skip logic.
+    // A decentralized coin omits the attestor chip (it publishes no reserve
+    // attestation) and routes jurisdiction to the overview section.
     const decentralizedHero = buildStablecoinDetailHeroViewModel({
       coin: {
         ...(attestedCoin as object),
@@ -551,7 +554,7 @@ describe("stablecoin detail hero view-model builder", () => {
       category: "Issued",
       value: "2018",
       href: "#info",
-      ariaLabel: "Issued: launched September 26, 2018 — jump to Key Information",
+      ariaLabel: "Issued: launched September 26, 2018 — jump to the coin overview",
     });
 
     // Absent or malformed dates omit the field instead of faking it — the
@@ -562,6 +565,19 @@ describe("stablecoin detail hero view-model builder", () => {
         buildPassportHero({ coin: { launchDate: malformed } }).passportItems.some((item) => item.key === "issued"),
       ).toBe(false);
     }
+  });
+
+  it("points the Jurisdiction field at the Regulatory standing module once a regime is reviewed", () => {
+    // `#jurisdiction` is owned by that module's below-xl fold (rail twin at
+    // xl+), so the link only renders a target when a regime profile exists.
+    expect(
+      buildPassportHero({ coin: { mica: { status: "authorized" } } }).passportItems.find(
+        (item) => item.key === "jurisdiction",
+      )?.href,
+    ).toBe("#jurisdiction");
+    expect(
+      buildPassportHero().passportItems.find((item) => item.key === "jurisdiction")?.href,
+    ).toBe("#info");
   });
 
   it("builds the MiCA visa field with historical framing for frozen assets", () => {

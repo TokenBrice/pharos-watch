@@ -158,7 +158,7 @@ Model on `/screener` (client-only, bundled registry, URL-encoded filters). No AP
 
 **Navigation:** `src/lib/nav-config.ts` includes `/compliance/` in the `NAV_GROUPS` entry keyed `"risk"` with the `Landmark` icon and description "MiCA authorization and GENIUS implementation status across tracked stablecoins". The mobile header, desktop top nav, and command palette auto-index from `NAV_GROUPS`.
 
-**Detail-page surfacing:** `src/components/key-info-card-root.tsx` renders a MiCA/Historical MiCA badge in the jurisdiction block, linking to `/compliance/?regime=mica`. It reuses the established badge styling; no new component is required.
+**Detail-page surfacing:** the hero passport strip (`src/lib/stablecoin-detail-passport.ts`) carries the MiCA/Historical MiCA field, and `RegulatoryStandingCard` renders the per-regime facts it links to (`#jurisdiction`). Coins without a curated regime profile show the status only in the strip; nothing is faked on-page.
 
 **Static export / SEO:** route is statically pre-rendered and included in the sitemap; run `npm run seo:check` after crawlability changes. No `next.config.ts` change.
 

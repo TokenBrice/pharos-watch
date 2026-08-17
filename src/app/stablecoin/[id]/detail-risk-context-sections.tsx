@@ -3,6 +3,8 @@
 import type { ReactNode, Ref } from "react";
 import { ChartPie } from "lucide-react";
 import { CoinNotices } from "@/components/coin-notice";
+import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
+import { KeyLinksCard } from "@/components/stablecoin-detail/key-links-card";
 import { ContagionSnapshot } from "@/components/stablecoin-detail/contagion-snapshot";
 import { MechanismReviewPanel } from "@/components/stablecoin-detail/mechanism-review-panel";
 import { MintAuthoritySection } from "@/components/stablecoin-detail/mint-authority-section";
@@ -21,7 +23,6 @@ import { resolveMechanismArchetype } from "@shared/lib/classification";
 import {
   DEWSDetail,
   FlowsSection,
-  KeyInfoCard,
   PegStabilityCard,
   StablecoinSafetyScoreV9Card,
   StablecoinDepegResolverCard,
@@ -68,30 +69,31 @@ export function DetailRiskContextSections({
   return (
     <>
       <div id="overview" ref={overviewGateRef} className="space-y-6 scroll-mt-32">
+        {/* `#info` is the passport strip's fallback target for facts that live
+            in the strip itself (launch date, jurisdiction without a regulatory
+            review), so the section keeps the id even when the coin has no peg
+            mechanism to render. */}
         <section id="info" className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6">
-          <div className={viewModel.coin.pegMechanism ? "grid gap-6 lg:grid-cols-2" : undefined}>
-            <KeyInfoCard
+          {viewModel.coin.pegMechanism ? (
+            <PegStabilityCard
               meta={viewModel.coin}
               resolvedMechanismArchetype={resolvedMechanismArchetype}
               isWrapper={isWrapperVariant}
               parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
               parentArchetype={parentArchetype}
               variantKind={viewModel.coin.variantKind ?? null}
-              contractsBelowXlOnly
-              splitMechanism={Boolean(viewModel.coin.pegMechanism)}
             />
-            {viewModel.coin.pegMechanism ? (
-              <PegStabilityCard
-                meta={viewModel.coin}
-                resolvedMechanismArchetype={resolvedMechanismArchetype}
-                isWrapper={isWrapperVariant}
-                parentSymbol={isWrapperVariant ? viewModel.variantParent?.symbol : null}
-                parentArchetype={parentArchetype}
-                variantKind={viewModel.coin.variantKind ?? null}
-              />
-            ) : null}
-          </div>
+          ) : null}
         </section>
+        {/* The xl rail owns Key Links and Contracts; below xl the rail is
+            hidden, so in-flow copies keep the outbound links, the reserve
+            attestation link, and the deployment list reachable. Both own their
+            anchors (`#attestation`, `#contracts`) — the rail copies are marked
+            as their twins. */}
+        <div className="space-y-4 xl:hidden">
+          <KeyLinksCard meta={viewModel.coin} anchors />
+          <ContractDeployments coinId={viewModel.coin.id} contracts={viewModel.coin.contracts ?? []} />
+        </div>
         <section id="report-card">
           {viewModel.reportCard && viewModel.reportCardsResponse ? (
             <StablecoinSafetyScoreV9Card
@@ -173,7 +175,11 @@ export function DetailRiskContextSections({
         ) : null}
         {sharedModules.regulatoryStanding ? (
           <div className="xl:hidden">
-            <RailCopyFold title="Regulatory standing" chip={sharedModules.foldChips.regulatoryStanding}>
+            <RailCopyFold
+              title="Regulatory standing"
+              id="jurisdiction"
+              chip={sharedModules.foldChips.regulatoryStanding}
+            >
               {sharedModules.foldBodies.regulatoryStanding}
             </RailCopyFold>
           </div>

@@ -3,8 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 
-import { KeyInfoCard } from "@/components/key-info-card-root";
-import { ContractDeployments } from "@/components/key-info-card/contract-deployments";
+import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import type { StablecoinMeta } from "@shared/types";
 
 vi.mock("next/image", () => ({
@@ -47,7 +46,7 @@ afterEach(() => {
   window.gtag = undefined;
 });
 
-describe("KeyInfoCard contract interactions", () => {
+describe("ContractDeployments interactions", () => {
   it("selects a contract chain, opens the explorer, and copies the selected address", () => {
     vi.useFakeTimers();
     const writeText = vi.fn();
@@ -57,7 +56,7 @@ describe("KeyInfoCard contract interactions", () => {
     });
     window.gtag = vi.fn();
 
-    const { container } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+    const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
     const mobileGrid = container.querySelector(".grid.grid-cols-5");
     expect(mobileGrid).not.toBeNull();
 
@@ -98,7 +97,7 @@ describe("KeyInfoCard contract interactions", () => {
       ],
     } as StablecoinMeta;
 
-    const { container } = render(<KeyInfoCard meta={duplicateChainMeta} resolvedMechanismArchetype={null} />);
+    const { container } = render(<ContractDeployments coinId={duplicateChainMeta.id} contracts={duplicateChainMeta.contracts ?? []} />);
     const mobileGrid = container.querySelector(".grid.grid-cols-5");
     expect(mobileGrid).not.toBeNull();
 
@@ -121,7 +120,7 @@ describe("KeyInfoCard contract interactions", () => {
       value: { writeText: vi.fn() },
     });
 
-    const { unmount } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+    const { unmount } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
     fireEvent.click(screen.getAllByRole("button", { name: "Copy Ethereum contract address" })[0]);
 
     unmount();
@@ -131,7 +130,7 @@ describe("KeyInfoCard contract interactions", () => {
   });
 
   it("hides overflow mobile contracts again and clears a hidden selected chain", () => {
-    const { container } = render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+    const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
     const mobileGrid = container.querySelector(".grid.grid-cols-5");
     expect(mobileGrid).not.toBeNull();
 
@@ -150,7 +149,7 @@ describe("KeyInfoCard contract interactions", () => {
   });
 
   it("renders desktop labeled contract rows with address, copy, and explorer actions", () => {
-    render(<KeyInfoCard meta={meta} resolvedMechanismArchetype={null} />);
+    render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
 
     // Each deployment gets a labeled row: chain link + truncated address +
     // copy button + explorer link.
@@ -184,38 +183,13 @@ describe("KeyInfoCard contract interactions", () => {
     expect(screen.getByRole("button", { name: "Collapse contract deployments" })).toBeTruthy();
   });
 
-  it("links MiCA badges to the tracker and marks frozen statuses as historical", () => {
-    render(
-      <KeyInfoCard
-        meta={{
-          ...meta,
-          status: "frozen",
-          mica: {
-            status: "authorized",
-          },
-        } as StablecoinMeta}
-        resolvedMechanismArchetype={null}
-      />,
-    );
+  it("gives the in-flow module its own shell, title, and #contracts anchor", () => {
+    const { container } = render(<ContractDeployments coinId={meta.id} contracts={meta.contracts ?? []} />);
 
-    const link = screen.getByRole("link", { name: /Historical MiCA status: Authorized/i });
-    expect(link.getAttribute("href")).toBe("/compliance?regime=mica");
-    expect(screen.getByText("Historical MiCA: Authorized")).toBeTruthy();
-  });
-
-  it("renders the Launched proof line only for valid launch dates", () => {
-    render(
-      <KeyInfoCard
-        meta={{ ...meta, launchDate: "2018-09-26" } as StablecoinMeta}
-        resolvedMechanismArchetype={null}
-      />,
-    );
-    expect(screen.getByText("Launched")).toBeTruthy();
-    expect(screen.getByText("September 26, 2018")).toBeTruthy();
-    cleanup();
-
-    // Absent or malformed dates omit the line (passport omit-when-absent rule).
-    render(<KeyInfoCard meta={{ ...meta, launchDate: "2018-13-45" } as StablecoinMeta} resolvedMechanismArchetype={null} />);
-    expect(screen.queryByText("Launched")).toBeNull();
+    const section = container.querySelector("#contracts");
+    expect(section).not.toBeNull();
+    expect(within(section as HTMLElement).getByRole("heading", { name: "Contracts" })).toBeTruthy();
+    // The rail twin carries no id, so a dual-mounted page has exactly one.
+    expect(container.querySelectorAll("#contracts").length).toBe(1);
   });
 });

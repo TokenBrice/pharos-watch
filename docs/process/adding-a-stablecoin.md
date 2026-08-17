@@ -298,7 +298,7 @@ Three optional clusters on `StablecoinMeta` drive the detail-page hero verdict, 
 - Synthetic / hedged asset: name the hedge shape and where yield comes from. Example for USDe: "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions on derivatives exchanges; yield comes from funding rates."
 - Frozen / paused asset: use past tense and name the event. Example: "USR was Resolv Labs's delta-neutral synthetic dollar that paused issuance in 2026..."
 
-**`mechanismArchetype` (top-level enum)** — coarse mechanism class that drives the schematic diagram shown above the Peg Stability prose in `KeyInfoCard`.
+**`mechanismArchetype` (top-level enum)** — coarse mechanism class that drives the schematic diagram shown beside the Peg Stability prose in `PegStabilityCard`.
 
 Mapping cheatsheet:
 
