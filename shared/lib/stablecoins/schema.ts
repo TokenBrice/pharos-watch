@@ -8,6 +8,7 @@ import { DetailProviderSchema, PEG_CURRENCY_VALUES } from "../../types/core";
 import { CAUSE_OF_DEATH_VALUES } from "../../types/cause-of-death";
 import { FullReserveCompositionSchema } from "../../types/reserves";
 import { defaultV9DependencyEconomicRole } from "../../types/dependency-types";
+import { validateMintBridgeOwnership } from "./mint-bridge-ownership";
 import {
   CoinNoticeSchema,
   BlacklistabilityReviewSchema,
@@ -715,6 +716,20 @@ export const StablecoinMetaAssetSchema: z.ZodType<StablecoinMeta, unknown> = Sta
           path: ["obituary"],
         });
       }
+    }
+  })
+  .superRefine((meta, ctx) => {
+    for (const violation of validateMintBridgeOwnership(meta, { enforce: true })) {
+      if (violation.severity !== "error") continue;
+      const path = violation.path
+        .split(/[.\[\]]/)
+        .filter(Boolean)
+        .map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment));
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `[mint-bridge-ownership:${violation.code}] ${violation.message}`,
+        path,
+      });
     }
   });
 
