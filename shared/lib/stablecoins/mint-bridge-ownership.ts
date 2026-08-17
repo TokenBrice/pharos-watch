@@ -20,6 +20,7 @@ export type MintBridgeOwnershipViolationCode =
   | "non-normalized-deployment-ref"
   | "mint-ref-not-native"
   | "bridge-control-unknown-route"
+  | "representation-route-without-bridge-mint"
   | "bridge-capability-in-mint"
   | "missing-mint-deployment-refs"
   | "missing-native-deployment"
@@ -470,6 +471,36 @@ export function validateMintBridgeOwnership(
       violations,
       seen,
     });
+  }
+
+  for (let index = 0; index < routes.length; index += 1) {
+    const route = routes[index]!;
+    if (
+      route.reviewDisposition !== "reviewed" ||
+      (route.issuanceModel !== "bridge-representation" && route.issuanceModel !== "wrapped-representation")
+    ) {
+      continue;
+    }
+
+    const routeId = normalizeDeploymentId(route.id);
+    if (!routeId) continue;
+    const coveringControls = bridgeControls.filter((control) =>
+      control.routeRefs.some((routeRef) => normalizeDeploymentId(routeRef) === routeId),
+    );
+    if (coveringControls.length === 0 || coveringControls.some((control) => control.capabilities.includes("bridge-mint"))) {
+      continue;
+    }
+
+    const coveringControlIds = coveringControls.map((control) => `"${control.id}"`).join(", ");
+    addViolation(
+      violations,
+      seen,
+      meta,
+      "representation-route-without-bridge-mint",
+      `bridgeRouteRisk.routes[${index}].id`,
+      `reviewed representation route "${route.id}" is covered by control IDs [${coveringControlIds}], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
+      "error",
+    );
   }
 
   const active = isActiveStablecoinMeta(meta);

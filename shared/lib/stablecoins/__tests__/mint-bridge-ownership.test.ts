@@ -145,7 +145,10 @@ function bridgeControl(
   };
 }
 
-function representationRoute(id: string): BridgeRouteDeployment {
+function representationRoute(
+  id: string,
+  overrides: Partial<BridgeRouteDeployment> = {},
+): BridgeRouteDeployment {
   return makeRoute(id, {
     sourceChain: "arbitrum",
     canonicalChain: "arbitrum",
@@ -155,6 +158,7 @@ function representationRoute(id: string): BridgeRouteDeployment {
     riskTier: "external-lock-mint",
     semantics: "lock-mint",
     scope: "peripheral",
+    ...overrides,
   });
 }
 
@@ -183,6 +187,7 @@ function expectNoOwnershipViolations(
 }
 
 const ACTIVE_ONLY_VIOLATION_CODES: ReadonlySet<MintBridgeOwnershipViolation["code"]> = new Set([
+  "representation-route-without-bridge-mint",
   "bridge-capability-in-mint",
   "missing-mint-deployment-refs",
   "missing-native-deployment",
@@ -297,6 +302,93 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     });
 
     expect(validateMintBridgeOwnership(meta, { enforce: true })).toEqual([]);
+  });
+
+  it.each(["bridge-representation", "wrapped-representation"] as const)(
+    "requires bridge-mint when a reviewed %s route has structured coverage",
+    (issuanceModel) => {
+      const route = representationRoute(BASE_ROUTE, { issuanceModel });
+      const meta = makeCoin({
+        contracts: contractsFor([BASE_ROUTE]),
+        bridgeRouteRisk: makeBridgeProfile([route], [
+          bridgeControl({
+            id: "admin-only-control",
+            routeRefs: [BASE_ROUTE],
+            capabilities: ["admin"],
+          }),
+        ]),
+      });
+
+      expect(validateMintBridgeOwnership(meta, { enforce: true })).toEqual([
+        expect.objectContaining({
+          code: "representation-route-without-bridge-mint",
+          path: "bridgeRouteRisk.routes[0].id",
+          message: `reviewed representation route "${BASE_ROUTE}" is covered by control IDs ["admin-only-control"], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
+          severity: "error",
+        }),
+      ]);
+    },
+  );
+
+  it("accepts structured representation coverage when a control names the bridge-mint holder", () => {
+    const route = representationRoute(BASE_ROUTE);
+    const meta = makeCoin({
+      contracts: contractsFor([BASE_ROUTE]),
+      bridgeRouteRisk: makeBridgeProfile([route], [
+        bridgeControl({
+          id: "reviewed-mint-control",
+          routeRefs: [BASE_ROUTE],
+          capabilities: ["admin", "bridge-mint"],
+        }),
+      ]),
+    });
+
+    expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
+  });
+
+  it("keeps the conservative fallback when no structured control references a representation route", () => {
+    const route = representationRoute(BASE_ROUTE);
+    const meta = makeCoin({
+      contracts: contractsFor([BASE_ROUTE]),
+      bridgeRouteRisk: makeBridgeProfile([route]),
+    });
+
+    expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
+  });
+
+  it("does not require bridge-mint for a native-issuance route with structured admin coverage", () => {
+    const route = makeRoute(BASE_ROUTE);
+    const meta = makeCoin({
+      contracts: contractsFor([BASE_ROUTE]),
+      bridgeRouteRisk: makeBridgeProfile([route], [
+        bridgeControl({
+          id: "canonical-adapter-admin",
+          routeRefs: [BASE_ROUTE],
+          capabilities: ["admin"],
+        }),
+      ]),
+    });
+
+    expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
+  });
+
+  it("does not require bridge-mint for an unresolved representation route", () => {
+    const route = representationRoute(BASE_ROUTE, {
+      reviewDisposition: "unresolved",
+      reviewNote: "The route review has not identified its transfer-rail controls yet.",
+    });
+    const meta = makeCoin({
+      contracts: contractsFor([BASE_ROUTE]),
+      bridgeRouteRisk: makeBridgeProfile([route], [
+        bridgeControl({
+          id: "unresolved-admin-control",
+          routeRefs: [BASE_ROUTE],
+          capabilities: ["admin"],
+        }),
+      ]),
+    });
+
+    expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
   });
 
   it("allows one Safe to have distinct native-mint and bridge capabilities", () => {

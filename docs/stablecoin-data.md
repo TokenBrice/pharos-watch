@@ -67,13 +67,14 @@ For an active multi-deployment asset:
 - `mintAuthority.upgradeability.deploymentRefs` is required when `canChangeMintLogic: true` and names only the native deployments whose mint-critical logic the path can replace;
 - bridge machinery belongs in `bridgeRouteRisk.controls[]`. Each `BridgeRouteControl` has a stable kebab-case `id`, one or more `routeRefs`, and unique capabilities drawn from `bridge-mint`, `bridge-burn`, `upgrade`, `admin`, `pause`, `rate-limit`, `validator`, `escrow`, and `peer-config`;
 - a bridge control may reference a reviewed native route when the capability governs a transfer pool, adapter, peer, or message path rather than ordinary native issuance; and
+- a reviewed `bridge-representation` or `wrapped-representation` route referenced by any structured bridge control must have at least one covering control with `bridge-mint`; if the minter cannot be identified, leave the route out of every control's `routeRefs` so the conservative route-derived fallback remains scoreable; and
 - active Mint Authority data cannot use `role: "bridge-admin"`, `authorityType: "bridge"`, `routeChecks`, or `mintPath: "bridge-or-oft-synthetic"`. The three bridge-specific enum values remain only for historical readback; `routeChecks` belongs on structured bridge controls.
 
 A single-deployment asset may omit `deploymentRefs` only while its sole authored deployment is unambiguously reviewed native issuance. Add explicit references when another deployment is authored or canonicality becomes ambiguous.
 
 Do not invent a native route for a product with no local issuance. Author `mintAuthority.review.noLocalIssuance` with `reviewedAt`, `reviewer`, and `rationale`; either exception kind is invalid when a reviewed native-issuance route exists. `kind: "inherited-parent-issuance"` additionally requires `mintPath: "wrapped-or-variant-inherited"` and `inheritedFrom`. `kind: "external-only-representation"` is valid only when every authored route is reviewed and every authored contract is covered by one of those routes.
 
-`npm run check:stablecoin-data` runs the ownership audit as a blocking catalog gate. It rejects malformed, duplicate, unknown, or non-native references; invalid no-local-issuance exceptions; duplicate cross-domain bridge capabilities; missing active multi-deployment refs; and bridge vocabulary in active Mint Authority data. The V9 compiler rechecks ownership and fails closed rather than silently dropping an invalid control.
+`npm run check:stablecoin-data` runs the ownership audit as a blocking catalog gate. It rejects malformed, duplicate, unknown, or non-native references; invalid no-local-issuance exceptions; `representation-route-without-bridge-mint`; duplicate cross-domain bridge capabilities; missing active multi-deployment refs; and bridge vocabulary in active Mint Authority data. The V9 compiler rechecks ownership and fails closed rather than silently dropping an invalid control.
 
 ## Mint Authority Review
 

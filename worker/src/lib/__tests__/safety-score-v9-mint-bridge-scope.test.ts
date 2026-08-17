@@ -45,7 +45,10 @@ function route(
   };
 }
 
-function representationRoute(id: string): BridgeRouteDeployment {
+function representationRoute(
+  id: string,
+  overrides: Partial<BridgeRouteDeployment> = {},
+): BridgeRouteDeployment {
   return route(id, {
     sourceChain: "arbitrum",
     canonicalChain: "arbitrum",
@@ -55,6 +58,7 @@ function representationRoute(id: string): BridgeRouteDeployment {
     riskTier: "external-lock-mint",
     semantics: "lock-mint",
     scope: "peripheral",
+    ...overrides,
   });
 }
 
@@ -290,6 +294,39 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
     });
     expect(controls).toHaveLength(2);
     expect(bridge!.capabilities).not.toContain("mint");
+  });
+
+  it("retains intrinsic bridge-mint for a reviewed representation route without structured coverage", () => {
+    const metadata = meta("fixture-intrinsic-bridge-mint", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)]),
+    });
+    const { compiled } = compileFixture(metadata);
+    const bridge = controlsFor(compiled, metadata.id).find((control) =>
+      control.controlKey.startsWith(`bridge-meta:${metadata.id}:`),
+    );
+
+    expect(bridge).toMatchObject({
+      deploymentKey: BASE_ROUTE,
+      capabilities: ["bridge-mint"],
+    });
+  });
+
+  it("fails the V9 producer with route and control attribution for shadowed representation bridge-mint", () => {
+    const metadata = meta("fixture-shadowed-bridge-mint", {
+      bridgeRouteRisk: bridgeProfile([representationRoute(BASE_ROUTE)], {
+        controls: [
+          bridgeControl({
+            id: "admin-only-shadow",
+            routeRefs: [BASE_ROUTE],
+            capabilities: ["admin"],
+          }),
+        ],
+      }),
+    });
+
+    expect(() => compileFixture(metadata)).toThrow(
+      `Safety Score v9 mint/bridge ownership validation failed for fixture-shadowed-bridge-mint: representation-route-without-bridge-mint at bridgeRouteRisk.routes[0].id: reviewed representation route "${BASE_ROUTE}" is covered by control IDs ["admin-only-shadow"], but none includes "bridge-mint"; name the bridge-mint holder in one of those controls, or stop referencing the route so the conservative route-derived fallback overlay applies`,
+    );
   });
 
   it("keeps a shared Safe identity-linked while separating native mint from bridge capabilities", () => {
