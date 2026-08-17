@@ -105,7 +105,6 @@ import {
   WRAPPER_OPERATOR_VALUES,
   YIELD_TYPE_VALUES,
 } from "./core";
-import { isWellFormedDeploymentId } from "../lib/deployment-id";
 import {
   BridgeRouteRiskTierSchema,
   CollateralQualitySchema,
@@ -139,9 +138,15 @@ const StrictIsoDateSchema = z.string().refine(isValidIsoDate, {
 });
 const ReviewDateSchema = StrictIsoDateSchema;
 
-const DeploymentIdSchema = z.string().refine(isWellFormedDeploymentId, {
-  message: "Expected a normalized chain:contractAddress deployment ID",
-});
+// Shape only. `shared/types` must not import `shared/lib`, so the canonical-form
+// check stays with the single normalizer: `validateMintBridgeOwnership()` raises
+// `non-normalized-deployment-ref` for an id that parses but is not already
+// normalized, and it runs in the merged catalog schema, `check:stablecoin-data`,
+// and the V9 compiler defence. Duplicating `normalizeDeploymentId` here would
+// create a second normalization authority, which the authoring contract forbids.
+const DeploymentIdSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9-]*:\S+$/, "Expected a chain:contractAddress deployment ID");
 const DeploymentRefsSchema = z
   .array(DeploymentIdSchema)
   .min(1)
