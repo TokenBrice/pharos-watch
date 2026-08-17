@@ -574,7 +574,9 @@ export function validateMintBridgeOwnership(
     }
   }
 
-  if (active && isMultiDeployment && resolvedNativeRoutes.length === 0 && !reviewedNoLocalIssuanceException) {
+  // Only meaningful once a Mint Authority review exists; unreviewed assets are owned by the
+  // mint-authority and bridge-route coverage audits, not by this cross-domain ownership rule.
+  if (active && mintAuthority && isMultiDeployment && resolvedNativeRoutes.length === 0 && !reviewedNoLocalIssuanceException) {
     addViolation(
       violations,
       seen,

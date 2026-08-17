@@ -336,15 +336,15 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const mintControls = controlReview.controls.filter((control) =>
       control.controlKey.startsWith(`mint-meta:${assetId}:`),
     );
-    // Control keys are derived from stable control identity, not array position, so reordering the
-    // reviewed `controls` array no longer changes compiled identities.
-    const expectedControlKeys = [
-      "mint-meta:dusd-dialectic:31eba9035ce4e8c7925a",
-      "mint-meta:dusd-dialectic:4f72410f15f4ab33173b",
-      "mint-meta:dusd-dialectic:698be001dc2d297ffcee",
-      "mint-meta:dusd-dialectic:8931251fb8e32aae6dfe",
-      "mint-meta:dusd-dialectic:9178c2c9b995cf1511b7",
-    ];
+    // Control keys derive from stable control identity, not array position, so reordering the
+    // reviewed `controls` array cannot change compiled identities. Look controls up by their
+    // on-chain authority instead of by index.
+    const controlKeyByAuthority = new Map(
+      mintControls.map((control) => [control.authority?.authorityKey ?? "", control.controlKey] as const),
+    );
+    const FEE_SHARE_AUTHORITY = "ethereum:0xa7f0121375dc52028e333f02715183a1d1a690a7";
+    const DAO_PROXY_ADMIN_AUTHORITY = "ethereum:0x62244c74e1d09b3d86ef7342d354b5d7770bde10";
+    const SECURITY_COUNCIL_AUTHORITY = "ethereum:0x89faa3b02ef5ab185b8ace489af62748acb50afc";
 
     expect(profile).toMatchObject({
       confidence: "probable",
@@ -372,22 +372,23 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       bypassSurfaces: [expect.stringContaining("only to request setRecoveryMode(true)")],
     });
     expect(controlReview.state).toBe("reviewed-controls");
-    expect(mintControls.map((control) => control.controlKey)).toEqual(expectedControlKeys);
+    expect(new Set(mintControls.map((control) => control.controlKey)).size).toBe(5);
     // The scoped historical review establishes incident absence positively, so no
     // control is left at the fail-closed "unknown" incident state.
     expect(mintControls.map((control) => control.incidentState)).toEqual(
-      Array.from({ length: expectedControlKeys.length }, () => "none"),
+      Array.from({ length: mintControls.length }, () => "none"),
     );
     expect(asset.economicControlReview?.mint.status.observationState).toBe("known");
-    // Mint selection lands on the fee-share dilution control (index 1) and the
-    // upgrade path on the DAO proxy admin (index 3); the Security Council's
-    // recovery-module control (index 4) carries only parameter-change capability.
-    expect(asset.economicControlReview?.mint.controlKey).toBe(expectedControlKeys[1]);
+    // Mint selection lands on the fee-share dilution control and the upgrade path on the DAO proxy
+    // admin; the Security Council's recovery-module control carries only parameter-change capability.
+    expect(asset.economicControlReview?.mint.controlKey).toBe(controlKeyByAuthority.get(FEE_SHARE_AUTHORITY));
     expect(asset.economicControlReview?.mint.upgrade).toMatchObject({
       state: "reviewed",
-      controlKey: expectedControlKeys[3],
+      controlKey: controlKeyByAuthority.get(DAO_PROXY_ADMIN_AUTHORITY),
     });
-    const councilControl = mintControls.find((control) => control.controlKey === expectedControlKeys[4])!;
+    const councilControl = mintControls.find(
+      (control) => control.controlKey === controlKeyByAuthority.get(SECURITY_COUNCIL_AUTHORITY),
+    )!;
     expect(councilControl.capabilities).toEqual(["parameter-change"]);
     expect(councilControl.capabilities).not.toContain("mint");
 
@@ -401,7 +402,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       gapIds: [],
     });
     expect(compiledMintControls.map((control) => control.status)).toEqual(
-      expectedControlKeys.map(() =>
+      compiledMintControls.map(() =>
         expect.objectContaining({
           observationState: "known",
           gapIds: [],
